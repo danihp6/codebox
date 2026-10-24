@@ -6,6 +6,16 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-24 (OCI migration, pulled forward)
+
+- `ops/oci/launch.sh`: the retry loop extracted from `pkm-randomlike`, with `CB_OCI_*`
+  knobs, `cb-instance` as the idempotency key and a `--dry-run` check.
+- `.github/workflows/oci-retry.yml`: the chained wait, the `CB_OCI_RETRY=off` brake, the
+  `oci-ready` announcement and a 10-minute cron as the safety net.
+- The `cb-*` network (`cb-vcn`, `cb-igw`, `cb-rt`, `cb-sl`, `cb-subnet`), the `cb-ci`
+  identity and its API key in OCI; `danihp6/codebox` is public so the wait spends no
+  Actions minutes.
+
 ### Added — 2026-10-24 (design batch)
 
 The first delivery is documentation only. It fixes the name, the product, the architecture,
@@ -38,6 +48,9 @@ the contracts and the delivery plan before any code exists.
 
 ### Changed
 
+- D34 amended: the OCI retry moved out of `pkm-randomlike` before parity. That repository
+  is braked (`OCI_RETRY=off`), its `pkm-vcn`/`pkm-subnet` are deleted, and its remaining OCI
+  variables are stale by design; Task-32 is now only the cleanup.
 - The project was renamed from the working title *Groundstation* to **Codebox** before the
   first commit: binary `codebox` with alias `cb`, daemon `cbd`, environment prefix `CB_`,
   OCI resources `cb-*`, branch prefix `cb/`. *Groundstation* was dropped because

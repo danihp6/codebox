@@ -1,0 +1,148 @@
+name: oci / retry
+
+# Waits for an Always Free Ampere slot in the home region, unattended and without gaps.
+# Extracted from `pkm-randomlike` (D22, D34); the chain, the brake, the shape rotation and
+# the announcement are kept, the variables are `CB_OCI_*`, and the instance is
+# `cb-instance`.
+#
+# The schedule is not a cadence: measured on the donor repository a `*/30` fired three
+# times in six hours and a `*/10` fired once in five. So this workflow does what
+# `agent-cycle.yml` does — each run hands the baton to the next one when it ends without an
+# instance, which makes the wait continuous: 8 attempts per run, one launch every ~7
+# minutes, around the clock, until a slot opens. The cron stays as the thing that restarts
+# the chain if a run dies before handing it over.
+#
+# The gap is deliberate and it is the tuning knob. At ~2.5 min between launches half the
+# attempts came back `TooManyRequests`; at ~5 min it still did, and a chained run starts
+# within seconds of the previous one's last attempt, which is two launches back to back.
+# So: 5 min between attempts, 10 after a throttle, and a 5 min warm-up at the top of every
+# run. ~9 launches an hour instead of ~25, and the limiter stops eating attempts.
+#
+# Every attempt asks for `2/12 2/12 1/6` — the Always Free Ampere ceiling since August
+# 2026, weighted two attempts to one toward half of it. 1/6 fits hosts where the full
+# entitlement does not, and half a box now is worth more than a perfect one that never
+# appears. A 4/24 request is a PAYG entitlement: on this account it can only ever answer
+# "out of capacity", so it is not asked at all.
+#
+# The chain stops by itself: a run that finds the instance `RUNNING` (or launches it) parks
+# with an outcome, announces it in an `oci-ready` issue, and does not re-dispatch. The
+# repository variable `CB_OCI_RETRY=off` is the brake — a run reads it, attempts nothing
+# and chains nothing; the cron then ticks into an empty run until someone turns it back on.
+#
+# Auth is a dedicated OCI user (`cb-ci`) with a policy that can launch instances and read
+# images, nothing else. The private key is the only secret; the rest are identifiers and
+# live as repository variables.
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+    inputs:
+      attempts:
+        description: Attempts this run makes (default 8)
+        type: number
+        default: 8
+
+concurrency:
+  group: cb-oci-retry
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+  # To hand the baton to the next run. A misconfigured run exits non-zero and does not
+  # chain, so a broken credential cannot spin forever.
+  actions: write
+
+jobs:
+  attempt:
+    runs-on: ubuntu-24.04
+    # Eight attempts at ~1 min 40 s each, ~5 min between them, a 5 min warm-up and up to
+    # 5 minutes waiting for the IP once a slot opens: 300 + 8 · 102 + 7 · 300 ≈ 54 min,
+    # under the script's own 60 min budget, which keeps the job from being killed mid-launch.
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      # `CB_OCI_RETRY=off` is the brake: the run still exists, does nothing and chains nothing.
+      - name: Install the OCI CLI
+        if: vars.CB_OCI_RETRY != 'off'
+        run: pip install --quiet oci-cli
+
+      - name: Attempts at a slot
+        id: launch
+        if: vars.CB_OCI_RETRY != 'off'
+        env:
+          CB_OCI_ATTEMPTS: ${{ inputs.attempts || 8 }}
+          CB_OCI_SHAPES: '2/12 2/12 1/6'
+          CB_OCI_ATTEMPT_SLEEP: 300
+          CB_OCI_THROTTLE_SLEEP: 600
+          CB_OCI_START_DELAY: 300
+          CB_OCI_BUDGET: 3600
+          CB_OCI_BOOT_GB: 100
+          CB_OCI_INSTANCE_NAME: cb-instance
+          CB_OCI_SSH_PUBLIC_KEY: ${{ vars.CB_OCI_SSH_PUBLIC_KEY }}
+          CB_OCI_COMPARTMENT_ID: ${{ vars.CB_OCI_COMPARTMENT_ID }}
+          CB_OCI_SUBNET_ID: ${{ vars.CB_OCI_SUBNET_ID }}
+          CB_OCI_IMAGE_ID: ${{ vars.CB_OCI_IMAGE_ID }}
+          CB_OCI_AD: ${{ vars.CB_OCI_AD }}
+          OCI_CLI_USER: ${{ vars.CB_OCI_CLI_USER }}
+          OCI_CLI_FINGERPRINT: ${{ vars.CB_OCI_CLI_FINGERPRINT }}
+          OCI_CLI_TENANCY: ${{ vars.CB_OCI_CLI_TENANCY }}
+          OCI_CLI_REGION: ${{ vars.CB_OCI_CLI_REGION }}
+          OCI_CLI_KEY_CONTENT: ${{ secrets.CB_OCI_CLI_KEY_CONTENT }}
+        run: bash ops/oci/launch.sh
+
+      - name: Announce the instance
+        if: steps.launch.outputs.ip != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          IP: ${{ steps.launch.outputs.ip }}
+          SHAPE: ${{ steps.launch.outputs.shape }}
+          INSTANCE: ${{ steps.launch.outputs.id }}
+        run: |
+          set -euo pipefail
+          gh label create oci-ready --description "An OCI instance is ready" --color 0E8A16 2>/dev/null || true
+          title="OCI: cb-instance is up (${IP})"
+          if gh issue list --state open --label oci-ready --json title --jq '.[].title' | grep -qxF "$title"; then
+            echo "already announced"
+            exit 0
+          fi
+          gh issue create --label oci-ready --title "$title" --body "$(cat <<BODY
+          The retry caught a slot.
+
+          | | |
+          | --- | --- |
+          | Instance | \`$INSTANCE\` |
+          | Shape | $SHAPE |
+          | Public IP | \`$IP\` |
+
+          Next: \`docs/agent-vm.md\` → bootstrap. The chain stops here: the next run finds
+          the instance running, parks and re-dispatches nothing.
+          BODY
+          )"
+
+      - name: Hand the wait to the next run
+        if: always() && vars.CB_OCI_RETRY != 'off' && steps.launch.outcome == 'success' && steps.launch.outputs.ip == ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # The schedule fires every one to five hours, so a run that stops after its own
+          # attempts leaves the wait asleep most of the day. This is the same baton
+          # `agent-cycle.yml` passes: the run keeps every decision (the switch, the
+          # attempts, the brake of an instance found RUNNING) and only asks for the next
+          # one. It is dispatched from inside a run of the same workflow, so `concurrency`
+          # queues it and it starts the moment this one ends.
+          #
+          # `steps.launch.outcome` guards the loop: a run whose attempts step failed is a
+          # broken credential or a bad variable, and chaining it would spin forever on the
+          # same error.
+          for try in 1 2 3; do
+            if gh workflow run oci-retry.yml --ref main; then
+              echo "next run dispatched (attempt $try)"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::could not dispatch the next run: the wait falls back to the schedule"
+          exit 1
