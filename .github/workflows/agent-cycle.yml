@@ -1,0 +1,302 @@
+name: agent / cycle
+
+# The autopilot's unit of work, and the only workflow allowed to write `main`: one
+# batch, the Orchestrator driving the ritual it already knows — cut, spec, worktree,
+# dev, QA, merge --no-ff, bookkeeping, push. Nested subagents were measured working
+# headlessly, so the roles are used exactly as written.
+#
+# The unit of durability is the **task**, not the batch: every `task-<ID>` branch is
+# pushed (spec first, then `dev: done` and `qa: pass` markers on its tip) and each
+# task's merge travels with its tick and its CHANGELOG entry in **one push**. A dead
+# runner therefore loses at most the task in flight, and the next cycle adopts the
+# live branches from `.agent_specs/resume.md` instead of cutting the batch again. The
+# run's conclusion is the outcome (`main` moved or an issue opened, gate green), not
+# the agent's exit code; a transport drop that shipped nothing is retried once inside
+# the job. `docs/agent-ci.md` owns the whole protocol.
+#
+# The batch is NOT named here. The role reads `TODO.md`'s plan and picks the lowest
+# pending batch whose dependencies are closed, applying the `*Decision:*` line each
+# item carries. A decision that is not written is never invented: the task is
+# blocked in an issue and the next candidate is taken.
+#
+# What the runner has to tell the role, because the local flow took it for granted:
+#   * There is no human. The `question` tool would hang the job: a blocking doubt
+#     becomes an `agent-blocked` issue instead.
+#   * There is no browser. A `[live]` criterion cannot be measured here, so it is
+#     never reported as passing: it becomes an `agent-review` issue, which is the
+#     `[?]` state of the design, and does not by itself stop the merge.
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: Model the whole cycle runs on (empty = CB_AGENT_MODEL)
+        default: ''
+        required: false
+      merge:
+        description: Merge to main at the end (false stops after QA)
+        type: boolean
+        default: true
+
+concurrency:
+  group: agent-cycle
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+  # To hand the baton to the driver when the cycle ends: the scheduled cron fires far
+  # less often than it asks to, so the loop cannot depend on it alone.
+  actions: write
+
+jobs:
+  cycle:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Remember where main and the issue list were
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          before=$(gh api "repos/$GITHUB_REPOSITORY/issues?state=open&per_page=100" --paginate | jq -s 'add | length')
+          {
+            echo "BEFORE_SHA=$(git rev-parse HEAD)"
+            echo "BEFORE_ISSUES=$before"
+          } >> "$GITHUB_ENV"
+          echo "main=$BEFORE_SHA  issues open=$before"
+
+      - run: npm ci --prefer-offline --no-audit --no-fund
+      - run: npm install -g @opencode/cli
+
+      - name: Configure git identity
+        run: |
+          git config user.name codebox-bot
+          git config user.email codebox-bot@users.noreply.github.com
+
+      - name: Recon the cycle's durable state
+        run: |
+          set -euo pipefail
+          git fetch --prune --quiet origin
+          node scripts/agent/recon.mjs --todo TODO.md --base origin/main --out .agent_specs/resume.md
+
+      - name: Run the cycle
+        id: agent
+        continue-on-error: true
+        env:
+          CB_AGENT_MODEL: ${{ vars.CB_AGENT_MODEL }}
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o pipefail
+          model='${{ inputs.model }}'
+          [ -n "$model" ] || model="${CB_AGENT_MODEL:?CB_AGENT_MODEL is not set}"
+          # One prompt for both hosts: the VM runs this file directly, and this
+          # workflow reads it so the fallback cannot drift from the loop.
+          PROMPT=$(sed -e "s|{{MERGE}}|${{ inputs.merge }}|g" scripts/agent/vm/prompt.md)
+          # A transport drop is not a broken loop: retry once when it shipped nothing. With
+          # the durable branches the second attempt adopts whatever the first one pushed,
+          # so the retry is cheap; after a task shipped, the next cycle resumes instead.
+          run_cycle() {
+            opencode run --agent orchestrator --auto --model "$model" "$PROMPT" 2>&1 | tee -a /tmp/cycle.txt
+            return "${PIPESTATUS[0]}"
+          }
+          run_cycle
+          status=$?
+          if [ "$status" -eq 0 ]; then exit 0; fi
+          after=$(gh api "repos/$GITHUB_REPOSITORY/issues?state=open&per_page=100" --paginate | jq -s 'add | length' || echo '?')
+          if [ "$(git rev-parse HEAD)" = "$BEFORE_SHA" ] && [ "$after" = "${BEFORE_ISSUES:-}" ] && grep -qE 'Transport:|finish_reason' /tmp/cycle.txt; then
+            echo "::warning::The model stream dropped with nothing shipped; retrying the cycle once."
+            node scripts/agent/recon.mjs --todo TODO.md --base origin/main --out .agent_specs/resume.md
+            run_cycle
+            exit $?
+          fi
+          exit "$status"
+
+      - name: What the cycle changed
+        if: always()
+        run: |
+          echo "== main before: $BEFORE_SHA"
+          echo "== main now:    $(git rev-parse HEAD)"
+          echo "== new commits"
+          git log --oneline "$BEFORE_SHA..HEAD" || true
+          echo "== files touched"
+          git diff --stat "$BEFORE_SHA..HEAD" || true
+          echo "== tree state"
+          git status --short
+
+      - name: The merged tree still passes the gate
+        id: gate
+        if: always()
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          npm ci --prefer-offline --no-audit --no-fund 2>&1 | tee /tmp/install.log
+          npm run lint 2>&1 | tee /tmp/lint.log
+          npm test 2>&1 | tee /tmp/test.log
+          npm run build 2>&1 | tee /tmp/build.log
+
+      - name: The cycle's verdict
+        id: verdict
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AGENT_OUTCOME: ${{ steps.agent.outcome }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          MERGE_INPUT: ${{ inputs.merge }}
+        run: |
+          # The run's conclusion is the outcome, not the agent's exit code. A transport
+          # drop after a task shipped is a warning, not a broken loop: with one push per
+          # task, `main` and `TODO.md` are consistent at every boundary and the next cycle
+          # resumes from the branches. A red streak must mean a loop that moves nothing.
+          after=$(gh api "repos/$GITHUB_REPOSITORY/issues?state=open&per_page=100" --paginate | jq -s 'add | length')
+          head=$(git rev-parse HEAD)
+          moved=no; [ "$head" = "$BEFORE_SHA" ] || moved=yes
+          issued=no; [ "$after" = "${BEFORE_ISSUES:-}" ] || issued=yes
+          echo "main $BEFORE_SHA -> $head (moved: $moved), issues ${BEFORE_ISSUES:-?} -> $after, agent: ${AGENT_OUTCOME:-unknown}, gate: ${GATE_OUTCOME:-unknown}, merge: ${MERGE_INPUT:-true}"
+
+          if [ "${GATE_OUTCOME:-unknown}" != success ]; then
+            echo "::error::The merged tree does not pass the gate: nothing is trusted until it does."
+            exit 1
+          fi
+          if [ "$moved" = yes ] || [ "$issued" = yes ]; then
+            if [ "${AGENT_OUTCOME:-unknown}" != success ]; then
+              echo "::warning::The cycle exited ${AGENT_OUTCOME}, but it left a trace (main moved and/or an issue opened); the next cycle resumes from it."
+            fi
+            exit 0
+          fi
+          if [ "$MERGE_INPUT" != true ] && [ "${AGENT_OUTCOME:-unknown}" = success ]; then
+            echo "::warning::Stopped after QA on purpose (merge disabled); the branches stay in qa: pass for the next cycle."
+            exit 0
+          fi
+          echo "::error::The cycle moved nothing and opened no issue: the work it started did not finish inside this run."
+          exit 1
+
+      - name: Hand the baton to the next cycle
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Measured overnight: a `*/30` cron fired three times in six hours on this
+          # private repository, so the loop cannot depend on the schedule. The cycle
+          # asks the driver for the next one instead, and tells it to ignore this run —
+          # which is still in flight, and would otherwise read as "a cycle is already
+          # running". The driver keeps every decision: CB_AGENT_AUTOPILOT, the backlog, the red
+          # streak and the cap.
+          gh workflow run agent-autopilot.yml --ref main -f ignore_run=${{ github.run_id }} || true
+
+      - name: Summary
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          AGENT_OUTCOME: ${{ steps.agent.outcome }}
+          GATE_OUTCOME: ${{ steps.gate.outcome }}
+          VERDICT_OUTCOME: ${{ steps.verdict.outcome }}
+          MERGE_INPUT: ${{ inputs.merge }}
+        run: |
+          # The run's own summary. GitHub renders its own test panel from the log; this
+          # is the part it cannot know: which tasks the cycle took, what the gate did,
+          # and what a human still has to look at — with a symbol per line so the state
+          # reads at a glance from the runs list.
+          set -uo pipefail
+          out="$GITHUB_STEP_SUMMARY"
+          line() { printf '%s\n' "$1" >> "$out"; }
+
+          before=$(git rev-parse "$BEFORE_SHA")
+          moved=$(git rev-parse HEAD)
+          short=$(git rev-parse --short HEAD)
+          tasks=$(git log --format=%s "$BEFORE_SHA..HEAD" | grep -oE 'task-[0-9]+' | sort -u | sed 's/^task-/Task-/' | paste -sd' ' - || true)
+          [ -n "$tasks" ] || tasks='—'
+          diff=$(git diff --shortstat "$BEFORE_SHA..HEAD" || true)
+          [ -n "$diff" ] || diff='nothing'
+          tests=$(grep -aoE '[0-9]+ passed \([0-9]+\)' /tmp/test.log 2>/dev/null | tail -1 || true)
+          started=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .run_started_at 2>/dev/null || echo '')
+          review=''
+          blocked=''
+          if [ -n "$started" ]; then
+            review=$(gh issue list --state open --label agent-review --limit 30 \
+              --json number,title,url,createdAt \
+              --jq ".[] | select(.createdAt >= \"$started\") | \"[#\(.number)](\(.url)) \(.title)\"" || true)
+            blocked=$(gh issue list --state open --label agent-blocked --limit 30 \
+              --json number,title,url,createdAt \
+              --jq ".[] | select(.createdAt >= \"$started\") | \"[#\(.number)](\(.url)) \(.title)\"" || true)
+          fi
+          open=$(grep -cE '^- \[ \] \*\*\[Task-' TODO.md || true)
+          marks=$(grep -cE '^- \[!\] \*\*\[Task-' TODO.md || true)
+          inflight=$(grep -oE 'branches alive: [0-9]+' .agent_specs/resume.md 2>/dev/null | grep -oE '[0-9]+' || true)
+          [ -n "$inflight" ] || inflight='?'
+
+          if [ "${VERDICT_OUTCOME:-unknown}" != success ]; then
+            emoji='🛑'; title='The cycle failed'
+          elif [ "$MERGE_INPUT" != 'true' ]; then
+            emoji='⚠️'; title='Stopped after QA (merge disabled)'
+          elif [ "$moved" = "$before" ]; then
+            emoji='⚠️'; title='Nothing shipped this cycle'
+          elif [ "${AGENT_OUTCOME:-unknown}" != success ]; then
+            emoji='♻️'; title='Interrupted, resumable'
+          else
+            emoji='✅'; title='Batch shipped'
+          fi
+
+          line "# $emoji $title"
+          line ""
+          line "| | |"
+          line "| --- | --- |"
+          line "| Tasks | $tasks |"
+          line "| main | \`${BEFORE_SHA:0:7}\` → \`$short\` |"
+          line "| Gate (post-merge) | ${GATE_OUTCOME:-unknown}${tests:+ · $tests} |"
+          line "| Diff | $diff |"
+          line "| Backlog | $open open · $marks blocked |"
+          line "| In flight | $inflight task branch(es) |"
+
+          if [ "${VERDICT_OUTCOME:-unknown}" = success ] && [ "${AGENT_OUTCOME:-unknown}" != success ]; then
+            line ""
+            line "### ♻️ Interrupted, not lost"
+            line ""
+            line "The process ended with \`${AGENT_OUTCOME}\`; every task it finished is already on \`main\` (one push per task, tick and CHANGELOG included) and any task in flight travels in its \`task-*\` branch. The next cycle adopts it."
+          fi
+
+          if [ -n "$review" ]; then
+            line ""
+            line "### ⚠️ Parked for your eye"
+            line ""
+            line "Measured everything it could; these are the subjective residue."
+            line ""
+            printf '%s\n' "$review" | sed 's/^/- /' >> "$out"
+          fi
+          if [ -n "$blocked" ]; then
+            line ""
+            line "### 🛑 Blocked — needs a decision or a fix"
+            line ""
+            printf '%s\n' "$blocked" | sed 's/^/- /' >> "$out"
+          fi
+
+          if [ "${AGENT_OUTCOME:-unknown}" != success ] && [ -f /tmp/cycle.txt ]; then
+            line ""
+            line "### 🛑 What the cycle said at the end"
+            line ""
+            line '```'
+            tail -n 12 /tmp/cycle.txt | sed -e 's/\x1b\[[0-9;]*m//g' -e 's/`//g' >> "$out"
+            line '```'
+          fi
+
+          if [ "$moved" != "$before" ]; then
+            line ""
+            line "<details><summary>Commits</summary>"
+            line ""
+            git log --format='- `%h` %s' "$BEFORE_SHA..HEAD" >> "$out"
+            line ""
+            line "</details>"
+          fi
+# Re-registered after the repository was recreated (2026-10-20).

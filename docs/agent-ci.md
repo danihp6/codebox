@@ -18,8 +18,6 @@ repository would make Actions free and the box merely warmer and faster.
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
 | `ci.yml` | push to `main`, pull requests | The gate: `npm ci && npm run lint && npm test && npm run build`. Read-only. |
-| `agent-smoke.yml` | dispatch | Proves the inference credential, the CLI and `CB_AGENT_MODEL` answer. Spends a few cents. |
-| `agent-role-smoke.yml` | dispatch | Proves a roled agent starts headless, loads its prompt, uses a tool under `--auto`, and can push a throwaway branch. |
 | `agent-cycle.yml` | dispatch (the driver dispatches it) | **One batch, end to end.** The only workflow that merges into `main`. |
 | `agent-autopilot.yml` | `schedule` every 30 min, dispatch | The loop: decides whether a cycle may start and dispatches one. Spends no tokens. |
 | `agent-autopilot-window.yml` | dispatch, `schedule` hourly | The timed brake: arms `CB_AGENT_AUTOPILOT` for a range and turns it off on the range's edges. |
@@ -234,8 +232,6 @@ Workflow permissions are per job, minimal:
 | Workflow | `permissions` |
 | --- | --- |
 | `ci.yml` | `contents: read` |
-| `agent-smoke.yml` | `contents: read` |
-| `agent-role-smoke.yml` | `contents: write` (throwaway branch only) |
 | `agent-cycle.yml` | `contents: write`, `issues: write` |
 | `agent-autopilot.yml` | `actions: write`, `issues: write`, `contents: read` |
 | `agent-autopilot-window.yml` | `actions: write`, `contents: read` |
@@ -287,9 +283,7 @@ itself), which is cheap next to the cycle it exists to stop starting.
   owns those branches.
 - `main` has no server-side protection unless the plan offers rulesets for a private
   repository. Where it does not, the only barrier between the agent and `main` is the gate,
-  the QA waves and the job's `contents: write` — which is why only `agent-cycle.yml` and
-  `agent-role-smoke.yml` hold it, and the smoke is limited to one throwaway branch that it
-  deletes.
+  the QA waves and the job's `contents: write` — which is why only `agent-cycle.yml` holds it.
 - The agent runs with `--auto`, a shell, an inference key in its environment and write access
   to `main`. `webfetch` is denied for every pipeline role, so a poisoned document inside the
   repository is the injection risk worth watching; protected paths are the product's answer
@@ -311,9 +305,6 @@ itself), which is cheap next to the cycle it exists to stop starting.
 ## 13. What Batch 1 must prove
 
 - `ci.yml` is green from a fresh clone with the empty workspace stubs.
-- `agent-smoke.yml` answers with `CB_AGENT_MODEL` and reports the model id it used.
-- `agent-role-smoke.yml` starts `orchestrator` headless, proves a tool call under `--auto`,
-  and pushes a branch that is deleted afterwards.
 - One manual `agent-cycle.yml` — forced, or with the brake armed for the run — ships a
   docs-only task through the full ritual, and the brake is off again afterwards.
 - A cycle that moves nothing is red, and the third red parks the loop.
