@@ -234,3 +234,19 @@ Quiet hours hold everything except `approval.created` and failures of a job mark
 - Never touches a protected path with auto-merge on.
 - Never retries itself in a loop, and never reuses a worktree.
 - Never rewrites history: no force-push, no amend of a pushed commit.
+
+## 15. Routines (chat schedules)
+
+A routine is **not** a run. It is a cron entry with a `kind` (D38):
+
+- `reminder` — push only, no model, no session, no worktree. "Remind me to take the pill."
+- `prompt` — the daemon appends an `origin: routine` message to its `chatSessionId`, or creates
+  a new chat session for the routine when it has none or the old one was archived, sends it to
+  OpenCode and streams the reply; the chat stays a chat (D36).
+
+The **chat agent creates them** through the `routine.create` tool; unattended run agents never
+get the tool. The app can list, pause, run now and delete, but creation is conversational. The
+scheduler claims `(routine_id, scheduled_for)` transactionally and uses the same D13 misfire
+rule as a job. A `prompt` with no `chatSessionId` — or whose session was archived — gets a new
+chat session on that fire; it never appends to an unrelated one. A `reminder` costs nothing; a
+`prompt` counts against `CB_DAILY_COST_USD`.

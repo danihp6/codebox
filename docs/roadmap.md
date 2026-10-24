@@ -81,6 +81,19 @@ and cost targets met or explained, and the owner prefers it to SSH for the same 
 **Risks:** the operator stops using it; the app becomes a chore. Mitigation: narrow scope,
 push-first flows, measure time-to-action.
 
+## Phase 7 — Routines (Batch 9)
+
+**Outcome:** the operator says "remind me to take the pill at 10" or "summarise the repo every
+morning" in chat, the agent creates the routine, and it fires with a push. Reminders spend no
+tokens; prompt routines spend the daily cap.
+
+**Exit criterion:** a reminder and a prompt routine created from chat fire on time in
+`Europe/Madrid`, the reply lands in its session (created on the first fire when it had none),
+and the push deep-links to it.
+
+**Risks:** noisy schedules and cost creep. Mitigation: push preferences, quiet hours, the
+daily cap, and no routine tool in unattended runs (D38).
+
 ## Sequencing at a glance
 
 ```mermaid

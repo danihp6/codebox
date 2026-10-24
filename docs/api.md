@@ -263,6 +263,21 @@ Replying twice is a 409; the second reply never reaches OpenCode.
 | `POST` | `/v1/push/subscriptions` | `write` | `{ kind: "web" \| "fcm" \| "apns", endpoint, keys }`. |
 | `DELETE` | `/v1/push/subscriptions/{id}` | `write` | Unsubscribe. |
 
+### 5.8 Routines
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/v1/routines` | `read` | Schedules with `nextFireAt`, `lastFiredAt` and `enabled`. |
+| `POST` | `/v1/routines` | `chat` | `{ title, kind, cron, timezone, repoId?, prompt?, chatSessionId?, notify }`; also the target of `routine.create`. |
+| `GET` | `/v1/routines/{id}` | `read` | One routine and its last fire. |
+| `PATCH` | `/v1/routines/{id}` | `chat` | Pause/resume or edit the schedule. |
+| `DELETE` | `/v1/routines/{id}` | `chat` | Delete it and its fires. |
+| `POST` | `/v1/routines/{id}/run` | `chat` | Fire now; idempotent per minute. |
+
+A `reminder` has no `prompt`; a `prompt` requires `repoId` and `prompt`. When `chatSessionId` is
+omitted, the daemon creates a chat session for the routine on its first fire. Creation is
+normally the chat agent's `routine.create` tool; the app lists, pauses and deletes.
+
 ## 6. SSE
 
 `GET /v1/events` is the only stream. Query filters (`types`, `runId`, `chatId`) are additive;
@@ -292,7 +307,8 @@ data: {"runId":"run_01J...","seq":17,"delta":"…","ts":"2026-10-24T18:04:02Z"}
 Event types are the D14/D16 list: `run.queued`, `run.started`, `run.output`, `run.tool`,
 `run.permission`, `run.gate`, `run.pr`, `run.merged`, `run.finished`, `run.failed`,
 `run.cancelled`, `chat.delta`, `chat.message`, `chat.tool`, `chat.permission`, `chat.idle`,
-`job.changed`, `approval.created`, `approval.resolved`, `telemetry`.
+`routine.fired`, `routine.replied`, `routine.failed`, `job.changed`, `approval.created`,
+`approval.resolved`, `telemetry`.
 
 ## 7. Rate limits
 

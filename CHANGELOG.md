@@ -94,6 +94,10 @@ the contracts and the delivery plan before any code exists.
 
 ### Changed
 
+- D38: **two schedules, one clock.** Jobs stay repo transactions; **routines** are chat
+  schedules (`prompt`/`reminder`) created by the chat agent through a daemon tool, fired by the
+  same scheduler. A prompt routine with no session — or an archived one — gets a new chat on
+  fire. Tasks 33–36 and the local L1/L2 items are in the backlog.
 - D37: the source repository is **public**, so the OCI wait and the agent loop spend no
   Actions minutes. `docs/agent-ci.md` §8 and §11 now treat the private-plan allowance as a
   fallback for the day it goes private.

@@ -81,7 +81,7 @@ One feature folder owns its routes, components and store. A shared component mov
 | `/repos/:id` | Repo | Gate editor, protected paths, policy, recent runs. |
 | `/chat` | Chat list | Sessions by repo, last message, unread marker. |
 | `/chat/:id` | Chat | Streaming text, tool cards, permission cards, interrupt, promote. |
-| `/jobs` | Jobs | List, next fire, pause/resume, create. |
+| `/jobs` | Jobs | List, next fire, pause/resume, create; a **Routines** tab lists the chat schedules and opens the editor as a sheet. |
 | `/jobs/:id` | Job | Cron and timezone editor, next fires, history. |
 | `/runs` | Runs | Filterable list with state chips and cost. |
 | `/runs/:id` | Run detail | Timeline, gate tail, guardrail checklist, PR link, cancel, revert. |
@@ -146,7 +146,10 @@ The chat screen is the product's front door:
 - permission cards with **Allow once / Allow for session / Deny**, disabled after reply;
 - a composer that stays usable while the agent works, with a stop button;
 - "Promote to run" opens a confirmation with the repo, base branch and the prompt that will
-  be used, then navigates to the new run.
+  be used, then navigates to the new run;
+- a routine created in chat renders a confirmation card with its kind (`reminder` or
+  `prompt`), the local time and the next fire; routine messages carry a `routine` badge and a
+  link to the list.
 
 Streaming text is appended with a single `requestAnimationFrame` flush per frame; the list
 sticks to the bottom only when the user is already at the bottom.
@@ -181,9 +184,10 @@ is worse than a disabled button.
 - **Web/PWA:** `PushManager` subscription with the VAPID public key, stored through
   `POST /v1/push/subscriptions`.
 - **Native:** Capacitor Push (FCM/APNs) with the same event-to-payload mapping (D30).
-- Payloads carry `{ type, runId?, chatId?, title, body }`; a tap deep-links to the resource.
-- Preferences per event type (`run.finished`, `run.failed`, `approval.created`,
-  `run.merged`), plus quiet hours evaluated on the daemon, not the device.
+- Payloads carry `{ type, runId?, chatId?, routineId?, title, body }`; a tap deep-links to the
+  resource.
+- Preferences per event type (`run.finished`, `run.failed`, `approval.created`, `run.merged`,
+  `routine`), plus quiet hours evaluated on the daemon, not the device.
 
 ## 12. Testing
 

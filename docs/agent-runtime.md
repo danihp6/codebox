@@ -35,6 +35,11 @@ A session is always created **inside a directory**: the run's worktree, or the c
 worktree. The daemon never lets a session see `/`, the repository cache or the state
 directory.
 
+A **routine tool** (`routine.create` / `list` / `pause`) is mounted in chat sessions only: it
+writes a schedule through the daemon, never the filesystem. Run sessions never receive it
+(D38); a run that could create schedules would turn prompt injection into persistence. A
+`prompt` routine without a session creates one on its first fire.
+
 Sessions are named `cb-run-<runId>` and `cb-chat-<chatId>`, so a leaked session id in a log
 is traceable to a row without exposing a prompt.
 
@@ -125,6 +130,9 @@ Two policies (D27):
 - The policy is data in `packages/core`, not scattered `if`s in the daemon.
 - A denial is `approval.resolved` with `decision: "deny"` and `reason: "policy"`; the agent
   receives a rejection and may adapt.
+- `routine.create/list/pause` is a **chat-only** tool (D38). It is not in the run tool set and
+  never appears in a run's prompt; a schedule is created by a human conversation, not by an
+  unattended agent.
 
 The job environment is an allowlist (`CB_MODEL_PROVIDER_KEYS` plus `PATH`, `HOME`, `LANG`
 and the git identity). GitHub credentials, the session secret, the Vault token and the

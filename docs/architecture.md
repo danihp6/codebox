@@ -120,6 +120,8 @@ single writer. Tables:
 | `repos` | Registered repositories and per-repo policy. |
 | `jobs` | Reusable job definitions, cron, timezone, prompt, mode. |
 | `runs` | One execution: trigger, state, branch, worktree, session, PR, gate, cost. |
+| `routines` | Chat schedules: `prompt` or `reminder`, cron, IANA timezone, optional chat session. |
+| `routine_fires` | One row per fire; `(routine_id, scheduled_for)` is the idempotency key. |
 | `run_events` | Append-only timeline (`seq`, `type`, `payload`, `ts`). |
 | `approvals` | Permission requests and their replies. |
 | `chat_sessions` | Persistent chat sessions bound to a repo. |
@@ -359,6 +361,7 @@ Rules enforced by review and, later, by a dependency-cruiser check:
 | VM reboots | systemd starts the units; boot reconciliation marks orphaned `running` runs as `failed` with `instance_restarted`, removes stale locks, and resumes the queue. |
 | Disk full | The run engine refuses new runs, cleans old worktrees, raises `telemetry` with `disk_low`; the app shows a blocking banner. |
 | Clock/DST | Cron uses IANA zones and the misfire policy (D13); a missed fire is explicit, never a silent catch-up storm. |
+| Routine's chat session archived or absent | A `prompt` routine creates a new chat session for the fire; it never appends to an unrelated session. |
 | Token expired/revoked | GitHub App tokens refresh; a revoked device gets `401` and must re-pair; the app clears its local token. |
 | Cost cap reached | The current run is cancelled, the queue pauses, the owner is notified; the next UTC day resets it. |
 | Duplicate scheduler tick | Claiming a run is a SQLite transaction with a unique `(job_id, scheduled_for)` constraint; a second tick updates nothing. |

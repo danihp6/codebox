@@ -42,9 +42,10 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 3 | Integrations: OpenCode, workspaces, scheduler, GitHub | 07–10 | 4 |
 | 4 | Daemon: config, auth, chat, runs, CLI | 11–12, 13–17 | 2, then 4 |
 | 5 | Hybrid app shell and screens | 18 → 19–23 | 1, then 5 |
-| 6 | OCI extraction and VM image | 24–25 | 2 |
+| 6 | OCI extraction and VM image | 24–25, 33 | 3 |
 | 7 | Hardening, e2e, observability, release | 26–30 | 5 |
-| 8 | Beta, onboarding, migration of pkm | 31–32 | 2 |
+| 8 | Beta, onboarding, migration of pkm | 31–32, 34 | 3 |
+| 9 | Chat routines and reminders | 35–36 | 1, then 2 |
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -361,6 +362,16 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       second boot; `[live]` an instance launched from the image boots, starts the tunnel and
       answers `/v1/health` without manual steps.
 
+- [ ] **[Task-33]** Routine contracts. Zod schemas and types for `Routine` (`kind` =
+      `prompt`/`reminder`, cron, IANA timezone, optional `repoId` and `prompt`, optional
+      `chatSessionId`, `enabled`, `nextFireAt`, `lastFiredAt`, `notify`) and for the chat tool
+      input/output that creates them; the `routine.fired`, `routine.replied` and
+      `routine.failed` events; the `/v1/routines` shapes. *Paths:* `packages/contracts/**`,
+      `docs/api.md` (routine section). *Dependencies:* Task-03. *Acceptance:* `[unit]` a
+      fixture per kind parses; `[unit]` a prompt routine without repo/prompt is rejected and a
+      reminder without prompt is accepted; `[unit]` the tool schema rejects a missing timezone;
+      `[unit]` the OpenAPI document lists the three events.
+
 ---
 
 ## Batch 7 — Hardening, e2e, observability, release
@@ -421,6 +432,58 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       updates `docs/oci.md` (migration section). *Dependencies:* Task-24, Task-31.
       *Acceptance:* `[live]` pkm has no `oci-retry` workflow, `OCI_RETRY` is `off` or gone,
       and a search of that repository finds no `pkm-` OCI resource identifier.
+- [ ] **[Task-34]** Routine store and scheduler. Add `routines` and `routine_fires` (a
+      numbered migration; never edit an applied one), the repositories, and the transactional
+      claim on `(routine_id, scheduled_for)`; next fire in the IANA zone with the D13 misfire
+      rule. *Paths:* `packages/store/**`, `packages/scheduler/**`,
+      `docs/architecture.md` (table section), `docs/jobs.md` (routine scheduling section).
+      *Dependencies:* Task-04, Task-09, Task-33. *Acceptance:* `[unit]` migrations apply to an
+      empty database and are idempotent; `[unit]` 20 concurrent claims produce one winner;
+      `[unit]` a DST transition in `Europe/Madrid` produces the expected next fire; `[unit]` a
+      missed fire inside the grace runs once and outside it is skipped.
+
+---
+
+## Batch 9 — Chat routines and reminders
+
+A routine is not a run: no worktree, no gate, no PR (D38). The agent defines it from chat, the
+scheduler fires it, the app lists and pauses it. `reminder` costs no tokens; `prompt` counts
+against the daily cap.
+
+- [ ] **[Task-35]** Routine engine and the chat tool. On a fire: a `reminder` pushes and does
+      nothing else; a `prompt` appends an `origin: routine` message to its `chatSessionId`, or
+      creates a new chat session for the routine when it has none or the old one was archived,
+      sends it to OpenCode and streams the reply, pushing a summary at the end. Expose
+      `routine.create` / `list` / `pause` to **chat sessions only** — an unattended run never
+      gets the tool — and write the agent instructions for it. No worktree, no gate, no PR.
+      *Paths:* `apps/daemon/src/routines/**`, `docs/jobs.md` (routine execution section),
+      `docs/agent-runtime.md` (routine tool section). *Dependencies:* Task-13, Task-16,
+      Task-34. *Acceptance:* `[unit]` a reminder writes one push and no chat message; `[unit]`
+      a prompt fire writes one message, streams the reply and never opens a PR; `[unit]` a
+      prompt routine with no session creates one; `[unit]` a run agent cannot call the tool;
+      `[live]` a routine created from chat fires and its answer appears in that session.
+- [ ] **[Task-36]** Routines UI. A routines tab in the jobs screen: list, next fire, last
+      result, pause/resume, run now and delete; the chat shows a confirmation card when the
+      agent creates one (kind, local time, cost) and a badge on routine messages. Notification
+      preference `routine`. *Paths:* `apps/app/src/app/features/jobs/**` (routines tab),
+      `docs/app.md` (chat and jobs sections). *Dependencies:* Task-21, Task-35. *Acceptance:*
+      `[unit]` pause/resume and delete call the contract; `[unit]` a reminder and a prompt
+      routine render their distinct kind and cost; `[live]` a routine created in chat appears
+      in the list without a reload and its push arrives on the phone.
+
+---
+
+## Local / human (never picked by the driver)
+
+The driver only counts `- [ ] **[Task-NN]**`; these `L<n>` items are outside the queue by
+construction. They need a local key, an external tool or a store account.
+
+- [ ] **L1 — Release signing.** Keep the Android keystore and the Apple certificate off the
+      repository and off Actions; Task-29 builds unsigned artifacts and checksums; the operator
+      signs and distributes. *Dependencies:* Q1 (distribution) and Task-29.
+- [ ] **L2 — Visual prototype.** A Figma file with the seven screens (pair, dashboard, repos,
+      chat, jobs, run detail, settings) and the tokens in `docs/app.md` §9; export PNGs and a
+      screen-to-route map into `design/`. Task-18 implements from it. *Dependencies:* none.
 
 ---
 

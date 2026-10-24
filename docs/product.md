@@ -107,6 +107,9 @@ In:
 - dashboard and repo settings;
 - OCI provisioning, image, tunnel, backup and `cb doctor`.
 
+**Later:** routines (chat schedules and reminders, D38) are Phase 7 / Batch 9; they are not
+v0.1 scope. A routine is not a run and never opens a PR.
+
 Out (deliberately):
 
 - multi-user, roles, organisations;
