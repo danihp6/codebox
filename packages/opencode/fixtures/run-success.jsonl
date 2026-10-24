@@ -1,0 +1,7 @@
+{"type":"session.updated","properties":{"sessionId":"ses_fixture01","status":"busy"}}
+{"type":"message.part.text","properties":{"sessionId":"ses_fixture01","messageId":"msg_fixture01","delta":"Reading the repository.\n"}}
+{"type":"message.part.text","properties":{"sessionId":"ses_fixture01","messageId":"msg_fixture01","delta":"Running the repository gate.\n"}}
+{"type":"message.part.tool","properties":{"sessionId":"ses_fixture01","messageId":"msg_fixture02","tool":"bash","status":"start"}}
+{"type":"message.part.text","properties":{"sessionId":"ses_fixture01","messageId":"msg_fixture03","delta":"The gate is green.\n"}}
+{"type":"session.usage","properties":{"sessionId":"ses_fixture01","model":"anthropic/claude-sonnet-4","tokensIn":128,"tokensOut":64,"costUsd":0.0042}}
+{"type":"session.updated","properties":{"sessionId":"ses_fixture01","status":"idle"}}

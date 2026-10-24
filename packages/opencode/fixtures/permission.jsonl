@@ -1,0 +1,2 @@
+{"type":"session.updated","properties":{"sessionId":"ses_fixture01","status":"busy"}}
+{"type":"permission.updated","properties":{"sessionId":"ses_fixture01","permissionId":"per_fixture01","tool":"bash","title":"Run the repository gate","input":{"command":"npm run gate"}}}

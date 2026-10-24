@@ -1,0 +1,2 @@
+{"type":"session.updated","properties":{"sessionId":"ses_fixture01","status":"busy"}}
+{"type":"message.part.text","properties":{"sessionId":"ses_fixture01","messageId":"msg_fixture01","delta":"Applying the change.\n"}}
