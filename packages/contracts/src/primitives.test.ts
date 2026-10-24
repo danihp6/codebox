@@ -7,8 +7,11 @@ import {
   ID_PREFIXES,
   JobId,
   MessageId,
+  ROUTINE_EVENT_NAMES,
+  ROUTINE_KINDS,
   RepoId,
   RequestId,
+  RoutineId,
   RUN_MODES,
   RUN_STATE_TERMINAL,
   RUN_STATES,
@@ -24,6 +27,7 @@ import {
   globSchema,
   idSchema,
   isTerminalRunState,
+  routineKindSchema,
   runStateSchema,
   sseEventNameSchema,
   slugSchema,
@@ -43,12 +47,14 @@ describe('ids', () => {
       ['msg_01JABCDEFG', 'message'],
       ['dev_01JABCDEFG', 'device'],
       ['sub_01JABCDEFG', 'pushSubscription'],
+      ['rtn_01JABCDEFG', 'routine'],
       ['c_01JABCDEFG', 'cursor'],
       ['req_01JABCDEFG', 'request'],
     ];
     for (const [id, prefix] of cases) {
       expect(idSchema(prefix as keyof typeof ID_PREFIXES).safeParse(id).success).toBe(true);
     }
+    expect(ID_PREFIXES.routine).toBe('rtn_');
     expect(RepoId.safeParse('run_01JABCDEFG').success).toBe(false);
     expect(JobId.safeParse('job_short').success).toBe(false);
     expect(RunId.safeParse('run_01JABCDEFG').success).toBe(true);
@@ -57,6 +63,9 @@ describe('ids', () => {
     expect(MessageId.safeParse('msg_01JABCDEFG').success).toBe(true);
     expect(DeviceId.safeParse('dev_01JABCDEFG').success).toBe(true);
     expect(SubscriptionId.safeParse('sub_01JABCDEFG').success).toBe(true);
+    expect(RoutineId.safeParse('rtn_01JABCDEFG').success).toBe(true);
+    expect(RoutineId.safeParse('sub_01JABCDEFG').success).toBe(false);
+    expect(RoutineId.safeParse('rtn_short').success).toBe(false);
     expect(Cursor.safeParse('c_01JABCDEFG').success).toBe(true);
     expect(RequestId.safeParse('req_01JABCDEFG').success).toBe(true);
   });
@@ -134,12 +143,15 @@ describe('enums', () => {
     expect([...SCOPES]).toEqual(['read', 'chat', 'runs', 'write', 'admin']);
     expect([...RUN_TRIGGERS]).toEqual(['schedule', 'manual', 'promote', 'revert', 'retry']);
     expect([...RUN_MODES]).toEqual(['work']);
+    expect([...ROUTINE_KINDS]).toEqual(['prompt', 'reminder']);
+    expect(routineKindSchema.safeParse('reminder').success).toBe(true);
+    expect(routineKindSchema.safeParse('job').success).toBe(false);
   });
 });
 
 describe('events', () => {
   it('the event name list is the D14 list', () => {
-    expect(SSE_EVENT_NAMES).toHaveLength(20);
+    expect(SSE_EVENT_NAMES).toHaveLength(23);
     expect([...SSE_EVENT_NAMES]).toEqual([
       'run.queued',
       'run.started',
@@ -161,7 +173,17 @@ describe('events', () => {
       'approval.created',
       'approval.resolved',
       'telemetry',
+      'routine.fired',
+      'routine.replied',
+      'routine.failed',
     ]);
+    expect([...ROUTINE_EVENT_NAMES]).toEqual([
+      'routine.fired',
+      'routine.replied',
+      'routine.failed',
+    ]);
+    expect([...SSE_EVENT_NAMES].slice(-3)).toEqual([...ROUTINE_EVENT_NAMES]);
+    expect([...SSE_EVENT_NAMES].indexOf('telemetry')).toBe(19);
     expect([...SSE_CONTROL_EVENT_NAMES]).toEqual(['gap']);
     for (const control of SSE_CONTROL_EVENT_NAMES) {
       expect((SSE_EVENT_NAMES as readonly string[]).includes(control)).toBe(false);

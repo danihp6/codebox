@@ -16,6 +16,8 @@ const chatId = 'chat_01JABCDEFG';
 const approvalId = 'apv_01JABCDEFG';
 const jobId = 'job_01JABCDEFG';
 const repoId = 'repo_01JABCDEFG';
+const routineId = 'rtn_01JABCDEFG';
+const messageId = 'msg_01JABCDEFG';
 
 const pr = { number: 42, url: 'https://github.com/dani/example/pull/42', mergeable: true };
 const gate = { status: 'passed', exitCode: 0, durationMs: 184000 };
@@ -111,6 +113,18 @@ const fixtures: Readonly<Record<SseEventName, { event: SseEventName; data: unkno
       queueDepth: 1,
     },
   },
+  'routine.fired': {
+    event: 'routine.fired',
+    data: { routineId, kind: 'prompt', scheduledFor: '2026-10-24T07:00:00Z', ts },
+  },
+  'routine.replied': {
+    event: 'routine.replied',
+    data: { routineId, chatId, messageId, ts },
+  },
+  'routine.failed': {
+    event: 'routine.failed',
+    data: { routineId, code: 'chat_unavailable', message: 'No chat could be opened.', ts },
+  },
 };
 
 function parseError(fn: () => unknown): unknown {
@@ -176,6 +190,31 @@ describe('events', () => {
       parseSseEvent({ event: 'run.output', data: { runId, seq: 1, ts, delta: 'x', tool: 'bash' } }),
     );
     expect(error instanceof ContractParseError ? error.first.path : null).toBe('event.data.tool');
+  });
+
+  it('routine events are global and carry no per-run seq', () => {
+    const fired = parseSseEvent({
+      event: 'routine.fired',
+      data: { routineId, kind: 'reminder', scheduledFor: ts, ts },
+    });
+    expect(fired.event).toBe('routine.fired');
+    const withSeq = parseError(() =>
+      parseSseEvent({
+        event: 'routine.fired',
+        data: { routineId, kind: 'reminder', scheduledFor: ts, ts, seq: 1 },
+      }),
+    );
+    expect(withSeq instanceof ContractParseError ? withSeq.first.path : null).toBe(
+      'event.data.seq',
+    );
+    const replied: SseEventData['routine.replied'] = { routineId, chatId, messageId, ts };
+    expect(replied.messageId).toBe(messageId);
+    const failed: SseEventData['routine.failed'] = {
+      routineId,
+      code: 'chat_unavailable',
+      message: 'x',
+    };
+    expect(failed.code).toBe('chat_unavailable');
   });
 
   it('accepts the gap control frame on the stream union only', () => {

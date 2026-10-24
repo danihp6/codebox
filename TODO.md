@@ -362,7 +362,7 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       second boot; `[live]` an instance launched from the image boots, starts the tunnel and
       answers `/v1/health` without manual steps.
 
-- [ ] **[Task-33]** Routine contracts. Zod schemas and types for `Routine` (`kind` =
+- [x] **[Task-33]** Routine contracts. Zod schemas and types for `Routine` (`kind` =
       `prompt`/`reminder`, cron, IANA timezone, optional `repoId` and `prompt`, optional
       `chatSessionId`, `enabled`, `nextFireAt`, `lastFiredAt`, `notify`) and for the chat tool
       input/output that creates them; the `routine.fired`, `routine.replied` and

@@ -10,6 +10,7 @@ export {
   MessageId,
   DeviceId,
   SubscriptionId,
+  RoutineId,
   Cursor,
   RequestId,
   timestampSchema,
@@ -29,8 +30,11 @@ export {
   runModeSchema,
   REPO_POLICIES,
   repoPolicySchema,
+  ROUTINE_KINDS,
+  routineKindSchema,
   RUN_STATE_TERMINAL,
   isTerminalRunState,
+  ROUTINE_EVENT_NAMES,
   SSE_EVENT_NAMES,
   sseEventNameSchema,
   SSE_CONTROL_EVENT_NAMES,
@@ -42,6 +46,7 @@ export type {
   RunTrigger,
   RunMode,
   RepoPolicy,
+  RoutineKind,
   SseEventName,
 } from './primitives.js';
 
@@ -77,6 +82,7 @@ export {
   pageOfChatSession,
   pageOfChatMessage,
   pageOfDevice,
+  pageOfRoutine,
   parsePage,
   IDEMPOTENT_ROUTES,
 } from './pagination.js';
@@ -178,6 +184,32 @@ export type {
   Brake,
 } from './resources.js';
 
+// Routines: docs/api.md §5.8, D38.
+export {
+  ROUTINE_TOOL_NAMES,
+  promptRoutineSchema,
+  reminderRoutineSchema,
+  routineSchema,
+  parseRoutine,
+  routineCreateToolInputSchema,
+  routineCreateToolOutputSchema,
+  routineListToolInputSchema,
+  routineListToolOutputSchema,
+  routinePauseToolInputSchema,
+  routinePauseToolOutputSchema,
+} from './routines.js';
+export type {
+  Routine,
+  PromptRoutine,
+  ReminderRoutine,
+  RoutineCreateToolInput,
+  RoutineCreateToolOutput,
+  RoutineListToolInput,
+  RoutineListToolOutput,
+  RoutinePauseToolInput,
+  RoutinePauseToolOutput,
+} from './routines.js';
+
 // Events: the docs/api.md §6 SSE contract, the D14/D16 list.
 export {
   runEventBase,
@@ -202,6 +234,10 @@ export {
   approvalCreatedDataSchema,
   approvalResolvedDataSchema,
   telemetryDataSchema,
+  routineEventBase,
+  routineFiredDataSchema,
+  routineRepliedDataSchema,
+  routineFailedDataSchema,
   sseEventSchema,
   sseGapDataSchema,
   sseGapEventSchema,

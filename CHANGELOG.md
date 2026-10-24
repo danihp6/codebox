@@ -6,6 +6,15 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-24 (Task-33, routine contracts)
+
+- `Routine` is now a contract: a discriminated union on `kind` where a `prompt` requires a
+  repo and a prompt while a `reminder` carries neither, with `rtn_` ids, the chat-tool input
+  and output schemas, and the `/v1/routines` shapes.
+- The `routine.fired`, `routine.replied` and `routine.failed` events join the frozen list
+  (23 names), the OpenAPI document grows from 41 to 46 paths and both are checked against
+  `docs/api.md` and `docs/decisions.md`.
+
 ### Added — 2026-10-24 (Task-06, security primitives)
 
 - `@codebox/security` ships the pairing code (ten Crockford characters, single use, TTL,

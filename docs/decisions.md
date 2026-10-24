@@ -95,7 +95,8 @@ resource list, payloads and error envelope are in `docs/api.md`.
 `run.queued`, `run.started`, `run.output`, `run.tool`, `run.permission`, `run.gate`,
 `run.pr`, `run.merged`, `run.finished`, `run.failed`, `run.cancelled`, `chat.delta`,
 `chat.message`, `chat.tool`, `chat.permission`, `chat.idle`, `job.changed`,
-`approval.created`, `approval.resolved`, `telemetry`.
+`approval.created`, `approval.resolved`, `telemetry`, `routine.fired`, `routine.replied`,
+`routine.failed`.
 
 ### OCI resources
 

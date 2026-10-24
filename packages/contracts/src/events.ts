@@ -4,9 +4,12 @@ import {
   ApprovalId,
   ChatId,
   JobId,
+  MessageId,
   RepoId,
+  RoutineId,
   RunId,
   commitShaSchema,
+  routineKindSchema,
   runTriggerSchema,
   timestampSchema,
 } from './primitives.js';
@@ -125,6 +128,26 @@ export const telemetryDataSchema = z.strictObject({
   queueDepth: z.number().int().nonnegative(),
 });
 
+export const routineEventBase = z.strictObject({
+  routineId: RoutineId,
+  ts: timestampSchema,
+});
+
+export const routineFiredDataSchema = routineEventBase.extend({
+  kind: routineKindSchema,
+  scheduledFor: timestampSchema,
+});
+
+export const routineRepliedDataSchema = routineEventBase.extend({
+  chatId: ChatId,
+  messageId: MessageId,
+});
+
+export const routineFailedDataSchema = routineEventBase.extend({
+  code: z.string().min(1),
+  message: z.string().min(1),
+});
+
 export const sseEventSchema = z.discriminatedUnion('event', [
   z.strictObject({ event: z.literal('run.queued'), data: runQueuedDataSchema }),
   z.strictObject({ event: z.literal('run.started'), data: runStartedDataSchema }),
@@ -146,6 +169,9 @@ export const sseEventSchema = z.discriminatedUnion('event', [
   z.strictObject({ event: z.literal('approval.created'), data: approvalCreatedDataSchema }),
   z.strictObject({ event: z.literal('approval.resolved'), data: approvalResolvedDataSchema }),
   z.strictObject({ event: z.literal('telemetry'), data: telemetryDataSchema }),
+  z.strictObject({ event: z.literal('routine.fired'), data: routineFiredDataSchema }),
+  z.strictObject({ event: z.literal('routine.replied'), data: routineRepliedDataSchema }),
+  z.strictObject({ event: z.literal('routine.failed'), data: routineFailedDataSchema }),
 ]);
 export type SseEvent = z.infer<typeof sseEventSchema>;
 
