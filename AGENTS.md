@@ -11,9 +11,10 @@ same task.
 
 ## Status
 
-**Design only.** The repository currently contains documentation. No application code, no
-workflows, no scripts. Batch 1 in `TODO.md` is the first code batch. Until it ships, a task
-that needs code is blocked, not improvised.
+**Bootstrap.** Task-01 shipped the npm workspaces, the root gate and CI; the OCI wait runs
+from `.github/workflows/oci-retry.yml`. The daemon, the app and the agent pipeline are not
+written yet — Batch 1 Task-02 is the next code task. A task that needs code the tree does not
+have is blocked, not improvised.
 
 ## Product invariants
 

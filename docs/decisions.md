@@ -42,6 +42,7 @@ these IDs.
 | **D34** | `pkm-randomlike`'s OCI retry was **migrated to Codebox on 2026-10-24**, before parity, by operator decision. pkm is braked (`OCI_RETRY=off`), its `pkm-vcn`/`pkm-subnet` are retired and Codebox owns `ops/oci` and the chain. | The original "do not touch pkm until parity" clause was overtaken by the operator wanting the box launched now. The autopilot's OCI wait is not load-bearing for the game; the cost of two chains on one tenancy is a shared rate limiter. Task-32 is reduced to deleting the duplicate and the stale variables. |
 | **D35** | No Kubernetes, no serverless, no managed queue in v1. | One VM, one process, SQLite. Add a queue only when a measured limit demands it. |
 | **D36** | A chat session **persists** across messages and app restarts, bound to one repository and one OpenCode session; it never opens a PR and never merges. | Chat is exploratory work with context; a run is a transaction. Keeping them separate is what makes "promote to run" meaningful. |
+| **D37** | The **source repository is public**. Secrets stay out of the tree (D19, D20) and are held by Actions and OCI Vault. | Public repositories get free Actions minutes, which is what lets the OCI wait and the agent loop run around the clock. The exposure is the source, the docs and issue text, not a credential; if the repository ever goes private, `docs/agent-ci.md` §11's allowance check becomes load-bearing again. |
 
 ## Frozen values
 
