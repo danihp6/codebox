@@ -16,6 +16,16 @@ first release exists.
   identity and its API key in OCI; `danihp6/codebox` is public so the wait spends no
   Actions minutes.
 
+### Added — 2026-10-24 (Task-01, monorepo bootstrap)
+
+- npm workspaces for `apps/daemon`, `apps/app` and the eight `packages/*` stubs, so every
+  later batch has a home and one lockfile.
+- Root scripts (`lint`, `test`, `build`, `typecheck`, `format`), `tsconfig.base.json`,
+  ESLint + Prettier, the Vitest workspace, `.editorconfig` and `.gitignore`.
+- Node 24 pinned in `engines`; the CI gate runs `npm ci && npm run lint && npm test &&
+  npm run build` on every push to `main` and every pull request
+  (`.github/workflows/ci.yml`).
+
 ### Added — 2026-10-24 (design batch)
 
 The first delivery is documentation only. It fixes the name, the product, the architecture,

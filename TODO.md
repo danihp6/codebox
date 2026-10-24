@@ -87,7 +87,7 @@ without asking a question that the docs already answer.
 `.gitignore`, `.github/workflows/ci.yml`; Task-02 holds `opencode.json`, `.agent_roles/**`,
 `scripts/agent/**`, `.github/workflows/agent-*.yml`.
 
-- [ ] **[Task-01]** Monorepo bootstrap. Create npm workspaces (`apps/daemon`, `apps/app`,
+- [x] **[Task-01]** Monorepo bootstrap. Create npm workspaces (`apps/daemon`, `apps/app`,
       `packages/{contracts,core,store,opencode,workspaces,scheduler,git-provider,security}`),
       root `package.json` scripts (`lint`, `test`, `build`, `typecheck`), `tsconfig.base.json`,
       ESLint/Prettier, Vitest workspace, `.gitignore`, `.editorconfig`, stub `README.md` per

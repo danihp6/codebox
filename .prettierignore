@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.md
+coverage/
+.agent_specs/
+*.log
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
