@@ -16,6 +16,16 @@ first release exists.
   identity and its API key in OCI; `danihp6/codebox` is public so the wait spends no
   Actions minutes.
 
+### Added — 2026-10-24 (Task-02, agent pipeline)
+
+- The deterministic core (`recon`, `gate`, `verdict`) with its unit tests, `opencode.json`
+  wired to the four roles, the Actions host (`agent-cycle`, `agent-autopilot`, the timed
+  window) and the VM host (`run-cycle`, `run-driver`, `brake`, `install.sh`,
+  `cb-agent.service`).
+- The smoke workflow is removed and `docs/agent-ci.md` no longer describes it.
+- **Blocked:** the `[live]` criterion (one real cycle that moves `main` or opens an issue)
+  needs `CB_AGENT_MODEL` and a provider key. Task-02 stays `[!]` until it is measured.
+
 ### Added — 2026-10-24 (Task-01, monorepo bootstrap)
 
 - npm workspaces for `apps/daemon`, `apps/app` and the eight `packages/*` stubs, so every
