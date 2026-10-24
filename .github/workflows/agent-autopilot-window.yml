@@ -1,0 +1,245 @@
+name: agent / autopilot window
+
+# The timed window: the brake with a range attached. A dispatch arms it — "on for the
+# next <hours> hours, starting at <from>" — and writes the range it promised into the
+# repository variables `CB_AGENT_FROM` and `CB_AGENT_UNTIL`, both UTC and absolute
+# ISO instants rather than recurring `HH:MM`, so a pass never has to wonder whether
+# that `02:00` is today's or tomorrow's. The hourly cron is the other edge: it turns
+# the brake on when the range opens and off when it closes, so the off happens on its
+# own even when the loop is parked and no cycle is left in flight to hand the baton.
+# Dispatching with `hours: 0` closes the range now, which is how the brake goes back
+# into a human's hands.
+#
+# One invariant, and it is the whole contract: **with a range set, the brake mirrors
+# the range** — `on` inside it, `off` outside it, on either edge. A manual `off` inside
+# an open range therefore lasts until the next pass. When a range closes (or `hours: 0`
+# stops it) the pass turns the brake off **and clears the range**, so "no range set" is
+# a state a human can reach and see: the brake goes back to being the repository
+# variable the settings own, and this workflow stops running its hourly pass at all.
+# One range at a time: a new dispatch replaces the old one.
+#
+# A cron cannot say "for the next four hours", so the range is data and this workflow
+# is the only thing that moves it; it lives in variables rather than in a commit so
+# that `agent-cycle` stays the only workflow allowed to write `main`. Writing a
+# repository variable is *not* in `GITHUB_TOKEN`'s permission set (`actions/variables`
+# answers 403 "Resource not accessible by integration"), so it takes a PAT in the
+# `CB_AGENT_TOKEN` secret: classic with the `repo` scope, or fine-grained with
+# `Variables: read and write` on this repository. The PAT is exported only to the steps
+# that touch a variable — asking the driver for a cycle uses the workflow's own
+# `GITHUB_TOKEN`, which is the one carrying `actions: write` (measured: a PAT there
+# answers 403 "Resource not accessible by personal access token").
+
+on:
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: Hours the loop stays on from `from` (0 = stop now, brake off)
+        required: true
+        default: '4'
+      from:
+        description: Start of the range, UTC `HH:MM` (or an ISO instant; empty = now)
+        required: false
+        default: ''
+  schedule:
+    # The window's own edge. An hourly, ~10-second run that spends no inference is
+    # cheaper than a stale `on` left in the settings with nothing to turn it off; with
+    # no range set the job is skipped, so the pass costs nothing at all.
+    - cron: '0 * * * *'
+
+concurrency:
+  group: agent-autopilot-window
+  cancel-in-progress: false
+
+permissions:
+  # To hand the baton to the driver when the range opens, and for nothing else: this
+  # workflow never touches `main` and never checks the repository out.
+  actions: write
+
+env:
+  GH_REPO: ${{ github.repository }}
+
+jobs:
+  window:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    if: github.event_name != 'schedule' || vars.CB_AGENT_UNTIL != ''
+    env:
+      BRAKE: ${{ vars.CB_AGENT_AUTOPILOT }}
+      WINDOW_FROM: ${{ vars.CB_AGENT_FROM }}
+      WINDOW_UNTIL: ${{ vars.CB_AGENT_UNTIL }}
+      HOURS: ${{ inputs.hours }}
+      FROM_INPUT: ${{ inputs.from }}
+    steps:
+      - name: Is the token there?
+        env:
+          GH_TOKEN: ${{ secrets.CB_AGENT_TOKEN }}
+        run: |
+          # The one failure a human has to fix, so it names the fix instead of leaking
+          # a 403 out of `gh`.
+          if [ -z "${GH_TOKEN:-}" ]; then
+            echo "::error::No CB_AGENT_TOKEN secret. Create a token that may write repository variables — a classic PAT with the repo scope, or a fine-grained one with Variables read and write on this repository — and store it as the secret CB_AGENT_TOKEN."
+            exit 1
+          fi
+
+      - name: Arm the range
+        id: arm
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          # The PAT is scoped to the steps that touch a variable, and to nothing else:
+          # the driver dispatch below uses the workflow's own token, which is the one
+          # that carries `actions: write`.
+          GH_TOKEN: ${{ secrets.CB_AGENT_TOKEN }}
+        run: |
+          # The range is written first and the brake second: a pass that dies in between
+          # leaves a range whose brake the hourly pass then agrees with, never a brake
+          # whose range is missing. A stop writes neither: it clears them.
+          set -euo pipefail
+          put() {
+            if ! gh variable set "$1" --body "$2"; then
+              echo "::error::Could not write the variable $1: CB_AGENT_TOKEN cannot manage repository variables (it needs the repo scope, or Variables read and write)."
+              exit 1
+            fi
+          }
+          drop() {
+            # The range has to be *cleared*, not left in the past: the driver parks
+            # whenever `CB_AGENT_UNTIL` is set, so a spent range would keep a human's
+            # manual `on` parked forever. Deleting is what makes "no range" visible in
+            # the variables list too.
+            gh api "repos/$GH_REPO/actions/variables/$1" >/dev/null 2>&1 || return 0
+            if ! gh api -X DELETE "repos/$GH_REPO/actions/variables/$1" >/dev/null; then
+              echo "::error::Could not delete the variable $1: CB_AGENT_TOKEN cannot manage repository variables (it needs the repo scope, or Variables read and write)."
+              exit 1
+            fi
+          }
+
+          hours="${HOURS:-4}"
+          case "$hours" in
+            '' | *[!0-9.]*) echo "::error::hours must be a number, got '$hours'."; exit 1 ;;
+          esac
+          if ! from=$(date -u -d "${FROM_INPUT:-now}" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null); then
+            echo "::error::from='$FROM_INPUT' is not a time: use a UTC HH:MM, or an ISO instant like 2026-10-18T22:00:00Z."
+            exit 1
+          fi
+
+          now=$(date -u +%s)
+          from_s=$(date -u -d "$from" +%s)
+          until_s=$(awk -v s="$from_s" -v h="$hours" 'BEGIN { printf "%d", s + h * 3600 }')
+          until=$(date -u -d "@$until_s" +%Y-%m-%dT%H:%M:%SZ)
+
+          armed=false
+          stop=false
+          if [ "$until_s" -le "$now" ]; then
+            stop=true
+            reason="Empty range ($until is not in the future): the brake is off and the range is cleared."
+          elif [ "$now" -lt "$from_s" ]; then
+            reason="Range $from → $until (UTC): off until the hourly pass opens it."
+          else
+            armed=true
+            reason="Range $from → $until (UTC)."
+          fi
+
+          if [ "$stop" = false ]; then
+            put CB_AGENT_FROM "$from"
+            put CB_AGENT_UNTIL "$until"
+          fi
+          if [ "$armed" = true ]; then
+            # The brake mirrors the range from the moment the range is open: the arm
+            # writes it here so the dispatch below starts inside a range that is real.
+            if [ "${BRAKE:-}" != on ]; then put CB_AGENT_AUTOPILOT on; fi
+          elif [ "${BRAKE:-}" != off ]; then
+            put CB_AGENT_AUTOPILOT off
+          fi
+          if [ "$stop" = true ]; then
+            drop CB_AGENT_FROM
+            drop CB_AGENT_UNTIL
+          fi
+          echo "armed=$armed" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "# 🕒 The window is armed"
+            echo
+            echo "$reason"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Range | \`$from\` → \`$until\` |"
+            echo "| Brake | \`$([ "$armed" = true ] && echo on || echo off)\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Dispatch a driver for the range that is already open
+        if: github.event_name == 'workflow_dispatch' && steps.arm.outputs.armed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run agent-autopilot.yml --ref main
+
+      - name: The hourly edge
+        id: edge
+        if: github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.CB_AGENT_TOKEN }}
+        run: |
+          set -euo pipefail
+          put() {
+            if ! gh variable set "$1" --body "$2"; then
+              echo "::error::Could not write the variable $1: CB_AGENT_TOKEN cannot manage repository variables (it needs the repo scope, or Variables read and write)."
+              exit 1
+            fi
+          }
+          drop() {
+            # The range has to be *cleared*, not left in the past: the driver parks
+            # whenever `CB_AGENT_UNTIL` is set, so a spent range would keep a human's
+            # manual `on` parked forever. Deleting is what makes "no range" visible in
+            # the variables list too.
+            gh api "repos/$GH_REPO/actions/variables/$1" >/dev/null 2>&1 || return 0
+            if ! gh api -X DELETE "repos/$GH_REPO/actions/variables/$1" >/dev/null; then
+              echo "::error::Could not delete the variable $1: CB_AGENT_TOKEN cannot manage repository variables (it needs the repo scope, or Variables read and write)."
+              exit 1
+            fi
+          }
+
+          now=$(date -u +%s)
+          opened=false
+          if [ -z "${WINDOW_UNTIL:-}" ]; then
+            reason="No range set: the brake is manual (\`${BRAKE:-unset}\`)."
+          elif [ "$now" -ge "$(date -u -d "$WINDOW_UNTIL" +%s)" ]; then
+            # Brake first, range second: a pass that dies in between leaves the loop off
+            # with a spent range it clears on the next hour, never a free loop with a
+            # range that says "outside".
+            if [ "${BRAKE:-}" != off ]; then put CB_AGENT_AUTOPILOT off; fi
+            drop CB_AGENT_FROM
+            drop CB_AGENT_UNTIL
+            reason="The range ended at $WINDOW_UNTIL: the brake is off and the range is cleared."
+          elif [ -n "${WINDOW_FROM:-}" ] && [ "$now" -lt "$(date -u -d "$WINDOW_FROM" +%s)" ]; then
+            if [ "${BRAKE:-}" != off ]; then put CB_AGENT_AUTOPILOT off; fi
+            reason="The range opens at $WINDOW_FROM: the brake is off until then."
+          elif [ "${BRAKE:-}" != on ]; then
+            put CB_AGENT_AUTOPILOT on
+            opened=true
+            reason="Range open until $WINDOW_UNTIL: the brake is on."
+          else
+            reason="Range open until $WINDOW_UNTIL: the brake is already on."
+          fi
+
+          # A range that opens with the loop parked has no cycle in flight to hand the
+          # baton, and the driver's schedule fires far less often than it asks to, so
+          # the pass that arms the brake asks for a driver itself (the next step, with
+          # the workflow's own token).
+          echo "opened=$opened" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "# 🕒 The hourly window pass"
+            echo
+            echo "$reason"
+            echo
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| Range | \`${WINDOW_FROM:-—}\` → \`${WINDOW_UNTIL:-—}\` |"
+            echo "| Brake | \`${BRAKE:-unset}\` → \`$(gh api "repos/$GH_REPO/actions/variables/CB_AGENT_AUTOPILOT" --jq .value 2>/dev/null || echo '?')\` |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Dispatch a driver when the range has just opened
+        if: github.event_name == 'schedule' && steps.edge.outputs.opened == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run agent-autopilot.yml --ref main
+# Re-registered after the repository was recreated (2026-10-20).

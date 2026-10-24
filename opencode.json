@@ -1,0 +1,62 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "instructions": ["AGENTS.md"],
+  "compaction": { "auto": true, "tail_turns": 15 },
+  "tool_output": { "max_lines": 100, "max_bytes": 4096 },
+  "agent": {
+    "orchestrator": {
+      "description": "Coordinates the batch lifecycle: plans with the Architect, runs worktrees, launches dev subagents, drives QA, merges.",
+      "mode": "primary",
+      "temperature": 0.1,
+      "prompt": "{file:./.agent_roles/orchestrator.md}",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "webfetch": "deny"
+      }
+    },
+    "architect": {
+      "description": "Decomposes work into dependency-ordered batches, writes TODO.md and .agent_specs/task-<ID>.md. Read-only on the codebase.",
+      "mode": "all",
+      "temperature": 0.1,
+      "prompt": "{file:./.agent_roles/architect.md}",
+      "permission": {
+        "bash": "deny",
+        "edit": {
+          "*": "deny",
+          "TODO.md": "allow",
+          "TODO.md/*": "allow",
+          ".agent_specs/*": "allow",
+          ".agent_specs/**": "allow"
+        },
+        "webfetch": "allow"
+      }
+    },
+    "dev": {
+      "description": "Implements one task from its spec inside its worktree: TypeScript packages, the daemon, the app, with tests.",
+      "mode": "all",
+      "temperature": 0.2,
+      "prompt": "{file:./.agent_roles/dev.md}",
+      "permission": {
+        "edit": "allow",
+        "bash": "allow",
+        "external_directory": "allow"
+      }
+    },
+    "qa": {
+      "description": "Validates one task or a combined batch against the specs, audits path conflicts and reports pass/fail/not-run.",
+      "mode": "all",
+      "temperature": 0,
+      "prompt": "{file:./.agent_roles/qa.md}",
+      "permission": {
+        "edit": {
+          "*": "deny",
+          "TODO.md": "allow",
+          "TODO.md/*": "allow"
+        },
+        "bash": "allow",
+        "external_directory": "allow"
+      }
+    }
+  }
+}

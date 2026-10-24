@@ -98,7 +98,7 @@ without asking a question that the docs already answer.
       lint`, `npm test` and `npm run build` pass with the empty stubs; `[unit]` every
       workspace resolves through the root lockfile; `[unit]` no package has a dependency it
       does not import.
-- [ ] **[Task-02]** Agent pipeline wiring. Implement the pipeline designed in
+- [!] **[Task-02]** Agent pipeline wiring. Implement the pipeline designed in
       `docs/agent-pipeline.md`, `docs/agent-ci.md` and `docs/agent-vm.md`, adapted from
       `pkm-randomlike` with Codebox names: reconcile `.agent_roles/{orchestrator,architect,dev,qa}.md`
       with the scripts, and add `opencode.json`, `scripts/agent/{recon.mjs,gate.mjs,verdict.mjs}`,
@@ -115,6 +115,9 @@ without asking a question that the docs already answer.
       status` on a temp state directory reports the expected fields; `[live]` one dispatched
       `agent-cycle` on a throwaway branch moves `main` or opens an `agent-blocked` issue and
       the run summary says which.
+      BLOCKED: the `[live]` criterion is not measured — it needs `CB_AGENT_MODEL` and a
+      provider-key secret (`OPENCODE_API_KEY` / `ANTHROPIC_API_KEY` / …). The code and both
+      `[unit]` criteria are on `main`; free this task once the secrets exist.
 
 ---
 

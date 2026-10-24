@@ -1,0 +1,168 @@
+name: agent / autopilot
+
+# The loop. This workflow spends nothing on tokens: it only decides whether a cycle
+# may start, and dispatches one. Running the decision on a schedule instead of
+# chaining cycles from inside the cycle means a dead cycle, a cancelled run or a
+# crashed runner cannot end the loop — and that the human's brake is read at a
+# boundary, never in the middle of a merge.
+#
+# The brake is the repository variable `CB_AGENT_AUTOPILOT`: anything other than `on` stops
+# the loop (it ships as `off`). Setting it is a two-click change in the repo's
+# settings, and it takes effect at the next boundary, so no cycle is ever cut in
+# half. A blocked or red task does NOT stop the loop by itself: the cycle marks it
+# `[!]` in `TODO.md` and takes the next candidate.
+#
+# There is no daily cap by default (`CB_AGENT_DAILY_CYCLES` unset or `0`), so the only
+# thing bounding the loop is the backlog's own finiteness: with no open `[ ]` left it
+# parks itself, and ~10 whole-batch cycles cover today's 30 tasks. The two stops that
+# remain are the day's three red cycles (something is broken; carrying on would only
+# bill minutes for garbage — re-run `agent / cycle` by hand to resume) and the
+# in-flight check.
+#
+# The brake can also be a **timed window**: `agent / autopilot window` writes a range
+# into `CB_AGENT_FROM` / `CB_AGENT_UNTIL` (UTC ISO instants) and turns the brake on
+# and off on its own edges. This gate reads that range as a belt: a stale `on` or a
+# cron that fires late can never start a cycle outside it, and with no range set the
+# brake is manual, exactly as before.
+
+on:
+  schedule:
+    # Every 30 minutes. GitHub's shortest cron interval is 5 minutes, and a busy
+    # cluster can delay a scheduled run; the concurrency group below is what keeps
+    # two cycles from overlapping.
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+    inputs:
+      ignore_run:
+        description: Cycle run handing the baton over (it is in flight, but it is the caller)
+        required: false
+        default: ''
+
+concurrency:
+  group: agent-autopilot
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  actions: write
+  issues: write
+
+jobs:
+  drive:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Should a cycle start?
+        id: gate
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CB_AGENT_AUTOPILOT: ${{ vars.CB_AGENT_AUTOPILOT }}
+          # The timed window's range, if one is armed. Both are absolute UTC instants,
+          # so the reading never depends on which day a recurring `HH:MM` meant.
+          WINDOW_FROM: ${{ vars.CB_AGENT_FROM }}
+          WINDOW_UNTIL: ${{ vars.CB_AGENT_UNTIL }}
+          IGNORE_RUN: ${{ inputs.ignore_run }}
+          # `0` or unset means no cap: the backlog's own finiteness is then the only
+          # thing bounding the loop (30 tasks in whole batches is ~10 cycles, and the
+          # loop parks itself when no `[ ]` is left). Set it to a number to bound a day.
+          CB_AGENT_DAILY_CYCLES: ${{ vars.CB_AGENT_DAILY_CYCLES }}
+        run: |
+          set -euo pipefail
+          cap="${CB_AGENT_DAILY_CYCLES:-0}"
+          go() { echo "go=$1" >> "$GITHUB_OUTPUT"; echo "REASON=$2" >> "$GITHUB_ENV"; echo "$2"; }
+          red() { gh issue create --label agent-blocked --title "$1" --body "$2" || true; }
+
+          if [ "${CB_AGENT_AUTOPILOT:-}" != "on" ]; then
+            go false "CB_AGENT_AUTOPILOT is '${CB_AGENT_AUTOPILOT:-unset}': the loop stays parked."
+            exit 0
+          fi
+
+          # The belt under the window: `agent / autopilot window` owns the brake, and it
+          # is turned off on the range's own edge, but a cron that fires late or a run
+          # that hand-shakes across the boundary must not start a cycle outside the
+          # range either. No range set means the brake is purely manual.
+          if [ -n "${WINDOW_UNTIL:-}" ]; then
+            now_epoch=$(date -u +%s)
+            until_epoch=$(date -u -d "$WINDOW_UNTIL" +%s 2>/dev/null || echo '')
+            if [ -n "$until_epoch" ] && [ "$now_epoch" -ge "$until_epoch" ]; then
+              go false "The window ended at $WINDOW_UNTIL: the loop stays parked until a range is armed again."
+              exit 0
+            fi
+            from_epoch=$(date -u -d "${WINDOW_FROM:-}" +%s 2>/dev/null || echo '')
+            if [ -n "$from_epoch" ] && [ "$now_epoch" -lt "$from_epoch" ]; then
+              go false "The window opens at $WINDOW_FROM: the loop is parked until then."
+              exit 0
+            fi
+          fi
+
+          open_tasks=$(grep -cE '^[[:space:]]*-[[:space:]]*\[ \][[:space:]]*\*\*\[Task-' TODO.md || true)
+          blocked=$(grep -cE '^[[:space:]]*-[[:space:]]*\[!\][[:space:]]*\*\*\[Task-' TODO.md || true)
+          echo "open=$open_tasks blocked=$blocked"
+          if [ "$open_tasks" -eq 0 ]; then
+            red "Autopilot: nothing left to take" \
+                "No open \`[ ]\` task remains in TODO.md ($blocked marked \`[!]\`). The loop is parked until a human frees one or adds work."
+            go false "No open task left."
+            exit 0
+          fi
+
+          inflight=$(gh run list --workflow=agent-cycle.yml --status in_progress --json databaseId --jq '.[0].databaseId' || true)
+          if [ -n "$inflight" ] && [ "$inflight" != "${IGNORE_RUN:-}" ]; then
+            go false "A cycle is already in flight ($inflight)."
+            exit 0
+          fi
+
+          today=$(date -u +%Y-%m-%d)
+          started=$(gh run list --workflow=agent-cycle.yml --created "$today" --json databaseId --jq 'length')
+          failed=$(gh run list --workflow=agent-cycle.yml --created "$today" --status failure --json databaseId --jq 'length')
+          echo "cycles today=$started failed=$failed cap=$cap"
+
+          if [ "$failed" -ge 3 ]; then
+            red "Autopilot parked: $failed red cycles today" \
+                "The loop stopped itself after $failed failed cycles on $today (limit 3). Look at the last agent / cycle runs, fix or free the task it was on, then re-run this workflow."
+            go false "Too many red cycles today."
+            exit 0
+          fi
+
+          if [ "$cap" -gt 0 ] && [ "$started" -ge "$cap" ]; then
+            go false "Daily cap reached ($started cycles today, cap $cap)."
+            exit 0
+          fi
+
+          go true "Dispatching a cycle."
+
+      - name: Dispatch a cycle
+        if: steps.gate.outputs.go == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run agent-cycle.yml --ref main
+
+      - name: Summary
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GO: ${{ steps.gate.outputs.go }}
+          CB_AGENT_AUTOPILOT_STATE: ${{ vars.CB_AGENT_AUTOPILOT }}
+          WINDOW_FROM: ${{ vars.CB_AGENT_FROM }}
+          WINDOW_UNTIL: ${{ vars.CB_AGENT_UNTIL }}
+        run: |
+          # The driver's own summary, so the usual question — "why has nothing run?" —
+          # is answered in the runs list instead of in a log.
+          set -uo pipefail
+          out="$GITHUB_STEP_SUMMARY"
+          if [ "${GO:-}" = 'true' ]; then emoji='🚀'; verb='dispatched a cycle'; else emoji='🅿️'; verb='stayed parked'; fi
+          {
+            echo "# $emoji The loop $verb"
+            echo
+            if [ -n "${REASON:-}" ]; then echo "**$REASON**"; echo; fi
+            echo "| | |"
+            echo "| --- | --- |"
+            echo "| CB_AGENT_AUTOPILOT | \`${CB_AGENT_AUTOPILOT_STATE:-unset}\` |"
+            echo "| Window | \`${WINDOW_FROM:-—}\` → \`${WINDOW_UNTIL:-—}\` UTC |"
+            echo "| Now | $(date -u '+%Y-%m-%d %H:%M') UTC |"
+            echo "| Open tasks | $(grep -cE '^- \[ \] \*\*\[Task-' TODO.md || true) |"
+            echo "| Blocked | $(grep -cE '^- \[!\] \*\*\[Task-' TODO.md || true) |"
+            echo "| Cycles today | $(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/agent-cycle.yml/runs?created=$(date -u +%Y-%m-%d)&per_page=100" --jq '.workflow_runs | length' 2>/dev/null || echo '?') |"
+          } >> "$out"
+# Re-registered after the repository was recreated (2026-10-20).
