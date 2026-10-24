@@ -1,0 +1,25 @@
+[Unit]
+Description=Codebox agent driver
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+Group=@USER@
+EnvironmentFile=/etc/codebox/cb-agent.env
+ExecStart=@REPO@/scripts/agent/vm/run-driver.sh
+Restart=on-failure
+RestartSec=30
+TimeoutStartSec=21600
+Nice=10
+CPUQuota=150%
+MemoryMax=10G
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=@STATE@ @HOME@
+
+[Install]
+WantedBy=multi-user.target

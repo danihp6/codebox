@@ -47,14 +47,20 @@ have() {
   done
 }
 
-# The env file is shell, so a value may contain `$HOME`; it is sourced as such.
+# The env file is shell, so a value may contain `$HOME`; it is sourced as such. Under
+# systemd the file is `0600 root:cb-agent` and systemd reads it as root, so the service's
+# environment already has the values and the file is not readable by the user.
 load_env() {
-  [ -f "$CB_AGENT_ENV" ] || die "no env file at $CB_AGENT_ENV (copy agent.env.example)"
-  set -a
-  # shellcheck disable=SC1090
-  . "$CB_AGENT_ENV"
-  set +a
-  resolve_paths
+  if [ -r "$CB_AGENT_ENV" ]; then
+    set -a
+    # shellcheck disable=SC1090
+    . "$CB_AGENT_ENV"
+    set +a
+    resolve_paths
+    return
+  fi
+  [ -n "${CB_AGENT_MODEL:-}" ] ||
+    die "no readable env file at $CB_AGENT_ENV and CB_AGENT_MODEL is unset"
 }
 
 ensure_state() {

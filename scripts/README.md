@@ -11,6 +11,7 @@ runs before any dependency is installed (Node built-ins only).
 | `gate.test.mjs` | Unit tests for every parking reason and the order that decides which one wins. |
 | `verdict.mjs` | The cycle's outcome: a red gate fails; a moved `main` or an opened issue is green even when the stream died. Pure. |
 | `verdict.test.mjs` | Unit tests for shipped, resumed, stopped and failed. |
+| `vm/` | The VM host: driver, cycle, brake, install, unit, env template and the canonical prompt (`scripts/agent/vm/README.md`). |
 | `README.md` | This map. |
 
 The hosts are `docs/agent-ci.md` (GitHub Actions) and `docs/agent-vm.md` (the box). The
