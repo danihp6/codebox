@@ -23,6 +23,15 @@ export default defineConfig({
       project('packages/scheduler'),
       project('packages/git-provider'),
       project('packages/security'),
+      {
+        test: {
+          name: 'scripts',
+          root: './scripts',
+          include: ['**/*.test.mjs'],
+          environment: 'node' as const,
+          passWithNoTests: true,
+        },
+      },
     ],
   },
 });
