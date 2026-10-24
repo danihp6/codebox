@@ -143,9 +143,9 @@ tool output that matches the secret scanner, and redact by key. Chat history 90 
 
 ## Not blocking, decide later
 
-- **Q14. License and repository visibility.** MIT is the workspace default; a private repo needs
-  none. Visibility also decides the CI host: a private repository pays for Actions minutes, a
-  public one does not (`agent-ci.md` §11). Decide before the first public push.
+- **Q14. License and repository visibility.** Visibility is **decided** by D37: the source
+  repository is public, which makes Actions minutes free. The license is still MIT by
+  workspace default; the `LICENSE` file is added before the first release.
 - **Q15. i18n beyond English/Spanish.** The app ships EN/ES; adding a locale is cheap but a
   translation is not free.
 - **Q16. Desktop wrapper.** PWA is enough for v1; Tauri only if native notifications or a

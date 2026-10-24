@@ -336,17 +336,17 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
 
 ## Batch 6 — OCI extraction and VM image
 
-- [ ] **[Task-24]** OCI extraction. Move the retry logic out of `pkm-randomlike` into
-      `ops/oci/launch.sh` with `CB_OCI_*` variables; add `ops/oci/provision.sh` (VCN, IGW,
-      route table, security list, subnet), `ops/oci/policy.md` (IAM), `ops/oci/README.md`,
-      and `.github/workflows/oci-retry.yml` with the chain, the brake, the shapes and the
-      announcement. Rename every resource to `cb-*`. *Paths:* `ops/oci/**`,
-      `.github/workflows/oci-retry.yml`, `docs/oci.md`. *Dependencies:* Task-01. *Acceptance:*
-      `[unit]` the launch script's shell tests pass (fixture `oci` binary) for capacity,
-      throttle, bad shape, missing key and an already-running instance; `[unit]` a dry
-      `provision.sh --plan` prints the exact `cb-*` resource names and makes no call;
-      `[live]` one dispatched retry run finds the existing instance, parks, announces it once
-      and does not chain.
+- [ ] **[Task-24]** OCI extraction, remainder. The retry already moved early (2026-10-24,
+      D34 amended): `ops/oci/launch.sh`, `.github/workflows/oci-retry.yml` and the `cb-*`
+      resources exist. What is missing is the reproducible part: `ops/oci/provision.sh` (VCN,
+      IGW, route table, security list, subnet; `--plan`, `--apply`, `--destroy`),
+      `ops/oci/policy.md` (the `cb-ci` / instance split) and the shell tests around
+      `launch.sh`. *Paths:* `ops/oci/**`, `.github/workflows/oci-retry.yml`, `docs/oci.md`.
+      *Dependencies:* Task-01. *Acceptance:* `[unit]` the launch script's shell tests pass
+      (fixture `oci` binary) for capacity, throttle, bad shape, missing key and an
+      already-running instance; `[unit]` a dry `provision.sh --plan` prints the exact `cb-*`
+      resource names and makes no call; `[live]` one dispatched retry run finds the existing
+      instance, parks, announces it once and does not chain.
 
 - [ ] **[Task-25]** VM image. Packer template for Ubuntu 24.04 arm64 installing Node 24, git,
       gh, opencode, cloudflared, build tools and the systemd units; cloud-init for first boot
@@ -411,12 +411,13 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       `docs/operations.md` (onboarding section). *Dependencies:* Task-26, Task-28, Task-30.
       *Acceptance:* `[live]` ten real runs, zero red gates merged, one deliberate revert
       exercised, and the measured latency/cost targets in `docs/product.md` met or explained.
-- [ ] **[Task-32]** Migrate `pkm-randomlike` to consume `ops/oci`. Open the change in that
-      repository, keep its autopilot working, and delete its duplicated launch script after
-      parity. *Paths:* external repository; this repo updates `docs/oci.md` (migration
-      section). *Dependencies:* Task-24, Task-31. *Acceptance:* `[live]` pkm's `oci / retry`
-      runs from the shared script with `CB_OCI_*` variables and no behaviour change for two
-      consecutive runs.
+- [ ] **[Task-32]** Retire the OCI copy in `pkm-randomlike`. The chain was braked
+      (`OCI_RETRY=off`) and its network deleted on 2026-10-24; the game repository still holds
+      the workflow and the stale OCI variables. Delete the duplicate workflow and the
+      variables, and leave a pointer to `ops/oci`. *Paths:* external repository; this repo
+      updates `docs/oci.md` (migration section). *Dependencies:* Task-24, Task-31.
+      *Acceptance:* `[live]` pkm has no `oci-retry` workflow, `OCI_RETRY` is `off` or gone,
+      and a search of that repository finds no `pkm-` OCI resource identifier.
 
 ---
 

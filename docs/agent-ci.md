@@ -180,10 +180,11 @@ beyond the smoke test, or a real tunnel. A pipeline that needs any of those is a
 - Inside the armed window, when one exists: `CB_AGENT_FROM` / `CB_AGENT_UNTIL` hold absolute
   UTC instants and the driver parks outside them even if the brake still reads `on`, so a
   late cron cannot start a cycle past the end.
-- The plan's monthly Actions allowance is not exhausted. The loop cannot read billing without
-  an admin-scoped token it should not hold, so this stays a human check
-  (`gh api /settings/billing/actions`) and the hard stop is GitHub refusing to start a job;
-  the window and the red-streak guard keep the spend small in the meantime.
+- For a private repository, the plan's monthly Actions allowance is not exhausted. This
+  repository is public (D37), so minutes are free and the check only applies if it ever goes
+  private. The loop cannot read billing without an admin-scoped token it should not hold, so
+  it stays a human check (`gh api /settings/billing/actions`); the window and the red-streak
+  guard keep the spend small in the meantime.
 
 Chaining matters and it is measured: cron is a request. The donor's `*/30` schedule fired
 three times in six hours overnight, so the schedule is the safety net and the chain is the
@@ -266,9 +267,11 @@ two namespaces exist because the box will eventually run both on the same machin
 
 A cycle is not cheap. The donor measured **1h32m** for a three-task batch on a 2-core runner,
 so roughly half an hour per task; Codebox re-measures in Batch 1 and replaces this sentence
-with its own number. A private repository spends the plan's monthly minute allowance, shared
-across the account, and running out **blocks** Actions rather than slowing it down. That is
-why the allowance check exists and why the box is the target host.
+with its own number. Actions minutes are free because the repository is public (D37); the box
+is still the target host because it is warmer and faster, not because runner time costs
+money. If the repository ever goes private, the plan's monthly minute allowance is shared
+across the account and running out **blocks** Actions rather than slowing it down — that is
+when the allowance check becomes load-bearing.
 
 The finite backlog is the real bound: eight batches of tasks is a few dozen hours of runner,
 after which there is no `- [ ]` left and the loop parks. The timed window adds a ~10-second

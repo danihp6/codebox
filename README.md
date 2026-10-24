@@ -7,10 +7,11 @@ own cloud VM. A hybrid Angular app — iOS, Android and web — is the ground st
 with an agent bound to a repository, launch and schedule jobs, watch a run stream, answer
 permission prompts, and let a green run merge itself.
 
-> **Status: design only (2026-10-24).** There is no application code yet. This repository
-> holds the product, architecture, API, security, OCI, image and delivery documentation that
-> the first implementation batch will build against. The decisions in
-> [`docs/decisions.md`](docs/decisions.md) are the contract; everything else follows them.
+> **Status: bootstrap (2026-10-24).** Task-01 shipped the npm workspace skeleton, the root
+> gate and CI, and the OCI wait already runs from this repository. There is no product code
+> yet: the daemon, the app and the agent pipeline are the next batches (`TODO.md`). The
+> decisions in [`docs/decisions.md`](docs/decisions.md) are the contract; everything else
+> follows them.
 
 ## Why
 

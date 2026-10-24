@@ -58,6 +58,13 @@ the contracts and the delivery plan before any code exists.
 
 ### Changed
 
+- D37: the source repository is **public**, so the OCI wait and the agent loop spend no
+  Actions minutes. `docs/agent-ci.md` §8 and §11 now treat the private-plan allowance as a
+  fallback for the day it goes private.
+- `AGENTS.md` and `README.md` moved from *design only* to *bootstrap* after Task-01 merged.
+- Task-24 and Task-32 re-scoped to what is actually left: Task-24 keeps the reproducible OCI
+  part (`provision.sh`, `policy.md`, shell tests), Task-32 only deletes pkm's duplicate
+  workflow and stale variables.
 - D34 amended: the OCI retry moved out of `pkm-randomlike` before parity. That repository
   is braked (`OCI_RETRY=off`), its `pkm-vcn`/`pkm-subnet` are deleted, and its remaining OCI
   variables are stale by design; Task-32 is now only the cleanup.
