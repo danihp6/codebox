@@ -86,6 +86,10 @@ Every non-2xx body is one shape:
 | 503 | `provider_unavailable` | GitHub, push or tunnel dependency failed. |
 | 500 | `internal` | A bug; `requestId` is the log key. |
 
+A machine token that is not an HTTP class travels in `details.reason` — `run_not_cancellable`,
+`approval_already_answered`, `repo_has_live_run` — while `code` stays one of the twelve values
+above, so a client switch never grows with a domain refusal.
+
 Domain refusals from the gate or the guardrails are **not** HTTP errors: a run that cannot
 merge is a `200` with `run.state = "pr_open"` and `run.blockers[]`.
 
@@ -103,6 +107,10 @@ List routes take `?limit=50&cursor=<opaque>` (`limit` 1–200). The response is:
 `Idempotency-Key` is required on `POST /v1/runs`, `POST /v1/jobs/{id}/run` and
 `POST /v1/chat/sessions/{id}/promote`. A replay returns the original `202` and the same
 resource; the same key with a different body is `409 idempotency_mismatch`.
+
+`limit` defaults to `50` and is an integer from `1` to `200`; the cursor is opaque, may be
+absent and is returned as `null` on the last page. `Idempotency-Key` is 1–255 characters and is
+retained for 24 h.
 
 ## 5. Resources
 
@@ -321,3 +329,35 @@ Limits are enforced in memory per process; a restart resets them. `429` always c
 An SSE stream that outlives its run closes after `run.finished`, `run.failed` or
 `run.cancelled`; the client reconnects with `Last-Event-ID` and receives the terminal event
 once.
+
+## 10. Contract package
+
+`@codebox/contracts` turns this document into code: one zod schema per resource, one per event,
+and one parse helper per boundary. Every schema is strict (an unknown field is a failure), every
+timestamp is RFC 3339 UTC with a `Z`, and every id is its prefix plus 6–40 alphanumeric
+characters.
+
+| Boundary | Module | Export | Parse helper |
+| --- | --- | --- | --- |
+| Ids, timestamps, enums, event names | `src/primitives.ts` | `RepoId` … `RequestId`, `RUN_STATES`, `SSE_EVENT_NAMES` | — |
+| Errors (§3) | `src/errors.ts` | `errorEnvelopeSchema`, `ERROR_STATUS` | `parseErrorEnvelope` |
+| Pagination and idempotency (§4) | `src/pagination.ts` | `paginationQuerySchema`, `pageSchema`, `IDEMPOTENT_ROUTES` | `parsePage` |
+| Resources (§5) | `src/resources.ts` | `repoSchema`, `jobSchema`, `runSchema`, … | `parseRepo`, `parseJob`, `parseRun`, … |
+| Events (§6) | `src/events.ts` | `sseEventSchema`, `sseStreamEventSchema` | `parseSseEvent`, `parseSseStreamEvent` |
+| Configuration | `src/config.ts` | `configSchema`, `CONFIG_DEFAULTS` | `parseConfig` |
+| OpenAPI 3.1 | `src/openapi.ts` | `openApiDocumentSchema` | `parseOpenApiDocument` |
+
+`parseOrThrow` is the only place a zod failure becomes a typed error: it throws a
+`ContractParseError` whose `first.path` is the failing field prefixed with the boundary
+(`job.cron`, `events.3.data.delta`, `config.CB_BIND`). The daemon maps that error to
+`422 validation_failed` with `details.path = error.first.path`.
+
+`buildOpenApiDocument()` returns the 3.1 document generated from those schemas, and a test
+proves this file and the document name the same routes:
+
+```
+npx vitest run --project packages/contracts -t 'docs/api.md routes match the OpenAPI paths'
+```
+
+A new route or field is a contract change: edit this document, the schema and the document
+builder in the same task.
