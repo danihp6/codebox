@@ -1,7 +1,9 @@
 import { z } from 'zod';
 import { parseOrThrow } from './parse.js';
 import { errorEnvelopeSchema } from './errors.js';
+import { sseEventSchema } from './events.js';
 import { pageOfRun } from './pagination.js';
+import { routineSchema } from './routines.js';
 import {
   approvalSchema,
   brakeSchema,
@@ -446,6 +448,78 @@ const ROUTES: readonly RouteSpec[] = [
     response: null,
   },
   {
+    path: '/v1/routines',
+    method: 'get',
+    operationId: 'listRoutines',
+    summary: 'Chat schedules, newest first.',
+    tag: 'routines',
+    status: '200',
+    response: 'Page',
+  },
+  {
+    path: '/v1/routines',
+    method: 'post',
+    operationId: 'createRoutine',
+    summary: 'Create a routine; the chat tool is the normal path.',
+    tag: 'routines',
+    status: '201',
+    response: 'Routine',
+  },
+  {
+    path: '/v1/routines/{id}',
+    method: 'get',
+    operationId: 'getRoutine',
+    summary: 'One routine with its next and last fire.',
+    tag: 'routines',
+    status: '200',
+    response: 'Routine',
+  },
+  {
+    path: '/v1/routines/{id}',
+    method: 'patch',
+    operationId: 'updateRoutine',
+    summary: 'Title, cron, timezone, prompt, notify or enabled.',
+    tag: 'routines',
+    status: '200',
+    response: 'Routine',
+  },
+  {
+    path: '/v1/routines/{id}',
+    method: 'delete',
+    operationId: 'deleteRoutine',
+    summary: 'Delete a routine and stop its schedule.',
+    tag: 'routines',
+    status: '204',
+    response: null,
+  },
+  {
+    path: '/v1/routines/{id}/pause',
+    method: 'post',
+    operationId: 'pauseRoutine',
+    summary: 'The scheduler stops selecting it.',
+    tag: 'routines',
+    status: '200',
+    response: 'Routine',
+  },
+  {
+    path: '/v1/routines/{id}/resume',
+    method: 'post',
+    operationId: 'resumeRoutine',
+    summary: 'Recompute the next fire from now.',
+    tag: 'routines',
+    status: '200',
+    response: 'Routine',
+  },
+  {
+    path: '/v1/routines/{id}/run',
+    method: 'post',
+    operationId: 'runRoutine',
+    summary: 'Fire it once now, outside the schedule.',
+    tag: 'routines',
+    status: '202',
+    response: 'Routine',
+  },
+  {
     path: '/v1/runs',
     method: 'get',
     operationId: 'listRuns',
@@ -569,6 +643,8 @@ const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
   NotificationPreferences: notificationPreferencesSchema,
   Me: meSchema,
   Brake: brakeSchema,
+  Routine: routineSchema,
+  SseEvent: sseEventSchema,
   Error: errorEnvelopeSchema,
   Page: pageOfRun,
 });
@@ -738,6 +814,7 @@ export function buildOpenApiDocument(): OpenApiDocument {
       { name: 'health', description: 'Health, version and telemetry.' },
       { name: 'jobs', description: 'Saved intentions and their schedule.' },
       { name: 'repos', description: 'Registered repositories.' },
+      { name: 'routines', description: 'Chat schedules: reminders and prompts.' },
       { name: 'runs', description: 'Executions, gate, PR and guardrails.' },
       { name: 'settings', description: 'Settings, notifications and push.' },
     ],

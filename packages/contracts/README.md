@@ -15,11 +15,12 @@ not exist. No I/O, no logger, no `Date.now()`; `zod` is the only runtime depende
 ## `src/`
 
 - `index.ts` — public entry point; re-exports every name once, grouped by module.
-- `primitives.ts` — ids, timestamps, slugs, cron and timezone shapes, run states, scopes and the 20 SSE event names.
+- `primitives.ts` — ids, timestamps, slugs, cron and timezone shapes, run states, scopes, the routine kinds and the 23 SSE event names.
 - `parse.ts` — `parseOrThrow`, `ContractParseError` and the `boundary.field` issue path.
 - `errors.ts` — the `docs/api.md` §3 error envelope and its status map.
 - `pagination.ts` — the §4 limits, the page envelope and the idempotent routes.
 - `resources.ts` — every resource of `docs/api.md` §5 with one `parse*` helper each.
+- `routines.ts` — the §5.8 routine union (`prompt`/`reminder`) and the chat-tool schemas.
 - `events.ts` — the §6 SSE union, the gap control frame and the retry constants.
 - `config.ts` — `CodeboxConfig`, the `CB_*` schema with the documented defaults and `parseConfig`.
 - `openapi.ts` — the OpenAPI 3.1 document built from the schemas, plus its 3.1 shape check.
@@ -27,6 +28,7 @@ not exist. No I/O, no logger, no `Date.now()`; `zod` is the only runtime depende
 - `primitives.test.ts` — ids, scalars, enums and the D14 event list.
 - `errors.test.ts` — the envelope and its status map.
 - `resources.test.ts` — one fixture per resource, strictness and the guardrail ids.
+- `routines.test.ts` — one fixture per routine kind, the kind rules and the tool schemas.
 - `events.test.ts` — one fixture per event, the gap frame and the data types.
 - `config.test.ts` — defaults, production rules, secret redaction and the key list.
 - `openapi.test.ts` — the 3.1 shape, the `$ref` rule and the `docs/api.md` route comparison.

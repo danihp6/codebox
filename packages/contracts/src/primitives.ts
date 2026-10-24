@@ -9,6 +9,7 @@ export const ID_PREFIXES = {
   message: 'msg_',
   device: 'dev_',
   pushSubscription: 'sub_',
+  routine: 'rtn_',
   cursor: 'c_',
   request: 'req_',
 } as const;
@@ -42,6 +43,9 @@ export type DeviceId = z.infer<typeof DeviceId>;
 
 export const SubscriptionId = idSchema('pushSubscription');
 export type SubscriptionId = z.infer<typeof SubscriptionId>;
+
+export const RoutineId = idSchema('routine');
+export type RoutineId = z.infer<typeof RoutineId>;
 
 export const Cursor = idSchema('cursor');
 export type Cursor = z.infer<typeof Cursor>;
@@ -105,6 +109,10 @@ export const REPO_POLICIES = ['auto', 'manual'] as const;
 export const repoPolicySchema = z.enum(REPO_POLICIES);
 export type RepoPolicy = z.infer<typeof repoPolicySchema>;
 
+export const ROUTINE_KINDS = ['prompt', 'reminder'] as const;
+export const routineKindSchema = z.enum(ROUTINE_KINDS);
+export type RoutineKind = z.infer<typeof routineKindSchema>;
+
 export const RUN_STATE_TERMINAL: readonly RunState[] = Object.freeze(
   RUN_STATES.filter(
     (state) => state === 'succeeded' || state === 'failed' || state === 'cancelled',
@@ -114,6 +122,8 @@ export const RUN_STATE_TERMINAL: readonly RunState[] = Object.freeze(
 export function isTerminalRunState(state: RunState): boolean {
   return RUN_STATE_TERMINAL.includes(state);
 }
+
+export const ROUTINE_EVENT_NAMES = ['routine.fired', 'routine.replied', 'routine.failed'] as const;
 
 export const SSE_EVENT_NAMES = [
   'run.queued',
@@ -136,6 +146,7 @@ export const SSE_EVENT_NAMES = [
   'approval.created',
   'approval.resolved',
   'telemetry',
+  ...ROUTINE_EVENT_NAMES,
 ] as const;
 
 export const sseEventNameSchema = z.enum(SSE_EVENT_NAMES);

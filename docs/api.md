@@ -10,7 +10,7 @@ schemas does not exist.
 - **JSON only**, `Content-Type: application/json`, UTF-8. Timestamps are RFC 3339 in UTC
   (`2026-10-24T18:03:11Z`); durations are seconds unless the name says otherwise.
 - **camelCase** fields; `id` prefixes are stable: `repo_`, `job_`, `run_`, `apv_`, `chat_`,
-  `msg_`, `dev_`, `sub_`.
+  `msg_`, `dev_`, `sub_`, `rtn_`.
 - **Authentication** is a bearer access token on every route except `/v1/health`,
   `/v1/version` and `POST /v1/pair`.
 - **No secret is ever returned.** Provider status is `configured` plus a last-four
@@ -265,10 +265,47 @@ Replying twice is a 409; the second reply never reaches OpenCode.
 
 ### 5.8 Routines
 
-Planned by D38 and implemented with the contracts in Task-33. The endpoints are intentionally
-not listed in a route table until the OpenAPI document carries them: this document mirrors the
-contract, it is not a wish list. A `reminder` has no prompt; a `prompt` requires a repo; when a
-prompt has no `chatSessionId`, or the session was archived, the daemon creates one on the fire.
+A routine is a chat schedule (D38), not a run: it never opens a worktree, a PR or a merge. The
+chat agent creates one through the `routine.create` tool; the routes below list, edit, pause,
+run now and delete. `reminder` pushes its `title` without a model; `prompt` sends its prompt to
+the chat and streams the answer (D36, [`docs/jobs.md`](jobs.md) §15).
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/v1/routines` | `read` | Chat schedules, newest first. |
+| `POST` | `/v1/routines` | `write` | Create a routine; the chat tool is the normal path. |
+| `GET` | `/v1/routines/{id}` | `read` | One routine with its next and last fire. |
+| `PATCH` | `/v1/routines/{id}` | `write` | Title, cron, timezone, prompt, notify or enabled. |
+| `DELETE` | `/v1/routines/{id}` | `write` | Delete a routine and stop its schedule. |
+| `POST` | `/v1/routines/{id}/pause` | `write` | The scheduler stops selecting it. |
+| `POST` | `/v1/routines/{id}/resume` | `write` | Recompute the next fire from now. |
+| `POST` | `/v1/routines/{id}/run` | `runs` | Fire it once now, outside the schedule. |
+
+- A `prompt` routine **requires** `repoId` and a non-empty `prompt`; `chatSessionId` is a
+  `chat_` id or `null`, and `null` means the daemon creates a chat session on the fire.
+- A `reminder` routine carries **no** `repoId`, `prompt` or `chatSessionId`: it costs no tokens
+  and has no session, and a kind-mismatched field is a 422 like any unknown field.
+- `title` (1–120 chars) is the label and the text a reminder pushes. `notify` is the per-routine
+  push switch and `enabled` the pause switch; `nextFireAt` and `lastFiredAt` are computed by the
+  scheduler, never written by a client.
+
+```json
+{
+  "id": "rtn_01J...",
+  "kind": "prompt",
+  "title": "Morning summary",
+  "cron": "0 8 * * *",
+  "timezone": "Europe/Madrid",
+  "enabled": true,
+  "notify": true,
+  "repoId": "repo_01J...",
+  "prompt": "Summarise the repository in five bullets.",
+  "chatSessionId": null,
+  "createdAt": "2026-10-24T18:03:11Z",
+  "nextFireAt": "2026-10-25T07:00:00Z",
+  "lastFiredAt": null
+}
+```
 
 ## 6. SSE
 
@@ -299,8 +336,8 @@ data: {"runId":"run_01J...","seq":17,"delta":"…","ts":"2026-10-24T18:04:02Z"}
 Event types are the D14/D16 list: `run.queued`, `run.started`, `run.output`, `run.tool`,
 `run.permission`, `run.gate`, `run.pr`, `run.merged`, `run.finished`, `run.failed`,
 `run.cancelled`, `chat.delta`, `chat.message`, `chat.tool`, `chat.permission`, `chat.idle`,
-`job.changed`, `approval.created`, `approval.resolved`, `telemetry`. The `routine.*` events
-join this list with the contracts in Task-33.
+`job.changed`, `approval.created`, `approval.resolved`, `telemetry`, `routine.fired`,
+`routine.replied`, `routine.failed`.
 
 ## 7. Rate limits
 
@@ -351,6 +388,7 @@ characters.
 | Errors (§3) | `src/errors.ts` | `errorEnvelopeSchema`, `ERROR_STATUS` | `parseErrorEnvelope` |
 | Pagination and idempotency (§4) | `src/pagination.ts` | `paginationQuerySchema`, `pageSchema`, `IDEMPOTENT_ROUTES` | `parsePage` |
 | Resources (§5) | `src/resources.ts` | `repoSchema`, `jobSchema`, `runSchema`, … | `parseRepo`, `parseJob`, `parseRun`, … |
+| Routines (§5.8) | `src/routines.ts` | `routineSchema`, `ROUTINE_TOOL_NAMES`, the tool schemas | `parseRoutine` |
 | Events (§6) | `src/events.ts` | `sseEventSchema`, `sseStreamEventSchema` | `parseSseEvent`, `parseSseStreamEvent` |
 | Configuration | `src/config.ts` | `configSchema`, `CONFIG_DEFAULTS` | `parseConfig` |
 | OpenAPI 3.1 | `src/openapi.ts` | `openApiDocumentSchema` | `parseOpenApiDocument` |

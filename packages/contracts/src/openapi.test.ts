@@ -25,6 +25,8 @@ const requiredComponents = [
   'PushSubscription',
   'Settings',
   'NotificationPreferences',
+  'Routine',
+  'SseEvent',
   'Error',
   'Page',
 ];
@@ -97,7 +99,17 @@ describe('openapi', () => {
   it('docs/api.md routes match the OpenAPI paths', () => {
     const document = buildOpenApiDocument();
     expect(Object.keys(document.paths).sort()).toEqual(docsPaths());
-    expect(Object.keys(document.paths)).toHaveLength(41);
+    expect(Object.keys(document.paths)).toHaveLength(46);
+  });
+
+  it('the OpenAPI document lists the three routine events', () => {
+    const document = buildOpenApiDocument();
+    const schemas = JSON.stringify(document.components.schemas);
+    for (const name of ['routine.fired', 'routine.replied', 'routine.failed']) {
+      expect(schemas).toContain(name);
+    }
+    expect(Object.keys(document.components.schemas)).toContain('Routine');
+    expect(parseOpenApiDocument(document)).toEqual(document);
   });
 
   it('rejects a document that is not 3.1 and one that misses a required key', () => {
