@@ -17,7 +17,8 @@ and nothing here is read by the daemon at runtime except the instance identity.
 | Boot volume | `cb-boot` | 100 GB, preserved on terminate. |
 | Block volume (optional) | `cb-workspaces` | 100 GB for worktrees when the boot disk is tight. |
 | CI user | `cb-ci` | API-key-only identity used by Actions. |
-| CI group | `cb-ci-policy` | Policy attached to `cb-ci`. |
+| CI group | `cb-ci` | Group the `cb-ci-policy` policy attaches to. |
+| CI policy | `cb-ci-policy` | Launch, volumes, VNIC/public IP and the network reads the launch needs. |
 | Instance dynamic group | `cb-instance-dg` | Matches `cb-instance` by compartment + name. |
 | Instance policy | `cb-instance-policy` | Lets the instance read its own secrets in Vault. |
 | Vault | `cb-vault` | Secrets: GitHub App key, session secret, tunnel token, provider keys. |
@@ -34,13 +35,17 @@ Two principals, two policies, no overlap.
 **`cb-ci` (provisioning, from GitHub Actions):**
 
 ```
-Allow group cb-ci-policy to manage instances in compartment <compartment>
-Allow group cb-ci-policy to use vcns in compartment <compartment>
-Allow group cb-ci-policy to use subnets in compartment <compartment>
-Allow group cb-ci-policy to use internet-gateways in compartment <compartment>
-Allow group cb-ci-policy to use route-tables in compartment <compartment>
-Allow group cb-ci-policy to use security-lists in compartment <compartment>
-Allow group cb-ci-policy to read instance-images in compartment <compartment>
+Allow group cb-ci to manage instances in tenancy
+Allow group cb-ci to use volumes in tenancy
+Allow group cb-ci to use vnics in tenancy
+Allow group cb-ci to use private-ips in tenancy
+Allow group cb-ci to use public-ips in tenancy
+Allow group cb-ci to use subnets in tenancy
+Allow group cb-ci to use vcns in tenancy
+Allow group cb-ci to use security-lists in tenancy
+Allow group cb-ci to use route-tables in tenancy
+Allow group cb-ci to use internet-gateways in tenancy
+Allow group cb-ci to read instance-images in tenancy
 ```
 
 Nothing about Vault, Object Storage or IAM itself.
@@ -79,9 +84,10 @@ a fixture and asserts the names.
 
 ## 4. The retry action
 
-`launch.sh` (shell, POSIX-ish, runs under `bash`) is the extracted `oci-launch.sh` from
-`pkm-randomlike`, renamed and de-hardcoded. It exists because A1 capacity in Madrid is
+`ops/oci/launch.sh` (shell, POSIX-ish, runs under `bash`) is the extracted `oci-launch.sh`
+from `pkm-randomlike`, renamed and de-hardcoded. It exists because A1 capacity in Madrid is
 exhausted for long stretches; the launch call answers `OutOfHostCapacity` until a slot opens.
+The migration landed on 2026-10-24, before parity, by operator decision (D34 amended).
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
@@ -127,15 +133,18 @@ state.
 
 `.github/workflows/oci-retry.yml`:
 
-- `workflow_dispatch` (manual, with `attempts` and `budget`) and a `schedule` every 30
-  minutes as a safety net.
+- `workflow_dispatch` (manual, with `attempts`) and a `schedule` every 10 minutes as a safety
+  net.
 - `concurrency: cb-oci-retry` with `cancel-in-progress: false`.
 - `timeout-minutes: 75`, above the script's own budget.
-- Steps: checkout, install the OCI CLI, configure the key from `OCI_CLI_KEY_CONTENT`, run
-  `launch.sh`, summarize, and chain the next run when the chain is still armed.
+- Steps: checkout, install the OCI CLI, configure the key from `CB_OCI_CLI_KEY_CONTENT`, run
+  `ops/oci/launch.sh`, create the `oci-ready` label if missing, announce, and chain the next
+  run when the chain is still armed.
 - The chain step is skipped when an instance exists, when `CB_OCI_RETRY=off`, or when the
   attempt step failed for a configuration reason.
 - No model tokens, no secrets in the summary, no resource created outside `cb-*`.
+- The repository is public, so Actions minutes are free: the chain costs nothing while it
+  waits for capacity.
 
 ## 6. Capacity and shape
 
@@ -168,10 +177,13 @@ What moves, and what does not:
 | Policy fragments in docs | `ops/oci/policy.md` | Split `cb-ci` and `cb-instance`. |
 | `pkm-agent-driver` service | `ops/vm/systemd/cb-agent.service` | A separate unit and user from the product's `codebox.service` (see `agent-vm.md` §2). |
 
-`pkm-randomlike` is **not modified** until Codebox reaches parity (D34). Its `oci / retry`
-keeps working from its own copy. Task-32 opens the migration in that repository, runs the
-shared script for two consecutive launches with no behaviour change, and only then deletes
-the duplicate.
+On 2026-10-24 the operator pulled the migration forward, before parity (D34 amended). The
+`pkm-randomlike` chain was braked (`OCI_RETRY=off`) and its in-flight run cancelled; its
+`pkm-vcn` and `pkm-subnet` were deleted; the `cb-*` network and the `cb-ci` identity were
+created from this repository. The game repository keeps its workflow file and its OCI
+variables, but they point at a subnet that no longer exists: re-arming that chain would fail
+at launch, so `OCI_RETRY` stays `off`. Task-32 is reduced to deleting the duplicate and the
+stale variables.
 
 ## 9. Teardown
 
@@ -189,7 +201,7 @@ the rebuild path.
 | Check | Frequency | Fails when |
 | --- | --- | --- |
 | `provision.sh --plan` names | CI, on change | A name is not `cb-*`, a CIDR moved, ingress is wider than `/32`. |
-| `launch.sh --dry-run` | CI, on change | A required variable is missing or a shape is malformed. |
+| `launch.sh --dry-run` | On change | A required variable is missing or a shape is malformed. |
 | `oci iam policy list` | Monthly, by hand | A policy grants more than §2. |
 | Bucket lifecycle | Monthly | Not `30 days`, or versioning on. |
 | Instance shape | After a resize | Above the free allowance without a note. |
