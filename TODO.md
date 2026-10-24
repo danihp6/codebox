@@ -339,7 +339,7 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
 
 ## Batch 6 — OCI extraction and VM image
 
-- [ ] **[Task-24]** OCI extraction, remainder. The retry already moved early (2026-10-24,
+- [x] **[Task-24]** OCI extraction, remainder. The retry already moved early (2026-10-24,
       D34 amended): `ops/oci/launch.sh`, `.github/workflows/oci-retry.yml` and the `cb-*`
       resources exist. What is missing is the reproducible part: `ops/oci/provision.sh` (VCN,
       IGW, route table, security list, subnet; `--plan`, `--apply`, `--destroy`),

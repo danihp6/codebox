@@ -66,9 +66,11 @@ is why the image can be rebuilt without carrying a credential (D20).
 `ops/oci/provision.sh` is idempotent and ordered:
 
 ```bash
-ops/oci/provision.sh --plan         # prints every call and every name; makes no call
-ops/oci/provision.sh --apply        # creates what is missing, updates nothing else
+ops/oci/provision.sh --plan                    # prints the plan; makes no call
+ops/oci/provision.sh --apply                   # creates what is missing, updates nothing else
 ops/oci/provision.sh --apply --with-vault --with-bucket
+ops/oci/provision.sh --destroy --plan          # §9, in reverse
+ops/oci/provision.sh --destroy --apply [--purge]
 ```
 
 1. VCN → IGW → route table → security list → subnet.
@@ -78,9 +80,36 @@ ops/oci/provision.sh --apply --with-vault --with-bucket
 5. Nothing about the instance: launching is `launch.sh`'s job, because capacity is the slow,
    retryable part.
 
-`--plan` is the review artifact: it prints the exact `cb-*` names, the CIDRs, the ingress
-rule and the OCIDs it would create, and exits 0 without a network call. A test runs it against
-a fixture and asserts the names.
+Required variables: `CB_OCI_COMPARTMENT_ID` and `CB_OCI_ADMIN_CIDR`, the admin `/32` the
+security list admits on port 22 — the operator's address, not a repository default. Optional:
+`CB_OCI_SUBNET_ID`, `CB_OCI_VAULT_ID`, `CB_OCI_BUCKET` and `CB_OCI_INSTANCE_NAME` (default
+`cb-instance`). A missing required variable is `error: <VAR> is empty` on stderr and exit 2,
+with no partial plan. The region is not a `CB_*` key: `--apply` and `--destroy` let the CLI
+read `OCI_CLI_REGION`, and `--plan` needs no region at all.
+
+`--plan` is the review artifact. It prints one line per resource, in the order above, as
+`<verb> <kind> <name> …details`: the verb is `create`, `reuse`, `delete` or `terminate`, the
+kind is `vcn`, `igw`, `route-table`, `security-list`, `subnet`, `dynamic-group`, `policy`,
+`vault`, `secret`, `bucket` or `instance`, and the name is always the `cb-*` name from §1 — a
+name that is not `cb-*` is exit 2. It prints the exact CIDRs (`10.0.0.0/16` for `cb-vcn`,
+`10.0.1.0/24` for `cb-subnet`, `0.0.0.0/0` as the route destination), the ingress rule
+`ingress tcp/22 from <CB_OCI_ADMIN_CIDR>`, the OCIDs it already knows from the environment
+(`CB_OCI_COMPARTMENT_ID`, and `CB_OCI_SUBNET_ID` when set), and the literal `-` for every
+value it can only know after creation. It invokes no `oci` binary and makes no network call,
+so it exits 0 on a machine with neither the CLI nor `jq`. `--with-vault` adds `cb-vault` and
+the four secret names `cb-github-app`, `cb-session-secret`, `cb-tunnel-token` and
+`cb-provider-keys`; `--with-bucket` adds `cb-backups`; nothing else changes.
+
+`--apply` looks every resource up by name inside `CB_OCI_COMPARTMENT_ID` before it creates
+it, so a second run prints `reuse` and calls no `create`. It never deletes, and never updates
+a resource it did not create. `--destroy` walks the same order backwards (§9), terminates
+`cb-instance` with `cb-boot` preserved and never deletes the image, which is the rebuild
+path. The script writes no state — no cache, no lock file, no `.state` directory: the
+tenancy is the state, as §4 requires of the retry.
+
+`ops/oci/test/provision.test.mjs` runs `--plan` against a fixture `oci` and asserts both the
+names and that the fixture was never called, so the plan cannot quietly start talking to the
+network.
 
 ## 4. The retry action
 

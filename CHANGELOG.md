@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-24 (Task-24, reproducible OCI network)
+
+- `ops/oci/provision.sh`: `--plan` prints every `cb-*` name, CIDR and ingress rule with no
+  OCI call, `--apply` creates what is missing by name and `--destroy` tears the network down
+  in reverse order while keeping `cb-boot` and the image; the tenancy is the only state.
+- `ops/oci/policy.md`: the `cb-ci` / `cb-instance` grants verbatim from `docs/oci.md`, with
+  the D20 rule that the instance holds no OCI API key.
+- Nine fixture-driven shell tests (five `launch.sh` outcomes, four `provision.sh` contracts)
+  under a new `ops` Vitest project, so `npm test` covers the retry loop.
+- The `[live]` criterion (one dispatched `oci-retry` run finding the existing `cb-instance`)
+  is **not measured** here; an `agent-review` issue carries its measurement.
+
 ### Added — 2026-10-24 (Task-03, contracts)
 
 - `@codebox/contracts` is now the executable form of the API: zod schemas and inferred types
