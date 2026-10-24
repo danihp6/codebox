@@ -32,6 +32,15 @@ export default defineConfig({
           passWithNoTests: true,
         },
       },
+      {
+        test: {
+          name: 'ops',
+          root: './ops',
+          include: ['**/test/**/*.test.mjs'],
+          environment: 'node' as const,
+          passWithNoTests: true,
+        },
+      },
     ],
   },
 });
