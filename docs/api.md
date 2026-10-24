@@ -265,18 +265,10 @@ Replying twice is a 409; the second reply never reaches OpenCode.
 
 ### 5.8 Routines
 
-| Method | Path | Auth | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/v1/routines` | `read` | Schedules with `nextFireAt`, `lastFiredAt` and `enabled`. |
-| `POST` | `/v1/routines` | `chat` | `{ title, kind, cron, timezone, repoId?, prompt?, chatSessionId?, notify }`; also the target of `routine.create`. |
-| `GET` | `/v1/routines/{id}` | `read` | One routine and its last fire. |
-| `PATCH` | `/v1/routines/{id}` | `chat` | Pause/resume or edit the schedule. |
-| `DELETE` | `/v1/routines/{id}` | `chat` | Delete it and its fires. |
-| `POST` | `/v1/routines/{id}/run` | `chat` | Fire now; idempotent per minute. |
-
-A `reminder` has no `prompt`; a `prompt` requires `repoId` and `prompt`. When `chatSessionId` is
-omitted, the daemon creates a chat session for the routine on its first fire. Creation is
-normally the chat agent's `routine.create` tool; the app lists, pauses and deletes.
+Planned by D38 and implemented with the contracts in Task-33. The endpoints are intentionally
+not listed in a route table until the OpenAPI document carries them: this document mirrors the
+contract, it is not a wish list. A `reminder` has no prompt; a `prompt` requires a repo; when a
+prompt has no `chatSessionId`, or the session was archived, the daemon creates one on the fire.
 
 ## 6. SSE
 
@@ -307,8 +299,8 @@ data: {"runId":"run_01J...","seq":17,"delta":"…","ts":"2026-10-24T18:04:02Z"}
 Event types are the D14/D16 list: `run.queued`, `run.started`, `run.output`, `run.tool`,
 `run.permission`, `run.gate`, `run.pr`, `run.merged`, `run.finished`, `run.failed`,
 `run.cancelled`, `chat.delta`, `chat.message`, `chat.tool`, `chat.permission`, `chat.idle`,
-`routine.fired`, `routine.replied`, `routine.failed`, `job.changed`, `approval.created`,
-`approval.resolved`, `telemetry`.
+`job.changed`, `approval.created`, `approval.resolved`, `telemetry`. The `routine.*` events
+join this list with the contracts in Task-33.
 
 ## 7. Rate limits
 
