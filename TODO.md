@@ -156,7 +156,7 @@ without asking a question that the docs already answer.
       "protected path" cases; `[unit]` DST transitions in `Europe/Madrid` produce the
       documented next fire; `[unit]` a diff of 41 files or 2 001 lines fails the budget.
 
-- [ ] **[Task-06]** Security primitives. Pairing codes (TTL, single use, constant-time),
+- [x] **[Task-06]** Security primitives. Pairing codes (TTL, single use, constant-time),
       device key fingerprints, access/refresh tokens, scopes, Argon2id/scrypt hashing,
       redaction, and optional Cloudflare Access JWT verification. *Paths:*
       `packages/security/**`, `docs/security.md` (auth section only). *Dependencies:* Task-03.

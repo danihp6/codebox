@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-24 (Task-06, security primitives)
+
+- `@codebox/security` ships the pairing code (ten Crockford characters, single use, TTL,
+  constant-time compare), scrypt hashing and device fingerprints, HMAC access tokens with
+  scopes and a deterministic refresh-token hash for device lookup.
+- `redact` walks a nested object on a new graph and never mutates its input, matching the
+  documented key patterns; Cloudflare Access JWT verification returns a typed reason
+  (`wrong_aud`, `expired`, `bad_signature`, `unsupported_alg`, `unknown_kid`, …).
+- Argon2id is not a Node built-in and no dependency was added: the doc's "Argon2id or scrypt"
+  is now scrypt for compared values and a keyed hash for looked-up values, written into
+  `docs/security.md` §4.
+
 ### Added — 2026-10-24 (Task-05, core rules)
 
 - `@codebox/core` holds the domain as pure functions: the run state machine with its legal

@@ -60,12 +60,40 @@ Rules:
 
 - A refresh token rotates on every use. Reusing an old one revokes the device — the standard
   theft signal.
-- Tokens are stored hashed (Argon2id or scrypt); a database copy does not grant access.
+- Values that are **compared** (pairing codes) are stored as salted **scrypt** hashes. The
+  refresh token is instead looked up by hash, so it is stored as
+  `HMAC-SHA256(CB_SESSION_SECRET, token)` lowercase hex: a salted hash cannot support a
+  lookup, and a database copy without the session secret grants nothing.
 - `DELETE /v1/devices/{id}` revokes immediately: the next request is a 401 and the app clears
   its store.
 - Pairing codes are rate-limited (10/hour/source) and never logged.
 - A device can hold a subset of scopes; the operator's phone normally holds all of them, a
   read-only tablet does not.
+
+### Primitives (`@codebox/security`)
+
+Every rule above is a tested function; the daemon maps a typed failure to `401`/`403` and never
+invents a format of its own.
+
+- **Pairing code:** 10 characters from the Crockford base32 alphabet without `I`, `L`, `O` and
+  `U` (`^[0-9A-HJKMNP-TV-Z]{10}$`), a 300 s TTL (`CB_PAIRING_TTL_SECONDS`), single use. A used,
+  expired or unknown code never pairs twice, and an unknown code costs the same scrypt check as
+  a wrong one.
+- **scrypt, not Argon2id:** Argon2id is not a Node built-in and this release adds no dependency,
+  so compared values use `scrypt$<N>$<r>$<p>$<salt>$<key>` with `N=16384, r=8, p=1` and a fresh
+  16-byte salt. `verifySecret` parses the stored hash, bounds its parameters and returns `false`
+  for a malformed value.
+- **Access token:** `cb1.<base64url(claims)>.<base64url(HMAC-SHA256(secret, "cb1.<claims>"))>`,
+  claims `{ v, sub, scopes, iat, exp }`, 900 s TTL. It is stateless: rotating
+  `CB_SESSION_SECRET` invalidates every access token and leaves refresh tokens alone.
+- **Authorisation:** `authorizeDevice` is a revoked check plus exact scope membership, with no
+  implied scope; a revoked device fails every scope, `admin` included.
+- **Redaction:** `redact()` returns a new value, replaces a key matching `token`, `secret`,
+  `password`, `key`, `authorization`, `cookie` or `private` with `[redacted]`, and never
+  mutates its input. It is the only redactor the logs pass through.
+- **Cloudflare Access:** `verifyAccessJwt` checks RS256, the `kid` in the fetched JWKS, the
+  signature, `exp`, `aud` and `iss = https://<CB_ACCESS_TEAM_DOMAIN>` in that order, and never
+  fetches anything itself.
 
 ## 5. Request security
 
