@@ -6,6 +6,17 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-24 (Task-04, store)
+
+- `@codebox/store` is the only SQL owner: `0001_init.sql` creates the ten tables and their
+  named indexes in WAL mode with foreign keys enforced, and the runner is checksum-pinned,
+  forward-only and one transaction per file.
+- Repositories for repos, jobs, runs, events, approvals, chats, devices, settings and usage,
+  an in-memory store for tests, stable cursor pagination and a `claimScheduledRun`
+  transaction that returns one winner under concurrent attempts.
+- Event replay is exact both by per-run `seq` and by the global `Last-Event-ID`, and a repo
+  with a live run cannot be deleted.
+
 ### Added — 2026-10-24 (Task-24, reproducible OCI network)
 
 - `ops/oci/provision.sh`: `--plan` prints every `cb-*` name, CIDR and ingress rule with no

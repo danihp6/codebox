@@ -138,7 +138,7 @@ without asking a question that the docs already answer.
       schema rejects a missing secret and accepts the documented defaults; `[unit]` the
       OpenAPI document builds and validates (3.1).
 
-- [ ] **[Task-04]** Store. SQLite WAL schema from `docs/architecture.md` §2, numbered
+- [x] **[Task-04]** Store. SQLite WAL schema from `docs/architecture.md` §2, numbered
       migrations, repositories for repos/jobs/runs/events/approvals/chat/devices/settings/
       usage, an in-memory fake for tests, and the transactional claim used by the scheduler.
       *Paths:* `packages/store/**`, `docs/architecture.md` (table section only).

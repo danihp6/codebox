@@ -113,22 +113,23 @@ Every function here is deterministic and unit-tested. It does no I/O and knows n
 ### `packages/store`
 
 SQLite schema, numbered migrations, repositories. One connection in the daemon; WAL; a
-single writer. Tables:
+single writer. Migrations are forward-only SQL files pinned by checksum: `0001_init.sql`
+creates the ten v1 tables below, and the routines tables arrive in `0002` (Task-34). Tables:
 
-| Table | Purpose |
-| --- | --- |
-| `repos` | Registered repositories and per-repo policy. |
-| `jobs` | Reusable job definitions, cron, timezone, prompt, mode. |
-| `runs` | One execution: trigger, state, branch, worktree, session, PR, gate, cost. |
-| `routines` | Chat schedules: `prompt` or `reminder`, cron, IANA timezone, optional chat session. |
-| `routine_fires` | One row per fire; `(routine_id, scheduled_for)` is the idempotency key. |
-| `run_events` | Append-only timeline (`seq`, `type`, `payload`, `ts`). |
-| `approvals` | Permission requests and their replies. |
-| `chat_sessions` | Persistent chat sessions bound to a repo. |
-| `chat_messages` | User/assistant/tool messages with retention. |
-| `devices` | Paired devices, public keys, token hashes, scopes, revocation. |
-| `settings` | Non-secret key/value settings and schema version. |
-| `usage` | Token/cost ledger per run and per day. |
+| Table | Purpose | Migration |
+| --- | --- | --- |
+| `repos` | Registered repositories and per-repo policy. | `0001_init.sql` |
+| `jobs` | Reusable job definitions, cron, timezone, prompt, mode. | `0001_init.sql` |
+| `runs` | One execution: trigger, state, branch, worktree, session, PR, gate, cost. | `0001_init.sql` |
+| `routines` | Chat schedules: `prompt` or `reminder`, cron, IANA timezone, optional chat session. | `0002_routines.sql` (Task-34, planned) |
+| `routine_fires` | One row per fire; `(routine_id, scheduled_for)` is the idempotency key. | `0002_routines.sql` (Task-34, planned) |
+| `run_events` | Append-only timeline (`seq`, `type`, `payload`, `ts`). | `0001_init.sql` |
+| `approvals` | Permission requests and their replies. | `0001_init.sql` |
+| `chat_sessions` | Persistent chat sessions bound to a repo. | `0001_init.sql` |
+| `chat_messages` | User/assistant/tool messages with retention. | `0001_init.sql` |
+| `devices` | Paired devices, public keys, token hashes, scopes, revocation. | `0001_init.sql` |
+| `settings` | Non-secret key/value settings and schema version. | `0001_init.sql` |
+| `usage` | Token/cost ledger per run and per day. | `0001_init.sql` |
 
 ### `packages/opencode`
 
