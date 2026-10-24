@@ -88,6 +88,9 @@ a fixture and asserts the names.
 from `pkm-randomlike`, renamed and de-hardcoded. It exists because A1 capacity in Madrid is
 exhausted for long stretches; the launch call answers `OutOfHostCapacity` until a slot opens.
 The migration landed on 2026-10-24, before parity, by operator decision (D34 amended).
+Until `docs/vm-image.md` ships, `CB_OCI_IMAGE_ID` points at the platform
+`Canonical-Ubuntu-24.04-aarch64` image and the bootstrap in `docs/agent-vm.md` is manual;
+swapping in the Packer image is a repository-variable change, not a code change.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
