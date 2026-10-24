@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-24 (Task-03, contracts)
+
+- `@codebox/contracts` is now the executable form of the API: zod schemas and inferred types
+  for every resource (`Repo`, `Job`, `Run`, `Approval`, `ChatSession`, `Device`, `Telemetry`,
+  health, settings, push), the error envelope with the documented status per code, pagination
+  and idempotency, and one `parse*` helper per boundary that throws a path-carrying typed
+  error.
+- The 20 D14/D16 SSE event names and their strict `data` shapes, the two run/chat bases and
+  the `gap` control frame; the event list cannot drift from the schema.
+- The `CB_*` config schema for `docs/providers.md` §2–§11 with every documented default, the
+  secret redaction list, and validation that never echoes a secret value.
+- A generated OpenAPI 3.1 document (`buildOpenApiDocument`) whose 41 paths are checked against
+  `docs/api.md`; `zod@4.6.7` is the only new dependency.
+
 ### Added — 2026-10-24 (OCI migration, pulled forward)
 
 - `ops/oci/launch.sh`: the retry loop extracted from `pkm-randomlike`, with `CB_OCI_*`

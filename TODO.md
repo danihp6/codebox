@@ -127,7 +127,7 @@ without asking a question that the docs already answer.
 `docs/api.md` (schema section); Task-04 holds `packages/store/migrations/**`; Task-05 holds
 `docs/jobs.md` (guardrail section); Task-06 holds `docs/security.md` (auth section).
 
-- [ ] **[Task-03]** Contracts. Zod schemas and TypeScript types for every API resource
+- [x] **[Task-03]** Contracts. Zod schemas and TypeScript types for every API resource
       (`Repo`, `Job`, `Run`, `Approval`, `ChatSession`, `Device`, `Telemetry`), every SSE
       event in D14/D16, the config schema for `docs/providers.md`, and the error envelope.
       Export a `parse` helper per boundary. Generate or check `docs/api.md` against the
