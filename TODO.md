@@ -147,7 +147,7 @@ without asking a question that the docs already answer.
       concurrent attempts; `[unit]` event replay by `seq` and by `Last-Event-ID` is exact;
       `[unit]` foreign keys are enforced and a deleted repo refuses to orphan a live run.
 
-- [ ] **[Task-05]** Core rules. Pure functions for the run state machine, the D12 auto-merge
+- [x] **[Task-05]** Core rules. Pure functions for the run state machine, the D12 auto-merge
       guardrails, D13 cron/misfire, D26 protected paths and diff budget, D27 permission
       policy, D29 cost/timeout. *Paths:* `packages/core/**`, `docs/jobs.md` (guardrail and
       lifecycle sections only). *Dependencies:* Task-03. *Acceptance:* `[unit]` every legal

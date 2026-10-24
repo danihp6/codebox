@@ -6,6 +6,16 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-24 (Task-05, core rules)
+
+- `@codebox/core` holds the domain as pure functions: the run state machine with its legal
+  transitions and cancellable states, and `evaluateAutoMerge` over the eight D12 guardrails in
+  a fixed order with a typed blocker per red case.
+- Cron parsing and next-fire in an IANA zone with the two DST rules, the D13 misfire decision,
+  the D26 protected-path globs and the 41-file / 2 001-line diff budget.
+- The D27 permission matrix (`allow`/`ask`/`deny`, fails closed outside the worktree) and the
+  D29 cost/timeout checks; the clock is always an argument, so every rule is table-tested.
+
 ### Added — 2026-10-24 (Task-04, store)
 
 - `@codebox/store` is the only SQL owner: `0001_init.sql` creates the ten tables and their

@@ -67,8 +67,20 @@ Rules:
 
 - Every transition is persisted with its event in the same transaction; the app's timeline
   and the audit log cannot disagree.
-- No state moves backwards. A retry is a **new run**, never a resumed one.
-- `merging` is atomic: cancel is refused there (409), and recovery is a revert.
+- The table is data in `@codebox/core` (`RUN_TRANSITIONS`) and every move goes through
+  `transitionRun(from, to)`, which returns either `{ allowed: true, from, to }` or
+  `{ allowed: false, from, to, code, message }` with `same_state`, `terminal_state` or
+  `illegal_transition`. The daemon writes the event only for an allowed outcome and maps the
+  rejection to a 409.
+- `TERMINAL_STATES` is `succeeded`, `failed`, `cancelled`; nothing leaves them.
+  `CANCELLABLE_STATES` is `queued`, `preparing`, `running` and `gating` (`canCancel`).
+- `merging → pr_open` is the re-evaluation path of §8, not a second lifecycle: it happens
+  once, when the merge call answers 405/409 and the guardrails are re-evaluated against fresh
+  facts. It is the only edge that points backwards.
+- No state moves backwards otherwise. A retry is a **new run**, never a resumed one.
+- `merging` is atomic: cancel is refused there (409), and recovery is a revert. The refusal is
+  the caller's (`canCancel('merging') === false`); the transition table reports
+  `illegal_transition` for `merging → cancelled` like any absent edge.
 - A run records the exact prompt, the agent, the model, the base commit and the gate command
   before it starts.
 
@@ -143,16 +155,21 @@ Run: run_01J… · Job: job_01J… · Agent: build · Model: …
 Auto-merge requires **all** of the following. A single failure leaves the PR open and
 notifies once.
 
-| # | Guardrail | Check | Failure code |
+| # | Guardrail id | Check | Failure code |
 | --- | --- | --- | --- |
-| G1 | Local gate | exit 0 | `gate_failed` |
-| G2 | Required checks | every required check on the head sha is `success` | `checks_red` |
-| G3 | PR mergeable | `mergeable: true`, no conflict | `not_mergeable` |
-| G4 | Base unchanged | base sha equals the one recorded at prepare | `base_moved` |
-| G5 | Diff budget | ≤ 40 files and ≤ 2 000 changed lines | `diff_too_large` |
-| G6 | Protected paths | no file matches `CB_PROTECTED_PATHS` | `protected_path` |
-| G7 | Veto | no `do-not-merge` label | `vetoed` |
-| G8 | Policy | repo and job are `auto`, `CB_AUTOMERGE=on`, probation met | `policy_manual` |
+| G1 | `gate` | local gate exited 0 | `gate_failed` |
+| G2 | `checks` | every required check on the head sha is `success` | `checks_red` |
+| G3 | `checks` | `mergeable: true`, no conflict (reported on the `checks` guardrail; the contract has no id for it) | `not_mergeable` |
+| G4 | `base` | base sha equals the one recorded at prepare | `base_moved` |
+| G5 | `diff` | ≤ 40 files and ≤ 2 000 changed lines | `diff_budget` |
+| G6 | `protected_paths` | no file matches `CB_PROTECTED_PATHS` | `protected_path` |
+| G7 | `labels` | no `do-not-merge` label | `label_do_not_merge` |
+| G8a | `policy` | repo and job are `auto`, probation met | `policy_manual` |
+| G8b | `automerger` | `CB_AUTOMERGE=on` | `automerger_off` |
+
+The failure codes are the `@codebox/contracts` `BlockerCode` vocabulary, and the guardrail
+ids are its `GuardrailId` vocabulary: the app renders those codes and this document does not
+invent a second spelling.
 
 G5 counts `git diff --numstat` against the base, so a rename counts as its real line delta.
 G6 matches with glob semantics against the normalised repo-relative path, including files
@@ -161,12 +178,18 @@ added, modified, renamed and deleted. The default list is in `docs/providers.md`
 The evaluation is one pure function:
 
 ```ts
-evaluateAutoMerge(input: MergeFacts): { merge: boolean; blockers: Blocker[] }
+evaluateAutoMerge(facts: MergeFacts): {
+  merge: boolean;
+  guardrails: GuardrailFact[];
+  blockers: MergeBlocker[];
+}
 ```
 
 `MergeFacts` includes the gate result, checks, PR state, base shas, diff stat, changed paths,
-labels, policy and the global switch. The app renders `blockers` verbatim; it never
-re-derives a guardrail from a string.
+labels, policy, diff budget, protected paths and the global switch. `guardrails` holds exactly
+eight entries in the order of the table, a passing one is `{ id, state: 'pass' }` and a failing
+one carries `reason: <blocker code>`; `blockers` is empty if and only if `merge` is true. The
+app renders both arrays verbatim; it never re-derives a guardrail from a string.
 
 ## 8. Merge
 
