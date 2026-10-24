@@ -10,7 +10,7 @@ import {
   utimes,
   writeFile,
 } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -28,15 +28,22 @@ const exec = promisify(execFile);
 const HOUR_MS = 3_600_000;
 const NOW = new Date('2026-06-07T08:09:10.000Z');
 
+// Hermetic: the tests never inherit the runner's git configuration or credentials.
+const GIT_TEST_ENV: Readonly<Record<string, string>> = Object.freeze({
+  PATH: '/usr/local/bin:/usr/bin:/bin',
+  HOME: homedir(),
+  GIT_TERMINAL_PROMPT: '0',
+  LC_ALL: 'C',
+  GIT_CONFIG_NOSYSTEM: '1',
+  GIT_CONFIG_GLOBAL: '/dev/null',
+});
+
 async function git(cwd: string, args: readonly string[]): Promise<string> {
-  const env = {
-    ...process.env,
-    GIT_TERMINAL_PROMPT: '0',
-    LC_ALL: 'C',
-    GIT_CONFIG_NOSYSTEM: '1',
-    GIT_CONFIG_GLOBAL: '/dev/null',
-  };
-  const result = await exec('git', args, { cwd, env, maxBuffer: 16 * 1024 * 1024 });
+  const result = await exec('git', args, {
+    cwd,
+    env: GIT_TEST_ENV,
+    maxBuffer: 16 * 1024 * 1024,
+  });
   return result.stdout;
 }
 
