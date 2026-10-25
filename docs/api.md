@@ -299,6 +299,10 @@ Replying twice is a 409; the second reply never reaches OpenCode.
 | `POST` | `/v1/chat/sessions/{id}/interrupt` | `chat` | Stops the agent; the session returns to `idle`. |
 | `POST` | `/v1/chat/sessions/{id}/promote` | `runs` | `{ title? }` → a run in the same worktree. |
 
+Promote starts a new run with `trigger: "promote"` from the repository's default branch. The
+prompt is the text of the last `assistant` message of the session; a session with no assistant
+message is `422` with `details.path: "chat.messages"`. The response is `202` with the new `Run`.
+
 ### 5.7 Settings and push
 
 | Method | Path | Auth | Purpose |

@@ -127,8 +127,8 @@ describe('startDaemon', () => {
     expect(handle.port).toBeGreaterThan(0);
     expect(handle.hostname).toBe('127.0.0.1');
     expect(handle.report.failed).toEqual([]);
-    expect(handle.report.absent).toHaveLength(10);
-    expect(handle.report.loaded).toEqual(['auth']);
+    expect(handle.report.absent).toHaveLength(8);
+    expect(handle.report.loaded).toEqual(['auth', 'chat', 'events']);
 
     const daemonFile = join(root, 'state', 'daemon.json');
     expect(existsSync(daemonFile)).toBe(true);
