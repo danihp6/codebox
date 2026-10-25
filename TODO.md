@@ -264,7 +264,7 @@ Task-16 holds `docs/providers.md` (push section); Task-17 holds `apps/daemon/src
       run; `[unit]` cursor pagination is stable while new runs arrive; `[live]` the app can
       create a job and see it fire without a page reload.
 
-- [ ] **[Task-16]** Notifications. Web Push subscription, VAPID signing, Capacitor push
+- [x] **[Task-16]** Notifications. Web Push subscription, VAPID signing, Capacitor push
       payload mapping, deduplication, and per-event preferences. *Paths:*
       `apps/daemon/src/push/**`, `docs/providers.md` (push section only). *Dependencies:*
       Task-11, Task-13 (events). *Acceptance:* `[unit]` a finished run produces one push per

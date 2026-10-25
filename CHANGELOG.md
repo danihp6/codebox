@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-16, notifications)
+
+- `apps/daemon/src/push` is a full daemon subsystem: the four `docs/api.md` §5.7 routes —
+  notification preferences, subscribe and unsubscribe — stored under two `settings` keys
+  (no migration), parsed with the contract schemas and behind the `read`/`write` scopes.
+- One finished run becomes **one** push per subscribed device: `run.merged` and
+  `run.finished` share the `run:<id>` delivery key, and a `404`/`410` from the push service
+  prunes exactly that subscription.
+- VAPID `ES256` JWTs and the RFC 8291 `aes128gcm` payload are built with `node:crypto` only,
+  so no dependency was added; without a VAPID pair the subsystem stays configured-off and
+  every delivery counts as skipped, which leaves the daemon boot unchanged.
+- Per-event preferences and quiet hours gate delivery, and a push held by quiet hours drains
+  when the window closes.
+- The `[live]` criterion — a real browser subscription receives the push and deep-links to
+  the run — is not measured on CI; an `agent-review` issue carries its measurement.
+
 ### Added — 2026-10-25 (Task-18, app shell)
 
 - `apps/app` is an Angular 22.2.3 + Ionic 9.0.9 + Capacitor 8.5.3 standalone, zoneless app:

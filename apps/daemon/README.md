@@ -26,6 +26,32 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `src/chat/ids.test.ts` — id shapes, uniqueness and injectable randomness.
 - `src/chat/service.test.ts` — fixture replay, prepare, interrupt, permissions and replies.
 - `src/chat/routes.test.ts` — the §5.6 HTTP contract: bodies, errors, scopes, redacted logs.
+- `src/push/index.ts` — the push subsystem module: one service, the four §5.7 routes and the
+  pump.
+- `src/push/service.ts` — the event-log pump, delivery, the preference and subscription APIs
+  and the injected transports.
+- `src/push/routes.ts` — the §5.7 notification handlers, their body schema and the `write`
+  check.
+- `src/push/ids.ts` — the only `sub_` subscription id generator.
+- `src/push/errors.ts` — `PushError` and its reason-to-envelope mapping.
+- `src/push/storage.ts` — the `notifications.preferences` and `push.subscriptions` settings
+  rows.
+- `src/push/mapping.ts` — the frozen event-to-notification table, the delivery key and the
+  message text.
+- `src/push/quiet-hours.ts` — the quiet-hours window in the configured time zone.
+- `src/push/vapid.ts` — the ES256 VAPID JWT and the authorization header.
+- `src/push/rfc8291.ts` — the `aes128gcm` payload encryption.
+- `src/push/transport.ts` — the transport port and the `web` implementation over `fetch`.
+- `src/push/ids.test.ts` — id shapes, uniqueness and pinned bytes.
+- `src/push/storage.test.ts` — defaults, round-trips, malformed rows and removal.
+- `src/push/mapping.test.ts` — the mapping table, the preference gate and the message text.
+- `src/push/quiet-hours.test.ts` — wrapping and same-day windows, zones and unusable input.
+- `src/push/vapid.test.ts` — JWT claims, ES256 verification and key refusal.
+- `src/push/rfc8291.test.ts` — header layout and an independent decrypt of the body.
+- `src/push/transport.test.ts` — request headers, encryption round-trip and status mapping.
+- `src/push/service.test.ts` — dedupe, pruning, preferences, quiet hours and unconfigured mode.
+- `src/push/routes.test.ts` — the §5.7 HTTP contract: bodies, scopes, envelopes, silent logs.
+- `src/push/index.test.ts` — the module seam and the pump timer.
 - `src/events/index.ts` — the SSE subsystem module: one bridge and one connection limiter.
 - `src/events/bridge.ts` — read-after-id replay, gap detection, filters, heartbeat, hard close.
 - `src/events/frames.ts` — the `text/event-stream` framing, pure and clock-free.
