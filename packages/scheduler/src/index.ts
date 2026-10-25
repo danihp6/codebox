@@ -33,3 +33,13 @@ export { claimKey, planFires, planTick } from './tick.js';
 
 // Resume and pause: the next fire from `now`, or none at all.
 export { planPause, planResume } from './resume.js';
+
+// Routines: the chat schedules of D38.
+export { fromUpdate, nextRoutineFire, planRoutineTick, toSchedule } from './routines.js';
+export type {
+  RoutineDue,
+  RoutineNextFire,
+  RoutineSkipped,
+  RoutineTickInput,
+  RoutineTickPlan,
+} from './routines.js';

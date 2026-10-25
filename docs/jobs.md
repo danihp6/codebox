@@ -295,3 +295,20 @@ scheduler claims `(routine_id, scheduled_for)` transactionally and uses the same
 rule as a job. A `prompt` with no `chatSessionId` — or whose session was archived — gets a new
 chat session on that fire; it never appends to an unrelated one. A `reminder` costs nothing; a
 `prompt` counts against `CB_DAILY_COST_USD`.
+
+### 15.1 Storage and the claim (Task-34)
+
+`0002_routines.sql` adds two tables, forward only:
+
+| Table | Holds |
+| --- | --- |
+| `routines` | The schedule: `kind` (`prompt` or `reminder`), title, `cron`, IANA timezone, `enabled`, `notify`, the `prompt` kind's `repo_id`/`prompt`/`chat_session_id`, `next_fire_at` and `last_fired_at`. |
+| `routine_fires` | One row per fire: `scheduled_for`, `fired_at` and the `outcome` — `claimed`, then `sent`/`replied`/`failed`, or `skipped`. |
+
+`next_fire_at` is the fire **not yet claimed**; `NULL` means the routine is paused. A claim is
+one transaction: the routine must be enabled and its `next_fire_at` must still equal the
+`scheduled_for` being claimed, the fire row is inserted, and `next_fire_at` moves on with
+`last_fired_at = fired_at`. `UNIQUE (routine_id, scheduled_for)` makes that exactly one
+winner: a tick that loses the race — a second process, a double tick, a stale read — gets
+`null` instead of an error and never fires twice. A `skipped` fire writes its row and moves
+`next_fire_at`, but leaves `last_fired_at` alone, because the fire never happened.

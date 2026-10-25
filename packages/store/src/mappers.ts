@@ -1,9 +1,18 @@
-import type { Approval, ChatMessage, ChatSession, Job, Repo, Run } from '@codebox/contracts';
+import type {
+  Approval,
+  ChatMessage,
+  ChatSession,
+  Job,
+  Repo,
+  Routine,
+  Run,
+} from '@codebox/contracts';
 import type { Device, RunState, SseEventName } from '@codebox/contracts';
 import type { SQLOutputValue } from 'node:sqlite';
 import type { DeviceRecord } from './devices.js';
 import type { EventRecord } from './events.js';
 import { StoreError } from './errors.js';
+import type { RoutineFireRecord } from './routine-fires.js';
 import type { RunRecord } from './runs.js';
 import type { UsageRecord } from './usage.js';
 
@@ -52,6 +61,8 @@ const BLOCKER_CODES = [
   'gate_failed',
   'not_mergeable',
 ] as const;
+const ROUTINE_KINDS = ['prompt', 'reminder'] as const;
+const ROUTINE_FIRE_OUTCOMES = ['claimed', 'sent', 'replied', 'failed', 'skipped'] as const;
 const SSE_EVENT_NAMES = [
   'run.queued',
   'run.started',
@@ -276,6 +287,42 @@ export function jobFromRow(rowValue: Row): Job {
     policy: enumColumn(rowValue, 'policy', REPO_POLICIES),
     createdAt: textColumn(rowValue, 'created_at'),
     nextFireAt: nullableTextColumn(rowValue, 'next_fire_at'),
+  };
+}
+
+export function routineFromRow(rowValue: Row): Routine {
+  const kind = enumColumn(rowValue, 'kind', ROUTINE_KINDS);
+  const base = {
+    id: textColumn(rowValue, 'id'),
+    title: textColumn(rowValue, 'title'),
+    cron: textColumn(rowValue, 'cron'),
+    timezone: textColumn(rowValue, 'timezone'),
+    enabled: booleanColumn(rowValue, 'enabled'),
+    notify: booleanColumn(rowValue, 'notify'),
+    createdAt: textColumn(rowValue, 'created_at'),
+    nextFireAt: nullableTextColumn(rowValue, 'next_fire_at'),
+    lastFiredAt: nullableTextColumn(rowValue, 'last_fired_at'),
+  };
+  // A reminder row never carries repo_id, prompt or chat_session_id: the table CHECK enforces
+  // it and the schema has no such keys, so the mapper must not invent them.
+  if (kind === 'reminder') return { ...base, kind };
+  return {
+    ...base,
+    kind,
+    repoId: textColumn(rowValue, 'repo_id'),
+    prompt: textColumn(rowValue, 'prompt'),
+    chatSessionId: nullableTextColumn(rowValue, 'chat_session_id'),
+  };
+}
+
+export function routineFireFromRow(rowValue: Row): RoutineFireRecord {
+  return {
+    id: integerColumn(rowValue, 'id'),
+    routineId: textColumn(rowValue, 'routine_id'),
+    scheduledFor: textColumn(rowValue, 'scheduled_for'),
+    firedAt: textColumn(rowValue, 'fired_at'),
+    outcome: enumColumn(rowValue, 'outcome', ROUTINE_FIRE_OUTCOMES),
+    detail: nullableTextColumn(rowValue, 'detail'),
   };
 }
 

@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-34, routine store and scheduler)
+
+- Migration `0002_routines.sql` adds `routines` and `routine_fires` with the D38 kind CHECKs
+  and `UNIQUE (routine_id, scheduled_for)` as the idempotency key; it is forward-only and
+  `0001_init.sql` is untouched.
+- `RoutineRepository` and `RoutineFireRepository` create, patch, pause, delete and list, and
+  the claim transaction returns one winner across 20 concurrent handles, with `skip` recording
+  a fire that was deliberately not sent.
+- `planRoutineTick` and `nextRoutineFire` reuse the job clock: the next fire is computed in the
+  IANA zone under the D13 grace and misfire rule, so the `Europe/Madrid` DST rows land on the
+  documented instants and a fire outside the grace is skipped once and never retried.
+
 ### Added — 2026-10-25 (Task-25, VM image)
 
 - A Packer template builds the Ubuntu 24.04 arm64 OCI image with Node 24, git, gh, opencode,

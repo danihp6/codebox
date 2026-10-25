@@ -432,7 +432,7 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       updates `docs/oci.md` (migration section). *Dependencies:* Task-24, Task-31.
       *Acceptance:* `[live]` pkm has no `oci-retry` workflow, `OCI_RETRY` is `off` or gone,
       and a search of that repository finds no `pkm-` OCI resource identifier.
-- [ ] **[Task-34]** Routine store and scheduler. Add `routines` and `routine_fires` (a
+- [x] **[Task-34]** Routine store and scheduler. Add `routines` and `routine_fires` (a
       numbered migration; never edit an applied one), the repositories, and the transactional
       claim on `(routine_id, scheduled_for)`; next fire in the IANA zone with the D13 misfire
       rule. *Paths:* `packages/store/**`, `packages/scheduler/**`,
