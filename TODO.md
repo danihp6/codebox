@@ -42,7 +42,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 3 | Integrations: OpenCode, workspaces, scheduler, GitHub | 07–10 | 4 |
 | 4 | Daemon: config, auth, chat, runs, CLI | 11–12, 13–17 | 2, then 4 |
 | 5 | Hybrid app shell and screens | 18 → 19–23 | 1, then 5 |
-| 6 | OCI extraction and VM image | 24–25, 33 | 3 |
+| 6 | OCI extraction and VM image | 24–25, 33, 37 | 3 |
 | 7 | Hardening, e2e, observability, release | 26–30 | 5 |
 | 8 | Beta, onboarding, migration of pkm | 31–32, 34 | 3 |
 | 9 | Chat routines and reminders | 35–36 | 1, then 2 |
@@ -340,6 +340,10 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
 
 ## Batch 6 — OCI extraction and VM image
 
+**Queue note:** Task-37 is ops-only, path-disjoint from every open task and needs nothing a
+batch-mate produces. When a cycle fills a one-task batch under rule 1b, take it before the app
+screens: it is the only task in the plan that keeps the box from disappearing on its own.
+
 - [x] **[Task-24]** OCI extraction, remainder. The retry already moved early (2026-10-24,
       D34 amended): `ops/oci/launch.sh`, `.github/workflows/oci-retry.yml` and the `cb-*`
       resources exist. What is missing is the reproducible part: `ops/oci/provision.sh` (VCN,
@@ -371,6 +375,29 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       fixture per kind parses; `[unit]` a prompt routine without repo/prompt is rejected and a
       reminder without prompt is accepted; `[unit]` the tool schema rejects a missing timezone;
       `[unit]` the OpenAPI document lists the three events.
+
+- [ ] **[Task-37]** Instance liveness. Always Free compute is reclaimed after seven days of
+      idleness, and today the answer is only recovery (D33). Ship the measurement half, as
+      D39 requires: `ops/vm/keepalive.sh` samples `/proc` twice a second apart and prints one
+      JSON line (`at`, `cpuBusyPct`, `memUsedPct`, `netBytes`, `load1`, `uptimeSeconds`),
+      appends it to `/var/lib/codebox/logs/keepalive.jsonl`, and then runs the bounded, useful
+      pass a parked box would otherwise skip — `cb doctor`, `cb prune` and a loopback
+      `GET /v1/health` — with every step optional, so a missing CLI or a stopped daemon is
+      logged as `skipped` and never fails the run. `codebox-keepalive.service` runs it every
+      six hours (`Persistent=true`) and `60-service.sh` installs and enables both units beside
+      the backup pair. No synthetic load: D39 explains why a burner is refused, not
+      forgotten. *Paths:* `ops/vm/keepalive.sh`,
+      `ops/vm/systemd/codebox-keepalive.service`, `ops/vm/systemd/codebox-keepalive.timer`,
+      `ops/vm/test/keepalive.test.mjs`, `ops/image/scripts/60-service.sh`, `ops/vm/README.md`,
+      `docs/oci.md` (§6 only), `docs/operations.md` (§10.5 only). *Dependencies:* Task-25.
+      *Acceptance:* `[unit]` `keepalive.sh --report` on a stub `/proc` prints exactly one JSON
+      line with the six fields and exits 0; `[unit]` with the daemon down and `cb` absent the
+      pass reports `skipped` for both steps, still writes the line and exits 0; `[unit]` the
+      script contacts nothing but loopback (its `curl` targets are greped and a fixture run
+      proves it); `[unit]` `60-service.sh` installs both units and enables the timer; `[live]`
+      after seven days `keepalive.jsonl` holds 28 lines and the OCI console shows no
+      reclamation warning — read by a human in the console, so it is reported as `[?]`, never
+      as passing.
 
 ---
 

@@ -187,8 +187,14 @@ state.
 - **Growing a 1/6 box** is a deliberate, braked operation: stop the chain, stop the
   instance, update `shape-config`, start it, re-arm the chain. A stopped instance is not
   `RUNNING`, so a live chain would launch a second box beside it.
-- Always Free compute can be reclaimed after a week of idleness; the backup and the image are
-  the answer, not a second instance.
+- Always Free compute can be reclaimed after a week of idleness. The rule is not "was it
+  touched" but the **95th percentile of CPU, memory and network over seven days**: a spike
+  every few hours does not move it, so the box is kept by doing its real work, not by a burner
+  (D39). `codebox-keepalive.timer` runs the liveness pass every six hours — `cb doctor`,
+  `cb prune`, a loopback health probe — and appends the reading it took to
+  `/var/lib/codebox/logs/keepalive.jsonl`, which is how the operator sees the box drifting
+  towards the threshold instead of guessing. If it is ever reclaimed, the backup and the image
+  are the answer, not a second instance (`docs/operations.md` §10.5).
 
 ## 7. Cost
 
