@@ -27,25 +27,68 @@ device identity.
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| `POST` | `/v1/pair/code` | loopback admin socket only | Issue a code (`{ name, ttlSeconds? }`). |
+| `POST` | `/v1/pair/code` | loopback source, or an `admin` bearer | Issue a one-time code → `201`. |
 | `POST` | `/v1/pair` | none, rate-limited | Exchange `{ code, deviceName, platform, devicePublicKey }`. |
 | `POST` | `/v1/auth/refresh` | refresh token | Rotate: returns a new access **and** refresh token. |
-| `POST` | `/v1/auth/logout` | bearer | Revokes the calling device's refresh token. |
+| `POST` | `/v1/auth/logout` | bearer | Revokes the calling device's refresh token; `204`. |
 | `GET` | `/v1/me` | bearer | `{ device, scopes, serverTime }`. |
-| `GET` | `/v1/devices` | bearer | Paired devices, last seen, scopes. |
+| `GET` | `/v1/devices?limit=50&cursor=` | `read` | Paired devices, last seen, scopes. |
 | `DELETE` | `/v1/devices/{id}` | `admin` | Revoke one device; its next request is a 401. |
 
-`POST /v1/pair` returns:
+`POST /v1/pair/code` serves a loopback source (`127.0.0.1`, `::1` or `::ffff:127.0.0.1`) and
+any source that presents a bearer carrying `admin`; anything else is `403 forbidden` with
+`details.reason = "loopback_required"`. The body is `{ "name", "ttlSeconds"?, "scopes"? }`:
+`name` is 1–64 characters, `ttlSeconds` is an integer from 30 to 3600 and defaults to
+`CB_PAIRING_TTL_SECONDS`, and `scopes` defaults to all five. It answers `201`:
 
 ```json
 {
-  "device": { "id": "dev_01J...", "name": "Dani iPhone", "platform": "ios" },
+  "code": "7K3M9QXB2F",
+  "expiresAt": "2026-10-25T00:05:00Z",
+  "scopes": ["read", "chat", "runs", "write", "admin"],
+  "name": "Dani iPhone"
+}
+```
+
+The plaintext code is returned once; only its hash is kept, in memory, so a code is single use
+and a daemon restart invalidates an unused one.
+
+`POST /v1/pair` takes:
+
+```json
+{
+  "code": "7K3M9QXB2F",
+  "deviceName": "Dani iPhone",
+  "platform": "ios",
+  "devicePublicKey": "…"
+}
+```
+
+`platform` is `ios`, `android`, `web` or `cli`. A used, expired or unknown code is
+`401 unauthorized` with `details.reason` of `"used_code"`, `"expired_code"` or `"unknown_code"`,
+and it never creates a device. A successful exchange returns:
+
+```json
+{
+  "device": {
+    "id": "dev_01JABCDEFGHJKMNPQRSV",
+    "name": "Dani iPhone",
+    "platform": "ios",
+    "scopes": ["read", "chat", "runs", "write", "admin"],
+    "createdAt": "2026-10-24T18:03:11Z",
+    "lastSeenAt": null
+  },
   "accessToken": "…",
   "refreshToken": "…",
   "expiresIn": 900,
   "scopes": ["read", "chat", "runs", "write", "admin"]
 }
 ```
+
+`POST /v1/auth/refresh` takes `{ "refreshToken": "…" }` and answers `200` with
+`{ accessToken, refreshToken, expiresIn, scopes }`. The refresh token rotates on every use; the
+previous one is kept only to detect replay, and presenting it revokes the device and answers
+`401`.
 
 Scopes: `read` (all GETs), `chat` (messages, interrupt), `runs` (create, cancel, revert, run
 now), `write` (repos, jobs, settings, approval replies), `admin` (pairing codes, revoke other
@@ -55,6 +98,10 @@ deliberate choice, not a default.
 Access tokens live 900 s (`CB_ACCESS_TOKEN_TTL_SECONDS`); refresh tokens 30 days and rotate
 on every use. A used refresh token is dead — replay is treated as theft and revokes the
 device.
+
+Pairing is rate limited: `POST /v1/pair` and `POST /v1/pair/code` share **10 requests per
+rolling hour per source**. Over the limit the answer is `429 rate_limited` with
+`Retry-After: <seconds>` and `details.retryAfter`.
 
 ## 3. Errors
 
