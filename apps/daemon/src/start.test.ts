@@ -127,7 +127,8 @@ describe('startDaemon', () => {
     expect(handle.port).toBeGreaterThan(0);
     expect(handle.hostname).toBe('127.0.0.1');
     expect(handle.report.failed).toEqual([]);
-    expect(handle.report.absent).toHaveLength(11);
+    expect(handle.report.absent).toHaveLength(10);
+    expect(handle.report.loaded).toEqual(['auth']);
 
     const daemonFile = join(root, 'state', 'daemon.json');
     expect(existsSync(daemonFile)).toBe(true);
@@ -164,7 +165,9 @@ describe('startDaemon', () => {
     expect(await index.text()).toBe(INDEX);
 
     const missing = await fetch(`${base}/v1/nope`);
-    expect(missing.status).toBe(404);
+    expect(missing.status).toBe(401);
+    const missingBody: unknown = await missing.json();
+    expect(missingBody).toMatchObject({ error: { code: 'unauthorized' } });
 
     await handle.stop('test');
     handles.length = 0;

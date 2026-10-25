@@ -111,9 +111,14 @@ export function createApp(options: CreateAppOptions): DaemonApp {
     ),
   );
 
-  app.get('*', async (c): Promise<Response> => {
+  app.get('*', async (c, next): Promise<Response | void> => {
     const requestPath = c.req.path;
-    if (isApiPath(requestPath)) return notFound(c, requestPath);
+    if (isApiPath(requestPath)) {
+      // A subsystem module registers its routes after this catch-all, so an API path has to
+      // fall through; an unmatched one still ends in `app.notFound`, never in `index.html`.
+      await next();
+      return;
+    }
     // Hono and node-server normalise the target before any route runs, so the raw target is
     // the only place a dot-segment is still visible; the SPA fallback must never answer it.
     if (hasDotSegment(rawRequestTarget(c))) return notFound(c, requestPath);

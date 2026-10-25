@@ -6,6 +6,23 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-12, auth and pairing)
+
+- The daemon pairs a device: `POST /v1/pair/code` (loopback source or an `admin` bearer)
+  mints a one-time 10-character code with a 300 s TTL, stored only as a scrypt hash in
+  memory; `POST /v1/pair` exchanges it for a device row, a 900 s access token and a 30-day
+  refresh token. A used, expired or unknown code never pairs twice, even under two concurrent
+  exchanges, and the 11th pairing request per source in an hour is `429` with `Retry-After`.
+- Refresh tokens rotate on every use; the previous hash is kept only to detect replay, and a
+  replay revokes the device. A revoked device fails every scope, `admin` included.
+- One `/v1/*` middleware guards every route except health, version, pairing and the refresh
+  exchange; `GET /v1/me`, `GET /v1/devices` (`read`), `DELETE /v1/devices/{id}` (`admin`) and
+  `POST /v1/auth/logout` answer the documented bodies with strict schemas and the documented
+  `401`/`403`/`404`/`422`/`429` envelopes.
+- `apps/daemon/src/app.ts` hands an API path to the modules registered after the SPA catch-all,
+  so a module route is reachable while an unmatched `/v1` path still ends in `not_found` and
+  the traversal guard and `app_not_built` fallback are unchanged.
+
 ### Added — 2026-10-25 (Task-34, routine store and scheduler)
 
 - Migration `0002_routines.sql` adds `routines` and `routine_fires` with the D38 kind CHECKs

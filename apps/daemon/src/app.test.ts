@@ -369,6 +369,30 @@ describe('static hosting', () => {
   });
 });
 
+describe('route seam', () => {
+  it('leaves an unmatched API path to the not_found envelope', async () => {
+    const { app } = harness();
+    const response = await app.request('/v1/nope');
+    expect(response.status).toBe(404);
+    const body = await jsonBody(response);
+    expect(body['error']).toMatchObject({
+      code: 'not_found',
+      details: { path: '/v1/nope' },
+    });
+  });
+
+  it('keeps the static fallback when no build exists', async () => {
+    const { app } = harness({ files: {} });
+    const response = await app.request('/');
+    expect(response.status).toBe(404);
+    const body = await jsonBody(response);
+    expect(body['error']).toMatchObject({
+      code: 'not_found',
+      details: { path: '/', reason: 'app_not_built' },
+    });
+  });
+});
+
 describe('onError', () => {
   it('answers 500 with the internal envelope and logs the error', async () => {
     const { app, lines } = harness({

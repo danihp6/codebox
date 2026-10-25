@@ -229,7 +229,7 @@ Task-16 holds `docs/providers.md` (push section); Task-17 holds `apps/daemon/src
       boot reconciliation marks a fake running run failed once; `[live]` `npm start` serves
       the health endpoint and the built app on the configured port.
 
-- [ ] **[Task-12]** Auth and pairing. Pairing code issue (admin-only), exchange, refresh,
+- [x] **[Task-12]** Auth and pairing. Pairing code issue (admin-only), exchange, refresh,
       logout, device list/revoke, scopes, and middleware for every `/v1` route except health
       and pairing. *Paths:* `apps/daemon/src/auth/**`, `docs/api.md` (auth section only).
       *Dependencies:* Task-06, Task-11. *Acceptance:* `[unit]` no `/v1` route responds without
