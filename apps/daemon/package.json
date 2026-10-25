@@ -13,7 +13,17 @@
     "dist"
   ],
   "scripts": {
+    "prebuild": "npm run build -w @codebox/contracts -w @codebox/security -w @codebox/store",
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "start": "node dist/main.js",
+    "test": "cd ../.. && vitest run --project apps/daemon"
+  },
+  "dependencies": {
+    "@codebox/contracts": "0.0.0",
+    "@codebox/security": "0.0.0",
+    "@codebox/store": "0.0.0",
+    "@hono/node-server": "2.1.5",
+    "hono": "4.13.13"
   }
 }
