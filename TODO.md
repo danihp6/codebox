@@ -322,7 +322,7 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       action; `[live]` a created job appears in the list with the next fire in the selected
       timezone.
 
-- [ ] **[Task-22]** Run detail. Timeline, gate output, guardrail checklist, diff stat, PR
+- [x] **[Task-22]** Run detail. Timeline, gate output, guardrail checklist, diff stat, PR
       link, merge result, cost, cancel, revert. *Paths:*
       `apps/app/src/app/features/run-detail/**`. *Dependencies:* Task-18. *Acceptance:*
       `[unit]` each guardrail renders red/green from the contract, not from a string match;

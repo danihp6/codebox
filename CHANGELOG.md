@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-22, run detail)
+
+- `/runs/:id` is a real screen: the timeline replayed from `GET /v1/runs/{id}/events` and
+  extended by the SSE stream with a key per event, so a reconnect never duplicates a row;
+  the gate result, the eight contract guardrails rendered from `guardrailSchema.state` (never
+  a string match), the blockers, the diff stat, the PR link, the merge result and the cost.
+- Cancel asks first and then reflects the returned `cancelled` run; revert is offered only on
+  a `succeeded` run that carries a PR, sends one `Idempotency-Key` and navigates to the new
+  run. A `409 diff_unavailable` is a normal state, not an error.
+- `ApiClient` gains `getRun`, `runEvents`, `runDiff`, `cancelRun` and `revertRun`, all parsed
+  with the contract schemas, and a malformed body is an `ApiError` with code `contract`.
+- The `[live]` criterion — a live timeline and the revert deep link on the VM — is not
+  measured on CI; an `agent-review` issue carries its measurement.
+
 ### Added — 2026-10-25 (Task-16, notifications)
 
 - `apps/daemon/src/push` is a full daemon subsystem: the four `docs/api.md` §5.7 routes —

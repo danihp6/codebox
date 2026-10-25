@@ -32,8 +32,8 @@ Tasks 19–23 replace the placeholder feature pages in place.
 - `src/app/app.routes.spec.ts` — path table and lazy-loader resolution.
 - `src/app/shell/tabs.page.ts` — the five bottom tabs.
 - `src/app/shell/tabs.page.spec.ts` — tab order and rendered hooks.
-- `src/app/core/api/api-client.ts` — typed `/v1` client, `ApiError` and pair parsing.
-- `src/app/core/api/api-client.spec.ts` — payload parsing and error-envelope mapping.
+- `src/app/core/api/api-client.ts` — typed `/v1` client, `ApiError`, pair parsing, the run detail reads, cancel and revert.
+- `src/app/core/api/api-client.spec.ts` — payload parsing, error-envelope mapping, the event page and the run detail calls.
 - `src/app/core/api/http.ts` — the API base URL, prefix and URL helper.
 - `src/app/core/auth/auth.store.ts` — pairing, restore, single-flight refresh, logout.
 - `src/app/core/auth/auth.store.spec.ts` — mocked pairing and refresh rotation.
@@ -59,7 +59,12 @@ Tasks 19–23 replace the placeholder feature pages in place.
 - `src/app/features/pairing/pairing.page.ts` — pairing placeholder.
 - `src/app/features/repos/repo.page.ts` — repo detail placeholder.
 - `src/app/features/repos/repos.page.ts` — repos placeholder.
-- `src/app/features/run-detail/run.page.ts` — run detail placeholder.
+- `src/app/features/run-detail/run.page.ts` — run detail: timeline, gate, guardrails, blockers, diff, PR, cost, cancel and revert.
+- `src/app/features/run-detail/run.page.spec.ts` — run hooks, guardrail states, actions and dictionary completeness.
+- `src/app/features/run-detail/run-detail.store.ts` — the run projection, its two actions and the stream reducer.
+- `src/app/features/run-detail/run-detail.store.spec.ts` — loading, cancel confirmation, revert and stream handling.
+- `src/app/features/run-detail/timeline.ts` — dedupe keys and one-line details for the event timeline.
+- `src/app/features/run-detail/timeline.spec.ts` — key precedence, detail rendering and page merging.
 - `src/app/features/runs-list/runs.page.ts` — runs placeholder.
 - `src/app/features/settings/devices.page.ts` — devices placeholder.
 - `src/app/features/settings/settings.page.ts` — settings placeholder.

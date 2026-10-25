@@ -22,5 +22,56 @@
     "loading": "Cargando",
     "error": "Algo ha salido mal",
     "empty": "No hay nada aquí"
+  },
+  "run": {
+    "title": "Ejecución",
+    "state": {
+      "queued": "En cola",
+      "preparing": "Preparando",
+      "running": "Ejecutando",
+      "gating": "Pasando la puerta",
+      "pr_open": "Pull request abierta",
+      "merging": "Fusionando",
+      "succeeded": "Correcta",
+      "failed": "Fallida",
+      "cancelled": "Cancelada"
+    },
+    "guardrail": {
+      "gate": "Puerta",
+      "checks": "Comprobaciones",
+      "base": "Rama base",
+      "diff": "Presupuesto del diff",
+      "protected_paths": "Rutas protegidas",
+      "labels": "Etiquetas",
+      "policy": "Política",
+      "automerger": "Fusión automática"
+    },
+    "section": {
+      "timeline": "Cronología",
+      "gate": "Puerta",
+      "guardrails": "Guardarraíles",
+      "blockers": "Bloqueos",
+      "diff": "Diff",
+      "cost": "Coste",
+      "pullRequest": "Pull request",
+      "merge": "Fusión"
+    },
+    "action": {
+      "cancel": "Cancelar ejecución",
+      "confirmCancel": "Confirmar cancelación",
+      "dismissCancel": "Seguir ejecutando",
+      "revert": "Revertir",
+      "retry": "Reintentar"
+    },
+    "empty": {
+      "timeline": "Todavía no hay eventos.",
+      "blockers": "No hay bloqueos."
+    },
+    "error": {
+      "diffUnavailable": "El diff no está disponible para esta ejecución."
+    },
+    "event": {
+      "other": "Evento"
+    }
   }
 }
