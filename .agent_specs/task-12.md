@@ -33,9 +33,15 @@ Every path this task creates or modifies. **Nothing outside this list.**
 - `apps/daemon/src/app.ts` — **one** change, described under "The route seam" below. No other
   edit to this file.
 - `apps/daemon/src/app.test.ts` — only to add the two assertions named below.
+- `apps/daemon/src/start.test.ts` — only the three consequences of the first module existing
+  on disk: `report.absent` drops by one (`11` → `10`), `report.loaded` equals `['auth']`, and
+  `GET /v1/nope` becomes `401 unauthorized` instead of `404` (the middleware now guards an
+  unknown API path). Nothing else in that file.
 - `docs/api.md` (§2 "Authentication and pairing" only; no other section, no other doc)
 - `apps/daemon/README.md` — one line per new file in the `## Files` list, plus a `## Notes`
-  bullet if a non-obvious rule needs it.
+  bullet if a non-obvious rule needs it. Do **not** write how many `@codebox/*` packages
+  `prebuild` builds (Task-14 adds more); say "the `@codebox/*` packages the daemon
+  value-imports".
 
 ### Inputs (read-only)
 
@@ -280,7 +286,9 @@ duplicate that validation.
         JSON is `400 bad_request`; a token without the `Bearer ` prefix is `401`.
   - [ ] `[unit]` **The seam:** `GET /v1/unknown` with a valid token is `404 not_found` with
         `details.path`, `GET /` still answers `app_not_built`, and the pre-existing
-        `apps/daemon/src/app.test.ts` tests pass unchanged.
+        `apps/daemon/src/app.test.ts` tests pass unchanged; `apps/daemon/src/start.test.ts`
+        carries only the three consequences listed in the exclusive paths and still boots the
+        daemon on an ephemeral port.
   - [ ] `[unit]` Everything outside the exclusive paths is untouched:
         `git diff --name-only origin/main...task-12`.
   - [ ] `[live]` Not measurable on the pipeline host: a real pairing from the CLI to a phone
