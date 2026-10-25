@@ -6,6 +6,17 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-20, chat)
+
+- `/chat` is a real session list grouped by repository with a repo filter and a new-chat
+  action; `/chat/:id` is a streaming transcript with markdown and code blocks, tool cards,
+  permission cards that disable after a reply, a composer that stays usable while the agent
+  works, a stop button and "promote to run".
+- Deltas append in order and a replay is a no-op, so a reconnect never duplicates a message;
+  the stream state is a pure reducer with its own tests.
+- The `[live]` criterion — a 200-token stream renders without layout jump while the composer
+  stays usable — is not measured on CI; an `agent-review` issue carries the measurement.
+
 ### Added — 2026-10-25 (Task-19, dashboard and repos)
 
 - `/dashboard` renders the VM, queue and spend health cards and the five most recent runs from

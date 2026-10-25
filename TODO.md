@@ -334,7 +334,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       a PATCH and reflected optimistically; `[live]` adding a repo shows its gate result
       without a reload.
 
-- [ ] **[Task-20]** Chat. Session list, message stream, tool cards, permission cards,
+- [x] **[Task-20]** Chat. Session list, message stream, tool cards, permission cards,
       interrupt, markdown/code rendering, repo switcher, "promote to run" action. *Paths:*
       `apps/app/src/app/features/chat/**`. *Dependencies:* Task-18. *Acceptance:* `[unit]`
       deltas append in order and a reconnect does not duplicate a message; `[unit]` a
