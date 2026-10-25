@@ -237,7 +237,7 @@ Task-16 holds `docs/providers.md` (push section); Task-17 holds `apps/daemon/src
       token; `[unit]` a revoked device gets 401 on the next request; `[live]` a real pairing
       from the CLI to a phone emulator completes in under two minutes.
 
-- [ ] **[Task-13]** Chat API and event bridge. Persistent chat sessions bound to a repo,
+- [x] **[Task-13]** Chat API and event bridge. Persistent chat sessions bound to a repo,
       message post, history cursor, interrupt, OpenCode session mapping, SSE normalisation,
       and permission cards. *Paths:* `apps/daemon/src/chat/**`,
       `apps/daemon/src/events/**`, `docs/api.md` (chat section only). *Dependencies:* Task-07,

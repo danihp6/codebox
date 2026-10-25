@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-13, chat API and event bridge)
+
+- The daemon serves `docs/api.md` §5.6: create, list, get and archive a chat session bound to
+  a repository, post a message, page the transcript oldest-first and interrupt the agent,
+  behind the `chat` or `read` scope and parsed with the contract schemas.
+- A chat pump maps OpenCode events into `chat.message`, `chat.delta`, `chat.tool`,
+  `chat.permission` and `chat.idle` rows with a monotonic per-chat `seq`, redacts the tool
+  input before it is stored, turns a permission request into exactly one approval row and
+  delivers an answered approval back to OpenCode.
+- `GET /v1/events` is the one SSE stream: exact `Last-Event-ID` replay, one `gap` frame on a
+  pruned range, a 15 s heartbeat, additive `types`/`runId`/`chatId` filters, a terminal close
+  for a run stream and three connections per device.
+- Archiving keeps the worktree; a restart re-binds the session to a new OpenCode session in
+  the same worktree.
+
 ### Added — 2026-10-25 (Task-14, run engine)
 
 - `apps/daemon/src/run` executes one run end to end behind injected ports: bare clone,
