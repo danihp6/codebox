@@ -66,7 +66,7 @@ queued → preparing → running → gating → pr_open → merging → succeede
 | --- | --- | --- | --- |
 | `queued` | Claimed or created manually | A slot and a worktree exist | `run.queued` |
 | `preparing` | Clone/fetch and worktree creation start | The OpenCode session exists | `run.started` |
-| `running` | The prompt is sent | The agent is idle, or a timeout/cancel | `run.output`, `run.tool` |
+| `running` | The session exists and the envelope is sent | The agent is idle, or a timeout/cancel | `run.output`, `run.tool` |
 | `gating` | Agent finished | The gate exits | `run.gate` |
 | `pr_open` | Branch pushed, PR opened | All guardrails pass, or a blocker stops the run | `run.pr` |
 | `merging` | Guardrails green and merge started | GitHub confirms the merge | `run.merged` |
@@ -77,7 +77,11 @@ queued → preparing → running → gating → pr_open → merging → succeede
 Rules:
 
 - Every transition is persisted with its event in the same transaction; the app's timeline
-  and the audit log cannot disagree.
+  and the audit log cannot disagree. The run engine (`apps/daemon/src/run/engine.ts`) is the
+  single writer of `runs` and `run_events` during a run: the API mints the `run_…` id first
+  and the engine creates the row as `queued`.
+- `pr_open` is an outcome, not an error. A guardrail refusal parks the run there with its
+  guardrails and blockers and emits nothing further; only a failed step ends `failed`.
 - The table is data in `@codebox/core` (`RUN_TRANSITIONS`) and every move goes through
   `transitionRun(from, to)`, which returns either `{ allowed: true, from, to }` or
   `{ allowed: false, from, to, code, message }` with `same_state`, `terminal_state` or
@@ -118,19 +122,25 @@ The gate is the repository's own check, run in the worktree before any PR exists
   interpolated by the model, and the command is stored on the run before it starts.
 - Default `npm test && npm run build`; a repo can override it. CI of record stays GitHub
   Actions when the repo has it (product §"not a general CI").
-- Timeout `CB_GATE_TIMEOUT_SECONDS` (1 800); on timeout the process group is killed.
+- Timeout `CB_GATE_TIMEOUT_SECONDS` (1 800); on timeout the process group is killed. The gate
+  runs detached, so `SIGTERM` and then `SIGKILL` reach every child it spawned; the result is
+  exit `124` and `timedOut: true`. A cancel aborts the same group and reports `130`; a shell
+  that cannot start is `127` and never rejects the caller.
 - Environment: the job allowlist, not the daemon's. `CI=1`, `NO_COLOR=1`, and `CB_RUN_ID`
   (the run's id, for a gate that wants to name its artifact). `CB_RUN_ID` is set for the
-  child; it is not a configuration key.
-- Output is captured to `logs/run-<id>/gate.log`; the last 100 lines and the exit code are
-  attached to the PR and the run.
-- A red gate stops the run **before** the PR: it pushes nothing and the run ends `failed`
-  with `gate_failed`. The worktree is kept for inspection.
+  child; it is not a configuration key. Nothing else crosses over: a `CB_GITHUB_TOKEN` in the
+  daemon's environment is not visible to the gate.
+- Output is captured to `logs/run-<id>/gate.log` (directory mode `0750`); the last 100 lines
+  (each at most 2 000 characters) and the exit code are attached to the run and the PR.
+- A red gate stops the run **before** the PR: it pushes nothing, opens no PR, and the run ends
+  `failed` with `gate_failed`. The worktree is kept for inspection.
 
 ## 6. Commit, push and PR
 
 - One commit is created by the daemon if the agent did not commit: subject from the job
-  title, body with the run trailer `Codebox-Run: <runId>` (D25).
+  title (trimmed to 72 characters), body with the run trailer `Codebox-Run: <runId>` (D25),
+  written with the configured author through the injected git runner. Nothing is committed
+  twice: a clean index returns the current `HEAD` and leaves the history alone.
 - The branch is pushed with the installation token; the author is `codebox[bot]`.
 - The PR body is generated, not written by the model:
 
@@ -151,13 +161,26 @@ Run: run_01J… · Job: job_01J… · Agent: build · Model: …
 
 ### Guardrails
 - [x] gate
-- [x] required checks
-- [ ] base unchanged — main moved during the run
+- [x] checks
+- [x] base
+- [x] diff
+- [x] protected_paths
+- [x] labels
+- [x] policy
+- [x] automerger
 ```
 
-- Draft PR when the gate failed; normal PR when it passed.
-- Labels: `cb:gate-failed`, `cb:needs-review`, `cb:auto-merge`. `do-not-merge` is honoured as
-  an operator veto.
+A failing guardrail is `- [ ] <id> — <blocker message>`; the eight ids are the
+`GuardrailId` vocabulary in `GUARDRAIL_IDS` order, rendered from the same evaluation that
+decides the merge. The body is built when the PR opens, before the provider's checks and base
+sha exist, so its guardrail section carries the facts known at that moment; the merge decision
+is a second evaluation against the PR.
+
+- A PR exists only after a green gate: a red gate pushes nothing and opens no PR, so there is
+  no draft for it. The PR is always normal (`draft: false`).
+- Labels: `cb:auto-merge` when the PR opens; `cb:needs-review` when a guardrail parks it;
+  `do-not-merge` is honoured as an operator veto. `cb:gate-failed` is unused: a red gate never
+  reaches a PR.
 - Idempotency is by branch: a second push to the same branch updates the existing PR instead
   of opening a duplicate.
 - The push comes from `@codebox/git-provider` over an injected git runner; the run engine never
@@ -228,11 +251,15 @@ app renders both arrays verbatim; it never re-derives a guardrail from a string.
 
 | Trigger | Effect |
 | --- | --- |
-| Operator cancel | Interrupt the session, stop the gate process group, keep the branch, remove the worktree after retention. |
-| `CB_RUN_TIMEOUT_SECONDS` | Same as cancel; code `timeout`. |
-| Daily cost cap | Cancel the current run, pause the queue until the next UTC day, code `cost_cap_reached`. |
+| Operator cancel | Interrupt the session, close it, abort the gate's process group, stop the gate, remove the worktree (a run that never reached `pr_open` has nothing to inspect), keep the branch. The row becomes `cancelled` with `finishedAt`, and `run.cancelled` carries the reason. |
+| `CB_RUN_TIMEOUT_SECONDS` | The same cancel, checked before every step and on every agent event, with `failureCode: 'timeout'` and `reason: 'timeout'`. |
+| Daily cost cap | Cancel the current run after persisting the cumulative cost, pause the queue until the next UTC day, code `cost_cap_reached`. |
 | Per-job `maxCostUsd` | Cancel that run only. |
 | Disk low | Refuse new runs, clean past-retention worktrees, emit `telemetry`. |
+
+A cancel is refused — `cancel()` answers `false` without touching the session or the worktree —
+for an unknown id, a terminal run, and a run in `merging`, where `canCancel` is the authority.
+A run parked in `pr_open` is not cancellable either: its PR is the operator's to close.
 
 Cancel during `merging` is refused: the merge call is not interruptible, and a half-merged
 state is worse than a late one.
