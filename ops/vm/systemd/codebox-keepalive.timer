@@ -1,0 +1,10 @@
+[Unit]
+Description=Codebox liveness pass every six hours
+
+[Timer]
+OnCalendar=*-*-* 00/6:40:00
+Persistent=true
+Unit=codebox-keepalive.service
+
+[Install]
+WantedBy=timers.target

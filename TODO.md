@@ -303,7 +303,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       in a mobile viewport with no horizontal scroll and the pairing screen is usable at
       320 px.
 
-- [ ] **[Task-37]** Instance liveness. Always Free compute is reclaimed after seven days of
+- [x] **[Task-37]** Instance liveness. Always Free compute is reclaimed after seven days of
       idleness, and today the answer is only recovery (D33). Ship the measurement half, as
       D39 requires: `ops/vm/keepalive.sh` samples `/proc` twice a second apart and prints one
       JSON line (`at`, `cpuBusyPct`, `memUsedPct`, `netBytes`, `load1`, `uptimeSeconds`),

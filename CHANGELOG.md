@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-37, instance liveness)
+
+- `ops/vm/keepalive.sh` samples `/proc` twice a second apart, appends one JSON line to
+  `/var/lib/codebox/logs/keepalive.jsonl` and then runs a bounded pass (`cb doctor`, `cb prune`,
+  a loopback `GET /v1/health`) in which every step is optional and a missing CLI or a stopped
+  daemon is `skipped`, never a failure; no synthetic load, per D39.
+- `codebox-keepalive.service` and `.timer` run it every six hours with `Persistent=true`, and
+  `60-service.sh` installs and enables both beside the backup pair; the Packer template uploads
+  the new files.
+- `[live]` — 28 lines after seven days and no reclamation warning in the OCI console — needs a
+  human at the console; an `agent-review` issue carries the measurement and it is not reported
+  as passing.
+
 ### Added — 2026-10-25 (Task-21, jobs and runs list)
 
 - `/jobs` lists jobs with their next fire, pauses and resumes optimistically, runs one now and

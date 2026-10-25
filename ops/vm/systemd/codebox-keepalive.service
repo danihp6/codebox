@@ -1,0 +1,18 @@
+[Unit]
+Description=Codebox liveness pass: sample /proc, then a bounded housekeeping pass
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=codebox
+Group=codebox
+# /srv/codebox is writable because `cb prune` removes finished worktrees under
+# /srv/codebox/worktrees. No [Install]: the timer triggers this unit.
+ExecStart=/usr/local/lib/codebox/keepalive.sh
+TimeoutStartSec=300
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/codebox /srv/codebox

@@ -164,15 +164,17 @@ describe('Packer template', () => {
   });
 });
 
-describe('the five units', () => {
+describe('the seven units', () => {
   const unitDir = path.join(vmDir, 'systemd');
   const units = fs.readdirSync(unitDir).sort();
 
-  it('ships the four services and the timer', () => {
+  it('ships the five services and the two timers', () => {
     expect(units).toEqual([
       'cloudflared.service',
       'codebox-backup.service',
       'codebox-backup.timer',
+      'codebox-keepalive.service',
+      'codebox-keepalive.timer',
       'codebox-opencode.service',
       'codebox.service',
     ]);

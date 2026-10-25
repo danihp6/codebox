@@ -186,6 +186,12 @@ Always Free compute can be reclaimed after a week of idleness. Launch from the i
 (`ops/oci/launch.sh`), restore the last backup, re-point the tunnel, pair the device. The
 repositories are on GitHub; the state is in the backup. Target RTO 45 minutes.
 
+`codebox-keepalive.timer` is the early warning: after seven days the log holds 28 lines (four
+samples a day), so `wc -l /var/lib/codebox/logs/keepalive.jsonl` answers 28 and
+`systemctl list-timers codebox-keepalive.timer` shows the next elapse within six hours. A short
+file means the timer did not fire — a stopped instance runs no timers — so read
+`journalctl -u codebox-keepalive.service` before blaming the provider.
+
 ## 11. Cost
 
 - `cb cost` prints today, the last seven days and the top jobs by spend.
