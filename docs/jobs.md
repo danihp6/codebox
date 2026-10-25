@@ -312,4 +312,3 @@ one transaction: the routine must be enabled and its `next_fire_at` must still e
 winner: a tick that loses the race — a second process, a double tick, a stale read — gets
 `null` instead of an error and never fires twice. A `skipped` fire writes its row and moves
 `next_fire_at`, but leaves `last_fired_at` alone, because the fire never happened.
-
