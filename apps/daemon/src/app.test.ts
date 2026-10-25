@@ -15,7 +15,18 @@ import {
 import type { CodeboxConfig } from '@codebox/contracts';
 import { openInMemoryStore } from '@codebox/store';
 import type { Store } from '@codebox/store';
-import { API_PREFIX, REQUEST_ID_HEADER, createApp, errorBody, newRequestId } from './app.js';
+import {
+  API_PREFIX,
+  BODY_TOO_LARGE_PATH,
+  MAX_REQUEST_BYTES,
+  ORIGIN_REFUSAL_REASON,
+  REQUEST_ID_HEADER,
+  SECURITY_HEADERS,
+  createApp,
+  errorBody,
+  newRequestId,
+  originAllowed,
+} from './app.js';
 import { loadConfig, readBuildInfo, resolvePaths } from './config.js';
 import type { HealthProbes } from './health.js';
 import { createLogger } from './logger.js';
@@ -45,6 +56,7 @@ interface Harness {
 interface HarnessOptions {
   readonly files?: Record<string, string>;
   readonly probes?: Partial<HealthProbes>;
+  readonly config?: Record<string, string>;
 }
 
 function harness(options: HarnessOptions = {}): Harness {
@@ -59,6 +71,7 @@ function harness(options: HarnessOptions = {}): Harness {
     CB_ENV: 'test',
     CB_SESSION_SECRET: SESSION_SECRET,
     CB_STATE_DIR: join(directory, 'state'),
+    ...options.config,
   });
   const store = openInMemoryStore();
   stores.push(store);
@@ -369,8 +382,146 @@ describe('static hosting', () => {
   });
 });
 
-describe('route seam', () => {
-  it('leaves an unmatched API path to the not_found envelope', async () => {
+describe('security headers', () => {
+  it('pins the four headers and their exact values', () => {
+    expect(SECURITY_HEADERS).toEqual({
+      'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+      'X-Content-Type-Options': 'nosniff',
+      'Referrer-Policy': 'no-referrer',
+      'Content-Security-Policy':
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+    });
+  });
+
+  it('sets them on a JSON answer, on the static app and on an error', async () => {
+    const { app } = harness();
+    for (const path of [`${API_PREFIX}/version`, '/', '/v1/nope']) {
+      const response = await app.request(path);
+      for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+        expect(response.headers.get(name), `${path} ${name}`).toBe(value);
+      }
+    }
+  });
+
+  it('never overwrites a header a route already set', async () => {
+    const { app } = harness();
+    app.get(
+      '/v1/custom',
+      (c): Response => c.json({ ok: true }, 200, { 'Referrer-Policy': 'same-origin' }),
+    );
+    const response = await app.request('/v1/custom');
+    expect(response.headers.get('referrer-policy')).toBe('same-origin');
+    expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+  });
+});
+
+describe('origin allowlist', () => {
+  function configured(): DaemonApp {
+    return harness({ config: { CB_ALLOWED_ORIGINS: 'https://box.example' } }).app;
+  }
+
+  it('compares lowercased and without a trailing slash, and accepts an empty list', () => {
+    expect(originAllowed('https://box.example', ['https://box.example'])).toBe(true);
+    expect(originAllowed('https://BOX.example/', ['https://box.example'])).toBe(true);
+    expect(originAllowed('https://evil.example', ['https://box.example'])).toBe(false);
+    expect(originAllowed('https://evil.example', [])).toBe(true);
+  });
+
+  it('refuses a foreign origin on a /v1 path with forbidden and reason origin', async () => {
+    const app = configured();
+    const response = await app.request(`${API_PREFIX}/version`, {
+      headers: { origin: 'https://evil.example' },
+    });
+
+    expect(response.status).toBe(403);
+    expect(response.headers.get('content-type')).toBe('application/json; charset=utf-8');
+    const body = await jsonBody(response);
+    expect(() => errorEnvelopeSchema.parse(body)).not.toThrow();
+    expect(body).toMatchObject({
+      error: {
+        code: 'forbidden',
+        message: 'Forbidden',
+        details: { reason: ORIGIN_REFUSAL_REASON },
+      },
+    });
+    expect(ORIGIN_REFUSAL_REASON).toBe('origin');
+  });
+
+  it('serves the configured origin, no origin at all, and a request without an allowlist', async () => {
+    const own = await configured().request(`${API_PREFIX}/version`, {
+      headers: { origin: 'https://box.example' },
+    });
+    expect(own.status).toBe(200);
+
+    const none = await configured().request(`${API_PREFIX}/version`);
+    expect(none.status).toBe(200);
+
+    const any = await harness().app.request(`${API_PREFIX}/version`, {
+      headers: { origin: 'https://evil.example' },
+    });
+    expect(any.status).toBe(200);
+  });
+
+  it('never origin-checks the hosted app or the SPA fallback', async () => {
+    const app = configured();
+    for (const path of ['/', '/runs/run_000001']) {
+      const response = await app.request(path, { headers: { origin: 'https://evil.example' } });
+      expect(response.status, path).toBe(200);
+    }
+  });
+});
+
+describe('request body cap', () => {
+  it('answers 400 bad_request for a declared body over 1 MiB and never runs the route', async () => {
+    let ran = 0;
+    const { app } = harness();
+    app.post(`${API_PREFIX}/runs`, (c): Response => {
+      ran += 1;
+      return c.json({ ok: true }, 202);
+    });
+
+    const response = await app.request(`${API_PREFIX}/runs`, {
+      method: 'POST',
+      headers: { 'content-length': String(MAX_REQUEST_BYTES + 1) },
+    });
+
+    expect(MAX_REQUEST_BYTES).toBe(1_048_576);
+    expect(response.status).toBe(400);
+    const body = await jsonBody(response);
+    expect(() => errorEnvelopeSchema.parse(body)).not.toThrow();
+    expect(body).toMatchObject({
+      error: {
+        code: 'bad_request',
+        details: { limitBytes: MAX_REQUEST_BYTES, path: BODY_TOO_LARGE_PATH },
+      },
+    });
+    expect(BODY_TOO_LARGE_PATH).toBe('request.body');
+    expect(ran).toBe(0);
+  });
+
+  it('lets a body at the cap through and ignores an absent or non-numeric length', async () => {
+    const { app } = harness();
+    const atCap = await app.request(`${API_PREFIX}/version`, {
+      headers: { 'content-length': String(MAX_REQUEST_BYTES) },
+    });
+    expect(atCap.status).toBe(200);
+
+    const nonNumeric = await app.request(`${API_PREFIX}/version`, {
+      headers: { 'content-length': 'huge' },
+    });
+    expect(nonNumeric.status).toBe(200);
+  });
+
+  it('does not cap a static response', async () => {
+    const { app } = harness();
+    const response = await app.request('/', {
+      headers: { 'content-length': String(MAX_REQUEST_BYTES + 1) },
+    });
+    expect(response.status).toBe(200);
+  });
+});
+
+describe('route seam', () => {  it('leaves an unmatched API path to the not_found envelope', async () => {
     const { app } = harness();
     const response = await app.request('/v1/nope');
     expect(response.status).toBe(404);

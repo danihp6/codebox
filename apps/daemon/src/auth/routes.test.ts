@@ -12,6 +12,7 @@ import { createLogger } from '../logger.js';
 import { createShutdownRegistry } from '../modules.js';
 import type { DaemonApp, DaemonContext } from '../modules.js';
 import { createModule } from './index.js';
+import { API_RATE_LIMIT } from './middleware.js';
 
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
 const INDEX = '<!doctype html><title>cb</title>';
@@ -502,5 +503,30 @@ describe('the module route seam', () => {
       code: 'not_found',
       details: { path: '/v1/unknown' },
     });
+  });
+});
+
+describe('per-device rate limit', () => {
+  it('answers 429 on the 121st request of one device and serves another', async () => {
+    const { app } = harness();
+    const first = await pairDevice(app, undefined, 'Dani phone');
+    const headers = { authorization: `Bearer ${first.accessToken}` };
+    for (let index = 0; index < API_RATE_LIMIT; index += 1) {
+      expect((await app.request('/v1/me', { headers })).status, `request ${index + 1}`).toBe(200);
+    }
+
+    const limited = await app.request('/v1/me', { headers });
+    expect(limited.status).toBe(429);
+    expect(Number(limited.headers.get('retry-after'))).toBeGreaterThan(0);
+    expect((await bodyOf(limited))['error']).toMatchObject({
+      code: 'rate_limited',
+      details: { retryAfter: expect.any(Number) },
+    });
+
+    const second = await pairDevice(app, undefined, 'Tablet');
+    const elsewhere = await app.request('/v1/me', {
+      headers: { authorization: `Bearer ${second.accessToken}` },
+    });
+    expect(elsewhere.status).toBe(200);
   });
 });

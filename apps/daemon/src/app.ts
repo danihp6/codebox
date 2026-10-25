@@ -10,6 +10,17 @@ import { createStaticHandler } from './static.js';
 
 export const API_PREFIX = '/v1';
 export const REQUEST_ID_HEADER = 'x-request-id';
+export const MAX_REQUEST_BYTES = 1_048_576;
+export const BODY_TOO_LARGE_PATH = 'request.body';
+export const ORIGIN_REFUSAL_REASON = 'origin';
+
+export const SECURITY_HEADERS: Readonly<Record<string, string>> = Object.freeze({
+  'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
+  'Content-Security-Policy':
+    "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'",
+});
 
 export interface CreateAppOptions {
   readonly context: DaemonContext;
@@ -24,6 +35,8 @@ const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
 const REQUEST_ID_TIME_CHARS = 10;
 const REQUEST_ID_RANDOM_CHARS = 16;
 const REQUEST_ID_RANDOM_BYTES = 10;
+const NUMERIC_HEADER = /^\d+$/;
+const ORIGIN_TRAILING_SLASHES = /\/+$/;
 
 /** docs/api.md §3: ERROR_STATUS is typed as a plain number, every value is a valid status. */
 type HttpStatus = 200 | 201 | 400 | 401 | 403 | 404 | 409 | 422 | 429 | 500 | 502 | 503;
@@ -69,6 +82,16 @@ export function errorBody(input: {
   return { error };
 }
 
+export function originAllowed(origin: string, allowed: readonly string[]): boolean {
+  if (allowed.length === 0) return true;
+  const candidate = normaliseOrigin(origin);
+  return allowed.some((entry) => normaliseOrigin(entry) === candidate);
+}
+
+function normaliseOrigin(value: string): string {
+  return value.toLowerCase().replace(ORIGIN_TRAILING_SLASHES, '');
+}
+
 export function createApp(options: CreateAppOptions): DaemonApp {
   const { context } = options;
   const probes = options.probes ?? createProbes(context);
@@ -83,6 +106,9 @@ export function createApp(options: CreateAppOptions): DaemonApp {
     c.header(REQUEST_ID_HEADER, requestId);
     const startedAt = Date.now();
     await next();
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) {
+      if (!c.res.headers.has(name)) c.header(name, value);
+    }
     logger.info({
       msg: 'request',
       requestId,
@@ -91,6 +117,21 @@ export function createApp(options: CreateAppOptions): DaemonApp {
       status: c.res.status,
       durationMs: Date.now() - startedAt,
     });
+  });
+
+  // Request controls land before any route: a refused origin or an oversized body must never
+  // reach a handler, and the hosted app is not origin-checked at all.
+  app.use('*', async (c, next) => {
+    if (!isApiPath(c.req.path)) {
+      await next();
+      return;
+    }
+    const origin = c.req.header('origin');
+    if (origin !== undefined && !originAllowed(origin, context.config.CB_ALLOWED_ORIGINS)) {
+      return refusedOrigin(c);
+    }
+    if (declaredLength(c) > MAX_REQUEST_BYTES) return bodyTooLarge(c);
+    await next();
   });
 
   app.get(`${API_PREFIX}/health`, async (c): Promise<Response> => {
@@ -149,6 +190,38 @@ export function createApp(options: CreateAppOptions): DaemonApp {
 
 function json(c: AppContext, body: unknown, status: HttpStatus): Response {
   return c.json(body, status, JSON_HEADERS);
+}
+
+function declaredLength(c: AppContext): number {
+  const declared = c.req.header('content-length');
+  if (declared === undefined || !NUMERIC_HEADER.test(declared)) return 0;
+  return Number(declared);
+}
+
+function refusedOrigin(c: AppContext): Response {
+  return json(
+    c,
+    errorBody({
+      code: 'forbidden',
+      message: 'Forbidden',
+      requestId: requestIdOf(c),
+      details: { reason: ORIGIN_REFUSAL_REASON },
+    }),
+    statusFor('forbidden'),
+  );
+}
+
+function bodyTooLarge(c: AppContext): Response {
+  return json(
+    c,
+    errorBody({
+      code: 'bad_request',
+      message: 'Bad request',
+      requestId: requestIdOf(c),
+      details: { limitBytes: MAX_REQUEST_BYTES, path: BODY_TOO_LARGE_PATH },
+    }),
+    statusFor('bad_request'),
+  );
 }
 
 function notFound(c: AppContext, requestPath: string, extra?: Record<string, unknown>): Response {

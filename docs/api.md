@@ -549,6 +549,15 @@ Event types are the D14/D16 list: `run.queued`, `run.started`, `run.output`, `ru
 Limits are enforced in memory per process; a restart resets them. `429` always carries
 `Retry-After`.
 
+The two device budgets are taken in the auth middleware, after the token and the scope check and
+before the handler: the key is `device:<id>`, `POST /v1/runs`, `POST /v1/jobs/{id}/run` and
+`POST /v1/routines/{id}/run` count against the 10/minute budget **only**, and every other
+authenticated `/v1` request counts against the 120/minute one. The pairing budget is per source
+address and separate. A refusal is the ordinary error envelope — `code: "rate_limited"`,
+`details.retryAfter`, `Retry-After` — so a client renders it like any other `ApiError`. Health,
+version and pairing are not counted against a device: they either carry no device or are
+rate-limited by source.
+
 ## 8. Versioning and compatibility
 
 - `packages/contracts` generates the OpenAPI 3.1 document and the app's client. CI fails if

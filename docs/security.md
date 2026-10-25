@@ -99,14 +99,38 @@ invents a format of its own.
 
 - Every `/v1` route except health, version and pairing requires a bearer token; the
   middleware is registered once, not per handler (Task-12 asserts it).
-- Origin checks: browser requests must match `CB_ALLOWED_ORIGINS`; native origins
-  (`capacitor://localhost`, `http://localhost`) are explicit, never `*`.
+- **Origin allowlist.** A `/v1` request that carries an `Origin` header is compared, lowercased
+  and without a trailing slash, with `CB_ALLOWED_ORIGINS`. A mismatch is `403 forbidden` with
+  `details.reason = "origin"`, and the request never reaches a handler. The config folds the
+  origin of `CB_PUBLIC_URL` into the list when the list itself is empty, so a production boot
+  always has one. An **empty** list means development: every origin is accepted, deliberately.
+  Native origins (`capacitor://localhost`, `http://localhost`) are listed explicitly, never `*`.
+  The hosted app and the SPA fallback are not origin-checked: they serve the bundle, not the API.
+- **Body cap.** A `Content-Length` above **1 MiB** (`MAX_REQUEST_BYTES`) on a `/v1` path is a
+  `400 bad_request` with `details.limitBytes` and `details.path = "request.body"`, decided before
+  anything is parsed; the route never runs. No `/v1` route accepts a larger body today, so the
+  4 MB allowance for markdown attachments in `docs/api.md` §9 has no route to apply to yet.
+- **Rate limits** are enforced per device in the auth middleware, after authentication and the
+  scope check and before the handler: **120 requests/minute** on any `/v1` route
+  (`API_RATE_LIMIT`) and **10/minute** on the three run-creating routes — `POST /v1/runs`,
+  `POST /v1/jobs/{id}/run` and `POST /v1/routines/{id}/run` (`WORK_RATE_LIMIT`). A work route is
+  counted in the tighter budget only, never in both. A refusal is `429 rate_limited` with
+  `Retry-After`, emitted by the same error path as every other auth failure. The pairing limiter
+  (10/hour/source) is separate and unchanged.
 - CSRF is not applicable to bearer tokens, but state-changing GETs are forbidden anyway.
-- Body size is capped before parsing (1 MB; 4 MB for markdown).
 - All input is parsed by a zod schema at the edge; unknown fields are rejected.
 - Errors never echo a token, a path outside the repo, or an upstream response body.
-- Security headers: HSTS, `X-Content-Type-Options`, `Referrer-Policy: no-referrer`,
-  `Content-Security-Policy` for the hosted app with no inline script.
+- **Security headers** are set on every response, JSON and static alike, and never overwrite a
+  header a route already set: `Strict-Transport-Security: max-age=31536000; includeSubDomains`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, and a
+  `Content-Security-Policy` of `default-src 'self'; script-src 'self'; style-src 'self'
+  'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';
+  frame-ancestors 'none'; base-uri 'self'; form-action 'self'` — no inline script, no
+  third-party origin.
+- Both request refusals are logged by the request middleware as their status; there is no extra
+  log line and no request body in it. The numbers are exported constants in
+  `apps/daemon/src/app.ts` and `apps/daemon/src/auth/middleware.ts`, pinned by their unit tests
+  (D40).
 
 ## 6. The agent as an untrusted process
 
@@ -117,11 +141,11 @@ The agent is capable by design; the boundary is what it can reach (D27).
 | Working directory | One worktree per session; the process cwd is that directory. |
 | Permissions | Edits and in-worktree bash allowed for runs; `webfetch` denied; outside-worktree denied (`agent-runtime.md` §6). |
 | Environment | Allowlist: `PATH`, `HOME`, `LANG`, git identity, model keys. No GitHub token, no session secret, no Vault token. |
-| Network | Best-effort egress restriction in Batch 7; the agent has no inbound listener. |
-| Secrets in the repo | The gate runs a secret scan; a hit fails the run before the PR. |
+| Network | No inbound listener and no listener of its own. Outbound is **allowed and not filtered**: no egress filter ships in v1, so the permission policy and the sandbox below are the boundary. |
+| Secrets in the repo | The gate runs a secret scan over the run's own diff; a hit fails the run with `gate_failed` before the branch is pushed and no PR exists. |
 | Prompt injection | Repository text is data, not instructions; the envelope says so; protected paths stop the dangerous diffs. |
 | Resource use | Timeout, cost cap, concurrency cap, disk guard. |
-| Isolation (optional) | A bubblewrap/container runner in Batch 7; not a v1 dependency. |
+| Isolation | **No** bubblewrap or container runner in v1. The systemd unit is the isolation boundary: `CapabilityBoundingSet=`, `SystemCallFilter=@system-service`, `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6`, `ProtectSystem=strict`, `ProtectHome=true`, `PrivateTmp=true`, `UMask=0027`, and only `/var/lib/codebox` and `/srv/codebox` are writable. `MemoryDenyWriteExecute` is never set: it would kill V8's JIT. |
 
 The agent never gets a credential that can push to `main`: the installation token is scoped to
 the selected repositories, and branch protection (where the plan allows it) plus the cycle's

@@ -30,6 +30,19 @@ export type {
 
 export { REDACTED_PLACEHOLDER, REDACTION_KEY_PATTERNS, isSecretKey, redact } from './redact.js';
 
+export { REDACTION_CORPUS } from './redact-corpus.js';
+export type { RedactionFixture } from './redact-corpus.js';
+
+export {
+  SECRET_PATTERN_NAMES,
+  SECRET_PATTERN_SOURCES,
+  SECRET_SCAN_ALLOW_MARKER,
+  SECRET_PLACEHOLDERS,
+  scanPatchForSecrets,
+  formatSecretFinding,
+} from './secret-scan.js';
+export type { SecretFinding, SecretPatternName } from './secret-scan.js';
+
 export { verifyAccessJwt } from './access-jwt.js';
 export type {
   AccessJwk,

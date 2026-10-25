@@ -21,7 +21,7 @@ import {
   enforceRateLimit,
   rateLimitSource,
 } from './middleware.js';
-import type { RateLimiter } from './middleware.js';
+import type { ApiRateLimiters, RateLimiter } from './middleware.js';
 import {
   PAIRING_NAME_MAX_LENGTH,
   PAIRING_TTL_MAX_SECONDS,
@@ -33,6 +33,9 @@ export interface RegisterAuthRoutesOptions {
   readonly now: () => Date;
   readonly isLoopback: (c: Context) => boolean;
   readonly rateLimit: RateLimiter;
+  // The per-device budgets are built once by the caller with the daemon clock, so every route
+  // the module registers shares one window.
+  readonly limiters?: ApiRateLimiters;
   // The device routes read and revoke rows, and `AuthService` is the token seam, not a
   // repository: the store stays the only place device rows are read.
   readonly store: Store;
@@ -135,7 +138,7 @@ export function registerAuthRoutes(
   service: AuthService,
   options: RegisterAuthRoutesOptions,
 ): void {
-  app.use(`${API_PREFIX}/*`, createAuthMiddleware(service));
+  app.use(`${API_PREFIX}/*`, createAuthMiddleware(service, options.limiters));
 
   app.post(`${API_PREFIX}/pair/code`, (c) =>
     handle(c, async () => {
