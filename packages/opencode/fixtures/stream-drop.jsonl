@@ -1,0 +1,5 @@
+{"type":"session.updated","properties":{"sessionId":"ses_fixture01","status":"busy"}}
+{"type":"message.part.text","properties":{"sessionId":"ses_fixture01","messageId":"msg_fixture01","delta":"First chunk.\n"}}
+{"type":"message.part.text","properties":{"sessionId":"ses_fixture01","messageId":"msg_fixture01","delta":"Second chunk.\n"}}
+{"type":"message.part.text","properties":{"sessionId":"ses_fixture01","messageId":"msg_fixture01","delta":"Third chunk.\n"}}
+{"type":"session.usage","properties":{"sessionId":"ses_fixture01","model":"anthropic/claude-sonnet-4","tokensIn":64,"tokensOut":32,"costUsd":0.0021}}

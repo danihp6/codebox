@@ -6,6 +6,17 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-07, OpenCode wrapper)
+
+- `@codebox/opencode` is the only package that knows the OpenCode wire: a `fetch`-based
+  `AgentRuntime` over the pinned V2 HTTP surface, a normaliser that emits contract SSE events
+  (`run.*`/`chat.*`) with caller-owned `seq` and timestamps, and the run prompt envelope.
+- The supervisor is policy with injected spawn, port probe, clock and sleep: it adopts an
+  already-healthy server, restarts a dead child inside a bounded window and refuses a second
+  listener on the port.
+- `FakeOpenCode` is an in-process HTTP server that scores the client itself; five recorded
+  fixtures pin the success, permission, interrupt, dropped-stream and crash timelines.
+
 ### Added — 2026-10-24 (Task-33, routine contracts)
 
 - `Routine` is now a contract: a discriminated union on `kind` where a `prompt` requires a

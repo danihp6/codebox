@@ -174,7 +174,7 @@ without asking a question that the docs already answer.
 holds `docs/jobs.md` (PR section) — Task-05 already holds the guardrail section, so 09 and 10
 must not edit it.
 
-- [ ] **[Task-07]** OpenCode wrapper. Pin `@opencode/client`; implement session create,
+- [x] **[Task-07]** OpenCode wrapper. Pin `@opencode/client`; implement session create,
       prompt, interrupt, event subscription, permission list/reply, models and agents;
       normalise events into contracts; record fixtures from a fake server. Add a supervisor
       (start/health/restart) and a `FakeOpenCode` for tests. *Paths:* `packages/opencode/**`,
