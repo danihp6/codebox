@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-10, GitHub provider)
+
+- `@codebox/git-provider` implements the `GitProvider` port for GitHub: an App JWT from the
+  private key, installation tokens cached until shortly before expiry and refreshed once on a
+  401, repository verification, branch push with the credential only in the git argument, one
+  PR per branch (a second push updates it), the required-check summary the guardrails read,
+  merge with the documented 405/409/422 mapping, close, branch delete and a PAT fallback.
+- Every failure is a typed `GitProviderError` mapped one-to-one to the contract error
+  vocabulary; no raw GitHub body, URL, header or token can reach a message or a log.
+- `startFakeGitHub` is a scriptable in-process REST surface, so the whole provider is proven
+  offline; section 6 of `docs/jobs.md` is reconciled.
+- The `[live]` criterion (real `verifyRepo`/`getChecks` against a scratch repository with a
+  fine-grained PAT) is **not measured** here; an `agent-review` issue carries its measurement.
+
 ### Added — 2026-10-25 (Task-09, scheduler)
 
 - `@codebox/scheduler` is the one seam the daemon ticks: `planTick` turns the due rows into an

@@ -160,6 +160,17 @@ Run: run_01J… · Job: job_01J… · Agent: build · Model: …
   an operator veto.
 - Idempotency is by branch: a second push to the same branch updates the existing PR instead
   of opening a duplicate.
+- The push comes from `@codebox/git-provider` over an injected git runner; the run engine never
+  spawns `git` itself. The installation token appears only inside the remote argument of that
+  one `git push`: it is never logged, never returned and never persisted. A 401 from GitHub
+  invalidates the cached installation token and retries the same request once; a second 401
+  fails the step, and a daemon with no credential at all fails the step read-only.
+- The check summary the guardrails read is the provider's: the head sha's check runs joined
+  with the base branch's required-status-checks rule. When that rule cannot be read (404/403)
+  every check on the head sha counts as required, so an unknown rule fails closed; a check that
+  is not `completed` counts as pending.
+- The PR is looked up by `owner:branch` before it is created, and the labels above are applied
+  only once the PR number exists. That is what makes a retried push a patch, not a second PR.
 
 ## 7. Guardrails (D12)
 

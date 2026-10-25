@@ -201,7 +201,7 @@ must not edit it.
       skipped; `[unit]` two ticks in the same second claim one run; `[unit]` a paused job is
       never due.
 
-- [ ] **[Task-10]** GitHub provider. App JWT → installation token, repo verification, branch
+- [x] **[Task-10]** GitHub provider. App JWT → installation token, repo verification, branch
       push, PR open, checks read, merge (squash/merge), close, and idempotency by branch.
       PAT fallback. Mock the GitHub HTTP surface in tests. *Paths:*
       `packages/git-provider/**`, `docs/jobs.md` (PR section only). *Dependencies:* Task-03,
