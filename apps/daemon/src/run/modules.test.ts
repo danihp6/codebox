@@ -63,7 +63,10 @@ describe('run and gate as module seams', () => {
     expect(report.failed).toEqual([]);
     expect(report.absent).toContain('run');
     expect(report.absent).toContain('gate');
-    expect(report.loaded).toEqual([]);
+    // Another module in the tree may legitimately load (`auth` does on the combined branch);
+    // what this seam promises is only that `run` and `gate` are not among them.
+    expect(report.loaded).not.toContain('run');
+    expect(report.loaded).not.toContain('gate');
   });
 
   it('startDaemon still boots on an ephemeral port with a temporary state directory', async () => {
