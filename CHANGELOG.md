@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-09, scheduler)
+
+- `@codebox/scheduler` is the one seam the daemon ticks: `planTick` turns the due rows into an
+  ordered claim plan with the D13 grace decision, recomputes the next fire from `now` (never
+  from the missed schedule, so no catch-up storm) and persists one update per selected fire.
+- `validateSchedule` and `planFires` back job create/edit and the next-fire preview;
+  `planResume`/`planPause` keep a paused job invisible and recompute on resume; tick delay is
+  epoch-aligned at 15–30 s.
+- The cron arithmetic stays in `@codebox/core` as an injected `CronEngine`; the package holds
+  no clock, timer, environment or I/O, and its table-driven tests pin the Madrid DST rows, the
+  grace boundary, the claim key and total ordering. Section 2 of `docs/jobs.md` is reconciled.
+
 ### Added — 2026-10-25 (Task-08, workspaces)
 
 - `@codebox/workspaces` owns the on-disk side of a run: a bare clone cache cloned atomically

@@ -34,14 +34,25 @@ second definition.
 - **Misfire:** on boot or after a pause, a fire missed by less than
   `CB_MISFIRE_GRACE_SECONDS` (900) runs once; older misses are logged once and skipped. No
   catch-up storm.
+- **One fire per tick:** only an enabled job whose `next_fire_at` is at or before the tick is
+  a candidate. Each candidate ends in exactly one decision — due inside the grace window,
+  skipped outside it — plus one `next_fire_at` written in the same transaction as the claim
+  and recomputed from the tick instant, never from the missed fire. A job is never both due
+  and skipped, and never claimed twice for the same `next_fire_at`.
 - **Claiming:** the scheduler ticks every `CB_SCHEDULER_TICK_SECONDS` (15) and claims due
   jobs in one SQLite transaction with `UNIQUE(job_id, scheduled_for)`. Two ticks cannot both
   win.
-- **Queue order:** `scheduled_for`, then `created_at`. Manual runs sort with the current time.
+- **Queue order:** `scheduled_for`, then `created_at`, then the job id, so two ticks of the
+  same rows are identical. A cap on claims truncates that order after sorting; the job left
+  out keeps its `next_fire_at` for the next tick. Manual runs sort with the current time.
+- **Preview:** `GET /v1/jobs/{id}/next` returns the next five fires after now in the job's
+  zone; an invalid cron or an unknown zone previews as an empty list.
 - **Concurrency:** at most `CB_MAX_CONCURRENCY_PER_REPO` (1) and `CB_MAX_CONCURRENCY` (2)
   runs. A due job that cannot start stays `queued`; it does not fail.
 - **Pause:** `enabled=false` removes it from selection; resuming recomputes the next fire from
   now, never from the missed schedule.
+- **Owner:** `packages/scheduler` holds these rules as pure functions over a row plus the tick
+  instant; `@codebox/core` owns the cron arithmetic and the grace decision.
 
 ## 3. Run lifecycle
 

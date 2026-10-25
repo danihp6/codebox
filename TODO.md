@@ -193,7 +193,7 @@ must not edit it.
       `.github/workflows/x.yml` and `ops/vm/install.sh`; `[live]` on the reference VM a
       100 MB repo clones once and a second run reuses the cache in under 5 s.
 
-- [ ] **[Task-09]** Scheduler. Cron parsing, next-run in IANA timezone, due selection with
+- [x] **[Task-09]** Scheduler. Cron parsing, next-run in IANA timezone, due selection with
       grace, misfire policy, queue ordering, and the 15-second tick contract. *Paths:*
       `packages/scheduler/**`, `docs/jobs.md` (scheduling section only). *Dependencies:*
       Task-03, Task-05. *Acceptance:* `[unit]` next fire matches a table of known cases across
