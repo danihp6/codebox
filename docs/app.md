@@ -13,10 +13,10 @@ speaks to OpenCode, GitHub or a model provider (D4).
 | Native shell | Capacitor (iOS + Android) | One codebase, native push, Keychain/Keystore, deep links. |
 | Web | `@angular/service-worker` PWA | Installed on desktop and Android without a store. |
 | State | Signals + small stores; no NgRx | The daemon is the state; the app caches views, not truth. |
-| HTTP | `HttpClient` behind a generated client from `packages/contracts` | One source of truth for payloads. |
-| Stream | `EventSource` wrapper with `Last-Event-ID` and backoff | SSE survives the tunnel and mobile networks. |
-| i18n | `@ngx-translate/core`, EN + ES | Runtime switch (D24); no rebuild per locale. |
-| Tests | Angular's supported unit runner + Playwright (D32) | Unit for logic, Playwright for the flows. |
+| HTTP | `HttpClient` + `withFetch()` behind a typed `ApiClient` written against `packages/contracts` parse helpers; one source of truth for payloads. | One source of truth for payloads. |
+| Stream | `fetch` + `ReadableStream` SSE reader with `Last-Event-ID` and backoff (`EventSource` cannot send the bearer header). | SSE survives the tunnel and mobile networks. |
+| i18n | Signal-based `I18nService` with `assets/i18n/{en,es}.json`; no third-party i18n runtime (bundle budget, no extra dependency). | Runtime switch (D24); no rebuild per locale. |
+| Tests | Angular's supported unit runner + Playwright (D32) (Vitest via `ng test`, headless, jsdom) | Unit for logic, Playwright for the flows. |
 
 Versions are pinned in `package.json` at Batch 1; a major bump is its own task. The app is
 built by `ng build`, served by the daemon from `/opt/codebox/app`, and wrapped by Capacitor

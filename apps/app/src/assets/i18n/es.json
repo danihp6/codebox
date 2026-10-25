@@ -1,0 +1,26 @@
+{
+  "app": {
+    "title": "Codebox"
+  },
+  "tabs": {
+    "dashboard": "Panel",
+    "chat": "Chat",
+    "jobs": "Tareas",
+    "runs": "Ejecuciones",
+    "settings": "Ajustes"
+  },
+  "pair": {
+    "title": "Vincular este dispositivo",
+    "code": "Código de vinculación",
+    "deviceName": "Nombre del dispositivo",
+    "submit": "Vincular",
+    "error": "El código no es válido o ha caducado."
+  },
+  "common": {
+    "retry": "Reintentar",
+    "cancel": "Cancelar",
+    "loading": "Cargando",
+    "error": "Algo ha salido mal",
+    "empty": "No hay nada aquí"
+  }
+}

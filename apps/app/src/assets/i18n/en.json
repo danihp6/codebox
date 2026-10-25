@@ -1,0 +1,26 @@
+{
+  "app": {
+    "title": "Codebox"
+  },
+  "tabs": {
+    "dashboard": "Dashboard",
+    "chat": "Chat",
+    "jobs": "Jobs",
+    "runs": "Runs",
+    "settings": "Settings"
+  },
+  "pair": {
+    "title": "Pair this device",
+    "code": "Pairing code",
+    "deviceName": "Device name",
+    "submit": "Pair",
+    "error": "The code is invalid or has expired."
+  },
+  "common": {
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "loading": "Loading",
+    "error": "Something went wrong",
+    "empty": "Nothing here"
+  }
+}
