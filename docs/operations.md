@@ -198,7 +198,7 @@ repositories are on GitHub; the state is in the backup. Target RTO 45 minutes.
 
 | Command | Purpose |
 | --- | --- |
-| `cb pair` | Mint a pairing code (local admin socket). |
+| `cb pair` | Mint a pairing code (loopback HTTP). |
 | `cb status` | Health, queue, current runs, brake. |
 | `cb doctor` | Every dependency, one line each. |
 | `cb run <jobId>` | Manual trigger. |
@@ -211,8 +211,21 @@ repositories are on GitHub; the state is in the backup. Target RTO 45 minutes.
 | `cb revert <runId>` | Revert a merge through a run. |
 | `cb prune` | Worktrees and WAL housekeeping. |
 
-The CLI is a thin client over `/v1` plus the local admin socket; it never reads SQLite
-directly, so it cannot drift from the API.
+The CLI is a thin client over `/v1`; it never reads SQLite directly, so it cannot drift from
+the API. The local admin path is **loopback HTTP** (`POST /v1/pair/code` from `127.0.0.1`),
+not a unix socket.
+
+- **Environment.** `CODEBOX_URL` (default `http://127.0.0.1:8787`), `CODEBOX_TOKEN` (no
+  default) and `CODEBOX_STATE_DIR` (default `/var/lib/codebox`, where `cli.token` is read when
+  no flag or variable supplies a token). `--url` and `--token` override them for one command.
+  These are the CLI's own variables: the daemon's `CB_*` table is unchanged.
+- **Exit codes.** `0` success; `1` a `cb doctor` check failed; `2` usage (unknown command or
+  flag, missing positional, invalid value); `3` the daemon is unreachable, timed out or answered
+  with a non-JSON body; `4` `401`/`403` (missing, expired or weak token); `5` any other non-2xx
+  answer; `cb update` and `cb backup` pass the script's exit code through.
+- **Pairing.** `cb pair --name "Dani iPhone"` prints the code, its expiry and a
+  `codebox://pair?url=<base>&code=<code>` deep link. A terminal QR renderer is deferred: v1 adds
+  no QR dependency, so the operator types or copies the code.
 
 ## 13. Change management
 

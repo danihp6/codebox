@@ -6,6 +6,17 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-17, CLI)
+
+- `cb` ships as `apps/daemon/bin/cb.mjs`: `pair`, `status`, `doctor`, `run`, `jobs`, `logs`,
+  `events`, `brake`, `update`, `backup` and `revert`, a thin HTTP client over `/v1` with an
+  injected transport and no import of the daemon's internals.
+- `cb doctor` runs eight checks, prints one `ok`/`warn`/`fail`/`skip` line each and exits
+  non-zero on a failure; exit codes `0`–`5` are frozen and `CODEBOX_URL`/`CODEBOX_TOKEN` are
+  the client variables.
+- No token is ever printed: every rendered value passes the redaction helper, and an error
+  envelope that echoes a token is still safe.
+
 ### Added — 2026-10-25 (Task-15, jobs and runs API)
 
 - `docs/api.md` §5.3–§5.5 are served: job CRUD with `nextFireAt` and a next-fire preview,

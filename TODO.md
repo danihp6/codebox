@@ -271,7 +271,7 @@ Task-16 holds `docs/providers.md` (push section); Task-17 holds `apps/daemon/src
       device and not one per event; `[unit]` an expired subscription is pruned; `[live]` a
       real browser subscription receives the push and deep-links to the run.
 
-- [ ] **[Task-17]** CLI. `cb pair`, `cb status`, `cb doctor`, `cb run`, `cb jobs`, `cb logs`,
+- [x] **[Task-17]** CLI. `cb pair`, `cb status`, `cb doctor`, `cb run`, `cb jobs`, `cb logs`,
       `cb brake`, `cb update`, `cb backup`, `cb revert`. Thin client over `/v1` plus a local
       admin socket for pairing/brake. *Paths:* `apps/daemon/src/cli/**`,
       `apps/daemon/bin/**`, `docs/operations.md` (CLI section only). *Dependencies:* Task-11,
