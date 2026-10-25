@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    // The unit suite resolves the contracts sources, so it does not need `prebuild` to have
+    // produced `packages/contracts/dist` first. The browser build still consumes the dist.
+    "paths": {
+      "@codebox/contracts": ["../../packages/contracts/src/index.ts"]
+    }
+  },
+  "include": ["src/**/*.spec.ts", "src/**/*.d.ts"]
+}

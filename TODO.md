@@ -287,7 +287,7 @@ Task-16 holds `docs/providers.md` (push section); Task-17 holds `apps/daemon/src
 `apps/app/src/app/app.routes.ts`, `apps/app/src/app/app.config.ts`, the theme and the API
 client. Tasks 19–23 own disjoint feature folders and do not edit the router.
 
-- [ ] **[Task-18]** App shell. Ionic Angular 22 standalone starter (tabs), theme tokens,
+- [x] **[Task-18]** App shell. Ionic Angular 22 standalone starter (tabs), theme tokens,
       Capacitor config, secure storage, API client generated from contracts, auth/pairing
       flow, SSE service with reconnect, route placeholders for every screen, i18n scaffold
       (EN/ES), PWA manifest and service worker. *Paths:* `apps/app/**` except the feature

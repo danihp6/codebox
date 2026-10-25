@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-18, app shell)
+
+- `apps/app` is an Angular 22.2.3 + Ionic 9.0.9 + Capacitor 8.5.3 standalone, zoneless app:
+  a tab shell, the theme tokens, every documented route declared lazily as a placeholder for
+  Tasks 19–23, an EN/ES i18n scaffold, the manifest and a service worker.
+- `core/api` is a typed client over the contract parsers; `core/events` is a fetch-based SSE
+  client with exponential backoff, `Last-Event-ID` resume and gap handling; `core/auth` keeps
+  the access token in a signal and the refresh token in a `SecureStore` port — nothing in
+  `localStorage`.
+- The app unit suite runs headless through `@angular/build:unit-test` with a 30 s budget, and
+  the root gate builds the app too.
+
 ### Added — 2026-10-25 (Task-17, CLI)
 
 - `cb` ships as `apps/daemon/bin/cb.mjs`: `pair`, `status`, `doctor`, `run`, `jobs`, `logs`,
