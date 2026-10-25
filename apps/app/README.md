@@ -8,10 +8,12 @@ Tasks 19–23 replace the placeholder feature pages in place.
 ## Files
 
 - `package.json` — workspace manifest; pinned versions and the build/test scripts.
-- `angular.json` — the application, dev-server and unit-test targets (Vitest + jsdom, headless).
+- `angular.json` — the application, dev-server and unit-test targets (Vitest + jsdom, headless,
+  pointed at `vitest.config.mts`).
 - `tsconfig.json` — the standalone CLI tsconfig plus the repository's strict flags.
 - `tsconfig.app.json` — the browser build project.
 - `tsconfig.spec.json` — the unit-test project.
+- `vitest.config.mts` — the unit runner budget (30 s per test for cold lazy-loader resolution).
 - `capacitor.config.ts` — app id, name, web directory and Android scheme.
 - `ngsw-config.json` — shell-only service-worker cache; no `/v1/**` entry.
 - `public/icons/icon-192.png` — maskable PWA icon, 192 px.
