@@ -41,6 +41,8 @@ batch claims the same path.
 - `packages/store/README.md`
 - `packages/scheduler/src/routines.ts`
 - `packages/scheduler/src/index.ts`
+- `packages/scheduler/src/index.test.ts` (only the frozen `public surface` export list:
+  `fromUpdate`, `nextRoutineFire`, `planRoutineTick`, `toSchedule` join it)
 - `packages/scheduler/src/routines.test.ts`
 - `packages/scheduler/README.md`
 - `docs/architecture.md` — **§2 `### packages/store` only** (the two routines table rows and
@@ -378,6 +380,8 @@ else is not a criterion.
   - `npm run build` — `tsc -b`, and it must stay green: this task adds no dependency.
   - `npx playwright test` — not applicable, this task has no web flow.
   - `git diff --name-only main...task-34` — audit against the exclusive paths.
+    `.agent_specs/task-34.md` is **excluded**: the pipeline force-adds the spec as the
+    branch's first commit and strips it in the merge to `main`.
   - Every command runs with no `CB_*` variable set and no network; the tests use
     `openInMemoryStore()` or a file database under `os.tmpdir()`.
 
@@ -392,7 +396,8 @@ else is not a criterion.
         `routine-fires.test.ts`; `npx vitest run --project packages/scheduler` reports
         `routines.test.ts`.
   - [ ] `[unit]` Nothing outside the exclusive paths was touched:
-        `git diff --name-only main...task-34` lists only paths from the list above, and
+        `git diff --name-only main...task-34 | grep -v '^\.agent_specs/'` lists only paths
+        from the list above, and
         `git diff --name-only main...task-34 -- packages/store/migrations/0001_init.sql`
         is empty.
   - [ ] `[unit]` **Migrations apply to an empty database and are idempotent.** In

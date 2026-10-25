@@ -161,6 +161,25 @@ describe('routines.create', () => {
     expect(isCheckViolation(error)).toBe(true);
     expect(store.routines.get('rtn_000020')).toBeNull();
   });
+
+  it('refuses a prompt routine with a null prompt at the table, not only in the schema', () => {
+    const error = captureError(() =>
+      store.db
+        .prepare(
+          `INSERT INTO routines (id, kind, title, cron, timezone, enabled, notify, repo_id,
+             prompt, chat_session_id, next_fire_at, last_fired_at, created_at)
+           VALUES ('rtn_000021', 'prompt', 'Bad', '0 8 * * *', 'UTC', 1, 1, ?, NULL, NULL, NULL, NULL,
+             '2026-01-03T00:00:00.000Z')`,
+        )
+        .run(REPO.id),
+    );
+    expect(isCheckViolation(error)).toBe(true);
+    expect(store.routines.get('rtn_000021')).toBeNull();
+
+    const valid = store.routines.create(PROMPT);
+    expect(valid.kind).toBe('prompt');
+    expect(parseRoutine(valid)).toEqual(PROMPT);
+  });
 });
 
 describe('routines.list', () => {
