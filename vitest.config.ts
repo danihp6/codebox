@@ -60,6 +60,10 @@ export default defineConfig({
           include: ['**/test/**/*.test.mjs'],
           environment: 'node' as const,
           passWithNoTests: true,
+          // Every test here shells out to a cold binary (packer, oci, openssl, bash). The first
+          // spawn of `packer fmt` measured 9–19 s on a CI runner against Vitest's 5 s default, so
+          // the budget is explicit instead of racing the cold tree.
+          testTimeout: 120_000,
         },
       },
     ],
