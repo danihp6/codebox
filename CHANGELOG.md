@@ -6,6 +6,17 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-21, jobs and runs list)
+
+- `/jobs` lists jobs with their next fire, pauses and resumes optimistically, runs one now and
+  creates a job through a cron picker with a timezone; `/jobs/:id` edits the same job, previews
+  the next five fires in its own timezone and shows its recent runs; `/runs` lists runs with
+  status chips and cost and pages with the API cursor.
+- The cron parser, the human summary and the timezone formatter are pure functions with pinned
+  tables; a paused job still offers run-now because the pause switch only stops the scheduler.
+- The `[live]` criterion — a created job appears with its next fire in the selected timezone —
+  is not measured on CI; an `agent-review` issue carries the measurement.
+
 ### Added — 2026-10-25 (Task-20, chat)
 
 - `/chat` is a real session list grouped by repository with a repo filter and a new-chat

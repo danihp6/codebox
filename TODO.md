@@ -341,7 +341,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       permission card disables after reply; `[live]` a 200-token stream renders without
       layout jump and the input stays usable while the agent works.
 
-- [ ] **[Task-21]** Jobs and runs list. Job list, create/edit with a cron picker and timezone,
+- [x] **[Task-21]** Jobs and runs list. Job list, create/edit with a cron picker and timezone,
       pause/resume, run now, next-fire preview, runs list with filters and status chips.
       *Paths:* `apps/app/src/app/features/jobs/**`,
       `apps/app/src/app/features/runs-list/**`. *Dependencies:* Task-18. *Acceptance:*
