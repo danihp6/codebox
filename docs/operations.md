@@ -26,17 +26,22 @@ documented in [`agent-vm.md`](agent-vm.md); this runbook never touches it.
 
 ```bash
 # as root on a fresh image
-/opt/codebox/install.sh --version 0.1.0 --sha256 <checksum>
-systemctl enable --now codebox.service codebox-opencode.service cloudflared.service
+/usr/local/lib/codebox/install.sh --artifact codebox-0.1.0.tar.gz --version 0.1.0 --sha256 <checksum>
+systemctl enable --now codebox.service cloudflared.service
 cb doctor
 ```
 
-`install.sh` verifies the artifact checksum, unpacks to `/opt/codebox/releases/<version>`,
-moves the `current` symlink, applies migrations and restarts. A failed checksum aborts before
-anything is replaced. No secret is read or written by the installer.
+`install.sh` verifies the artifact checksum, unpacks it to
+`/opt/codebox/releases/<version>`, moves the `current` symlink, restarts the daemon and polls
+`/v1/health`. A failed checksum aborts before anything is replaced (exit 3); an archive
+without `apps/daemon/dist/main.js` is refused and its release directory removed (exit 6); a
+daemon that does not answer within `--health-timeout` puts `current` back on the previous
+release (exit 4). Migrations are **not** applied here: the daemon runs them at boot
+(`openStore`). No secret is read or written by the installer.
 
 First boot (cloud-init, `docs/vm-image.md`) writes `/etc/codebox/instance.env` from Vault,
-sets the hostname and the instance name, then starts the units. The daemon fails fast if a
+sets the hostname and the instance name, then starts the units — `codebox-opencode.service` is
+started, not enabled, because the daemon may own that child. The daemon fails fast if a
 required key is missing, naming the key and never its value.
 
 ## 3. Pair the first device
@@ -52,17 +57,23 @@ command again; a used code never works twice.
 ## 4. Upgrade and rollback
 
 ```bash
-cb update --to 0.2.0            # downloads, verifies, migrates, restarts, health-checks
-cb update --rollback            # previous release, previous schema if the migration allows
+cb update --to 0.2.0            # downloads, verifies, restarts, health-checks
+cb update --rollback            # swaps current and previous
 ```
 
-- Migrations are forward-only; a rollback across a destructive migration is refused with the
-  migration id, and the recovery is a restore.
+- `cb update` is a thin wrapper over `/usr/local/lib/codebox/upgrade.sh`, which hands the
+  artifact to `install.sh`: checksum, unpack under `/opt/codebox/releases/<version>`, the
+  `current` symlink, a restart and a `/v1/health` poll. The `previous` symlink is what a
+  rollback moves back to, and two rollbacks in a row return to the release that was abandoned.
+- Migrations run in the daemon at boot, so they are forward-only; a rollback across a
+  destructive migration is refused with the migration id, and the recovery is a restore.
+- `upgrade.sh --prune` keeps the two newest directories under `/opt/codebox/releases/` and
+  removes the rest.
 - The upgrade path from N-1 is tested before a release (Task-29); an N-2 upgrade is a fresh
   install plus a restore.
 - `cb doctor` after the upgrade reports the version, the schema and each provider.
 - The release is a signed artifact with a published checksum; the installer refuses a
-  mismatch.
+  mismatch (exit 3) and an archive without the daemon entry point (exit 6).
 
 ## 5. Backup and restore
 

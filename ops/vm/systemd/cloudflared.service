@@ -1,0 +1,20 @@
+[Unit]
+Description=Cloudflare tunnel for the Codebox daemon
+After=network-online.target codebox.service
+Wants=network-online.target
+
+[Service]
+User=codebox
+Group=codebox
+EnvironmentFile=/etc/codebox/instance.env
+ExecStart=/usr/bin/cloudflared --no-autoupdate tunnel --config /etc/cloudflared/config.yml run
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/codebox /srv/codebox
+
+[Install]
+WantedBy=multi-user.target

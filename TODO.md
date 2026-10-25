@@ -352,7 +352,7 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       resource names and makes no call; `[live]` one dispatched retry run finds the existing
       instance, parks, announces it once and does not chain.
 
-- [ ] **[Task-25]** VM image. Packer template for Ubuntu 24.04 arm64 installing Node 24, git,
+- [x] **[Task-25]** VM image. Packer template for Ubuntu 24.04 arm64 installing Node 24, git,
       gh, opencode, cloudflared, build tools and the systemd units; cloud-init for first boot
       (hostname, instance identity, Vault fetch); `ops/vm/install.sh`, `upgrade.sh`,
       `backup.sh`, `restore.sh`; no secrets baked. *Paths:* `ops/image/**`, `ops/vm/**`,

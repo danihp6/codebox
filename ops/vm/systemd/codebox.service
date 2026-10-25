@@ -1,0 +1,22 @@
+[Unit]
+Description=Codebox daemon
+After=network-online.target codebox-opencode.service
+Wants=network-online.target
+
+[Service]
+User=codebox
+Group=codebox
+WorkingDirectory=/var/lib/codebox
+EnvironmentFile=/etc/codebox/instance.env
+ExecStart=/usr/bin/env node /opt/codebox/current/apps/daemon/dist/main.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/codebox /srv/codebox
+
+[Install]
+WantedBy=multi-user.target

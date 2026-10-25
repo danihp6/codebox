@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-25, VM image)
+
+- A Packer template builds the Ubuntu 24.04 arm64 OCI image with Node 24, git, gh, opencode,
+  cloudflared and the build tools; no secret is baked, and `90-verify.sh` fails the build when
+  a token pattern appears under `/etc` or `/opt`.
+- cloud-init renders `/etc/codebox/instance.env` from OCI Vault as `0600 root:codebox`, writes
+  the tunnel credentials, starts the units and appends one `first-boot.jsonl` line; a second
+  boot rewrites the same bytes and appends exactly one more line.
+- `ops/vm/{install,upgrade,backup,restore}.sh` install a release atomically after a checksum
+  check, roll back to `previous`, write the encrypted backup archive and restore it after
+  verifying its row counts; the units run the daemon, OpenCode, cloudflared and the nightly
+  backup.
+- The `[live]` criterion (an instance boots, the tunnel answers `/v1/health`) is not measured
+  here; an `agent-review` issue carries its measurement, as does `packer validate` against a
+  real tenancy.
+
 ### Added — 2026-10-25 (Task-11, daemon skeleton)
 
 - `@codebox/daemon` boots: every `CB_*` key is parsed and validated at the edge (a missing or
