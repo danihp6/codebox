@@ -5,8 +5,8 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 
 ## Files
 
-- `package.json` — workspace manifest; `prebuild` builds the three `@codebox/*` packages the
-  daemon value-imports, because the root `build` runs `apps/*` before `packages/*`.
+- `package.json` — workspace manifest; `prebuild` builds the `@codebox/*` packages the daemon
+  value-imports, because the root `build` runs `apps/*` before `packages/*`.
 - `tsconfig.json` — build and typecheck configuration.
 - `src/main.ts` — process entry point: boot order, `startDaemon`, `runMain`, `daemon.json`.
 - `src/config.ts` — `CB_*` loading, bind parsing, state paths, build info.
