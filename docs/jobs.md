@@ -321,7 +321,8 @@ get the tool. The app can list, pause, run now and delete, but creation is conve
 scheduler claims `(routine_id, scheduled_for)` transactionally and uses the same D13 misfire
 rule as a job. A `prompt` with no `chatSessionId` — or whose session was archived — gets a new
 chat session on that fire; it never appends to an unrelated one. A `reminder` costs nothing; a
-`prompt` counts against `CB_DAILY_COST_USD`.
+`prompt` is a chat turn, and the chat path does not yet write a usage row, so a routine prompt
+is not capped in this release — the cap and the ledger are a follow-up on the chat path.
 
 ### 15.1 Storage and the claim (Task-34)
 
@@ -339,3 +340,49 @@ one transaction: the routine must be enabled and its `next_fire_at` must still e
 winner: a tick that loses the race — a second process, a double tick, a stale read — gets
 `null` instead of an error and never fires twice. A `skipped` fire writes its row and moves
 `next_fire_at`, but leaves `last_fired_at` alone, because the fire never happened.
+
+### 15.2 The fire (Task-35)
+
+`apps/daemon/src/routines` owns the tick. One `setInterval` runs every
+`max(15, CB_SCHEDULER_TICK_SECONDS)` seconds (unref'd, one pass at a time: a second tick that
+starts while one is running returns an empty report). A pass reads the due rows oldest first
+(`enabled = 1 AND next_fire_at <= now`, twenty at a time), computes the next fire with the same
+cron arithmetic as a job, and applies D13: inside `CB_MISFIRE_GRACE_SECONDS` the routine fires;
+outside it the fire is recorded as `skipped` and `next_fire_at` moves on; a schedule the engine
+cannot advance is skipped once as `no_next_fire`, so the routine stops instead of retrying.
+
+The claim is the D38 transaction (§15.1): exactly one tick, process or manual call wins a
+`(routine_id, scheduled_for)`, and a loser writes no second event.
+
+- `reminder` — one `routine.fired` event and one `sent` fire row. No model, no chat, no
+  worktree.
+- `prompt` — the fire row is `claimed`; the routine then appends one `origin: routine` message
+  to its chat (creating the session when it has none or the old one was archived, and storing
+  the new id on the routine), streams the turn through the normal chat pump, and stores
+  `routine.replied` with the chat and message ids, or `routine.failed` with a code and a fixed
+  sentence. At most one prompt fire runs at a time: a second due prompt stays due for the next
+  tick, inside the grace. The fire row ends `replied` with the message id, or `failed` with the
+  code.
+
+**One push per outcome** (§13): a reminder's `routine.fired` is its push; a prompt's
+`routine.fired` is not, so the prompt pushes once at `routine.replied`, with the answer's text
+as the body and a link to the chat. A routine with `notify = false` pushes neither, and quiet
+hours hold both.
+
+`POST /v1/routines/{id}/run` fires by hand: it appends `routine.fired` and runs the same work
+without a `routine_fires` row and without touching `next_fire_at`, `last_fired_at` or `enabled`,
+so a manual fire never consumes the schedule. A routine never creates a `runs` row, a gate or a
+PR.
+
+| Method | Path | Scope | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/v1/routines` | `read` | Page of routines, newest first; `kind` and `enabled` filters. |
+| `GET` | `/v1/routines/{id}` | `read` | One routine with its next and last fire. |
+| `PATCH` | `/v1/routines/{id}` | `write` | `title`, `cron`, `timezone`, `prompt`, `notify` or `enabled`; a cron or timezone change recomputes `nextFireAt`. |
+| `POST` | `/v1/routines/{id}/pause` | `write` | `enabled = false`, `nextFireAt = null`. |
+| `POST` | `/v1/routines/{id}/resume` | `write` | `enabled = true`, `nextFireAt` recomputed from now. |
+| `POST` | `/v1/routines/{id}/run` | `runs` | Fire once now, outside the schedule. |
+| `DELETE` | `/v1/routines/{id}` | `write` | Delete the routine and stop its schedule; `204`. |
+
+`POST /v1/routines` is not mounted in this release: creation is the `routine.create` chat
+tool's job (Task-38), so `docs/api.md` §5.8's create row stays aspirational until that task.

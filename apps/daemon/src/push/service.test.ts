@@ -20,6 +20,10 @@ import type { PushKind, PushSendInput, PushSendOutcome, PushTransport } from './
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
 const TS = '2026-10-25T10:00:00.000Z';
 const RUN_ID = 'run_01JABCDEFG';
+const ROUTINE_ID = 'rtn_01JABCDEFG';
+const ROUTINE_REPO_ID = 'repo_push0001';
+const ROUTINE_CHAT_ID = 'chat_push0001';
+const ROUTINE_MESSAGE_ID = 'msg_push0001';
 const ENDPOINT_A = 'https://push.example.com/a';
 const ENDPOINT_B = 'https://push.example.com/b';
 const KEYS = { p256dh: 'p256dh-key', auth: 'auth-key' };
@@ -401,5 +405,165 @@ describe('push delivery without the gate', () => {
     });
     expect(stored.events).toEqual(['run.failed', 'approval.created']);
     expect(service.preferences()).toEqual(stored);
+  });
+});
+
+describe('push mapping for routines', () => {
+  function seedRoutine(store: Store, notify = true): void {
+    store.routines.create({
+      id: ROUTINE_ID,
+      kind: 'reminder',
+      title: 'Take the pill',
+      cron: '0 7 * * *',
+      timezone: 'UTC',
+      enabled: true,
+      notify,
+      createdAt: TS,
+      nextFireAt: null,
+      lastFiredAt: null,
+    });
+  }
+
+  function seedChat(store: Store): void {
+    store.repos.create({
+      id: ROUTINE_REPO_ID,
+      slug: 'acme/widgets',
+      defaultBranch: 'main',
+      gate: 'npm test',
+      policy: 'auto',
+      protectedPaths: [],
+      enabled: true,
+      createdAt: TS,
+    });
+    store.chats.createSession(
+      {
+        id: ROUTINE_CHAT_ID,
+        repoId: ROUTINE_REPO_ID,
+        title: 'Morning summary',
+        status: 'idle',
+        createdAt: TS,
+        updatedAt: TS,
+        lastMessage: null,
+      },
+      { opencodeSessionId: null, worktree: null },
+    );
+    store.chats.appendMessage(
+      {
+        id: ROUTINE_MESSAGE_ID,
+        chatId: ROUTINE_CHAT_ID,
+        role: 'assistant',
+        text: 'Nine bullets about the repository.',
+        createdAt: TS,
+      },
+      { origin: 'assistant' },
+    );
+  }
+
+  function appendRoutine(
+    store: Store,
+    type: 'routine.fired' | 'routine.replied',
+    data: Record<string, unknown>,
+  ): void {
+    store.events.append({ runId: null, chatId: null, seq: null, type, data, ts: TS });
+  }
+
+  function routinePreferences(service: PushService): void {
+    service.updatePreferences({ events: ['routine.fired', 'routine.replied'], quietHours: null });
+  }
+
+  it('pushes a reminder fire once and never pushes a prompt fire', async () => {
+    const { service, transport, store, lines } = harness();
+    routinePreferences(service);
+    await service.pump();
+    subscribe(service);
+    seedRoutine(store);
+    appendRoutine(store, 'routine.fired', {
+      routineId: ROUTINE_ID,
+      kind: 'reminder',
+      scheduledFor: TS,
+      ts: TS,
+    });
+
+    const reminder = await service.pump();
+    expect(reminder).toMatchObject({ sent: 1 });
+    expect(transport.sent).toHaveLength(1);
+    expect(transport.sent[0]?.message).toMatchObject({
+      type: 'routine.fired',
+      title: 'Take the pill',
+      body: 'Reminder.',
+      url: '/jobs',
+      routineId: ROUTINE_ID,
+    });
+
+    appendRoutine(store, 'routine.fired', {
+      routineId: ROUTINE_ID,
+      kind: 'prompt',
+      scheduledFor: '2026-11-10T07:00:00.000Z',
+      ts: TS,
+    });
+    const prompt = await service.pump();
+    expect(transport.sent).toHaveLength(1);
+    expect(prompt).toMatchObject({ sent: 0, skipped: 1 });
+    expect(messages(lines, 'push_skipped')).toContainEqual(
+      expect.objectContaining({ reason: 'routine_prompt', type: 'routine.fired' }),
+    );
+  });
+
+  it('pushes the reply summary with the chat message text', async () => {
+    const { service, transport, store } = harness();
+    routinePreferences(service);
+    await service.pump();
+    subscribe(service);
+    seedRoutine(store);
+    seedChat(store);
+    appendRoutine(store, 'routine.replied', {
+      routineId: ROUTINE_ID,
+      chatId: ROUTINE_CHAT_ID,
+      messageId: ROUTINE_MESSAGE_ID,
+      ts: TS,
+    });
+
+    const report = await service.pump();
+
+    expect(report).toMatchObject({ sent: 1 });
+    expect(transport.sent).toHaveLength(1);
+    expect(transport.sent[0]?.message).toEqual({
+      type: 'routine.replied',
+      title: 'Take the pill',
+      body: 'Nine bullets about the repository.',
+      url: `/chat/${ROUTINE_CHAT_ID}`,
+      tag: `routine:${ROUTINE_ID}:${ROUTINE_MESSAGE_ID}`,
+      routineId: ROUTINE_ID,
+      chatId: ROUTINE_CHAT_ID,
+    });
+  });
+
+  it('sends nothing for either kind when the routine is muted', async () => {
+    const { service, transport, store, lines } = harness();
+    routinePreferences(service);
+    await service.pump();
+    subscribe(service);
+    seedRoutine(store, false);
+    seedChat(store);
+    appendRoutine(store, 'routine.fired', {
+      routineId: ROUTINE_ID,
+      kind: 'reminder',
+      scheduledFor: TS,
+      ts: TS,
+    });
+    appendRoutine(store, 'routine.replied', {
+      routineId: ROUTINE_ID,
+      chatId: ROUTINE_CHAT_ID,
+      messageId: ROUTINE_MESSAGE_ID,
+      ts: TS,
+    });
+
+    const report = await service.pump();
+
+    expect(transport.sent).toHaveLength(0);
+    expect(report).toMatchObject({ sent: 0, skipped: 2 });
+    expect(
+      messages(lines, 'push_skipped').filter((line) => line['reason'] === 'routine_muted'),
+    ).toHaveLength(2);
   });
 });

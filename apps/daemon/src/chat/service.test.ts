@@ -21,6 +21,7 @@ import { DEFAULT_SUBSYSTEM_FLAGS, createShutdownRegistry } from '../modules.js';
 import type { DaemonContext } from '../modules.js';
 import { createChatService } from './service.js';
 import type { ChatAgent, ChatService, ChatWorkspaces } from './service.js';
+import { MAX_TEXT_CHARS } from './service.js';
 
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
 const REPO_ID = 'repo_chat0001';
@@ -532,5 +533,58 @@ describe('chat service', () => {
     expect(agent.replies).toEqual([
       { sessionId: FIRST_SESSION, requestId: 'per_2', reply: 'reject' },
     ]);
+  });
+});
+
+describe('chat message origin', () => {
+  function originOf(store: Store, messageId: string): unknown {
+    return store.db.prepare('SELECT origin FROM chat_messages WHERE id = ?').get(messageId)?.[
+      'origin'
+    ];
+  }
+
+  it('stores send as a user message and sendRoutine as a routine message', async () => {
+    const { service, store, agent } = harness();
+    const chat = seedChat(store);
+    agent.script(FIRST_SESSION, [
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'idle' },
+    ]);
+    agent.script(FIRST_SESSION, [
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'idle' },
+    ]);
+
+    const user = await service.send({ chatId: chat.id, text: 'hello' });
+    const routine = await service.sendRoutine({ chatId: chat.id, text: 'summarise the repo' });
+    await service.pump(chat.id);
+
+    expect(user.role).toBe('user');
+    expect(routine.role).toBe('user');
+    expect(originOf(store, user.id)).toBe('user');
+    expect(originOf(store, routine.id)).toBe('routine');
+  });
+
+  it('refuses an empty or over-long routine text with the same error as send', async () => {
+    const { service, store } = harness();
+    const chat = seedChat(store);
+
+    await expect(service.sendRoutine({ chatId: chat.id, text: '   ' })).rejects.toMatchObject({
+      name: 'ChatError',
+      reason: 'invalid_payload',
+      status: 422,
+    });
+    await expect(
+      service.sendRoutine({ chatId: chat.id, text: 'x'.repeat(MAX_TEXT_CHARS + 1) }),
+    ).rejects.toMatchObject({
+      name: 'ChatError',
+      reason: 'invalid_payload',
+      status: 422,
+    });
+    await expect(service.send({ chatId: 'chat_missing01', text: 'hello' })).rejects.toMatchObject({
+      reason: 'not_found',
+      status: 404,
+    });
+    await expect(
+      service.sendRoutine({ chatId: 'chat_missing01', text: 'hello' }),
+    ).rejects.toMatchObject({ reason: 'not_found', status: 404 });
   });
 });
