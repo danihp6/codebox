@@ -8,9 +8,13 @@ import {
   parseHealth,
   parseMe,
   parsePage,
+  parseRun,
+  parseRunDiff,
   parseVersion,
   runSchema,
   scopeSchema,
+  sseEventNameSchema,
+  timestampSchema,
 } from '@codebox/contracts';
 import type {
   Device,
@@ -19,8 +23,10 @@ import type {
   Me,
   Page,
   Run,
+  RunDiff,
   RunState,
   Scope,
+  SseEventName,
   Version,
 } from '@codebox/contracts';
 import { Observable, catchError, map, throwError } from 'rxjs';
@@ -43,6 +49,19 @@ export interface TokenPair {
   readonly refreshToken: string;
   readonly expiresIn: number;
   readonly scopes: readonly Scope[];
+}
+
+export interface RunEventItem {
+  readonly id: number;
+  readonly seq: number | null;
+  readonly type: SseEventName;
+  readonly data: Readonly<Record<string, unknown>>;
+  readonly ts: string;
+}
+
+export interface RunEventPage {
+  readonly data: readonly RunEventItem[];
+  readonly nextCursor: string | null;
 }
 
 export interface DomainErrorInit {
@@ -151,6 +170,35 @@ export class ApiClient {
     );
   }
 
+  getRun(id: string): Observable<Run> {
+    return this.send(this.http.get<unknown>(this.url(`/runs/${id}`)), parseRun);
+  }
+
+  runEvents(id: string, query?: { after?: number; limit?: number }): Observable<RunEventPage> {
+    const params = this.query({ after: query?.after, limit: query?.limit });
+    return this.send(
+      this.http.get<unknown>(this.url(`/runs/${id}/events`), { params }),
+      parseRunEventPage,
+    );
+  }
+
+  runDiff(id: string): Observable<RunDiff> {
+    return this.send(this.http.get<unknown>(this.url(`/runs/${id}/diff`)), parseRunDiff);
+  }
+
+  cancelRun(id: string): Observable<Run> {
+    return this.send(this.http.post<unknown>(this.url(`/runs/${id}/cancel`), null), parseRun);
+  }
+
+  revertRun(id: string, idempotencyKey: string): Observable<Run> {
+    return this.send(
+      this.http.post<unknown>(this.url(`/runs/${id}/revert`), null, {
+        headers: { 'Idempotency-Key': idempotencyKey },
+      }),
+      parseRun,
+    );
+  }
+
   private url(path: string): string {
     return `${this.config.baseUrl}${API_PREFIX}${path}`;
   }
@@ -207,6 +255,67 @@ export function parseTokenPair(input: unknown): TokenPair {
     expiresIn: requiredNumber(record, 'expiresIn'),
     scopes: parseScopes(record['scopes']),
   };
+}
+
+/** docs/api.md §5.4: the daemon builds this page locally, so the client parses it locally. */
+export function parseRunEventPage(input: unknown): RunEventPage {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    throw runEventIssue('page', 'expected an object');
+  }
+  const record = input as Record<string, unknown>;
+  const rawData = record['data'];
+  if (!Array.isArray(rawData)) throw runEventIssue('data', 'expected an array');
+
+  const data: RunEventItem[] = [];
+  for (let index = 0; index < rawData.length; index += 1) {
+    data.push(parseRunEventItem(rawData[index], `data.${index}`));
+  }
+
+  const nextCursor = record['nextCursor'];
+  if (nextCursor !== null && typeof nextCursor !== 'string') {
+    throw runEventIssue('nextCursor', 'expected a string or null');
+  }
+  return { data, nextCursor };
+}
+
+function parseRunEventItem(input: unknown, at: string): RunEventItem {
+  if (typeof input !== 'object' || input === null || Array.isArray(input)) {
+    throw runEventIssue(at, 'expected an object');
+  }
+  const record = input as Record<string, unknown>;
+
+  const id = record['id'];
+  if (typeof id !== 'number' || !Number.isInteger(id) || id <= 0) {
+    throw runEventIssue(`${at}.id`, 'expected a positive integer');
+  }
+
+  const seq = record['seq'];
+  if (seq !== null && (typeof seq !== 'number' || !Number.isInteger(seq) || seq <= 0)) {
+    throw runEventIssue(`${at}.seq`, 'expected a positive integer or null');
+  }
+
+  const type = sseEventNameSchema.safeParse(record['type']);
+  if (!type.success) throw runEventIssue(`${at}.type`, 'expected a known event name');
+
+  const payload = record['data'];
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    throw runEventIssue(`${at}.data`, 'expected an object');
+  }
+
+  const ts = timestampSchema.safeParse(record['ts']);
+  if (!ts.success) throw runEventIssue(`${at}.ts`, 'expected an RFC 3339 timestamp');
+
+  return {
+    id,
+    seq,
+    type: type.data,
+    data: payload as Readonly<Record<string, unknown>>,
+    ts: ts.data,
+  };
+}
+
+function runEventIssue(path: string, message: string): ContractParseError {
+  return new ContractParseError('run.events', [{ path, message, code: 'custom' }]);
 }
 
 function parseScopes(input: unknown): readonly Scope[] {

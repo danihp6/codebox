@@ -22,5 +22,56 @@
     "loading": "Loading",
     "error": "Something went wrong",
     "empty": "Nothing here"
+  },
+  "run": {
+    "title": "Run",
+    "state": {
+      "queued": "Queued",
+      "preparing": "Preparing",
+      "running": "Running",
+      "gating": "Gating",
+      "pr_open": "Pull request open",
+      "merging": "Merging",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "cancelled": "Cancelled"
+    },
+    "guardrail": {
+      "gate": "Gate",
+      "checks": "Checks",
+      "base": "Base branch",
+      "diff": "Diff budget",
+      "protected_paths": "Protected paths",
+      "labels": "Labels",
+      "policy": "Policy",
+      "automerger": "Auto-merger"
+    },
+    "section": {
+      "timeline": "Timeline",
+      "gate": "Gate",
+      "guardrails": "Guardrails",
+      "blockers": "Blockers",
+      "diff": "Diff",
+      "cost": "Cost",
+      "pullRequest": "Pull request",
+      "merge": "Merge"
+    },
+    "action": {
+      "cancel": "Cancel run",
+      "confirmCancel": "Confirm cancel",
+      "dismissCancel": "Keep running",
+      "revert": "Revert",
+      "retry": "Retry"
+    },
+    "empty": {
+      "timeline": "No events yet.",
+      "blockers": "No blockers."
+    },
+    "error": {
+      "diffUnavailable": "The diff is not available for this run."
+    },
+    "event": {
+      "other": "Event"
+    }
   }
 }
