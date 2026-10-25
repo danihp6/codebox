@@ -400,13 +400,16 @@ client. Tasks 19–23 own disjoint feature folders and do not edit the router.
       token; `[live]` `systemd-analyze security` reports the documented hardening score;
       `[live]` an oversized request is rejected before parsing.
 
-- [ ] **[Task-29]** Release pipeline. Versioning, signed daemon/app artifacts, image tag
+- [!] **[Task-29]** Release pipeline. Versioning, signed daemon/app artifacts, image tag
       scheme, changelog generation, rollback, and the upgrade path from N-1. *Paths:*
       `.github/workflows/release.yml`, `scripts/release/**`, `docs/operations.md` (release
       section). *Dependencies:* Task-25. *Acceptance:* `[unit]` a dry release produces the
       documented artifact names and checksums; `[unit]` the upgrade script refuses a
       checksum mismatch; `[live]` an N-1 instance upgrades and answers health with the new
       version.
+      BLOCKED: the runner's installation token has no `workflows` permission, so a branch
+      touching `.github/workflows/release.yml` cannot be pushed (issue #11). Grant the App
+      `Workflows: read and write`, or publish that one file manually and drop it from scope.
 
 - [ ] **[Task-30]** Docs and ADR pass. Reconcile every doc with the shipped code, add the
       runbook for the five most likely incidents, and amend the decisions that moved. *Paths:*
