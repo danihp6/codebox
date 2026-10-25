@@ -193,8 +193,10 @@ state.
   (D39). `codebox-keepalive.timer` runs the liveness pass every six hours — `cb doctor`,
   `cb prune`, a loopback health probe — and appends the reading it took to
   `/var/lib/codebox/logs/keepalive.jsonl`, which is how the operator sees the box drifting
-  towards the threshold instead of guessing. If it is ever reclaimed, the backup and the image
-  are the answer, not a second instance (`docs/operations.md` §10.5).
+  towards the threshold instead of guessing. Four fires a day at 00:40, 06:40, 12:40 and 18:40
+  UTC make **28 lines in seven days**: that count is the liveness check the operator reads. If
+  it is ever reclaimed, the backup and the image are the answer, not a second instance
+  (`docs/operations.md` §10.5).
 
 ## 7. Cost
 
