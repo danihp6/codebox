@@ -3,7 +3,13 @@ export { StoreError } from './errors.js';
 export type { StoreErrorCode } from './errors.js';
 
 // Connection: WAL, foreign keys, transactions and SQLite error classification.
-export { openDatabase, withTransaction, isUniqueViolation, isForeignKeyViolation } from './db.js';
+export {
+  openDatabase,
+  withTransaction,
+  isUniqueViolation,
+  isForeignKeyViolation,
+  isCheckViolation,
+} from './db.js';
 export type { OpenDatabaseOptions } from './db.js';
 
 // Migrations: numbered SQL files, checksum-pinned, forward only.
@@ -41,3 +47,10 @@ export type {
 export type { DeviceRecord, DeviceRepository } from './devices.js';
 export type { SettingsRepository } from './settings.js';
 export type { UsageRecord, UsageAggregate, UsageRepository } from './usage.js';
+export type { RoutineFilter, RoutinePatch, RoutineRepository } from './routines.js';
+export type {
+  RoutineFireOutcome,
+  RoutineFireRecord,
+  ClaimRoutineFireInput,
+  RoutineFireRepository,
+} from './routine-fires.js';

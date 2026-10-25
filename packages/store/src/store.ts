@@ -7,6 +7,8 @@ import { createEventRepository, type EventRepository } from './events.js';
 import { createJobRepository, type JobRepository } from './jobs.js';
 import { loadMigrationsFromDisk, MIGRATIONS_DIRECTORY, runMigrations } from './migrate.js';
 import { createRepoRepository, type RepoRepository } from './repos.js';
+import { createRoutineFireRepository, type RoutineFireRepository } from './routine-fires.js';
+import { createRoutineRepository, type RoutineRepository } from './routines.js';
 import { createRunRepository, type RunRepository } from './runs.js';
 import { createSettingsRepository, type SettingsRepository } from './settings.js';
 import { createUsageRepository, type UsageRepository } from './usage.js';
@@ -24,6 +26,8 @@ export interface Store {
   readonly devices: DeviceRepository;
   readonly settings: SettingsRepository;
   readonly usage: UsageRepository;
+  readonly routines: RoutineRepository;
+  readonly routineFires: RoutineFireRepository;
   close(): void;
 }
 
@@ -68,6 +72,8 @@ export function openStore(options: OpenStoreOptions): Store {
     devices: createDeviceRepository(db),
     settings: createSettingsRepository(db),
     usage: createUsageRepository(db),
+    routines: createRoutineRepository(db),
+    routineFires: createRoutineFireRepository(db),
     close(): void {
       if (closed) return;
       closed = true;

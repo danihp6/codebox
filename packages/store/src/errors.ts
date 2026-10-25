@@ -5,6 +5,7 @@ export type StoreErrorCode =
   | 'repo_has_live_run'
   | 'nested_transaction'
   | 'invalid_row'
+  | 'check_violation'
   | 'migration_invalid'
   | 'migration_checksum'
   | 'migration_failed';
