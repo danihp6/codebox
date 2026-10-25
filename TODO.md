@@ -256,7 +256,7 @@ Task-16 holds `docs/providers.md` (push section); Task-17 holds `apps/daemon/src
       during `running` kills the session and removes the worktree; `[live]` a real run on a
       scratch repo opens a PR and merges only after the gate and the checks are green.
 
-- [ ] **[Task-15]** Jobs/runs API. CRUD for jobs, run now, pause/resume, runs list/detail,
+- [x] **[Task-15]** Jobs/runs API. CRUD for jobs, run now, pause/resume, runs list/detail,
       cancel, event replay, approvals inbox and reply. Idempotency keys. *Paths:*
       `apps/daemon/src/jobs/**`, `apps/daemon/src/runs/**`, `docs/api.md` (jobs/runs section
       only). *Dependencies:* Task-11, Task-12, Task-14. *Acceptance:* `[unit]` every route

@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-15, jobs and runs API)
+
+- `docs/api.md` §5.3–§5.5 are served: job CRUD with `nextFireAt` and a next-fire preview,
+  run-now that the pause switch ignores, pause/resume, the runs list with stable cursor
+  pagination, run detail, cancel, revert, JSON event replay, diff stat, and the approval
+  inbox with `allow`/`deny` replies and expiry.
+- The merged run engine is wired behind `src/runs/**` from its ports: one shared engine, one
+  in-flight map and one cost budget for jobs and runs; a manual run writes the queued row and
+  `run.queued` before `engine.start` adopts it.
+- `Idempotency-Key` returns the first run for 24 h per device and rejects a different body
+  with `409 idempotency_mismatch`; the store is in memory and resets on restart.
+- `POST /v1/chat/sessions/{id}/promote` starts a run from the last assistant message.
+
 ### Added — 2026-10-25 (Task-13, chat API and event bridge)
 
 - The daemon serves `docs/api.md` §5.6: create, list, get and archive a chat session bound to
