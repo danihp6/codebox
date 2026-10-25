@@ -1,0 +1,259 @@
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import type { ComponentFixture } from '@angular/core/testing';
+import { TestBed } from '@angular/core/testing';
+import { provideRouter } from '@angular/router';
+import type { Health, Run, SseStreamEvent, Telemetry } from '@codebox/contracts';
+import { provideIonicAngular } from '@ionic/angular';
+import { signal } from '@angular/core';
+import { afterEach, describe, expect, it } from 'vitest';
+import { SECURE_STORE } from '../../core/auth/secure-store';
+import type { SecureStore } from '../../core/auth/secure-store';
+import { SseService } from '../../core/events/sse.service';
+import { DashboardPage, formatUsd } from './dashboard.page';
+import { STRINGS, translate } from './i18n';
+
+const TS = '2026-10-24T18:04:02Z';
+
+const HEALTH: Health = {
+  status: 'ok',
+  db: 'ok',
+  opencode: 'degraded',
+  disk: { freeBytes: 12_000, totalBytes: 48_000, usedPercent: 75 },
+  queue: { pending: 2, running: 1, maxConcurrency: 4 },
+  version: '0.1.0',
+};
+
+const TELEMETRY: Telemetry = {
+  range: '24h',
+  since: TS,
+  spendUsd: 1.25,
+  runs: { total: 3, succeeded: 2, failed: 1, cancelled: 0 },
+  disk: HEALTH.disk,
+  queueDepth: 2,
+};
+
+function runAt(index: number): Run {
+  return {
+    id: `run_01JABCDEFGHJKMNPQR${String(index).padStart(2, '0')}`,
+    repoId: 'repo_01JABCDEFGHJKMNPQRSV',
+    jobId: null,
+    state: index % 2 === 0 ? 'failed' : 'succeeded',
+    trigger: 'manual',
+    branch: `cb/run-${index}`,
+    baseRef: 'main',
+    pr: null,
+    gate: null,
+    guardrails: [],
+    blockers: [],
+    diff: null,
+    cost: { usd: 0.1, tokensIn: 10, tokensOut: 5 },
+    createdAt: TS,
+    finishedAt: TS,
+  };
+}
+
+const RUNS = [runAt(1), runAt(2), runAt(3), runAt(4), runAt(5)];
+
+const HEALTH_URL = '/v1/health';
+const TELEMETRY_URL = '/v1/telemetry?range=24h';
+const RUNS_URL = '/v1/runs?limit=5';
+
+const USED_KEYS: readonly string[] = [
+  'common.loading',
+  'common.error',
+  'dashboard.title',
+  'dashboard.section.health',
+  'dashboard.section.queue',
+  'dashboard.section.spend',
+  'dashboard.section.recent',
+  'dashboard.vm.db',
+  'dashboard.vm.opencode',
+  'dashboard.vm.disk',
+  'dashboard.queue.pending',
+  'dashboard.queue.running',
+  'dashboard.queue.max',
+  'dashboard.action.retry',
+  'dashboard.empty',
+  'dashboard.stale',
+  'dashboard.state.queued',
+  'dashboard.state.preparing',
+  'dashboard.state.running',
+  'dashboard.state.gating',
+  'dashboard.state.pr_open',
+  'dashboard.state.merging',
+  'dashboard.state.succeeded',
+  'dashboard.state.failed',
+  'dashboard.state.cancelled',
+];
+
+function memoryStore(): SecureStore {
+  const values = new Map<string, string>();
+  return {
+    get: (key) => Promise.resolve(values.get(key) ?? null),
+    set: (key, value) => {
+      values.set(key, value);
+      return Promise.resolve();
+    },
+    remove: (key) => {
+      values.delete(key);
+      return Promise.resolve();
+    },
+    clear: () => {
+      values.clear();
+      return Promise.resolve();
+    },
+  };
+}
+
+function envelope(code: string): Record<string, unknown> {
+  return { error: { code, message: 'Boom', requestId: 'req_01JABCDEFGHJKMNPQRSV' } };
+}
+
+function hook(element: HTMLElement, id: string): HTMLElement | null {
+  return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+}
+
+interface Mounted {
+  readonly fixture: ComponentFixture<DashboardPage>;
+  readonly element: HTMLElement;
+  readonly http: HttpTestingController;
+}
+
+async function mount(): Promise<Mounted> {
+  TestBed.configureTestingModule({
+    providers: [
+      provideRouter([]),
+      provideIonicAngular(),
+      provideHttpClient(),
+      provideHttpClientTesting(),
+      { provide: SECURE_STORE, useValue: memoryStore() },
+      { provide: SseService, useValue: { event: signal<SseStreamEvent | null>(null) } },
+    ],
+  });
+  const fixture = TestBed.createComponent(DashboardPage);
+  await fixture.whenStable();
+  return {
+    fixture,
+    element: fixture.nativeElement as HTMLElement,
+    http: TestBed.inject(HttpTestingController),
+  };
+}
+
+describe('DashboardPage', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('renders the three health cards and the five most recent runs', async () => {
+    const { fixture, element, http } = await mount();
+
+    expect(hook(element, 'dashboard-loading')).not.toBeNull();
+    expect(hook(element, 'page-dashboard')).not.toBeNull();
+
+    http.expectOne(HEALTH_URL).flush(HEALTH);
+    http.expectOne(TELEMETRY_URL).flush(TELEMETRY);
+    http.expectOne(RUNS_URL).flush({ data: RUNS, nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'dashboard-loading')).toBeNull();
+    expect(hook(element, 'health-vm')?.getAttribute('data-status')).toBe('ok');
+    expect(hook(element, 'health-db')?.getAttribute('data-state')).toBe('ok');
+    expect(hook(element, 'health-opencode')?.getAttribute('data-state')).toBe('degraded');
+    expect(hook(element, 'health-disk')?.getAttribute('data-percent')).toBe('75');
+    expect(hook(element, 'health-queue')?.getAttribute('data-pending')).toBe('2');
+    expect(hook(element, 'health-queue')?.getAttribute('data-running')).toBe('1');
+    expect(hook(element, 'health-queue')?.getAttribute('data-max')).toBe('4');
+    expect(hook(element, 'health-spend')?.getAttribute('data-usd')).toBe('1.25');
+    expect(hook(element, 'health-spend')?.textContent).toContain(formatUsd(1.25));
+
+    const rows = element.querySelectorAll<HTMLElement>('[data-testid="recent-run"]');
+    expect(rows).toHaveLength(5);
+    expect(rows[0]?.getAttribute('data-run-id')).toBe(RUNS[0]?.id);
+    expect(rows[0]?.getAttribute('data-state')).toBe('succeeded');
+    expect(rows[0]?.textContent).toContain(TS);
+    expect(rows[0]?.getAttribute('href')).toBe(`/runs/${RUNS[0]?.id}`);
+    expect(hook(element, 'dashboard-empty')).toBeNull();
+    expect(hook(element, 'dashboard-error')).toBeNull();
+    expect(hook(element, 'dashboard-stale')).toBeNull();
+  });
+
+  it('renders the empty state for an empty page', async () => {
+    const { fixture, element, http } = await mount();
+
+    http.expectOne(HEALTH_URL).flush(HEALTH);
+    http.expectOne(TELEMETRY_URL).flush(TELEMETRY);
+    http.expectOne(RUNS_URL).flush({ data: [], nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'dashboard-empty')).not.toBeNull();
+    expect(hook(element, 'recent-run')).toBeNull();
+  });
+
+  it('renders the error block and retries every read', async () => {
+    const { fixture, element, http } = await mount();
+
+    http.expectOne(HEALTH_URL).flush(envelope('internal'), {
+      status: 500,
+      statusText: 'Internal Server Error',
+    });
+    http.expectOne(TELEMETRY_URL).flush(TELEMETRY);
+    http.expectOne(RUNS_URL).flush({ data: RUNS, nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'dashboard-error')?.getAttribute('data-code')).toBe('internal');
+    expect(hook(element, 'health-vm')).toBeNull();
+
+    hook(element, 'dashboard-retry')?.click();
+    await fixture.whenStable();
+
+    http.expectOne(HEALTH_URL).flush(HEALTH);
+    http.expectOne(TELEMETRY_URL).flush(TELEMETRY);
+    http.expectOne(RUNS_URL).flush({ data: RUNS, nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'dashboard-error')).toBeNull();
+    expect(hook(element, 'health-vm')?.getAttribute('data-status')).toBe('ok');
+  });
+
+  it('marks the payload stale when a reload fails', async () => {
+    const { fixture, element, http } = await mount();
+
+    http.expectOne(HEALTH_URL).flush(HEALTH);
+    http.expectOne(TELEMETRY_URL).flush(TELEMETRY);
+    http.expectOne(RUNS_URL).flush({ data: RUNS, nextCursor: null });
+    await fixture.whenStable();
+    expect(hook(element, 'dashboard-stale')).toBeNull();
+
+    fixture.componentInstance.store.reload();
+    await fixture.whenStable();
+    http.expectOne(HEALTH_URL).flush(HEALTH);
+    http.expectOne(TELEMETRY_URL).flush(envelope('internal'), {
+      status: 500,
+      statusText: 'Internal Server Error',
+    });
+    http.expectOne(RUNS_URL).flush({ data: RUNS, nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'dashboard-stale')).not.toBeNull();
+    expect(hook(element, 'health-spend')?.getAttribute('data-usd')).toBe('1.25');
+  });
+
+  it('formats a spend with US dollars', () => {
+    expect(formatUsd(0)).toBe('$0.00');
+    expect(formatUsd(12.5)).toBe('$12.50');
+  });
+
+  it('ships the same keys in both dictionaries and resolves every template key', () => {
+    expect(Object.keys(STRINGS.en).sort()).toEqual(Object.keys(STRINGS.es).sort());
+    for (const locale of ['en', 'es'] as const) {
+      for (const [key, value] of Object.entries(STRINGS[locale])) {
+        expect(value, `${locale} ${key}`).not.toBe('');
+        expect(translate(locale, key), `${locale} ${key}`).toBe(value);
+      }
+      for (const key of USED_KEYS) {
+        expect(translate(locale, key), `${locale} ${key}`).not.toBe(key);
+      }
+    }
+  });
+});

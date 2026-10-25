@@ -1,0 +1,63 @@
+export type Locale = 'en' | 'es';
+
+/** `common.*` mirrors two shared keys because `src/assets/i18n/*.json` belongs to another task. */
+export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>> = Object.freeze({
+  en: Object.freeze({
+    'common.loading': 'Loading…',
+    'common.error': 'Something went wrong.',
+    'dashboard.title': 'Dashboard',
+    'dashboard.section.health': 'Health',
+    'dashboard.section.queue': 'Queue',
+    'dashboard.section.spend': 'Spend today',
+    'dashboard.section.recent': 'Recent runs',
+    'dashboard.vm.db': 'Database',
+    'dashboard.vm.opencode': 'OpenCode',
+    'dashboard.vm.disk': 'Disk used',
+    'dashboard.queue.pending': 'Pending',
+    'dashboard.queue.running': 'Running',
+    'dashboard.queue.max': 'Limit',
+    'dashboard.action.retry': 'Retry',
+    'dashboard.empty': 'No runs yet.',
+    'dashboard.stale': 'Showing the last response; the refresh failed.',
+    'dashboard.state.queued': 'Queued',
+    'dashboard.state.preparing': 'Preparing',
+    'dashboard.state.running': 'Running',
+    'dashboard.state.gating': 'Gating',
+    'dashboard.state.pr_open': 'Pull request open',
+    'dashboard.state.merging': 'Merging',
+    'dashboard.state.succeeded': 'Succeeded',
+    'dashboard.state.failed': 'Failed',
+    'dashboard.state.cancelled': 'Cancelled',
+  }),
+  es: Object.freeze({
+    'common.loading': 'Cargando…',
+    'common.error': 'Algo ha fallado.',
+    'dashboard.title': 'Panel',
+    'dashboard.section.health': 'Salud',
+    'dashboard.section.queue': 'Cola',
+    'dashboard.section.spend': 'Gasto de hoy',
+    'dashboard.section.recent': 'Ejecuciones recientes',
+    'dashboard.vm.db': 'Base de datos',
+    'dashboard.vm.opencode': 'OpenCode',
+    'dashboard.vm.disk': 'Disco usado',
+    'dashboard.queue.pending': 'Pendientes',
+    'dashboard.queue.running': 'En curso',
+    'dashboard.queue.max': 'Límite',
+    'dashboard.action.retry': 'Reintentar',
+    'dashboard.empty': 'Todavía no hay ejecuciones.',
+    'dashboard.stale': 'Mostrando la última respuesta; el refresco ha fallado.',
+    'dashboard.state.queued': 'En cola',
+    'dashboard.state.preparing': 'Preparando',
+    'dashboard.state.running': 'En curso',
+    'dashboard.state.gating': 'Validando',
+    'dashboard.state.pr_open': 'Pull request abierta',
+    'dashboard.state.merging': 'Fusionando',
+    'dashboard.state.succeeded': 'Correcta',
+    'dashboard.state.failed': 'Fallida',
+    'dashboard.state.cancelled': 'Cancelada',
+  }),
+});
+
+export function translate(locale: Locale, key: string): string {
+  return STRINGS[locale][key] ?? key;
+}
