@@ -9,7 +9,11 @@
       "default": "./dist/main.js"
     }
   },
+  "bin": {
+    "cb": "./bin/cb.mjs"
+  },
   "files": [
+    "bin",
     "dist"
   ],
   "scripts": {
