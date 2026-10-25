@@ -148,16 +148,28 @@ field, one package and its fixtures change. See [`agent-runtime.md`](agent-runti
 
 ### `packages/workspaces`
 
-- `ensureClone(repo)` → bare clone under `repos/<owner>__<name>.git`, fetched with
-  `--prune`.
+- `ensureClone(repo)` → bare clone under `repos/<owner>__<name>.git`, cloned into a temporary
+  directory and renamed into place, then fetched with `--prune`; a failed clone leaves no half
+  directory and never creates the cache entry.
 - `createWorktree(repo, runId, baseRef)` → `/srv/codebox/worktrees/<runId>`, branch
-  `cb/<runId>-<slug>`.
-- `removeWorktree(runId)` → `git worktree remove --force`, then prune.
-- `status(worktree)` → changed files, diff stat, protected-path hits.
+  `cb/<runId>-<slug>`, and the run marker written at the path git reports for
+  `codebox-run.json` — a linked worktree's `.git` is a file, so the marker lives in the real
+  git directory, not at `<worktree>/.git/codebox-run.json`.
+- `removeWorktree(worktree)` → `git worktree remove --force`, then prune.
+- `status(worktree)` → changed files, diff stat, protected-path hits; the base is the commit the
+  branch was cut from, never re-resolved, because G4 compares it with the base tip.
 - `cleanup()` → remove worktrees past retention; keep the cache.
 
+I/O lives in this package: `node:fs` for the cache and worktree directories plus
+`node:child_process` for git (§5's line predates it and omits `node:fs`). Every git call goes
+through the injected `GitRunner`, so the package is provable headless with a fake runner and
+with real local repositories in its tests. The clock, retention TTL and the D26 glob matcher
+are arguments, never globals; the `CB_*` values arrive from the daemon. Errors carry a code, the
+git subcommand and the exit code — never git's `stderr`, an argument list or a clone URL,
+because the URL carries the installation token.
+
 Rules: never symlink an external tree into a worktree; never reuse a worktree across runs;
-never touch the operator's own clone.
+never touch the operator's own clone or a directory this package did not create.
 
 ### `packages/scheduler`
 

@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-08, workspaces)
+
+- `@codebox/workspaces` owns the on-disk side of a run: a bare clone cache cloned atomically
+  and fetched thereafter, one worktree per run on a `cb/<runId>-<slug>` branch, its run
+  marker, and retention cleanup that never touches the cache or a directory it did not create.
+- `status` returns the frozen `RunDiff` plus the changed paths and the D26 protected-path
+  hits, with the recorded base sha kept distinct from the base tip the guardrails compare.
+- Git runs through an injectable `GitRunner` and the D26 globs through an injected matcher, so
+  the package is proven headless — including real-git tests against a temporary bare origin —
+  and no clone URL, stderr or command line can reach an error message.
+- The `[live]` criterion (a 100 MB repository clones once and reuses the cache in under 5 s on
+  the VM) is **not measured** here; an `agent-review` issue carries its measurement.
+
 ### Added — 2026-10-25 (Task-07, OpenCode wrapper)
 
 - `@codebox/opencode` is the only package that knows the OpenCode wire: a `fetch`-based

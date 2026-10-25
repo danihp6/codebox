@@ -184,7 +184,7 @@ must not edit it.
       reconnects once and reports `agent_unavailable` if it cannot; `[unit]` the supervisor
       restarts a dead child and refuses a second listener on the port.
 
-- [ ] **[Task-08]** Workspaces. Bare clone cache, fetch, worktree create/remove, branch
+- [x] **[Task-08]** Workspaces. Bare clone cache, fetch, worktree create/remove, branch
       naming, diff stat, protected-path scan, disk cleanup, and an injectable git runner for
       tests. *Paths:* `packages/workspaces/**`, `docs/architecture.md` (workspace section
       only). *Dependencies:* Task-03, Task-05. *Acceptance:* `[unit]` two worktrees from one
