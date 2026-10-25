@@ -245,7 +245,7 @@ Writes, all idempotent:
 | --- | --- | --- |
 | `<root>/etc/hostname` | 0644 | `cb-<last 8 characters of the instance id, lowercased>` (`ocid1.instance.oc1..ABCDEF12` → `cb-abcdef12`) |
 | `<root>/etc/hosts` | 0644 | appends `127.0.1.1 <hostname>` **only if the line is absent** |
-| `<root>/etc/codebox/instance.env` | 0640 `root:codebox` | the sorted `KEY=VALUE` list below, no timestamp |
+| `<root>/etc/codebox/instance.env` | 0600 `root:codebox` | the sorted `KEY=VALUE` list below, no timestamp |
 | `<root>/etc/cloudflared/config.yml` | 0640 `root:codebox` | `tunnel: <uuid>` + `credentials-file: /etc/cloudflared/<uuid>.json` |
 | `<root>/etc/cloudflared/<uuid>.json` | 0600 `root:root` | `{"AccountTag","TunnelSecret","TunnelID"}`, decoded from the token |
 | `<root>/var/lib/codebox/first-boot.jsonl` | 0640 `codebox:codebox` | one line appended per run |
@@ -262,7 +262,8 @@ makes the script exit non-zero and never leaves a partially written `instance.en
 (write to `instance.env.tmp`, `install` into place last).
 
 `--no-services` skips every `systemctl` call and the health wait, which is what a test uses.
-With services: `systemctl daemon-reload`, `enable --now codebox-opencode.service`, then
+With services: `systemctl daemon-reload`, `systemctl start codebox-opencode.service` (the
+opencode unit has no `[Install]`, so it is started, not enabled), then
 `codebox.service`, then `cloudflared.service`, then poll `--health-url`
 (default `http://127.0.0.1:8787/v1/health`) up to `--health-timeout` (default 120) seconds for
 any HTTP answer below 600, and log `first boot ok instance=<name> status=<status>` — the
@@ -353,7 +354,7 @@ Every unit carries `NoNewPrivileges=true`, `ProtectSystem=strict`, `ProtectHome=
 | `/opt/codebox/current` | `install.sh` | relative symlink `releases/<version>` |
 | `/opt/codebox/previous` | `install.sh`, `upgrade.sh` | relative symlink, the rollback target |
 | `/etc/codebox/image.json` | `60-service.sh` | `{version, commit, builtAt, node, opencode, cloudflared}` |
-| `/etc/codebox/instance.env` | `cloud-init.sh` | 0640 `root:codebox`, `docs/security.md` §secrets |
+| `/etc/codebox/instance.env` | `cloud-init.sh` | 0600 `root:codebox`, `docs/security.md` §secrets |
 | `/var/lib/codebox/first-boot.jsonl` | `cloud-init.sh` | one line per boot, `result` `ok` or `failed` |
 | `/var/lib/codebox/backups/cb-backup-<stamp>.age` | `backup.sh` | the encrypted archive |
 | `CB_BACKUP_BUCKET` | `backup.sh --upload` | default `cb-backups`; object `db/<Y>/<M>/<D>.age` |
@@ -410,7 +411,9 @@ else is not a criterion.
         least eight test files under `ops/image/test/` and `ops/vm/test/`, none skipped for a
         reason other than a missing host binary.
   - [ ] `[unit]` Nothing outside the exclusive paths was touched:
-        `git diff --name-only main...task-25` lists only paths from the list above.
+        `git diff --name-only main...task-25 | grep -v '^\.agent_specs/'` lists only paths
+        from the list above. `.agent_specs/task-25.md` is excluded: the pipeline force-adds
+        the spec and strips it in the merge.
   - [ ] `[unit]` **`packer validate` passes.** Command:
         `packer init ops/image && packer validate -var-file=ops/image/example.pkrvars.hcl ops/image`.
         Expected: `packer init` installs `github.com/hashicorp/oracle`, `packer validate`
@@ -448,7 +451,7 @@ else is not a criterion.
         5. the fixture `oci` log holds exactly `8` invocations after the two runs (four per
            run) and each one names its secret OCID;
         6. neither stdout nor stderr of either run contains `tunnel-secret-value`, and
-           `instance.env` is mode `0640` `root:codebox` when the test runs as root (that
+           `instance.env` is mode `0600` `root:codebox` when the test runs as root (that
            assertion is skipped otherwise, with the reason recorded).
   - [ ] `[live]` **An instance launched from the image boots, starts the tunnel and answers
         `/v1/health` without manual steps.** Not measurable on Actions: it needs a built image,

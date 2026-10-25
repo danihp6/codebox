@@ -1,7 +1,7 @@
 #cloud-config
 # First boot only, passed as instance user-data: the image carries neither an identity nor a
 # credential. cloud-init runs /usr/local/lib/codebox/cloud-init.sh, which reads the four Vault
-# secrets through the instance principal and writes /etc/codebox/instance.env (0640
+# secrets through the instance principal and writes /etc/codebox/instance.env (0600
 # root:codebox) and /etc/cloudflared. ${CB_INSTANCE_NAME} is substituted before the file is
 # handed to the instance; no name and no secret is ever committed here.
 hostname: ${CB_INSTANCE_NAME}

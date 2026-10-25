@@ -255,7 +255,7 @@ const hasCodeboxGroup =
 
 describe('cloud-init permissions', () => {
   it.skipIf(!asRoot || !hasCodeboxGroup)(
-    'cloud-init permissions: instance.env is 0640 root:codebox (skipped unless the suite runs as root with the codebox group)',
+    'cloud-init permissions: instance.env is 0600 root:codebox (skipped unless the suite runs as root with the codebox group)',
     () => {
       const fake = fakeOci();
       const root = tempDir();
@@ -267,8 +267,12 @@ describe('cloud-init permissions', () => {
 
       expect(result.status).toBe(0);
       const stat = fs.statSync(path.join(root, 'etc', 'codebox', 'instance.env'));
-      expect(stat.mode & 0o777).toBe(0o640);
+      expect(stat.mode & 0o777).toBe(0o600);
       expect(stat.uid).toBe(0);
+      const gid = Number(
+        spawnSync('getent', ['group', 'codebox'], { encoding: 'utf8' }).stdout.split(':')[2],
+      );
+      expect(stat.gid).toBe(gid);
     },
   );
 });

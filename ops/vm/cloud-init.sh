@@ -199,9 +199,12 @@ failure_message="cannot write the instance environment"
   fi
 } >"$instance_env.tmp"
 chmod 0600 "$instance_env.tmp"
-install -m 0640 "$instance_env.tmp" "$instance_env"
+if [ "$as_root" -eq 1 ] && getent group codebox >/dev/null 2>&1; then
+  install -m 0600 -o root -g codebox "$instance_env.tmp" "$instance_env"
+else
+  install -m 0600 "$instance_env.tmp" "$instance_env"
+fi
 rm -f "$instance_env.tmp"
-chown_if_root "$instance_env" codebox
 log "wrote $instance_env"
 
 current_step=services
