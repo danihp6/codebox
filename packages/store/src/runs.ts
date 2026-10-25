@@ -6,6 +6,7 @@ import { StoreError } from './errors.js';
 import {
   LIVE_RUN_STATES_SQL,
   booleanToInteger,
+  enumColumn,
   integerColumn,
   jsonText,
   row,
@@ -78,7 +79,28 @@ export interface RunRepository {
   claimScheduledRun(input: ClaimScheduledRunInput): RunRecord | null;
   countLive(repoId?: string): number;
   listByJob(jobId: string, limit: number): Run[];
+  /** Counts runs whose `created_at` is in [since, until], by state; every key is present. */
+  countByState(filter: {
+    readonly since: string;
+    readonly until: string;
+  }): Readonly<Record<RunState, number>>;
+  /** Deletes terminal runs finished before `cutoff`; returns the number of rows removed. */
+  pruneBefore(cutoff: string): number;
 }
+
+// The contract enums are re-declared here because @codebox/contracts is imported type-only: a
+// value import would need packages/contracts/dist, which does not exist during `npm test`.
+const RUN_STATES: readonly RunState[] = Object.freeze([
+  'queued',
+  'preparing',
+  'running',
+  'gating',
+  'pr_open',
+  'merging',
+  'succeeded',
+  'failed',
+  'cancelled',
+]);
 
 const COLUMNS = [
   'id',
@@ -176,6 +198,13 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
     SELECT ${COLUMNS} FROM runs WHERE job_id = ?
     ORDER BY created_at DESC, id DESC LIMIT ?
   `);
+  const countStates = db.prepare(`
+    SELECT state, COUNT(*) AS n FROM runs
+    WHERE created_at >= ? AND created_at <= ? GROUP BY state
+  `);
+  const deleteFinishedBefore = db.prepare(
+    'DELETE FROM runs WHERE finished_at IS NOT NULL AND finished_at < ?',
+  );
 
   const scalarColumns: readonly [ScalarPatchKey, string][] = [
     ['baseSha', 'base_sha'],
@@ -436,6 +465,23 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
       return selectByJob
         .all(jobId, Math.max(1, Math.trunc(limit)))
         .map((value) => toRun(runRecordFromRow(row(value))));
+    },
+
+    countByState(filter: {
+      readonly since: string;
+      readonly until: string;
+    }): Readonly<Record<RunState, number>> {
+      const counts = {} as Record<RunState, number>;
+      for (const state of RUN_STATES) counts[state] = 0;
+      for (const value of countStates.all(filter.since, filter.until)) {
+        const rowValue = row(value);
+        counts[enumColumn<RunState>(rowValue, 'state', RUN_STATES)] = integerColumn(rowValue, 'n');
+      }
+      return counts;
+    },
+
+    pruneBefore(cutoff: string): number {
+      return Number(deleteFinishedBefore.run(cutoff).changes);
     },
   };
 }
