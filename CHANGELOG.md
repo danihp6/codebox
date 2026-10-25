@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-19, dashboard and repos)
+
+- `/dashboard` renders the VM, queue and spend health cards and the five most recent runs from
+  the existing `ApiClient`, each read independent so one failure never blanks the others.
+- `/repos` lists repositories and adds one through a wizard that validates `owner/name` before
+  it sends anything, then shows the verification result without a reload; `/repos/:id` edits
+  the gate and the protected paths and flips the policy optimistically with a rollback on error.
+- The repos and telemetry reads live in feature-local `ReposApi`/`DashboardApi` modules because
+  `core/api/api-client.ts` has no such methods; they collapse into `ApiClient` when a later
+  task owns it.
+- The `[live]` criterion — adding a repo shows its gate result without a reload — is not
+  measured on CI and is blocked until a task ships `/v1/repos`; an `agent-review` issue carries
+  the measurement.
+
 ### Added — 2026-10-25 (Task-22, run detail)
 
 - `/runs/:id` is a real screen: the timeline replayed from `GET /v1/runs/{id}/events` and

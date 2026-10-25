@@ -326,7 +326,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       reclamation warning — read by a human in the console, so it is reported as `[?]`, never
       as passing.
 
-- [ ] **[Task-19]** Dashboard and repos. Health cards (VM, queue, spend), recent runs, repo
+- [x] **[Task-19]** Dashboard and repos. Health cards (VM, queue, spend), recent runs, repo
       list, add repo wizard, gate/policy editor, protected-paths preview. *Paths:*
       `apps/app/src/app/features/dashboard/**`,
       `apps/app/src/app/features/repos/**`. *Dependencies:* Task-18. *Acceptance:* `[unit]`
