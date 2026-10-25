@@ -14,7 +14,8 @@ before `npm run build`.
 - `package.json` — workspace manifest.
 - `tsconfig.json` — build and typecheck configuration.
 - `README.md` — this file map.
-- `migrations/0001_init.sql` — the ten v1 tables and their indexes (the routines tables are `0002`, Task-34).
+- `migrations/0001_init.sql` — the ten v1 tables and their indexes.
+- `migrations/0002_routines.sql` — the two routine tables, their kind CHECKs and the three indexes.
 
 ## `src/`
 
@@ -34,11 +35,15 @@ before `npm run build`.
 - `devices.ts` — paired devices, refresh-token rotation and revocation.
 - `settings.ts` — non-secret key/value settings stored as JSON.
 - `usage.ts` — the token/cost ledger and its per-day aggregate.
+- `routines.ts` — chat schedules: the discriminated union, the newest-first page and the due queue.
+- `routine-fires.ts` — the transactional claim on `(routine_id, scheduled_for)`, skip and outcome.
 - `migrate.test.ts` — migration application, idempotency, checksum and failure rollback.
 - `store.test.ts` — open/close, WAL, file format, the in-memory fake and the cursor.
 - `runs.test.ts` — the claim race, run round-trip, paging and live-state counting.
 - `events.test.ts` — replay by `seq` and by `Last-Event-ID`, stream sequences and pruning.
 - `repositories.test.ts` — repos, jobs, approvals, chats, devices, settings, usage and the deleted-repo rules.
+- `routines.test.ts` — the routine round-trip, the list filters, the patches and the two delete rules.
+- `routine-fires.test.ts` — the claim race, the claim guards, skip, finish and the reads.
 
 ## Checks
 
