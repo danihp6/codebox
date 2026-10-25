@@ -1,0 +1,21 @@
+[Unit]
+Description=Codebox OpenCode server on loopback
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=codebox
+Group=codebox
+WorkingDirectory=/var/lib/codebox
+EnvironmentFile=/etc/codebox/instance.env
+ExecStart=/usr/bin/env opencode serve --hostname 127.0.0.1 --port 4096
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/codebox /srv/codebox
+
+# No install section on purpose: the daemon may own the OpenCode child itself, so the unit
+# exists for crash isolation and is started only when the daemon is not the parent.

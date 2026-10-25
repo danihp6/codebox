@@ -1,0 +1,18 @@
+[Unit]
+Description=Codebox nightly backup to OCI Object Storage
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=codebox
+Group=codebox
+# CB_BACKUP_AGE_RECIPIENT and CB_BACKUP_BUCKET are host variables, never daemon configuration:
+# the operator sets them in a drop-in (`systemctl edit codebox-backup.service`), not in
+# instance.env.
+ExecStart=/usr/local/lib/codebox/backup.sh --upload
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/codebox /srv/codebox

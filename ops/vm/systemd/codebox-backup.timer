@@ -1,0 +1,13 @@
+[Unit]
+Description=Codebox nightly backup timer
+
+[Timer]
+OnCalendar=*-*-* 03:20:00
+Persistent=true
+Unit=codebox-backup.service
+
+[Install]
+WantedBy=timers.target
+
+# No [Service] block here: a timer carries no process and no hardening. The sandbox of the
+# job lives in codebox-backup.service, which this unit triggers.
