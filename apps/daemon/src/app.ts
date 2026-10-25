@@ -114,6 +114,9 @@ export function createApp(options: CreateAppOptions): DaemonApp {
   app.get('*', async (c): Promise<Response> => {
     const requestPath = c.req.path;
     if (isApiPath(requestPath)) return notFound(c, requestPath);
+    // Hono and node-server normalise the target before any route runs, so the raw target is
+    // the only place a dot-segment is still visible; the SPA fallback must never answer it.
+    if (hasDotSegment(rawRequestTarget(c))) return notFound(c, requestPath);
     const hit = await serveStatic(requestPath);
     if (hit.kind === 'file') {
       return c.body(new Uint8Array(hit.body), 200, { 'Content-Type': hit.contentType });
@@ -158,6 +161,44 @@ function notFound(c: AppContext, requestPath: string, extra?: Record<string, unk
 
 function isApiPath(requestPath: string): boolean {
   return requestPath === API_PREFIX || requestPath.startsWith(`${API_PREFIX}/`);
+}
+
+interface NodeRequestEnv {
+  readonly incoming?: { readonly url?: unknown };
+}
+
+/**
+ * The unnormalised request target. `@hono/node-server` keeps it on the raw `IncomingMessage`
+ * and collapses dot-segments and percent-encoding on the `Request` it builds, so `c.req.url`
+ * is only the fallback for transports that never normalise.
+ */
+function rawRequestTarget(c: AppContext): string {
+  const env: unknown = c.env;
+  if (typeof env === 'object' && env !== null) {
+    const incoming = (env as NodeRequestEnv).incoming;
+    if (typeof incoming === 'object' && incoming !== null && typeof incoming.url === 'string') {
+      return incoming.url;
+    }
+  }
+  return c.req.url;
+}
+
+const TARGET_END = /[?#]/;
+const TARGET_SEPARATOR = /[\\/]+/;
+
+function hasDotSegment(target: string): boolean {
+  const end = target.search(TARGET_END);
+  const path = end === -1 ? target : target.slice(0, end);
+  for (const segment of path.split(TARGET_SEPARATOR)) {
+    let decoded: string;
+    try {
+      decoded = decodeURIComponent(segment);
+    } catch {
+      return true;
+    }
+    if (decoded === '..') return true;
+  }
+  return false;
 }
 
 function requestIdOf(c: AppContext): string {

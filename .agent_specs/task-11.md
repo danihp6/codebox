@@ -551,6 +551,10 @@ Routes, exact:
 - `notFound`: an unknown `/v1` path, a `missing` static file and a `static` path outside the
   root all answer `404` with the envelope `not_found` and `details.path` = the request path.
   A `not_built` answer is `404` with `details.reason = 'app_not_built'`.
+- The static route inspects the **raw** request target first: a path with a `..` segment
+  (plain or percent-encoded, `.`/`%2e`) answers `404 not_found` before Hono/WHATWG
+  normalisation can collapse it, so the SPA fallback never returns `index.html` for a
+  traversal attempt.
 - `onError`: `500` with the envelope `internal` (never the error message) and one `error` line
   `{"msg":"request_failed","requestId","err"}`. The message is not echoed to the client.
 - Everything is `Content-Type: application/json; charset=utf-8` except a served file.
@@ -675,6 +679,9 @@ else is not a criterion.
   - `npm run build` — `tsc -b` and the app build when this task touches it (it does not).
   - `npx playwright test` — not applicable, this task has no web flow.
   - `git diff --name-only main...task-11` — audit against the exclusive paths.
+    `.agent_specs/task-11.md` is **excluded** from that audit: the pipeline force-adds the
+    spec as the branch's first commit and strips it again in the merge to `main`, so it is
+    never part of the task's content. Every other path in the diff must be on the list.
   - Every command runs from the worktree root with **no** `CB_*` variable exported. Nothing
     here needs `/var/lib/codebox`, `/etc/codebox/instance.env`, port 8787, `codebox.service`
     or a real credential.
@@ -690,8 +697,9 @@ else is not a criterion.
         `npx vitest run --project apps/daemon` reports eight test files
         (`config`, `logger`, `modules`, `health`, `boot`, `static`, `app`, `start`).
   - [ ] `[unit]` Nothing outside the exclusive paths was touched:
-        `git diff --name-only main...task-11` lists only paths from the list above, and
-        `git diff --name-only main...task-11 -- '*.md'` is exactly
+        `git diff --name-only main...task-11 | grep -v '^\.agent_specs/'` lists only paths
+        from the list above, and
+        `git diff --name-only main...task-11 -- '*.md' | grep -v '^\.agent_specs/'` is exactly
         `apps/daemon/README.md`.
   - [ ] `[unit]` **The daemon's tests run before the build.** Command:
         `rm -rf packages/*/dist apps/*/dist && npm test` exits 0 and reports the
@@ -732,7 +740,7 @@ else is not a criterion.
         npm run build
         CB_ENV=test CB_SESSION_SECRET=0123456789abcdef0123456789abcdef \
         CB_STATE_DIR="$ROOT/state" CB_INSTALL_DIR="$ROOT/install" \
-        CB_BIND=127.0.0.1:0 npm start -w @codebox/daemon > "$ROOT/out.log" 2>&1 &
+        CB_BIND=127.0.0.1:0 node apps/daemon/dist/main.js > "$ROOT/out.log" 2>&1 &
         PID=$!
         for i in $(seq 1 100); do [ -f "$ROOT/state/daemon.json" ] && break; sleep 0.1; done
         PORT=$(node -e "process.stdout.write(String(JSON.parse(require('fs').readFileSync('$ROOT/state/daemon.json','utf8')).port))")
@@ -746,7 +754,11 @@ else is not a criterion.
         `freeBytes`, `totalBytes` and `usedPercent`; `/v1/version` is `200` with `node`
         starting `v24.` and `version` `0.0.0`; the `cmp` prints `app=0` (the fixture
         `index.html` is served byte for byte); the unknown route prints `404`; `kill -TERM`
-        makes the process exit `0` within 5 s and `$ROOT/state/daemon.json` is gone. The
+        makes the process exit `0` within 5 s and `$ROOT/state/daemon.json` is gone.
+        `$PID` must be the daemon process itself: `npm start` adds a wrapper that swallows
+        the signal, so the block launches `node apps/daemon/dist/main.js` — the exact command
+        `npm start` resolves to — and signals that PID. A `143` exit or a surviving process
+        means the signal reached the wrapper, not the daemon, and is not a pass. The
         fixture directory stands in for the built Angular app, which this task does not
         produce; the path (`<CB_INSTALL_DIR>/app`) is the contract Task-18/20 fill. If the run
         cannot be executed on this host, QA reports it `not run` with the literal error and the
@@ -765,6 +777,10 @@ Additional `[unit]` evidence this task owes:
         `resolveStaticPath(root, p)` returns `null` for `/../package.json`,
         `/%2e%2e/package.json`, `/a/../../etc/passwd` and a path containing `%00`, and the
         same paths requested through `createApp` answer `404` with `code: "not_found"`.
+        The encoded form `/a/%2e%2e/%2e%2e/etc/passwd` is part of that set: `app.ts` inspects
+        the raw request target before WHATWG normalisation collapses its dot-segments, so the
+        SPA fallback never answers a traversal attempt with `index.html`. A `200` there is a
+        fail even though no file leaves the root.
 
 ## 📣 Coordination
 

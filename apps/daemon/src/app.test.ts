@@ -1,6 +1,9 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { request as httpRequest } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { serve } from '@hono/node-server';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   ERROR_STATUS,
@@ -98,6 +101,52 @@ async function jsonBody(response: Response): Promise<Record<string, unknown>> {
   const parsed: unknown = await response.json();
   if (typeof parsed !== 'object' || parsed === null) throw new Error('not an object');
   return parsed as Record<string, unknown>;
+}
+
+interface RawResult {
+  readonly path: string;
+  readonly status: number;
+  readonly body: string;
+}
+
+function rawGet(port: number, path: string): Promise<{ status: number; body: string }> {
+  return new Promise((resolve, reject) => {
+    const request = httpRequest({ host: '127.0.0.1', port, path, method: 'GET' }, (response) => {
+      let body = '';
+      response.setEncoding('utf8');
+      response.on('data', (chunk: string) => {
+        body += chunk;
+      });
+      response.on('end', () => resolve({ status: response.statusCode ?? 0, body }));
+    });
+    request.on('error', reject);
+    request.end();
+  });
+}
+
+/**
+ * The Fetch API normalises dot-segments before a Request exists, so the app is only ever shown
+ * a raw target by a real listener; this is the same node-server entry `startDaemon` uses.
+ */
+async function rawRequests(app: DaemonApp, paths: readonly string[]): Promise<RawResult[]> {
+  const server = serve({ fetch: app.fetch, port: 0, hostname: '127.0.0.1' });
+  await new Promise<void>((listening) => {
+    if (server.listening) listening();
+    else server.once('listening', () => listening());
+  });
+  const address = server.address();
+  if (address === null || typeof address === 'string') throw new Error('no listener address');
+  try {
+    const results: RawResult[] = [];
+    for (const path of paths) {
+      results.push({ path, ...(await rawGet((address as AddressInfo).port, path)) });
+    }
+    return results;
+  } finally {
+    await new Promise<void>((closed) => {
+      server.close(() => closed());
+    });
+  }
 }
 
 describe('newRequestId', () => {
@@ -288,13 +337,35 @@ describe('static hosting', () => {
     }
   });
 
-  it('answers the index when the URL parser has already collapsed the traversal', async () => {
+  it('answers not_found for a traversal target, plain or percent-encoded', async () => {
     const { app } = harness();
-    // WHATWG URL collapses "/a/../../etc/passwd" to "/etc/passwd" before the daemon sees it,
-    // so the request is an ordinary dotless route and the SPA fallback answers the index.
-    const response = await app.request('/a/%2e%2e/%2e%2e/etc/passwd');
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe(INDEX);
+    const traversal = [
+      '/a/%2e%2e/%2e%2e/etc/passwd',
+      '/a/../../etc/passwd',
+      '/../package.json',
+      '/%2e%2e/package.json',
+      '/a/.%2e/etc/passwd',
+      '/a/%2E%2E/etc/passwd',
+    ];
+    const results = await rawRequests(app, traversal);
+    for (const result of results) {
+      expect(result.status, result.path).toBe(404);
+      const body = JSON.parse(result.body) as {
+        error: { code: string; details: { path: string } };
+      };
+      expect(body.error.code, result.path).toBe('not_found');
+      expect(body.error.details.path, result.path).toBeDefined();
+      expect(result.body, result.path).not.toContain('@codebox/daemon');
+    }
+  });
+
+  it('keeps the SPA fallback and the missing asset answer over the same transport', async () => {
+    const { app } = harness();
+    const [route, asset] = await rawRequests(app, ['/runs/run_000001', '/main.js']);
+    expect(route?.status).toBe(200);
+    expect(route?.body).toBe(INDEX);
+    expect(asset?.status).toBe(404);
+    expect(JSON.parse(asset?.body ?? '{}')).toMatchObject({ error: { code: 'not_found' } });
   });
 });
 

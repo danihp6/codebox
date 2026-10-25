@@ -30,3 +30,7 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `createProbes` counts at most `PAGINATION_MAX_LIMIT` (200) queued runs for
   `health.queue.pending`, the contract's page limit; a larger queue reads as 200.
 - No subsystem directory exists yet: an absent module is a supported boot state.
+- The static route rejects a raw request target that carries a `..` segment, plain or
+  percent-encoded, before node-server normalisation collapses it, so the SPA fallback never
+  answers a traversal attempt with `index.html`. Only a real listener exposes that target; the
+  Fetch API normalises before a `Request` exists.
