@@ -6,6 +6,27 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-14, run engine)
+
+- `apps/daemon/src/run` executes one run end to end behind injected ports: bare clone,
+  worktree, OpenCode session with the versioned envelope, gate, one daemon commit when the
+  agent did not commit, push, PR with a generated body, required checks, the eight D12
+  guardrails and a merge that is retried once and then parked in `pr_open`.
+- Every state change goes through `transitionRun`; every event is persisted with a monotonic
+  per-run `seq` and then emitted. The walk is proven on fakes —
+  `queued → preparing → running → gating → pr_open → merging → succeeded` with exactly
+  `run.queued, run.started, run.gate, run.pr, run.merged, run.finished`.
+- A red gate pushes nothing, opens no PR and ends `failed` with `gate_failed`; a protected
+  path, a moved base or a red check parks the run in `pr_open` with the contract blocker; a
+  cancel interrupts the session and removes the worktree, and `merging` refuses one.
+- The gate runner uses `/bin/bash -lc` in its own process group with a
+  `PATH`/`HOME`/`TMPDIR` + `CI`/`NO_COLOR`/`CB_RUN_ID` allowlist, logs to
+  `logs/run-<id>/gate.log`, keeps the last 100 lines and kills the group on timeout (exit
+  124); the run timeout, the daily cost cap and one transport retry are enforced.
+- `apps/daemon/package.json` declares `@codebox/{core,opencode,workspaces,git-provider}` and
+  the lockfile records them; `run` and `gate` stay absent as daemon modules, so boot is
+  unchanged until the jobs API wires the engine.
+
 ### Added — 2026-10-25 (Task-12, auth and pairing)
 
 - The daemon pairs a device: `POST /v1/pair/code` (loopback source or an `admin` bearer)

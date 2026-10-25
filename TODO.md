@@ -246,7 +246,7 @@ Task-16 holds `docs/providers.md` (push section); Task-17 holds `apps/daemon/src
       `[unit]` a permission request becomes one approval and a reply reaches OpenCode;
       `[live]` two devices see the same chat delta within 1.5 s.
 
-- [ ] **[Task-14]** Run engine. Orchestrate worktree → session → prompt → gate → commit →
+- [x] **[Task-14]** Run engine. Orchestrate worktree → session → prompt → gate → commit →
       push → PR → guardrails → merge; cancellation, timeout, cost cap, retries that are new
       runs, and the post-merge notification. *Paths:* `apps/daemon/src/run/**`,
       `apps/daemon/src/gate/**`. *Dependencies:* Task-05, Task-07, Task-08, Task-09, Task-10,
