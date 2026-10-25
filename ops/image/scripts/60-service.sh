@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# The service user, the directory skeleton, the five units, the host scripts and the image
+# The service user, the directory skeleton, the seven units, the host scripts and the image
 # manifest. /opt/codebox is created empty on purpose: the release is installed from the
 # artifact, never baked.
 
@@ -27,7 +27,7 @@ install -d -m 0755 /opt/codebox
 install -d -m 0750 /usr/local/lib/codebox
 
 log "installing the host scripts"
-for script in lib.sh cloud-init.sh install.sh upgrade.sh backup.sh restore.sh; do
+for script in lib.sh cloud-init.sh install.sh upgrade.sh backup.sh restore.sh keepalive.sh; do
   install -m 0750 -o root -g root "$staging/vm/$script" "/usr/local/lib/codebox/$script"
 done
 install -m 0750 -o root -g root "$staging/90-verify.sh" /usr/local/lib/codebox/90-verify.sh
@@ -42,10 +42,14 @@ install -m 0644 -o root -g root "$staging/units/codebox-backup.service" \
   /etc/systemd/system/codebox-backup.service
 install -m 0644 -o root -g root "$staging/units/codebox-backup.timer" \
   /etc/systemd/system/codebox-backup.timer
+install -m 0644 -o root -g root "$staging/units/codebox-keepalive.service" \
+  /etc/systemd/system/codebox-keepalive.service
+install -m 0644 -o root -g root "$staging/units/codebox-keepalive.timer" \
+  /etc/systemd/system/codebox-keepalive.timer
 
 systemctl daemon-reload
 # codebox-opencode.service carries no [Install] on purpose: the daemon may own the child.
-systemctl enable codebox.service cloudflared.service codebox-backup.timer
+systemctl enable codebox.service cloudflared.service codebox-backup.timer codebox-keepalive.timer
 
 built_at=${CB_IMAGE_BUILT_AT:-}
 if [[ "$built_at" =~ ^[0-9]+$ ]]; then

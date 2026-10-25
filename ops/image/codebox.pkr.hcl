@@ -115,6 +115,21 @@ build {
   }
 
   provisioner "file" {
+    source      = "${path.root}/../vm/systemd/codebox-keepalive.service"
+    destination = "/tmp/codebox/units/codebox-keepalive.service"
+  }
+
+  provisioner "file" {
+    source      = "${path.root}/../vm/systemd/codebox-keepalive.timer"
+    destination = "/tmp/codebox/units/codebox-keepalive.timer"
+  }
+
+  provisioner "file" {
+    source      = "${path.root}/../vm/keepalive.sh"
+    destination = "/tmp/codebox/vm/keepalive.sh"
+  }
+
+  provisioner "file" {
     source      = "${path.root}/../vm/lib.sh"
     destination = "/tmp/codebox/vm/lib.sh"
   }
