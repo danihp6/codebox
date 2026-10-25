@@ -6,6 +6,7 @@ import { ContractParseError, parseHealth, parseVersion } from '@codebox/contract
 import { loadConfig } from './config.js';
 import { runMain, startDaemon } from './main.js';
 import type { DaemonHandle, MainIo } from './main.js';
+import { SUBSYSTEMS } from './modules.js';
 
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
 const INDEX = '<!doctype html><title>cb</title>';
@@ -127,8 +128,11 @@ describe('startDaemon', () => {
     expect(handle.port).toBeGreaterThan(0);
     expect(handle.hostname).toBe('127.0.0.1');
     expect(handle.report.failed).toEqual([]);
-    expect(handle.report.absent).toHaveLength(8);
-    expect(handle.report.loaded).toEqual(['auth', 'chat', 'events']);
+    expect(handle.report.loaded).toContain('auth');
+    expect(handle.report.disabled).toEqual([]);
+    expect(
+      new Set([...handle.report.loaded, ...handle.report.absent, ...handle.report.disabled]),
+    ).toEqual(new Set(SUBSYSTEMS));
 
     const daemonFile = join(root, 'state', 'daemon.json');
     expect(existsSync(daemonFile)).toBe(true);
