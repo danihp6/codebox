@@ -213,6 +213,35 @@ retained for 24 h.
 | `POST` | `/v1/jobs/{id}/resume` | `write` | Recomputes the next fire from now. |
 | `GET` | `/v1/jobs/{id}/next?count=5` | `read` | Preview in the job's timezone. |
 
+`repoId` and `enabled` (`true` or `false`) narrow the list; `limit` is 1–200 (default 50) and
+`cursor` is the opaque cursor of §4. Jobs come newest first.
+
+A job is created with a strict body — an unknown field is a 422, never a silent default:
+
+```json
+{
+  "repoId": "repo_01J...",
+  "title": "Nightly lockfile",
+  "prompt": "Update the lockfile, run the gate, fix what breaks.",
+  "mode": "work",
+  "agent": "build",
+  "model": null,
+  "cron": "0 3 * * *",
+  "timezone": "Europe/Madrid",
+  "policy": "auto"
+}
+```
+
+`repoId`, `title` (1–120 characters), `prompt` (1–8000), `cron` and `timezone` are required.
+`mode` is `work`, `agent` defaults to `CB_DEFAULT_AGENT`, `model` to `CB_DEFAULT_MODEL`,
+`policy` to the repository's policy, and a created job is `enabled`. `nextFireAt` is computed
+by the daemon from `now`, never sent by a client: an unknown `repoId` is a 422 with
+`details.path = "job.repoId"`, and a cron or zone the scheduler cannot resolve is a 422 with
+`details.path = "job.cron"` or `"job.timezone"` and `details.reason` of `field_count`,
+`range`, `step`, `syntax`, `no_fire` or `timezone`.
+
+The job object:
+
 ```json
 {
   "id": "job_01J...",
@@ -227,9 +256,37 @@ retained for 24 h.
   "enabled": true,
   "policy": "auto",
   "createdAt": "2026-10-24T18:03:11Z",
-  "nextFireAt": "2026-10-25T01:00:00Z"
+  "nextFireAt": "2026-10-25T02:00:00Z"
 }
 ```
+
+`PATCH /v1/jobs/{id}` takes any of `title`, `prompt`, `cron`, `timezone`, `agent`, `model`,
+`policy` and `enabled`. A `cron` or `timezone` change recomputes `nextFireAt` from `now`, and
+`enabled: false` stores `nextFireAt: null`. `pause` is `enabled: false` plus that `null`;
+`resume` recomputes the next fire from `now`. `DELETE` removes the job and keeps its runs,
+whose `jobId` becomes `null`. `POST /v1/jobs/{id}/run` creates a `queued` run immediately,
+ignored by the pause switch, and requires `Idempotency-Key` (§4).
+
+`GET /v1/jobs/{id}` answers the job, its five most recent runs and its next five fires:
+
+```json
+{
+  "job": { "id": "job_01J...", "…": "…" },
+  "lastRuns": [],
+  "nextFires": ["2026-10-25T02:00:00Z"]
+}
+```
+
+`GET /v1/jobs/{id}/next` takes `count` (1–20, default 5) and previews the same fires in the
+job's own timezone:
+
+```json
+{ "fires": ["2026-10-25T02:00:00Z", "2026-10-26T02:00:00Z"] }
+```
+
+Fire timestamps are RFC 3339 UTC with a `Z`. Every mutation appends one `job.changed` event
+with `{ jobId, change, ts }` — `change` is `created`, `updated`, `deleted`, `paused` or
+`resumed` — in the same transaction as the write.
 
 ### 5.4 Runs
 
@@ -242,6 +299,31 @@ retained for 24 h.
 | `POST` | `/v1/runs/{id}/revert` | `runs` | Opens a revert PR for the merge; returns a new run. |
 | `GET` | `/v1/runs/{id}/events?after=&limit=` | `read` | Event replay (JSON, not SSE). |
 | `GET` | `/v1/runs/{id}/diff` | `read` | Stat and changed files; the patch lives on GitHub. |
+
+`repoId`, `jobId` and `state` narrow the list; `limit` is 1–200 and `cursor` is the §4 cursor.
+Runs come newest first.
+
+`POST /v1/runs` starts a manual run and answers `202` with a `queued` run:
+
+```json
+{
+  "repoId": "repo_01J...",
+  "prompt": "Fix the failing job.",
+  "mode": "work",
+  "agent": "build",
+  "model": null,
+  "baseRef": "main"
+}
+```
+
+Only those fields are accepted. `mode` defaults to `work`, `agent` to `CB_DEFAULT_AGENT`,
+`model` to `CB_DEFAULT_MODEL`, and `baseRef` to the repository's default branch. The
+`Idempotency-Key` header is **required**; a replay answers `202` with the run the first call
+created and never starts a second one, the same key with a different body is `409
+idempotency_mismatch` (`details.key`), and a missing header is `400` with
+`details.reason = "idempotency_key_required"`. Keys are per device and retained 24 h; the store
+is in memory for the process lifetime, so a daemon restart forgets a replay and the persistent
+table is a later store task.
 
 The run object is the contract every screen renders:
 
@@ -273,7 +355,53 @@ The run object is the contract every screen renders:
 `succeeded`, `failed`, `cancelled`.
 
 `cancel` is legal in `queued`, `preparing`, `running` and `gating`; in `merging` it is a 409
-(the merge is atomic) and the recovering action is `revert`.
+(the merge is atomic) and the recovering action is `revert`. A run outside those four states,
+or one the daemon holds no live task for, is `409 conflict` with
+`details.reason = "run_not_cancellable"`.
+
+`POST /v1/runs/{id}/revert` is legal only for a `succeeded` run that carries a pull request;
+anything else is `409 conflict` with `details.reason = "run_not_revertible"`. It answers `202`
+with the **new** run — `trigger: "revert"`, `jobId: null`, the repository's default branch as
+`baseRef` — whose prompt reverts the merge commit of the original. An `Idempotency-Key` is
+honoured when present.
+
+`GET /v1/runs/{id}/events` is JSON replay, never SSE. `after` is the last event the client
+processed (default 0) and `limit` is 1–200 (default 200); `nextCursor` is the id of the last
+item when the page is full, `null` otherwise. An unknown run is a 404 before any read:
+
+```json
+{
+  "data": [
+    {
+      "id": 1842,
+      "seq": 17,
+      "type": "run.output",
+      "data": { "runId": "run_01J...", "seq": 17, "ts": "2026-10-24T18:04:02Z", "delta": "…" },
+      "ts": "2026-10-24T18:04:02Z"
+    }
+  ],
+  "nextCursor": "1842"
+}
+```
+
+`GET /v1/runs/{id}/diff` answers the stat and the changed files the daemon last measured; the
+patch itself lives on GitHub. A run without a worktree — still queued, or already cleaned up —
+is `409 conflict` with `details.reason = "diff_unavailable"`:
+
+```json
+{
+  "files": 6,
+  "added": 184,
+  "removed": 22,
+  "changedFiles": [{ "path": "src/a.ts", "status": "modified", "added": 12, "removed": 3 }]
+}
+```
+
+`POST /v1/chat/sessions/{id}/promote` (§5.6) is served by this subsystem because only it may
+start a run: it takes the session's last `assistant` message as the prompt (`422` with
+`details.path = "chat.messages"` when there is none), starts a `promote` run on the
+repository's default branch, answers `202`, requires `Idempotency-Key`, and refuses an
+archived session with `409 conflict` and `details.reason = "chat_archived"`.
 
 ### 5.5 Approvals
 
@@ -283,8 +411,27 @@ The run object is the contract every screen renders:
 | `GET` | `/v1/approvals/{id}` | `read` | One request with its redacted tool input. |
 | `POST` | `/v1/approvals/{id}/reply` | `write` | `{ decision: "allow" \| "deny", scope: "once" \| "session" }`. |
 
+`state` defaults to `pending` and accepts any of `pending`, `allowed`, `denied` and `expired`;
+the inbox is oldest first and paginated with the §4 `limit` and `cursor`.
+
+The reply body is a strict object:
+
+```json
+{ "decision": "allow", "scope": "once" }
+```
+
+The answer is `200` with the resolved approval — `state` becomes `allowed` or `denied` and
+`resolvedAt` is set. Replying to a row that is no longer `pending` is `409 conflict` with
+`details.reason = "approval_already_answered"`, and the second reply never reaches OpenCode.
+The row is resolved and `approval.resolved` with `{ approvalId, decision, ts }` is appended in
+one transaction; the chat subsystem observes the resolved row and delivers the answer. `scope`
+is validated against this contract but is not stored — the approvals table has no column for
+it — so a `session` reply is delivered as a one-shot answer.
+
 An approval not answered within `CB_APPROVAL_TTL_SECONDS` is rejected and marked `expired`.
-Replying twice is a 409; the second reply never reaches OpenCode.
+Every `/v1/approvals` request sweeps first, and a 60 s timer sweeps while the daemon runs: a
+row past its `expiresAt` becomes `expired` with `resolvedAt` set and one `approval.resolved`
+whose `decision` is `"expired"`.
 
 ### 5.6 Chat
 
