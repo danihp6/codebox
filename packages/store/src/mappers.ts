@@ -303,6 +303,8 @@ export function routineFromRow(rowValue: Row): Routine {
     nextFireAt: nullableTextColumn(rowValue, 'next_fire_at'),
     lastFiredAt: nullableTextColumn(rowValue, 'last_fired_at'),
   };
+  // A reminder row never carries repo_id, prompt or chat_session_id: the table CHECK enforces
+  // it and the schema has no such keys, so the mapper must not invent them.
   if (kind === 'reminder') return { ...base, kind };
   return {
     ...base,

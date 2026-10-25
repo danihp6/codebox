@@ -23,8 +23,8 @@ export interface RoutineNextFire {
 export interface RoutineTickInput {
   readonly now: string;
   readonly routines: readonly Routine[];
-  readonly graceSeconds: number;
-  readonly limit: number;
+  readonly graceSeconds: number; // CB_MISFIRE_GRACE_SECONDS
+  readonly limit: number; // max claims per tick, >= 1
 }
 
 export interface RoutineTickPlan {
