@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-25 (Task-11, daemon skeleton)
+
+- `@codebox/daemon` boots: every `CB_*` key is parsed and validated at the edge (a missing or
+  short secret fails fast with the key name and no value echoed), a structured JSON logger
+  redacts by key, SQLite comes from `@codebox/store`, and Hono serves `/v1/health`,
+  `/v1/version`, the built app and a request id on every answer.
+- Boot reconciliation marks a run left `running` as `failed` with `orphaned` exactly once,
+  removes stale locks, writes `daemon.json` and drains the server on `SIGTERM` with exit `0`.
+- The `DaemonModule` seam and the subsystem flags let Tasks 12–17 add modules without
+  rewriting `main.ts`; the daemon's vitest project resolves `@codebox/*` from source, so
+  `npm test` runs before `npm run build`.
+- `hono` 4.13.13 and `@hono/node-server` 2.1.5 are pinned, and the raw request target is
+  checked for dot segments so a traversal attempt cannot reach the SPA fallback.
+
 ### Added — 2026-10-25 (Task-10, GitHub provider)
 
 - `@codebox/git-provider` implements the `GitProvider` port for GitHub: an App JWT from the

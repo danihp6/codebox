@@ -219,7 +219,7 @@ Task-12 holds `docs/api.md` (auth section); Task-13 holds `docs/api.md` (chat se
 Task-14 holds `apps/daemon/src/run/**`; Task-15 holds `docs/api.md` (jobs/runs section);
 Task-16 holds `docs/providers.md` (push section); Task-17 holds `apps/daemon/src/cli/**`.
 
-- [ ] **[Task-11]** Daemon skeleton. Config load/validate, logger, SQLite wiring, Hono app,
+- [x] **[Task-11]** Daemon skeleton. Config load/validate, logger, SQLite wiring, Hono app,
       health/version, static app hosting, graceful shutdown, boot reconciliation (orphaned
       runs → `failed`, stale locks removed), and feature flags for the subsystems later tasks
       add. *Paths:* `apps/daemon/src/{main,config,app,health,boot}.ts`,
