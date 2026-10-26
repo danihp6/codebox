@@ -22,6 +22,7 @@ import type { DaemonContext } from '../modules.js';
 import { createChatService } from './service.js';
 import type { ChatAgent, ChatService, ChatWorkspaces } from './service.js';
 import { MAX_TEXT_CHARS } from './service.js';
+import type { RoutineToolServer } from './tools/index.js';
 
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
 const REPO_ID = 'repo_chat0001';
@@ -175,7 +176,7 @@ interface Harness {
   readonly workspaces: FakeWorkspaces;
 }
 
-function harness(): Harness {
+function harness(options: { readonly routineTools?: () => RoutineToolServer } = {}): Harness {
   const directory = mkdtempSync(join(tmpdir(), 'cb-13-chat-'));
   directories.push(directory);
   const config = loadConfig({
@@ -203,7 +204,12 @@ function harness(): Harness {
   };
   const agent = new FakeAgent();
   const workspaces = new FakeWorkspaces();
-  const service = createChatService({ context, agent, workspaces });
+  const service = createChatService({
+    context,
+    agent,
+    workspaces,
+    ...(options.routineTools === undefined ? {} : { routineTools: options.routineTools }),
+  });
   services.push(service);
   store.repos.create({
     id: REPO_ID,
@@ -533,6 +539,83 @@ describe('chat service', () => {
     expect(agent.replies).toEqual([
       { sessionId: FIRST_SESSION, requestId: 'per_2', reply: 'reject' },
     ]);
+  });
+});
+
+describe('chat routine tools', () => {
+  it('mounts the tool server in the chat session and creates a routine through it', async () => {
+    const { service, store, agent } = harness();
+    const chat = seedChat(store);
+    await service.prepare(chat.id);
+
+    const created = agent.created[0];
+    if (created === undefined) throw new Error('the agent session was not created');
+    const descriptor = created.mcp?.['codebox'];
+    if (descriptor === undefined) throw new Error('the session carried no routine tool server');
+    expect(descriptor.type).toBe('remote');
+    expect(descriptor.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/mcp$/);
+    const authorization = descriptor.headers['authorization'];
+    if (authorization === undefined) throw new Error('the mount carried no bearer token');
+    expect(authorization.startsWith('Bearer ')).toBe(true);
+
+    const response = await fetch(descriptor.url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization },
+      body: JSON.stringify({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'tools/call',
+        params: {
+          name: 'routine.create',
+          arguments: {
+            kind: 'prompt',
+            title: 'Morning summary',
+            cron: '0 7 * * *',
+            timezone: 'UTC',
+            prompt: 'Summarise the repository.',
+          },
+        },
+      }),
+    });
+    expect(response.status).toBe(200);
+    const payload = (await response.json()) as {
+      result?: { isError?: boolean; structuredContent?: { routine?: { id?: string } } };
+    };
+    expect(payload.result?.isError).toBe(false);
+    const routineId = payload.result?.structuredContent?.routine?.id;
+    if (routineId === undefined) throw new Error('the tool returned no routine');
+    const stored = store.routines.get(routineId);
+    if (stored === null || stored.kind !== 'prompt') throw new Error('the routine is missing');
+    expect(stored.repoId).toBe(REPO_ID);
+    expect(stored.chatSessionId).toBe(chat.id);
+  });
+
+  it('closes the routine tool server once on stop', () => {
+    let closes = 0;
+    const fake: RoutineToolServer = {
+      start: () => Promise.resolve({ url: 'http://127.0.0.1:1/mcp', token: 'fixture-token' }),
+      release: () => undefined,
+      close: () => {
+        closes += 1;
+        return Promise.resolve();
+      },
+    };
+    const { service } = harness({ routineTools: () => fake });
+    service.stop();
+    service.stop();
+    expect(closes).toBe(1);
+  });
+
+  it('creates the chat session without mcp when the tool server cannot start', async () => {
+    const failing: RoutineToolServer = {
+      start: () => Promise.reject(new Error('the listener did not bind')),
+      release: () => undefined,
+      close: () => Promise.resolve(),
+    };
+    const { service, store, agent } = harness({ routineTools: () => failing });
+    const chat = seedChat(store);
+    await service.prepare(chat.id);
+    expect(agent.created[0]?.mcp).toBeUndefined();
   });
 });
 

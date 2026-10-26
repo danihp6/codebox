@@ -5,11 +5,19 @@ export interface AgentHealth {
   readonly version: string;
 }
 
+export interface McpServerRef {
+  readonly type: 'remote';
+  readonly url: string;
+  readonly headers: Readonly<Record<string, string>>;
+}
+
 export interface CreateSessionInput {
   readonly directory: string;
   readonly title: string;
   readonly agent: string;
   readonly model: string | null;
+  /** Chat sessions only: the routine tool server. A run never sets it (D41). */
+  readonly mcp?: Readonly<Record<string, McpServerRef>>;
 }
 
 export interface SessionRef {

@@ -182,6 +182,7 @@ export function createAgentRuntime(options: AgentRuntimeOptions): AgentRuntime {
         directory: input.directory,
         agent: input.agent,
         model: input.model,
+        ...(input.mcp === undefined ? {} : { mcp: input.mcp }),
       },
     });
     const decoded = decodeSession(body);

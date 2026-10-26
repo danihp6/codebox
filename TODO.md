@@ -59,20 +59,18 @@ goes first because it is what lets the operator create and destroy the OCI footp
 wait is still open; the spot host reuses the same tool with the same image. Batches 7–9 keep
 their internal order behind it. Nothing is dropped, only displaced.
 
-**Cut — cycle after Task-37 (four of four slots used).** The host track takes every slot:
-Task-47 and Task-42 (Terraform for OCI and AWS), Task-40 (the `amazon-ebs` builder) and Task-41
-(the browser). Task-47 descends from Task-24, Task-40 and Task-41 from Task-25 — all merged — and
-the four are path-disjoint: `infra/oci`, `infra/aws`, the `ops/image` template, and
-`ops/image/scripts` plus `docs/vm-image.md`. Displaced and still eligible: Task-23, Task-27,
-Task-28, Task-35, Task-43 and Task-44; Task-44 holds `docs/decisions.md` when its cut arrives,
-so Task-28 waits for that one. No task holds a hot file in this cut. Not eligible: Task-26 and
-Task-29 are `[!]` on the `workflows` permission (issue #11); Task-30 waits for Task-29;
-Task-36 waits for Task-35 and Task-38; Task-31 waits for Task-26/28/30; Task-32 for Task-31;
-Task-45 for Task-39/40/41/42/44/47; Task-46 for Task-42–45.
-**Hot-file holders in this cut:** none; `package.json`, `package-lock.json`,
-`tsconfig.base.json`, `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts`,
-`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`,
-`CHANGELOG.md` and `docs/decisions.md` are held by no task.
+**Cut — cycle after Task-44 (one of four slots used, Task-38).** The queue was thin: the only
+dependency-free tasks were Task-38 (Batch 9) and Task-45 (Batch 13), and both claim
+`docs/decisions.md` — a hot file, one owner per batch — so they could not travel together.
+Task-38 went first because it is the lower batch and its own dependant (Task-36) is waiting;
+Task-45 is displaced to the next cut. The other three slots were empty for cause, not by
+choice: Task-26 and Task-29 are `[!]` on the `workflows` permission (issue #11); Task-30 waits
+for Task-29; Task-31 for Task-26/28/30; Task-32 for Task-31; Task-36 for Task-38 (merged) and
+is eligible next cycle; Task-46 for Task-42–45, with Task-45 still open.
+**Hot-file holders in this cut:** Task-38 held `docs/decisions.md` (D41); `package.json`,
+`package-lock.json`, `tsconfig.base.json`, `packages/contracts/src/index.ts`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`opencode.json`, `TODO.md` and `CHANGELOG.md` were held by no task.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -536,7 +534,7 @@ turn and is not capped until the chat path writes a usage row (Task-35 records t
       routine render their distinct kind and cost; `[live]` a routine created in chat appears
       in the list without a reload and its push arrives on the phone.
 
-- [ ] **[Task-38]** Routine tool seam. Mount `routine.create` / `list` / `pause` in **chat
+- [x] **[Task-38]** Routine tool seam. Mount `routine.create` / `list` / `pause` in **chat
       sessions only** — an unattended run never gets the tool — over a mechanism the pinned
       OpenCode client actually exposes (a loopback MCP server owned by the daemon, or an
       equivalent pinned-API surface), reclassify the three names as chat-allowed and run-denied

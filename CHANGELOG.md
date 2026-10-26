@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-38, the routine tool, chat sessions only)
+
+- A daemon-owned loopback MCP server (`apps/daemon/src/chat/tools`) serves `routine.create`,
+  `routine.list` and `routine.pause` over JSON-RPC 2.0 on `127.0.0.1:<ephemeral>`, one random
+  bearer token per chat session. The token — never the model's arguments — supplies the chat
+  and its repository, so `repoId` and `chatSessionId` cannot be spoofed; a prompt routine
+  created from a chat is bound to that chat. `routine.create` computes `nextFireAt` with the
+  same cron arithmetic as a job and writes nothing on a bad cron or timezone.
+- The `mcp` descriptor travels only in a **chat** session create body:
+  `CreateSessionInput` gained an optional `mcp` map and the wrapper forwards it verbatim. The
+  run engine is untouched and sends no descriptor.
+- `packages/core` classifies `routine.create/list/pause` as the new `routine` tool class: D27
+  allows it in chat and **denies it in run**, even if a descriptor ever leaked.
+- D41 records the mechanism and the boundary; `docs/agent-runtime.md` §2/§3/§6 and
+  `docs/security.md` §6 describe the server, the per-chat token and the chat-only mount.
+- `[live]` — a routine created from a real chat appears in `GET /v1/routines` and fires — is
+  measured on the VM; an `agent-review` issue carries it.
+
 ### Changed — 2026-10-26 (Task-44, concurrency three)
 
 - `CB_MAX_CONCURRENCY` defaults to 3 (per repository stays 1) and both keys reject 0 with a

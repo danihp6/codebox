@@ -1,5 +1,5 @@
 export type PermissionMode = 'chat' | 'run';
-export type PermissionTool = 'read' | 'edit' | 'bash' | 'webfetch' | 'other';
+export type PermissionTool = 'read' | 'edit' | 'bash' | 'webfetch' | 'routine' | 'other';
 export type PermissionDecision = 'allow' | 'ask' | 'deny';
 
 export const PERMISSION_MATRIX: Readonly<
@@ -10,6 +10,7 @@ export const PERMISSION_MATRIX: Readonly<
     edit: 'ask',
     bash: 'ask',
     webfetch: 'deny',
+    routine: 'allow',
     other: 'deny',
   }),
   run: Object.freeze({
@@ -17,6 +18,7 @@ export const PERMISSION_MATRIX: Readonly<
     edit: 'allow',
     bash: 'allow',
     webfetch: 'deny',
+    routine: 'deny',
     other: 'deny',
   }),
 });
@@ -38,6 +40,12 @@ const EDIT_TOOLS: readonly string[] = Object.freeze([
 ]);
 const BASH_TOOLS: readonly string[] = Object.freeze(['bash', 'shell', 'terminal']);
 const WEB_TOOLS: readonly string[] = Object.freeze(['webfetch', 'websearch', 'fetch']);
+// The chat tool server exposes exactly these three; anything else is `other` and fails closed.
+const ROUTINE_TOOLS: readonly string[] = Object.freeze([
+  'routine.create',
+  'routine.list',
+  'routine.pause',
+]);
 
 export function classifyTool(tool: string): PermissionTool {
   const name = tool.trim().toLowerCase();
@@ -45,6 +53,7 @@ export function classifyTool(tool: string): PermissionTool {
   if (EDIT_TOOLS.includes(name)) return 'edit';
   if (BASH_TOOLS.includes(name)) return 'bash';
   if (WEB_TOOLS.includes(name)) return 'webfetch';
+  if (ROUTINE_TOOLS.includes(name)) return 'routine';
   return 'other';
 }
 
