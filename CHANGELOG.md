@@ -21,10 +21,11 @@ first release exists.
 
 ### Changed — 2026-10-26 (roadmap, host track)
 
-- `TODO.md` gains Batches 10–13 (Tasks 39–46): provider-neutral image, `infra/aws` CDK spot
-  host, S3 backups, concurrency three, host-neutral docs and the measured bring-up. The host
-  track is pulled ahead of Batches 7–9, because OCI capacity has no date and the box cannot be
-  deployed until it lands.
+- `TODO.md` gains Batches 10–14 (Tasks 39–47): Terraform stacks under `infra/oci` and
+  `infra/aws`, provider-neutral image, S3 backups, concurrency three, host-neutral docs and the
+  measured bring-up. The host track is pulled ahead of Batches 7–9, because OCI capacity has no
+  date and the box cannot be deployed until it lands; Terraform runs first so the OCI footprint
+  can be created and destroyed while the wait is open.
 
 ### Added — 2026-10-25 (Task-37, instance liveness)
 
