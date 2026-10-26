@@ -7,6 +7,7 @@ export const NOTIFICATION_TYPES = [
   'run.cancelled',
   'approval.created',
   'routine.fired',
+  'routine.replied',
 ] as const;
 
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
@@ -44,6 +45,7 @@ const PREFERENCE_NAMES: Readonly<Record<NotificationType, readonly SseEventName[
     'run.cancelled': Object.freeze(['run.cancelled'] as const),
     'approval.created': Object.freeze(['approval.created'] as const),
     'routine.fired': Object.freeze(['routine.fired'] as const),
+    'routine.replied': Object.freeze(['routine.fired', 'routine.replied'] as const),
   },
 );
 
@@ -71,6 +73,11 @@ export function deliveryKeyOf(record: {
         ? null
         : `routine:${routineId}:${scheduledFor}`;
     }
+    case 'routine.replied': {
+      const routineId = stringOf(record.data['routineId']);
+      const messageId = stringOf(record.data['messageId']);
+      return routineId === null || messageId === null ? null : `routine:${routineId}:${messageId}`;
+    }
     default:
       return null;
   }
@@ -88,11 +95,14 @@ export function isCritical(type: NotificationType): boolean {
   return type === 'approval.created';
 }
 
-export function messageFor(input: {
+export interface PushMessageForInput {
   readonly type: NotificationType;
   readonly data: Readonly<Record<string, unknown>>;
   readonly routineTitle?: string | null;
-}): PushMessage {
+  readonly summary?: string | null;
+}
+
+export function messageFor(input: PushMessageForInput): PushMessage {
   const { type, data } = input;
   const tag = deliveryKeyOf({ type, data });
 
@@ -172,6 +182,19 @@ export function messageFor(input: {
         url: '/jobs',
         tag: tag ?? type,
         ...(routineId === null ? {} : { routineId }),
+      });
+    }
+    case 'routine.replied': {
+      const routineId = stringOf(data['routineId']);
+      const chatId = stringOf(data['chatId']);
+      return finish({
+        type,
+        title: input.routineTitle ?? 'Routine',
+        body: input.summary ?? 'Your routine answered in chat.',
+        url: `/chat/${chatId ?? ''}`,
+        tag: tag ?? type,
+        ...(routineId === null ? {} : { routineId }),
+        ...(chatId === null ? {} : { chatId }),
       });
     }
   }

@@ -6,7 +6,7 @@ import { AgentError, createAgentRuntime } from '@codebox/opencode';
 import type { AgentRuntime, RawAgentEvent, SessionRef } from '@codebox/opencode';
 import { redact } from '@codebox/security';
 import { withTransaction } from '@codebox/store';
-import type { EventRecord, Store } from '@codebox/store';
+import type { ChatMessageOrigin, EventRecord, Store } from '@codebox/store';
 import {
   WorkspaceError,
   createGitRunner,
@@ -47,9 +47,16 @@ export interface SendMessageInput {
   readonly text: string;
 }
 
+export interface SendRoutineInput {
+  readonly chatId: string;
+  readonly text: string;
+}
+
 export interface ChatService {
   /** Appends the user message and queues the prompt; returns the stored message. */
   send(input: SendMessageInput): Promise<ChatMessage>;
+  /** `send`, but the stored message carries `origin: 'routine'` (docs/jobs.md §15). */
+  sendRoutine(input: SendRoutineInput): Promise<ChatMessage>;
   /** Joins the pump for one chat; resolves when the agent reports idle. Never throws. */
   pump(chatId: string): Promise<void>;
   /** One pump step: reads pending approvals and delivers a reply. Public for tests. */
@@ -277,7 +284,7 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     });
   }
 
-  function appendUserMessage(chatId: string, text: string): ChatMessage {
+  function appendMessage(chatId: string, text: string, origin: ChatMessageOrigin): ChatMessage {
     const ts = clock().toISOString();
     const message: ChatMessage = {
       id: newMessageId(),
@@ -287,7 +294,7 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
       createdAt: ts,
     };
     const stored = withTransaction(store.db, () => {
-      const row = store.chats.appendMessage(message, { origin: 'user' });
+      const row = store.chats.appendMessage(message, { origin });
       const seq = store.events.nextSeq({ chatId });
       persistChatEvent(chatId, 'chat.message', seq, ts, { message: row });
       store.chats.updateSession(chatId, { status: 'working', updatedAt: ts });
@@ -624,18 +631,29 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     });
   }
 
-  async function send(input: SendMessageInput): Promise<ChatMessage> {
-    const text = input.text;
+  async function writeAndQueue(
+    chatId: string,
+    text: string,
+    origin: 'user' | 'routine',
+  ): Promise<ChatMessage> {
     if (text.length > MAX_TEXT_CHARS || text.trim().length === 0) {
       throw new ChatError('invalid_payload', 422, { path: 'chat.message.text' });
     }
-    const session = requireSession(input.chatId);
+    const session = requireSession(chatId);
     if (session.status === 'archived') throw archived();
     if (!agentSessions.has(session.id)) await prepare(session.id);
-    const message = appendUserMessage(session.id, text);
+    const message = appendMessage(session.id, text, origin);
     queueText(session.id, text);
     void startTurn(session.id);
     return message;
+  }
+
+  function send(input: SendMessageInput): Promise<ChatMessage> {
+    return writeAndQueue(input.chatId, input.text, 'user');
+  }
+
+  function sendRoutine(input: SendRoutineInput): Promise<ChatMessage> {
+    return writeAndQueue(input.chatId, input.text, 'routine');
   }
 
   async function interrupt(chatId: string): Promise<ChatSession> {
@@ -678,6 +696,7 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
 
   const service: ChatService = {
     send,
+    sendRoutine,
     pump: (chatId: string): Promise<void> => startTurn(chatId),
     tick,
     interrupt,

@@ -514,7 +514,7 @@ A routine is not a run: no worktree, no gate, no PR (D38). The agent defines it 
 scheduler fires it, the app lists and pauses it. `reminder` costs no tokens; `prompt` is a chat
 turn and is not capped until the chat path writes a usage row (Task-35 records that gap).
 
-- [ ] **[Task-35]** Routine engine. On a fire: a `reminder` pushes and does nothing else; a
+- [x] **[Task-35]** Routine engine. On a fire: a `reminder` pushes and does nothing else; a
       `prompt` appends an `origin: routine` message to its `chatSessionId`, or creates a new
       chat session for the routine when it has none or the old one was archived, sends it to
       OpenCode and streams the reply, pushing a summary at the end. Expose the `/v1/routines`

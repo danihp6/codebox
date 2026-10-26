@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-35, routine fire engine and `/v1/routines`)
+
+- The routine tick claims `(routine_id, scheduled_for)` transactionally and applies D13: a
+  `reminder` pushes and stops, a `prompt` appends an `origin: routine` message to its chat
+  (creating one when it has none or the old one was archived), streams the reply and pushes one
+  summary at the end.
+- `GET`, `PATCH`, `DELETE` and the pause/resume/run-now routes are mounted; `POST /v1/routines`
+  stays with Task-38's chat tool, and a fire never creates a run, a gate or a PR.
+- The store's SSE event names learn the three `routine.*` events, without which a fire cannot
+  be read back.
+- `[live]` — a seeded routine firing and answering in its session on the VM — is not measured
+  on CI; an `agent-review` issue carries it.
+
 ### Added — 2026-10-26 (Task-28, security hardening)
 
 - The gate scans the added lines of every diff for nine secret patterns before anything is

@@ -1,5 +1,6 @@
 import { randomBytes } from 'node:crypto';
 import type { NotificationPreferences, PushSubscription } from '@codebox/contracts';
+import type { EventRecord } from '@codebox/store';
 import type { DaemonContext } from '../modules.js';
 import { PushError } from './errors.js';
 import { newSubscriptionId } from './ids.js';
@@ -188,11 +189,31 @@ export function createPushService(options: CreatePushServiceOptions): PushServic
     return { attempts: subscriptions.length, sent, pruned, failed, skipped };
   }
 
-  function routineTitleOf(data: Readonly<Record<string, unknown>>): string | null {
+  interface RoutineNotice {
+    readonly title: string;
+    readonly notify: boolean;
+  }
+
+  function routineOf(data: Readonly<Record<string, unknown>>): RoutineNotice | null {
     const routineId = data['routineId'];
     if (typeof routineId !== 'string' || routineId === '') return null;
     try {
-      return context.store.routines.get(routineId)?.title ?? null;
+      const routine = context.store.routines.get(routineId);
+      return routine === null ? null : { title: routine.title, notify: routine.notify };
+    } catch {
+      return null;
+    }
+  }
+
+  /** The reply's text is the push body, but only while it is still the chat's last message. */
+  function replySummaryOf(record: EventRecord): string | null {
+    if (record.type !== 'routine.replied') return null;
+    const chatId = record.data['chatId'];
+    const messageId = record.data['messageId'];
+    if (typeof chatId !== 'string' || typeof messageId !== 'string') return null;
+    try {
+      const last = context.store.chats.lastMessage(chatId);
+      return last !== null && last.id === messageId ? last.text : null;
     } catch {
       return null;
     }
@@ -234,6 +255,17 @@ export function createPushService(options: CreatePushServiceOptions): PushServic
         skipped += 1;
         continue;
       }
+      if (record.type === 'routine.fired' && record.data['kind'] === 'prompt') {
+        skipped += 1;
+        logger.debug({ msg: 'push_skipped', reason: 'routine_prompt', type, tag });
+        continue;
+      }
+      const routine = routineOf(record.data);
+      if (routine !== null && !routine.notify) {
+        skipped += 1;
+        logger.debug({ msg: 'push_skipped', reason: 'routine_muted', type, tag });
+        continue;
+      }
       if (!isEnabled(preferences, type)) {
         skipped += 1;
         logger.debug({ msg: 'push_skipped', reason: 'preference', type, tag });
@@ -247,7 +279,8 @@ export function createPushService(options: CreatePushServiceOptions): PushServic
       const message = messageFor({
         type,
         data: record.data,
-        routineTitle: routineTitleOf(record.data),
+        routineTitle: routine?.title ?? null,
+        summary: replySummaryOf(record),
       });
       if (!isCritical(type) && quietNow(preferences.quietHours)) {
         held.push(message);

@@ -84,6 +84,9 @@ const SSE_EVENT_NAMES = [
   'approval.created',
   'approval.resolved',
   'telemetry',
+  'routine.fired',
+  'routine.replied',
+  'routine.failed',
 ] as const;
 
 export type Row = Record<string, unknown>;

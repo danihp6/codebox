@@ -12,6 +12,8 @@ import {
 const RUN_ID = 'run_01JABCDEFG';
 const APPROVAL_ID = 'apv_01JABCDEFG';
 const ROUTINE_ID = 'rtn_01JABCDEFG';
+const CHAT_ID = 'chat_01JABCDEFG';
+const MESSAGE_ID = 'msg_01JABCDEFG';
 const SCHEDULED_FOR = '2026-11-10T07:00:00.000Z';
 const PR = {
   number: 42,
@@ -26,7 +28,7 @@ describe('notification delivery keys', () => {
     }
   });
 
-  it('tags an approval and a routine fire', () => {
+  it('tags an approval, a routine fire and a routine reply', () => {
     expect(deliveryKeyOf({ type: 'approval.created', data: { approvalId: APPROVAL_ID } })).toBe(
       `approval:${APPROVAL_ID}`,
     );
@@ -36,6 +38,12 @@ describe('notification delivery keys', () => {
         data: { routineId: ROUTINE_ID, scheduledFor: SCHEDULED_FOR },
       }),
     ).toBe(`routine:${ROUTINE_ID}:${SCHEDULED_FOR}`);
+    expect(
+      deliveryKeyOf({
+        type: 'routine.replied',
+        data: { routineId: ROUTINE_ID, chatId: CHAT_ID, messageId: MESSAGE_ID },
+      }),
+    ).toBe(`routine:${ROUTINE_ID}:${MESSAGE_ID}`);
   });
 
   it('is not eligible for anything else in the log', () => {
@@ -55,7 +63,6 @@ describe('notification delivery keys', () => {
       'job.changed',
       'approval.resolved',
       'telemetry',
-      'routine.replied',
       'routine.failed',
     ] as const;
     for (const type of ineligible) {
@@ -67,21 +74,35 @@ describe('notification delivery keys', () => {
     expect(deliveryKeyOf({ type: 'run.finished', data: {} })).toBeNull();
     expect(deliveryKeyOf({ type: 'approval.created', data: { approvalId: '' } })).toBeNull();
     expect(deliveryKeyOf({ type: 'routine.fired', data: { routineId: ROUTINE_ID } })).toBeNull();
+    expect(
+      deliveryKeyOf({ type: 'routine.replied', data: { routineId: ROUTINE_ID, chatId: CHAT_ID } }),
+    ).toBeNull();
   });
 });
 
 describe('notification preferences', () => {
   it('defaults to finished, failed and approval', () => {
     expect(DEFAULT_NOTIFICATION_EVENTS).toEqual(['run.finished', 'run.failed', 'approval.created']);
-    expect(NOTIFICATION_TYPES).toHaveLength(6);
+    expect(NOTIFICATION_TYPES).toHaveLength(7);
   });
 
   it('names the preference that enables each type', () => {
     expect(preferenceNamesOf('run.merged')).toEqual(['run.merged', 'run.finished']);
+    expect(preferenceNamesOf('routine.replied')).toEqual(['routine.fired', 'routine.replied']);
     for (const type of NOTIFICATION_TYPES) {
-      if (type === 'run.merged') continue;
+      if (type === 'run.merged' || type === 'routine.replied') continue;
       expect(preferenceNamesOf(type)).toEqual([type]);
     }
+  });
+
+  it('enables a written routine reply through either routine preference', () => {
+    expect(isEnabled({ events: ['routine.fired'], quietHours: null }, 'routine.replied')).toBe(
+      true,
+    );
+    expect(isEnabled({ events: ['routine.replied'], quietHours: null }, 'routine.replied')).toBe(
+      true,
+    );
+    expect(isEnabled({ events: ['run.failed'], quietHours: null }, 'routine.replied')).toBe(false);
   });
 
   it('enables a merged run through either preference', () => {
@@ -189,6 +210,33 @@ describe('push messages', () => {
     });
     expect(prompt.title).toBe('Routine');
     expect(prompt.body).toBe('A scheduled routine fired.');
+  });
+
+  it('turns a routine reply into a summary push that links to the chat', () => {
+    const message = messageFor({
+      type: 'routine.replied',
+      data: { routineId: ROUTINE_ID, chatId: CHAT_ID, messageId: MESSAGE_ID },
+      routineTitle: 'Morning summary',
+      summary: 'Nine bullets about the repository.',
+    });
+    expect(message).toEqual({
+      type: 'routine.replied',
+      title: 'Morning summary',
+      body: 'Nine bullets about the repository.',
+      url: `/chat/${CHAT_ID}`,
+      tag: `routine:${ROUTINE_ID}:${MESSAGE_ID}`,
+      routineId: ROUTINE_ID,
+      chatId: CHAT_ID,
+    });
+
+    const fallback = messageFor({
+      type: 'routine.replied',
+      data: { routineId: ROUTINE_ID, chatId: CHAT_ID, messageId: MESSAGE_ID },
+      routineTitle: null,
+      summary: null,
+    });
+    expect(fallback.title).toBe('Routine');
+    expect(fallback.body).toBe('Your routine answered in chat.');
   });
 
   it('truncates the title to 120 and the body to 240 with one ellipsis', () => {
