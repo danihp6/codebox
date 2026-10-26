@@ -1,0 +1,28 @@
+# Parameters for the AWS spot host, one per variable in infra/aws/variables.tf.
+# Copy this file to terraform.tfvars, which infra/aws/.gitignore keeps out of git,
+# then edit admin_cidr, budget_alert_email, backup_bucket_name and ami_id. Every
+# value below is a placeholder: nothing here is a real address, account or secret.
+
+# Region, network and the single SSH source. aws_region matches backend.tf and
+# bootstrap/main.tf; admin_cidr is the operator's own host in CIDR form.
+aws_region         = "eu-west-1"
+admin_cidr         = "203.0.113.7/32"
+vpc_cidr           = "10.42.0.0/16"
+public_subnet_cidr = "10.42.1.0/24"
+
+# The instance. An empty ami_id resolves the newest Canonical Ubuntu 24.04 arm64
+# image; the bring-up sets the cb-image-<version>-<sha> AMI id produced by
+# `packer build -only=amazon-ebs.codebox` instead (docs/vm-image.md §3).
+ami_id         = ""
+instance_type  = "c7g.2xlarge"
+spot_max_price = "0.40"
+root_volume_gb = 100
+
+# The dump bucket. S3 names are global, so this placeholder must be replaced, and
+# the monthly budget alarms at 80 % of budget_limit_usd.
+backup_bucket_name = "cb-codebox-backups-example"
+budget_limit_usd   = 50
+budget_alert_email = "operator@example.com"
+
+# Tag prefix on every resource.
+project = "codebox"
