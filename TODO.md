@@ -566,9 +566,10 @@ the static resources on both sides; the instance stays with `ops/oci/launch.sh` 
 no `apply` can wait for capacity.
 
 - [ ] **[Task-42]** `infra/aws`: Terraform for the spot host. One root module (Terraform 1.9+,
-      the `aws` provider pinned, remote S3 state with native locking): a VPC with a public
-      subnet and **no inbound 80/443**, a security group allowing SSH only from the admin
-      `/32`, `ami_id` defaulting to the current Canonical Ubuntu 24.04 arm64 image from a
+      the `aws` provider pinned, remote S3 state with native locking, and a one-file
+      `bootstrap/` that creates the state bucket and its lock the first time): a VPC with a
+      public subnet and **no inbound 80/443**, a security group allowing SSH only from the
+      admin `/32`, `ami_id` defaulting to the current Canonical Ubuntu 24.04 arm64 image from a
       `data` source so the stack applies before the Codebox image exists, a **spot**
       `c7g.2xlarge` (8 vCPU / 16 GB arm64 — the floor for three repos × agent + build +
       Chromium plus the daemon, OpenCode and the tunnel) with a 100 GB gp3 volume and IMDSv2
