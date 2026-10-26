@@ -1,0 +1,9 @@
+# Copy to `backend.hcl` (gitignored) and pass it to `terraform init -backend-config=backend.hcl`.
+# The namespace is the tenancy's Object Storage namespace, not its OCID: `oci os ns get`.
+# Credentials stay in the environment: AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY, an OCI
+# customer secret key.
+region = "eu-madrid-1"
+
+endpoints = {
+  s3 = "https://<namespace>.compat.objectstorage.eu-madrid-1.oraclecloud.com"
+}

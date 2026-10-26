@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-26 (Task-47, `infra/oci` Terraform module)
+
+- `infra/oci` owns the static OCI footprint: `cb-vcn`, the IGW, `cb-rt`, an SSH-only `/32`
+  security list, `cb-subnet`, `cb-instance-dg`, `cb-ci-policy`, `cb-instance-policy`,
+  `cb-vault` with its four secret placeholders and `cb-backups` with its 30-day lifecycle.
+- The instance stays out on purpose: `ops/oci/launch.sh` keeps the capacity wait and reads the
+  module's `subnet_id`. `provision.sh` and its shell test retire.
+- State is remote in `cb-backups` over the S3-compatible endpoint with native locking; the
+  `cb-ci` policy gains only the two object statements that state needs.
+- `docs/oci.md` §2/§3/§7/§8/§9/§10 and `ops/oci/{README,policy}.md` describe Terraform;
+  `AGENTS.md` layout names both `infra/` modules.
+- `[live]` — a no-drift `plan`, a `destroy` that keeps the bucket and the image, and a rebuild
+  — is measured on the tenancy; an `agent-review` issue carries it.
+
 ### Added — 2026-10-26 (Task-42, `infra/aws` Terraform stack)
 
 - `infra/aws` creates the spot host: VPC, public subnet, IGW, a security group that admits SSH

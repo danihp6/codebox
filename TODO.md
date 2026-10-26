@@ -584,7 +584,7 @@ no `apply` can wait for capacity.
       `[unit]` a second `plan` after `apply` is empty; `[live]` `apply` creates the stack and
       `destroy` keeps only the bucket.
 
-- [ ] **[Task-47]** `infra/oci`: Terraform for the OCI resources. One root module (the `oci`
+- [x] **[Task-47]** `infra/oci`: Terraform for the OCI resources. One root module (the `oci`
       provider pinned, remote state in the existing `cb-backups` bucket) describing `cb-vcn`,
       the IGW, the route table, the security list (SSH only from the admin `/32`, no 80/443),
       `cb-subnet`, the dynamic group, the `cb-ci` and `cb-instance` policies, `cb-vault` with
