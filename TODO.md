@@ -386,7 +386,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       `[unit]` cancel is confirmed and reflects the `cancelled` event; `[live]` a run's
       timeline updates live and the revert action opens the generated PR in the browser.
 
-- [ ] **[Task-23]** Settings, devices and notifications. Profile, paired devices with revoke,
+- [x] **[Task-23]** Settings, devices and notifications. Profile, paired devices with revoke,
       notification preferences, provider status, danger zone (brake, wipe cache), about.
       *Paths:* `apps/app/src/app/features/settings/**`. *Dependencies:* Task-18. *Acceptance:*
       `[unit]` revoking the current device logs out locally and clears the secure store;

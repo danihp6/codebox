@@ -66,5 +66,14 @@ Tasks 19–23 replace the placeholder feature pages in place.
 - `src/app/features/run-detail/timeline.ts` — dedupe keys and one-line details for the event timeline.
 - `src/app/features/run-detail/timeline.spec.ts` — key precedence, detail rendering and page merging.
 - `src/app/features/runs-list/runs.page.ts` — runs placeholder.
-- `src/app/features/settings/devices.page.ts` — devices placeholder.
-- `src/app/features/settings/settings.page.ts` — settings placeholder.
+- `src/app/features/settings/devices.page.ts` — paired devices, current-device marker and a confirmed revoke per row.
+- `src/app/features/settings/devices.page.spec.ts` — empty state, current-device row, confirm-then-revoke and the error block.
+- `src/app/features/settings/devices.store.ts` — paired devices, the calling device and revoke (with logout of the calling device).
+- `src/app/features/settings/devices.store.spec.ts` — load, revoke another device and revoke the calling one down to an empty secure store.
+- `src/app/features/settings/i18n.ts` — the settings and devices dictionary in `en` and `es`.
+- `src/app/features/settings/settings.api.ts` — `/v1/me`, version, settings, providers, brake, cache wipe, devices and notification preferences; a missing route is not an error.
+- `src/app/features/settings/settings.api.spec.ts` — every URL, 404-as-absent, the 403 scope refusal and boundary parsing.
+- `src/app/features/settings/settings.page.ts` — profile, time zone, notifications, providers, danger zone and about, with explicit `unavailable` blocks.
+- `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, every section, the preference toggle and dictionary completeness.
+- `src/app/features/settings/settings.store.ts` — five independent reads, the time zone, the brake, the cache wipe and optimistic preference toggles.
+- `src/app/features/settings/settings.store.spec.ts` — independent reads, a 404 per resource, optimistic toggles and their rollbacks.

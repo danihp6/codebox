@@ -6,6 +6,17 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-23, settings, devices and notifications)
+
+- `/settings` becomes the operator's own screen: account time zone, push preferences per event
+  with optimistic toggles and rollback, provider status, the danger zone (brake, cache wipe)
+  and an explicit `unavailable` block for every resource whose daemon route this build does not
+  have.
+- `/settings/devices` lists paired devices with their scopes, marks the current one and revokes
+  a device; revoking the current device clears the secure store and logs out locally.
+- `[live]` — a preference change visible in the next push — is not measured on CI; an
+  `agent-review` issue carries the measurement.
+
 ### Added — 2026-10-26 (Task-39, provider-neutral first boot)
 
 - `ops/vm/cloud-init.sh` reads the four secret bundles from `CB_SECRETS_FILE`
