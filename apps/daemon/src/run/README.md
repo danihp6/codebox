@@ -6,8 +6,9 @@ The run engine: one run from `queued` to `succeeded`, `failed`, `cancelled` or a
 ## Files
 
 - `ports.ts` — the injected ports, the run settings the engine reads and the engine contract.
-- `engine.ts` — the flow, the state writes with their events, cancel, timeout, cost cap, the
-  single transport retry and the secret-scan step that turns a green gate red before the push.
+- `engine.ts` — the flow, the admission wait for a D15 slot, the state writes with their events,
+  cancel, timeout, cost cap, the single transport retry and the secret-scan step that turns a
+  green gate red before the push.
 - `commit.ts` — one commit for a worktree the agent left uncommitted, trailer in the body.
 - `pr-body.ts` — the PR body generated from the run's facts, never from the model.
 - `events.ts` — one event persisted with its `seq`, then handed to the emitter; approval ids.

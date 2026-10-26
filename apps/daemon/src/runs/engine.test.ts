@@ -96,6 +96,8 @@ describe('the daemon engine wiring', () => {
       gateShell: '/bin/sh',
       gateTimeoutSeconds: 60,
       runTimeoutSeconds: 120,
+      maxConcurrency: 3,
+      maxPerRepo: 1,
       dailyCostUsd: 2.5,
       automerge: 'off',
       mergeMethod: 'merge',

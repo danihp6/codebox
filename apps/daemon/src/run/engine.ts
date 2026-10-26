@@ -6,6 +6,7 @@ import { toPullRequestRef } from '@codebox/git-provider';
 import { GitProviderError } from '@codebox/git-provider';
 import type { RunState, RunDiff } from '@codebox/contracts';
 import {
+  canAdmitRun,
   canCancel,
   checkCost,
   checkRunTimeout,
@@ -13,7 +14,13 @@ import {
   evaluateAutoMerge,
   transitionRun,
 } from '@codebox/core';
-import type { GuardrailFact, MergeBlocker, MergeFacts } from '@codebox/core';
+import type {
+  ActiveRunRef,
+  AdmissionLimits,
+  GuardrailFact,
+  MergeBlocker,
+  MergeFacts,
+} from '@codebox/core';
 import { AgentError, buildRunEnvelope, createNormaliser } from '@codebox/opencode';
 import type {
   ApprovalRequestSignal,
@@ -22,6 +29,8 @@ import type {
   RawAgentEvent,
 } from '@codebox/opencode';
 import { sha256Hex, formatSecretFinding } from '@codebox/security';
+import { planAdmission } from '@codebox/scheduler';
+import type { WaitingRun } from '@codebox/scheduler';
 import { withTransaction } from '@codebox/store';
 import { WorkspaceError, branchName } from '@codebox/workspaces';
 import type { RepoInfo } from '@codebox/git-provider';
@@ -80,6 +89,12 @@ interface RunContext {
 interface ActiveRun {
   readonly ctx: RunContext;
   readonly promise: Promise<RunOutcome>;
+}
+
+interface WaitingEntry {
+  readonly ctx: RunContext;
+  readonly createdAt: string;
+  readonly resolve: () => void;
 }
 
 class RunFailure extends Error {
@@ -190,6 +205,8 @@ export function createRunEngine(ports: RunPorts): RunEngine {
   const settings = ports.settings;
   const logger = ports.logger;
   const inflight = new Map<string, ActiveRun>();
+  const activeOrder: string[] = [];
+  const waiting = new Map<string, WaitingEntry>();
 
   function nowIso(): string {
     return ports.clock().toISOString();
@@ -373,6 +390,82 @@ export function createRunEngine(ports: RunPorts): RunEngine {
     ctx.state = 'queued';
     for (const entry of records) ports.emit(entry);
     logger.info({ msg: 'run_queued', runId: ctx.input.runId, branch: ctx.branch });
+  }
+
+  function admissionLimits(): AdmissionLimits {
+    return { maxConcurrency: settings.maxConcurrency, maxPerRepo: settings.maxPerRepo };
+  }
+
+  function activeRefs(): ActiveRunRef[] {
+    const refs: ActiveRunRef[] = [];
+    for (const runId of activeOrder) {
+      const entry = inflight.get(runId);
+      if (entry !== undefined) refs.push({ runId, repoId: entry.ctx.input.repo.id });
+    }
+    return refs;
+  }
+
+  function replan(): void {
+    if (waiting.size === 0) return;
+    const candidates: WaitingRun[] = [];
+    for (const entry of waiting.values()) {
+      candidates.push({
+        runId: entry.ctx.input.runId,
+        repoId: entry.ctx.input.repo.id,
+        createdAt: entry.createdAt,
+      });
+    }
+    const plan = planAdmission(
+      { admit: canAdmitRun },
+      { active: activeRefs(), waiting: candidates, limits: admissionLimits() },
+    );
+    for (const run of plan.admitted) {
+      const entry = waiting.get(run.runId);
+      if (entry === undefined) continue;
+      waiting.delete(run.runId);
+      activeOrder.push(run.runId);
+      logger.info({ msg: 'run_admitted', runId: run.runId, repoId: run.repoId });
+      entry.resolve();
+    }
+  }
+
+  function releaseSlot(ctx: RunContext): void {
+    const index = activeOrder.indexOf(ctx.input.runId);
+    if (index !== -1) activeOrder.splice(index, 1);
+    waiting.delete(ctx.input.runId);
+    replan();
+  }
+
+  async function admission(ctx: RunContext): Promise<void> {
+    const decision = canAdmitRun({
+      repoId: ctx.input.repo.id,
+      active: activeRefs(),
+      limits: admissionLimits(),
+    });
+    if (decision.admitted) {
+      activeOrder.push(ctx.input.runId);
+      return;
+    }
+    const record = store.runs.getRecord(ctx.input.runId);
+    let resolveStart: () => void = () => undefined;
+    const started = new Promise<void>((resolve) => {
+      resolveStart = resolve;
+    });
+    waiting.set(ctx.input.runId, {
+      ctx,
+      createdAt: record === null ? nowIso() : record.createdAt,
+      resolve: () => {
+        resolveStart();
+      },
+    });
+    logger.info({
+      msg: 'run_waiting',
+      runId: ctx.input.runId,
+      repoId: ctx.input.repo.id,
+      active: activeOrder.length,
+      maxConcurrency: settings.maxConcurrency,
+    });
+    await started;
   }
 
   async function prepare(ctx: RunContext): Promise<void> {
@@ -1042,8 +1135,6 @@ export function createRunEngine(ports: RunPorts): RunEngine {
   }
 
   async function runFlow(ctx: RunContext): Promise<RunOutcome> {
-    queue(ctx);
-    if (ctx.cancelled || (await timeoutExpired(ctx))) return cancelledOutcome(ctx);
     await prepare(ctx);
     if (ctx.cancelled || (await timeoutExpired(ctx))) return cancelledOutcome(ctx);
     await runAgentPhase(ctx);
@@ -1094,6 +1185,9 @@ export function createRunEngine(ports: RunPorts): RunEngine {
       const ctx = createContext(input);
       const promise = (async (): Promise<RunOutcome> => {
         try {
+          queue(ctx);
+          await admission(ctx);
+          if (ctx.cancelled || (await timeoutExpired(ctx))) return cancelledOutcome(ctx);
           return await runFlow(ctx);
         } catch (error) {
           try {
@@ -1111,6 +1205,7 @@ export function createRunEngine(ports: RunPorts): RunEngine {
           }
         } finally {
           inflight.delete(input.runId);
+          releaseSlot(ctx);
         }
       })();
       inflight.set(input.runId, { ctx, promise });
@@ -1123,11 +1218,16 @@ export function createRunEngine(ports: RunPorts): RunEngine {
     ): Promise<boolean> {
       const entry = inflight.get(runId);
       if (entry === undefined) return false;
-      return cancelRun(entry.ctx, reason);
+      const parked = waiting.get(runId);
+      if (parked === undefined) return cancelRun(entry.ctx, reason);
+      waiting.delete(runId);
+      const cancelled = await cancelRun(entry.ctx, reason);
+      parked.resolve();
+      return cancelled;
     },
 
     active(): readonly string[] {
-      return [...inflight.keys()];
+      return [...activeOrder];
     },
   };
 }

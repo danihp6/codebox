@@ -31,6 +31,7 @@ describe('public surface', () => {
         'isTickSeconds',
         'nextRoutineFire',
         'nextTickDelay',
+        'planAdmission',
         'planFires',
         'planPause',
         'planResume',

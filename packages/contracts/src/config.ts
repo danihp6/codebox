@@ -121,7 +121,7 @@ export const CONFIG_DEFAULTS: Readonly<Record<string, string | number | boolean 
     CB_WORKSPACE_TTL_HOURS: 168,
     CB_CLONE_DEPTH: 0,
     CB_GIT_HTTP_TIMEOUT_SECONDS: 120,
-    CB_MAX_CONCURRENCY: 2,
+    CB_MAX_CONCURRENCY: 3,
     CB_MAX_CONCURRENCY_PER_REPO: 1,
     CB_RUN_TIMEOUT_SECONDS: 5400,
     CB_DAILY_COST_USD: 10,
@@ -179,6 +179,14 @@ function intField(fallback: number): z.ZodType<number, string | undefined> {
   return z
     .string()
     .regex(/^\d+$/, 'expected a non-negative integer')
+    .default(String(fallback))
+    .transform(Number);
+}
+
+function positiveIntField(fallback: number): z.ZodType<number, string | undefined> {
+  return z
+    .string()
+    .regex(/^[1-9]\d*$/, 'expected a positive integer')
     .default(String(fallback))
     .transform(Number);
 }
@@ -262,8 +270,8 @@ const configFieldSchemas = {
   CB_CLONE_DEPTH: intField(0),
   CB_GIT_HTTP_TIMEOUT_SECONDS: intField(120),
   // §8 Runs, merge and scheduler
-  CB_MAX_CONCURRENCY: intField(2),
-  CB_MAX_CONCURRENCY_PER_REPO: intField(1),
+  CB_MAX_CONCURRENCY: positiveIntField(3),
+  CB_MAX_CONCURRENCY_PER_REPO: positiveIntField(1),
   CB_RUN_TIMEOUT_SECONDS: intField(5400),
   CB_DAILY_COST_USD: usdField(10),
   CB_AUTOMERGE: z.enum(['on', 'off']).default('on'),

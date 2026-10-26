@@ -20,11 +20,13 @@ type-only so `npm test` runs before `npm run build`.
 - `tick.ts` — `planTick`, the claim key and the next-fire preview `planFires`.
 - `validate.ts` — `validateSchedule`: the cron failure code, the zone, or the next fire.
 - `resume.ts` — `planResume` from `now` and `planPause` to a null next fire.
+- `admission.ts` — `planAdmission`, the D15 waiting list in repository-first order.
 - `routines.ts` — the `Schedule` mapping, `planRoutineTick` and `nextRoutineFire` for D38.
 - `index.test.ts` — the frozen surface, the claim key and a deterministic plan.
 - `tick.test.ts` — grace, double tick, paused jobs, no next fire and the preview.
 - `tick-dst.test.ts` — the pinned Madrid DST rows observed through `planTick`.
 - `ordering.test.ts` — `scheduledFor`, `createdAt`, `ownerId` order and the claim limit.
+- `admission.test.ts` — three slots, the fourth waiting, a busy repo skipped and determinism.
 - `validate.test.ts` — every failure code and the next fire on success.
 - `resume.test.ts` — pause, resume from `now`, and the invalid cron or zone.
 - `clock.test.ts` — the pinned tick delay and the configured range.

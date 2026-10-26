@@ -54,6 +54,16 @@ export type {
 export { checkCost, checkRunTimeout } from './limits.js';
 export type { CostGuardCode, CostGuardResult, CostGuardInput, TimeoutCheck } from './limits.js';
 
+// Admission: the D15 global and per-repository caps as a pure rule.
+export { canAdmitRun } from './admission.js';
+export type {
+  ActiveRunRef,
+  AdmissionCode,
+  AdmissionDecision,
+  AdmissionLimits,
+  AdmissionQuery,
+} from './admission.js';
+
 // Usage: the telemetry window and its in-range summary.
 export {
   USAGE_RANGES,

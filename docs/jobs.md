@@ -47,8 +47,12 @@ second definition.
   out keeps its `next_fire_at` for the next tick. Manual runs sort with the current time.
 - **Preview:** `GET /v1/jobs/{id}/next` returns the next five fires after now in the job's
   zone; an invalid cron or an unknown zone previews as an empty list.
-- **Concurrency:** at most `CB_MAX_CONCURRENCY_PER_REPO` (1) and `CB_MAX_CONCURRENCY` (2)
-  runs. A due job that cannot start stays `queued`; it does not fail.
+- **Concurrency:** at most `CB_MAX_CONCURRENCY_PER_REPO` (1) run per repository and
+  `CB_MAX_CONCURRENCY` (3) runs globally; both must be at least 1. A run that cannot start
+  stays `queued`; it does not fail. The rule is `canAdmitRun` in `@codebox/core` and the
+  waiting list is `planAdmission` in `@codebox/scheduler`: the waiting runs are ordered by
+  repository, then `created_at`, then the run id, so two identical ticks admit the same
+  runs. A slot that frees goes to the first waiting run whose repository is free.
 - **Pause:** `enabled=false` removes it from selection; resuming recomputes the next fire from
   now, never from the missed schedule.
 - **Owner:** `packages/scheduler` holds these rules as pure functions over a row plus the tick

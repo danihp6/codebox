@@ -122,7 +122,8 @@ describe('config', () => {
     const config = parseConfig(dev());
     expect(config.CB_BIND).toBe('127.0.0.1:8787');
     expect(config.CB_STATE_DIR).toBe('/var/lib/codebox');
-    expect(config.CB_MAX_CONCURRENCY).toBe(2);
+    expect(config.CB_MAX_CONCURRENCY).toBe(3);
+    expect(config.CB_MAX_CONCURRENCY_PER_REPO).toBe(1);
     expect(config.CB_AUTOMERGE).toBe('on');
     expect(config.CB_MERGE_METHOD).toBe('squash');
     expect(config.CB_DAILY_COST_USD).toBe(10);
@@ -180,6 +181,18 @@ describe('config', () => {
     );
     expect(firstPath(parseError(() => parseConfig(dev({ CB_WORKSPACE_TTL_HOURS: '-1' }))))).toBe(
       'config.CB_WORKSPACE_TTL_HOURS',
+    );
+  });
+
+  it('rejects a zero concurrency', () => {
+    expect(firstPath(parseError(() => parseConfig(dev({ CB_MAX_CONCURRENCY: '0' }))))).toBe(
+      'config.CB_MAX_CONCURRENCY',
+    );
+    expect(
+      firstPath(parseError(() => parseConfig(dev({ CB_MAX_CONCURRENCY_PER_REPO: '0' })))),
+    ).toBe('config.CB_MAX_CONCURRENCY_PER_REPO');
+    expect(() => parseConfig(dev({ CB_MAX_CONCURRENCY: '0' }))).toThrow(
+      /expected a positive integer/,
     );
   });
 

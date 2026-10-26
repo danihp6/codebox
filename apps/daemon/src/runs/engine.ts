@@ -67,6 +67,8 @@ export function createDaemonSettings(context: DaemonContext): RunSettings {
     gateShell: config.CB_GATE_SHELL,
     gateTimeoutSeconds: config.CB_GATE_TIMEOUT_SECONDS,
     runTimeoutSeconds: config.CB_RUN_TIMEOUT_SECONDS,
+    maxConcurrency: config.CB_MAX_CONCURRENCY,
+    maxPerRepo: config.CB_MAX_CONCURRENCY_PER_REPO,
     dailyCostUsd: config.CB_DAILY_COST_USD,
     automerge: config.CB_AUTOMERGE,
     mergeMethod: config.CB_MERGE_METHOD,
