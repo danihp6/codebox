@@ -70,6 +70,9 @@ packages/
   scheduler/         # cron parsing, next-run calculation, queue
   git-provider/      # GitProvider port; GitHub first, GitLab later
   security/          # pairing, device tokens, redaction, request signing
+infra/
+  oci/               # Terraform: cb-vcn, IAM, Vault, cb-backups (the instance stays in ops/oci)
+  aws/               # Terraform: VPC, spot box, IAM, backup bucket (Task-42)
 ops/
   oci/               # launch retry, provisioning, IAM policy, resource inventory
   image/             # Packer template and image build

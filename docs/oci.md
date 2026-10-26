@@ -1,8 +1,10 @@
 # OCI
 
-Codebox runs on one Oracle Cloud instance, provisioned by scripts in `ops/oci/` and launched
-by a retry action extracted from `pkm-randomlike` (D22, D34). Every resource is named `cb-*`,
-and nothing here is read by the daemon at runtime except the instance identity.
+Codebox runs on one Oracle Cloud instance. The static footprint — the network, the two IAM
+policies, the dynamic group, the vault and the bucket — is the Terraform root module in
+[`../infra/oci`](../infra/oci); the instance itself is launched by a retry action in
+[`../ops/oci`](../ops/oci), extracted from `pkm-randomlike` (D22, D34). Every resource is
+named `cb-*`, and nothing here is read by the daemon at runtime except the instance identity.
 
 ## 1. Inventory
 
@@ -18,21 +20,21 @@ and nothing here is read by the daemon at runtime except the instance identity.
 | Block volume (optional) | `cb-workspaces` | 100 GB for worktrees when the boot disk is tight. |
 | CI user | `cb-ci` | API-key-only identity used by Actions. |
 | CI group | `cb-ci` | Group the `cb-ci-policy` policy attaches to. |
-| CI policy | `cb-ci-policy` | Launch, volumes, VNIC/public IP and the network reads the launch needs. |
+| CI policy | `cb-ci-policy` | Launch, volumes, VNIC/public IP, the network reads the launch needs, and the Terraform state object in `cb-backups`. |
 | Instance dynamic group | `cb-instance-dg` | Matches `cb-instance` by compartment + name. |
 | Instance policy | `cb-instance-policy` | Lets the instance read its own secrets in Vault. |
 | Vault | `cb-vault` | Secrets: GitHub App key, session secret, tunnel token, provider keys. |
 | Object Storage bucket | `cb-backups` | Nightly encrypted SQLite dumps, 30 days. |
 | Cloudflare tunnel | `cb-tunnel` | Outbound connector; the only public path. |
 
-Names are contract (D22). A script that creates a resource with another name is a bug, and
-`provision.sh --plan` fails on a mismatch.
+Names are contract (D22). A resource created under another name is a bug, and the `terraform
+test` suite in `infra/oci` plus a `plan` against the tenancy fail on a mismatch.
 
 ## 2. IAM
 
 Two principals, two policies, no overlap.
 
-**`cb-ci` (provisioning, from GitHub Actions):**
+**`cb-ci` (provisioning, launch and Terraform, from GitHub Actions):**
 
 ```
 Allow group cb-ci to manage instances in tenancy
@@ -46,9 +48,14 @@ Allow group cb-ci to use security-lists in tenancy
 Allow group cb-ci to use route-tables in tenancy
 Allow group cb-ci to use internet-gateways in tenancy
 Allow group cb-ci to read instance-images in tenancy
+Allow group cb-ci to read objects in compartment <compartment> where target.bucket.name = 'cb-backups'
+Allow group cb-ci to manage objects in compartment <compartment> where target.bucket.name = 'cb-backups'
 ```
 
-Nothing about Vault, Object Storage or IAM itself.
+The last two statements exist for Terraform and nothing else: the state object
+`infra/oci/terraform.tfstate` and its `.tflock` sibling live in `cb-backups`, so a `terraform
+init`/`plan`/`apply` authenticated as `cb-ci` must read and write them. The grant is narrowed
+to that one bucket, and `cb-ci` still has nothing on Vault, IAM or bucket administration.
 
 **`cb-instance` (runtime, through the instance principal):**
 
@@ -61,55 +68,72 @@ Allow dynamic-group cb-instance-dg to manage objects in compartment <compartment
 The instance never holds an OCI API key. It authenticates with its instance principal, which
 is why the image can be rebuilt without carrying a credential (D20).
 
-## 3. Provisioning order
+## 3. The Terraform module
 
-`ops/oci/provision.sh` is idempotent and ordered:
+[`../infra/oci`](../infra/oci) is one root module with Terraform `>= 1.10.0` and
+`hashicorp/oci` pinned in `.terraform.lock.hcl`. It owns everything in §1 except the instance,
+the boot volume and the block volume, and it is idempotent by construction: a second `apply`
+reports no change.
 
 ```bash
-ops/oci/provision.sh --plan                    # prints the plan; makes no call
-ops/oci/provision.sh --apply                   # creates what is missing, updates nothing else
-ops/oci/provision.sh --apply --with-vault --with-bucket
-ops/oci/provision.sh --destroy --plan          # §9, in reverse
-ops/oci/provision.sh --destroy --apply [--purge]
+terraform -chdir=infra/oci init -backend-config=backend.hcl
+terraform -chdir=infra/oci plan
+terraform -chdir=infra/oci apply
+terraform -chdir=infra/oci destroy   # §9
 ```
 
-1. VCN → IGW → route table → security list → subnet.
-2. Dynamic group and instance policy (needs the compartment and the instance name).
-3. Vault and the secret bundle placeholders (values are written by a human, never by CI).
-4. Bucket `cb-backups` with lifecycle `30 days`.
-5. Nothing about the instance: launching is `launch.sh`'s job, because capacity is the slow,
-   retryable part.
+| Variable | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `tenancy_ocid` | string | required | Tenancy: the home of the dynamic group. |
+| `compartment_ocid` | string | required | Compartment of every resource. |
+| `region` | string | required | e.g. `eu-madrid-1`. |
+| `admin_cidr` | string | required | The operator's `/32`; a `validation` rejects anything else, `0.0.0.0/0` in particular. |
+| `instance_name` | string | `cb-instance` | Display name the dynamic group matches. |
+| `vcn_cidr` | string | `10.0.0.0/16` | |
+| `subnet_cidr` | string | `10.0.1.0/24` | |
+| `vault_name` | string | `cb-vault` | |
+| `bucket_name` | string | `cb-backups` | |
+| `secret_names` | list(string) | the four `cb-*` names | One Vault secret per entry. |
 
-Required variables: `CB_OCI_COMPARTMENT_ID` and `CB_OCI_ADMIN_CIDR`, the admin `/32` the
-security list admits on port 22 — the operator's address, not a repository default. Optional:
-`CB_OCI_SUBNET_ID`, `CB_OCI_VAULT_ID`, `CB_OCI_BUCKET` and `CB_OCI_INSTANCE_NAME` (default
-`cb-instance`). A missing required variable is `error: <VAR> is empty` on stderr and exit 2,
-with no partial plan. The region is not a `CB_*` key: `--apply` and `--destroy` let the CLI
-read `OCI_CLI_REGION`, and `--plan` needs no region at all.
+`terraform.tfvars` (gitignored, loaded automatically) carries the four required values. They
+are the values `launch.sh` reads as `CB_OCI_*`: `CB_OCI_COMPARTMENT_ID` is
+`compartment_ocid`, `CB_OCI_ADMIN_CIDR` is `admin_cidr`, `CB_OCI_INSTANCE_NAME` is
+`instance_name`, and `CB_OCI_SUBNET_ID` is the module's `subnet_id` output. The outputs are
+`vcn_id`, `subnet_id`, `vault_id`, `bucket_name`, `instance_name` and `dynamic_group_id`.
 
-`--plan` is the review artifact. It prints one line per resource, in the order above, as
-`<verb> <kind> <name> …details`: the verb is `create`, `reuse`, `delete` or `terminate`, the
-kind is `vcn`, `igw`, `route-table`, `security-list`, `subnet`, `dynamic-group`, `policy`,
-`vault`, `secret`, `bucket` or `instance`, and the name is always the `cb-*` name from §1 — a
-name that is not `cb-*` is exit 2. It prints the exact CIDRs (`10.0.0.0/16` for `cb-vcn`,
-`10.0.1.0/24` for `cb-subnet`, `0.0.0.0/0` as the route destination), the ingress rule
-`ingress tcp/22 from <CB_OCI_ADMIN_CIDR>`, the OCIDs it already knows from the environment
-(`CB_OCI_COMPARTMENT_ID`, and `CB_OCI_SUBNET_ID` when set), and the literal `-` for every
-value it can only know after creation. It invokes no `oci` binary and makes no network call,
-so it exits 0 on a machine with neither the CLI nor `jq`. `--with-vault` adds `cb-vault` and
-the four secret names `cb-github-app`, `cb-session-secret`, `cb-tunnel-token` and
-`cb-provider-keys`; `--with-bucket` adds `cb-backups`; nothing else changes.
+An `apply` creates, in dependency order:
 
-`--apply` looks every resource up by name inside `CB_OCI_COMPARTMENT_ID` before it creates
-it, so a second run prints `reuse` and calls no `create`. It never deletes, and never updates
-a resource it did not create. `--destroy` walks the same order backwards (§9), terminates
-`cb-instance` with `cb-boot` preserved and never deletes the image, which is the rebuild
-path. The script writes no state — no cache, no lock file, no `.state` directory: the
-tenancy is the state, as §4 requires of the retry.
+1. `cb-vcn` (`10.0.0.0/16`) → `cb-igw` → `cb-rt` (`0.0.0.0/0 → cb-igw`) → `cb-sl` (one
+   ingress, tcp/22 from `admin_cidr`, all egress) → `cb-subnet` (`10.0.1.0/24`, public, on
+   `cb-rt` and `cb-sl`).
+2. `cb-instance-dg`, whose rule is `instance.compartment.id = '<compartment>',
+   instance.display-name = '<instance_name>'`, then `cb-ci-policy` and `cb-instance-policy`
+   with the statements of §2.
+3. `cb-vault` (`DEFAULT`), one AES-256 master key and one secret per `secret_names` entry,
+   each holding the `CHANGE_ME` placeholder. A value is written into Vault by hand, never by
+   the module and never by CI (D20): no secret is in the tree or in the Terraform state.
+4. `cb-backups`, versioning off, with a lifecycle that deletes its objects after 30 days.
+5. Nothing about the instance. Launching stays `launch.sh`'s job because capacity is the
+   slow, retryable part: a `terraform apply` that waited for an A1 slot would hold the whole
+   module for hours. The split is what lets the network, the IAM, the vault and the bucket be
+   applied and destroyed while the capacity wait is open (§4).
 
-`ops/oci/test/provision.test.mjs` runs `--plan` against a fixture `oci` and asserts both the
-names and that the fixture was never called, so the plan cannot quietly start talking to the
-network.
+The offline path needs no tenancy and no credential: `terraform -chdir=infra/oci init
+-backend=false`, then `validate` and `test`. `test` plans the module against a mocked provider
+and asserts the §1 names and CIDRs, the single `/32` ingress, the absence of 80/443 and of a
+`0.0.0.0/0` ingress, the four placeholders, the bucket lifecycle and the two policy names.
+
+State:
+
+- The backend is `s3` against OCI Object Storage's S3-compatible endpoint, with native
+  `use_lockfile` locking, `encrypt = true` and path-style requests. The bucket is
+  `cb-backups` — the one the module creates — and the key is `infra/oci/terraform.tfstate`.
+- `backend.tf` carries the bucket, the key and the switches; the tenancy's Object Storage
+  namespace is not in the tree. `region` and the `endpoints { s3 = ... }` block come from
+  `-backend-config=backend.hcl`, a gitignored copy of `infra/oci/backend.hcl.example`.
+- State credentials are the environment's, `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` as an
+  OCI customer secret key, never a file in the tree. `init -backend=false` needs neither the
+  namespace nor the key, which is why the offline checks run anywhere.
 
 ## 4. The retry action
 
@@ -202,8 +226,8 @@ state.
 
 The network, the A1 instance, the 100 GB boot volume and the bucket all sit inside the Always
 Free allowance. The billable surfaces are a shape above the allowance, extra block storage and
-egress. `provision.sh --plan` prints a warning when a shape or a volume exceeds the free
-tier.
+egress; `terraform plan` in `infra/oci` is the review, and it lists every resource a change
+would add or replace before anything is created.
 
 ## 8. Extraction from `pkm-randomlike` (D34)
 
@@ -213,7 +237,7 @@ What moves, and what does not:
 | --- | --- | --- |
 | `scripts/agent/vm/oci-launch.sh` | `ops/oci/launch.sh` | Prefix `pkm-` → `cb-`, `PKM_*`/`OCI_*` → `CB_OCI_*`, no game paths, tests rewritten. |
 | `.github/workflows/oci-retry.yml` | `.github/workflows/oci-retry.yml` | Chain, brake, shapes and announcement kept; variables renamed. |
-| Inline VCN/IGW/subnet calls | `ops/oci/provision.sh` | Extracted, idempotent, `--plan`. |
+| Inline VCN/IGW/subnet calls | `infra/oci/` | Extracted in this repository as an idempotent shell script under `ops/oci/`, retired when the Terraform module landed; the network, the IAM, the vault and the bucket are `infra/oci` now. |
 | Policy fragments in docs | `ops/oci/policy.md` | Split `cb-ci` and `cb-instance`. |
 | `pkm-agent-driver` service | `ops/vm/systemd/cb-agent.service` | A separate unit and user from the product's `codebox.service` (see `agent-vm.md` §2). |
 
@@ -228,19 +252,28 @@ stale variables.
 ## 9. Teardown
 
 ```bash
-ops/oci/provision.sh --destroy --plan    # what would be deleted
-ops/oci/provision.sh --destroy --apply   # network, bucket, vault policy; keeps the image
+terraform -chdir=infra/oci destroy
 ```
 
-The instance is terminated with its boot volume preserved for one week; `cb-backups` is
-emptied only with an explicit `--purge`, and the image is never deleted by teardown — it is
-the rebuild path.
+`cb-instance` is not in the module, so a destroy never terminates it: brake the retry chain,
+terminate the instance from `launch.sh` or the console, and only then destroy — the VCN cannot
+go while its VNIC exists. The image is not in the module either, so the rebuild path always
+survives, and `cb-boot` is preserved or not by the terminate call, not by Terraform.
+
+`cb-backups` **is** in the module, so a destroy takes it with the network, the policies, the
+dynamic group and the vault. That bucket holds two things worth a thought before the command:
+the nightly dumps (D33) and the Terraform state of this very module. A teardown is therefore a
+full one — copy out what you want to keep (`terraform -chdir=infra/oci state pull >
+cb-oci.tfstate`, `oci os object bulk-download`) — and the final state write has nowhere to go
+once the bucket is gone, so expect Terraform to report it after the resources are already
+deleted. The next `apply` starts from an empty state and rebuilds the same `cb-*` resources.
 
 ## 10. Checks
 
 | Check | Frequency | Fails when |
 | --- | --- | --- |
-| `provision.sh --plan` names | CI, on change | A name is not `cb-*`, a CIDR moved, ingress is wider than `/32`. |
+| `terraform fmt -check -recursive`, `terraform validate`, `terraform test` | On change, by hand until a workflow exists (issue #11) | A name is not `cb-*`, a CIDR moved, ingress is wider than `/32`. |
+| `terraform plan` against the tenancy | Monthly, by hand | A `cb-*` resource drifts from the code, or a name or CIDR moved. |
 | `launch.sh --dry-run` | On change | A required variable is missing or a shape is malformed. |
 | `oci iam policy list` | Monthly, by hand | A policy grants more than §2. |
 | Bucket lifecycle | Monthly | Not `30 days`, or versioning on. |
