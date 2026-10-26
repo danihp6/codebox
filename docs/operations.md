@@ -406,8 +406,13 @@ the keys and `stat` prints the mode, so no command shows a value. If the SSM ses
 `/etc/cloudflared/config.yml`, starts `codebox-opencode` (started, never enabled) and then
 `codebox` and `cloudflared`, and polls `/v1/health` for `--health-timeout` 120 s
 (`ops/vm/README.md` §Commands; `docs/vm-image.md` §5). `/etc/codebox/image.json` is baked by
-`ops/image/scripts/60-service.sh` (mode `0644`, `root:root`) and printed by `cb doctor`
-(`docs/vm-image.md` §9). On this host nothing runs the script at launch —
+`ops/image/scripts/60-service.sh` (mode `0644`, `root:root`; version, commit, build time and the
+`node`, `opencode` and `cloudflared` versions — `docs/vm-image.md` §9). The box proves it with the
+`stat` and `jq` lines below, because `cb doctor` reads no image file: it asks the daemon for
+`/v1/health`, `/v1/providers` and `/v1/telemetry` and prints one line per dependency — `db`,
+`opencode`, `tunnel`, `github`, `disk`, `queue`, `cost` and `backup`
+(`apps/daemon/src/cli/doctor.ts`, `docs/operations.md` §7) — exiting `1` only when one of them
+fails. On this host nothing runs the script at launch —
 `infra/aws/compute.tf` declares no `user_data` — so the operator runs it once over the session;
 that is the one manual step besides the bundles, and the ≤ 5 minute bound starts at `T0`, not at
 launch.
@@ -426,6 +431,7 @@ sudo env CB_INSTANCE_NAME=cb-spot CB_PUBLIC_URL=https://cb.<domain> \
   /usr/local/lib/codebox/cloud-init.sh --instance-id "$INSTANCE_ID"
 T1=$(date -u +%s); echo "first boot took $((T1-T0)) s"
 sudo stat -c '%a %U:%G %n' /etc/codebox/instance.env /etc/cloudflared/config.yml /etc/codebox/image.json
+sudo jq -c '{version, commit, builtAt}' /etc/codebox/image.json
 systemctl status codebox.service cloudflared.service --no-pager
 cb doctor; echo "doctor=$?"
 curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8787/v1/health
@@ -435,18 +441,20 @@ sudo tail -n 1 /var/lib/codebox/first-boot.jsonl
 ```
 
 Expected: `600 root:codebox /etc/codebox/instance.env`,
-`640 root:codebox /etc/cloudflared/config.yml`, `644 root:root /etc/codebox/image.json`; both
-units `active (running)`; `doctor=0` — a `warn` never fails, `docs/operations.md` §7; `200`; `ok`;
-`5`; and a JSON line ending `"result":"ok"`. The `systemctl` and `curl` lines are the only health
-evidence, and the probe never leaves the box.
+`640 root:codebox /etc/cloudflared/config.yml`, `644 root:root /etc/codebox/image.json`; one
+`{"version":…,"commit":…,"builtAt":…}` line from the manifest; both units `active (running)`;
+`doctor=0` on the eight dependency lines — a `warn` never fails, `docs/operations.md` §7; `200`;
+`ok`; `5`; and a JSON line ending `"result":"ok"`. The `systemctl` and `curl` lines are the only
+health evidence, and the probe never leaves the box.
 
 ### 14.5 Tunnel hostname and pairing
 
 The tunnel credentials are rendered from the token at first boot into
 `/etc/cloudflared/config.yml` (`docs/vm-image.md` §5, step 3); the public hostname is attached to
 the tunnel in the Cloudflare dashboard and no origin port is opened (`docs/aws.md` §3, D18); the
-daemon trusts `CB_PUBLIC_URL` and `CB_ALLOWED_ORIGINS` defaults to it (`docs/providers.md` §2);
-Q8 in `docs/open-questions.md` lists everything a hostname change touches.
+daemon trusts `CB_PUBLIC_URL` (`docs/providers.md` §2) and `CB_ALLOWED_ORIGINS`, which defaults to
+it (`docs/providers.md` §4); Q8 in `docs/open-questions.md` lists everything a hostname change
+touches.
 
 In the dashboard: Zero Trust → Networks → Tunnels → the tunnel → Public Hostname → `cb.<domain>` →
 `http://127.0.0.1:8787`. The DNS record stays proxied, and nothing is published on 80 or 443.
@@ -534,7 +542,6 @@ cb run <jobId-A>
 cb run <jobId-B>
 cb run <jobId-C>
 cb status
-cb runs --state running
 ```
 
 ```bash
@@ -545,10 +552,11 @@ sudo journalctl -k --since '-20 min' | grep -ci 'out of memory'
 ```
 
 Expected: `.queue.maxConcurrency` is `3`; one green `npx playwright test --workers=1` inside a
-worktree on the box, with no download; `cb status` prints `3 running, 0 pending, max 3`;
-`cb runs --state running` lists three; `MemAvailable` never below `1024` MiB; the OOM count is
-`0`; and all three runs end `succeeded`. Each job's prompt is the repository's own gate, which
-includes `npx playwright test --workers=1` (`.agent_roles/qa.md`).
+worktree on the box, with no download; `cb status` prints `3 running, 0 pending, max 3` on its
+`queue` row and names the three run ids, comma-separated, on its `running` row — that row lists at
+most five, so three fit; `MemAvailable` never below `1024` MiB; the OOM count is `0`; and all three
+runs end `succeeded`. Each job's prompt is the repository's own gate, which includes
+`npx playwright test --workers=1` (`.agent_roles/qa.md`).
 
 ### 14.8 Cost
 
@@ -597,6 +605,6 @@ so none of these is measured by CI:
 | Criterion | Command | Bound | Recorded in | Note |
 | --- | --- | --- | --- | --- |
 | boot to `/v1/health` | `T0`/`T1` around `cloud-init.sh`, then `curl … /v1/health` | `T1-T0 ≤ 300` s | `first-boot.jsonl` last line | operator-run; not measured by CI |
-| three runs, Playwright green, no OOM | `cb runs --state running`, `free -m`, `journalctl -k` | 3 running, `MemAvailable ≥ 1024` MiB, 0 OOM | the runs' gates and `journalctl` | operator-run; not measured by CI |
+| three runs, Playwright green, no OOM | `cb status`, `free -m`, `journalctl -k` | 3 running, `MemAvailable ≥ 1024` MiB, 0 OOM | the runs' gates and `journalctl` | operator-run; not measured by CI |
 | rebuilt box restores the newest dump | `restore.sh --latest`, then the `jobs/chat_messages` counts | equal counts, same `cb jobs` | the restore output | operator-run; not measured by CI |
 | monthly spot cost | `describe-spot-price-history` × 730 | `≤ budget_limit_usd` | `docs/aws.md` §10.1 | operator-run; not measured by CI |
