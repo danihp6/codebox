@@ -12,6 +12,7 @@ instance its identity and its secrets at first boot. Nothing secret is ever bake
 | Runtime | Node 24 LTS from the official arm64 tarball, `npm`, `corepack`. |
 | Tools | `git`, `gh`, `curl`, `jq`, `age`, `unzip`, `build-essential`, `python3`, `sqlite3`. |
 | Agent | `opencode` pinned to the tested version. |
+| Browser | Playwright's pinned Chromium plus its apt dependencies under `/opt/ms-playwright`, world-readable by the `codebox` user, with no run-time download. |
 | Edge | `cloudflared` from Cloudflare's apt repository. |
 | Service user | `codebox` (system, no shell login, home `/var/lib/codebox`). |
 | Units | `codebox.service`, `codebox-opencode.service`, `cloudflared.service`, and the nightly `codebox-backup.service` behind `codebox-backup.timer`. |
@@ -36,6 +37,7 @@ ops/image/
     20-node.sh             # Node 24 + corepack, pinned and checksum-verified
     30-tools.sh            # git, gh, age, sqlite3, jq
     40-opencode.sh         # pinned binary + version check
+    45-browser.sh          # pinned Playwright Chromium, no run-time download
     50-cloudflared.sh      # repo, package, no token
     60-service.sh          # user, directories, units, host commands, image.json
     70-harden.sh           # sshd, fail2ban, unattended-upgrades, sysctl
@@ -74,6 +76,8 @@ Build time is ~15 minutes. A build that fails `90-verify.sh` produces no image.
 
 - `node --version` is 24.x; `npm --version` works; `corepack` is present.
 - `git`, `gh`, `sqlite3`, `age`, `jq`, `cloudflared`, `opencode` answer `--version`.
+- The Playwright Chromium is present at its installed revision under `/opt/ms-playwright`,
+  `ldd` reports no `not found`, and one bounded headless launch exits 0.
 - `systemctl is-enabled` reports the five units; `systemd-analyze verify` is clean.
 - The `codebox` user exists, has no password and cannot log in.
 - `/opt/codebox` is absent or empty (the app is installed from the artifact, not baked).
@@ -160,6 +164,9 @@ Two independent axes:
 ## 9. Image hygiene
 
 - `apt-get clean`, no `/var/lib/apt/lists`, no compiler cache, no npm cache in the image.
+- No browser cache lives under `/root/.cache`: Playwright installs under `/opt/ms-playwright`
+  at build time, `PLAYWRIGHT_BROWSERS_PATH` is set system-wide in `/etc/environment`, and the
+  tree is `root:root` but readable by `codebox`, so a test run downloads nothing.
 - Journald capped at 200 MB; the app's own logs live in `/var/lib/codebox/logs`.
 - The image carries a build manifest at `/etc/codebox/image.json`: version, commit, build time,
   `node`, `opencode` and `cloudflared`. `cb doctor` prints it.

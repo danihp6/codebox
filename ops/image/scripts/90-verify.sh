@@ -18,7 +18,7 @@ else
 fi
 
 usage_text='usage: 90-verify.sh [--root DIR] [--only CHECK] [--help]
-checks: runtime tools units user layout secrets image   (default: all)'
+checks: runtime tools units user layout secrets image browser   (default: all)'
 
 only=all
 
@@ -44,7 +44,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-checks=(runtime tools units user layout secrets image)
+checks=(runtime tools units user layout secrets image browser)
 case " ${checks[*]} " in
   *" $only "*) ;;
   *) printf '%s\n' "$usage_text" >&2; die 2 "$only is not a check" ;;
@@ -200,6 +200,47 @@ check_image() {
     done <"$file"
   done
   printf 'ok image\n'
+}
+
+check_browser() {
+  local dir file revision binary library
+  dir=$(rooted /opt/ms-playwright)
+  if [ ! -d "$dir" ]; then
+    printf 'fail browser %s is missing\n' "$dir"
+    return 1
+  fi
+  file=$(rooted /etc/environment)
+  if [ ! -f "$file" ] || ! grep -qx 'PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright' "$file"; then
+    printf 'fail browser %s does not set PLAYWRIGHT_BROWSERS_PATH\n' "$file"
+    return 1
+  fi
+  revision=$(find "$dir" -mindepth 1 -maxdepth 1 -type d -name 'chromium-*' -printf '%f\n' \
+    2>/dev/null | sort -V | tail -n 1 || true)
+  if [ -z "$revision" ]; then
+    printf 'fail browser no chromium revision under %s\n' "$dir"
+    return 1
+  fi
+  binary=$(find "$dir/$revision" -maxdepth 3 -type f -name chrome 2>/dev/null | sort -V |
+    tail -n 1 || true)
+  if [ -z "$binary" ]; then
+    printf 'fail browser no chrome binary under %s\n' "$dir/$revision"
+    return 1
+  fi
+  if [ ! -x "$binary" ]; then
+    printf 'fail browser %s is not executable\n' "$binary"
+    return 1
+  fi
+  library=$(ldd "$binary" 2>/dev/null | awk '/not found/ {print $1; exit}' || true)
+  if [ -n "$library" ]; then
+    printf 'fail browser %s needs %s\n' "$binary" "$library"
+    return 1
+  fi
+  if ! timeout 60 "$binary" --headless=new --no-sandbox --disable-dev-shm-usage \
+    --dump-dom about:blank >/dev/null 2>&1; then
+    printf 'fail browser headless launch failed\n'
+    return 1
+  fi
+  printf 'ok browser\n'
 }
 
 failed=0

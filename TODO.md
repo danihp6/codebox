@@ -633,7 +633,7 @@ the app or the API.
       credential variable; `[live]` a build (after Task-39 merges) produces an arm64 AMI
       whose `/etc/codebox/image.json` matches the OCI image built from the same commit.
 
-- [ ] **[Task-41]** A browser in the image. The e2e gate and the app's own checks need
+- [x] **[Task-41]** A browser in the image. The e2e gate and the app's own checks need
       Chromium: install Playwright's pinned browser with its apt dependencies, system-wide
       and read-only for `codebox`, under `PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright`, with
       no download at run time. `90-verify.sh` proves the binary, the shared libraries and one

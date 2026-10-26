@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-41, browser in the image)
+
+- `ops/image/scripts/45-browser.sh` installs Playwright's pinned Chromium (1.64.1) with its
+  apt dependencies under `/opt/ms-playwright`, readable by `codebox`, with no run-time
+  download and nothing left under `/root/.cache`.
+- `90-verify.sh` gains a `browser` check — the installed revision, an `ldd`-clean binary and
+  one bounded headless launch — so a broken browser fails the build, not the first run.
+- `ops/vm/test/verify.test.mjs` covers the missing-browser, live-stub and failed-launch
+  paths against a stub root.
+- `[live]` — `90-verify.sh --only browser` plus an offline `npx playwright test` on the built
+  image — is measured on the box; an `agent-review` issue carries it.
+
 ### Added — 2026-10-26 (Task-40, second builder: AWS)
 
 - The Packer template gains an `amazon-ebs` source beside `oracle-oci` in one build block, so
