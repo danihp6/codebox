@@ -6,6 +6,26 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-39, provider-neutral first boot)
+
+- `ops/vm/cloud-init.sh` reads the four secret bundles from `CB_SECRETS_FILE`
+  (`/etc/codebox/secret-bundles.json`, `0600`, written by the operator) when it exists and from
+  OCI Vault through the instance principal otherwise; a missing key is exit 2 with step
+  `secrets` and no `instance.env` written, and the file source needs neither `oci` nor a Vault
+  region.
+- The hostname comes from `--instance-id`, `CB_INSTANCE_ID` or the metadata service — the OCI
+  bearer probe first, then the AWS IMDSv2 handshake — so the same image names itself on a host
+  with no OCI grant.
+- The file source, the missing key, `CB_INSTANCE_ID` and the IMDSv2 probe have their own cases
+  beside the Vault ones; the second-boot idempotency and no-echo assertions still hold.
+
+### Changed — 2026-10-26 (roadmap, host track)
+
+- `TODO.md` gains Batches 10–13 (Tasks 39–46): provider-neutral image, `infra/aws` CDK spot
+  host, S3 backups, concurrency three, host-neutral docs and the measured bring-up. The host
+  track is pulled ahead of Batches 7–9, because OCI capacity has no date and the box cannot be
+  deployed until it lands.
+
 ### Added — 2026-10-25 (Task-37, instance liveness)
 
 - `ops/vm/keepalive.sh` samples `/proc` twice a second apart, appends one JSON line to

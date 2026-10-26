@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 
 # First boot of a launched instance: gives it its identity and its secrets without baking
-# either. Every secret comes from OCI Vault through the instance principal, is written once
-# and is never echoed; a second boot rewrites the same bytes.
+# either. The secret bundles come from the host's own store — OCI Vault through the instance
+# principal on OCI, or a root-only JSON file the operator drops on any other host — and are
+# written once and never echoed; a second boot rewrites the same bytes.
 
 set -euo pipefail
 
@@ -54,18 +55,40 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-region=${CB_VAULT_REGION:-${OCI_CLI_REGION:-}}
-[ -n "$region" ] || die 2 "CB_VAULT_REGION is empty"
 instance_name=${CB_INSTANCE_NAME:-cb-instance}
-need CB_PUBLIC_URL CB_VAULT_GITHUB_APP_SECRET_OCID CB_VAULT_SESSION_SECRET_OCID \
-  CB_VAULT_TUNNEL_TOKEN_OCID CB_VAULT_PROVIDER_KEYS_OCID
+# Precedence: a secret bundle file on the host wins over the provider store, so the same image
+# boots on a host whose identity has no Vault grant.
+secret_bundles=${CB_SECRETS_FILE:-/etc/codebox/secret-bundles.json}
+need CB_PUBLIC_URL
 [[ "$health_timeout" =~ ^[0-9]+$ ]] || die 2 "health-timeout is not a number"
 need_bin base64 node
 
-if [ -z "$instance_id" ]; then
+# The instance id names the host. The flag wins, then CB_INSTANCE_ID, then the provider's
+# metadata service: OCI answers to an Oracle bearer header, AWS to an IMDSv2 token.
+metadata_instance_id() {
+  local id token
   need_bin curl
-  instance_id=$(curl -fsS -H 'Authorization: Bearer Oracle' \
-    http://169.254.169.254/opc/v2/instance/id) || die 2 "cannot read the instance id"
+  id=$(curl -fsS --max-time 2 -H 'Authorization: Bearer Oracle' \
+    http://169.254.169.254/opc/v2/instance/id || true)
+  if [ -n "$id" ]; then
+    printf '%s' "$id"
+    return 0
+  fi
+  token=$(curl -fsS --max-time 2 -X PUT \
+    -H 'X-aws-ec2-metadata-token-ttl-seconds: 60' \
+    http://169.254.169.254/latest/api/token || true)
+  [ -n "$token" ] || return 1
+  id=$(curl -fsS --max-time 2 -H "X-aws-ec2-metadata-token: $token" \
+    http://169.254.169.254/latest/meta-data/instance-id || true)
+  [ -n "$id" ] || return 1
+  printf '%s' "$id"
+}
+
+if [ -z "$instance_id" ]; then
+  instance_id=${CB_INSTANCE_ID:-}
+fi
+if [ -z "$instance_id" ]; then
+  instance_id=$(metadata_instance_id) || die 2 "cannot read the instance id"
 fi
 lowered=${instance_id,,}
 hostname="cb-${lowered: -8}"
@@ -138,9 +161,8 @@ fi
 install -m 0644 "$tmp/hosts" "$(rooted /etc/hosts)"
 log "hostname $hostname"
 
-current_step=vault
-failure_message="cannot read the secret bundle"
-need_bin oci
+current_step=secrets
+failure_message="cannot read the secret bundles"
 read_secret() {
   local ocid=$1 encoded
   encoded=$(oci secrets secret-bundle get --region "$region" --secret-id "$ocid" \
@@ -148,11 +170,61 @@ read_secret() {
   printf '%s' "$encoded" | base64 -d
 }
 
-github_key=$(read_secret "$CB_VAULT_GITHUB_APP_SECRET_OCID")
-session_secret=$(read_secret "$CB_VAULT_SESSION_SECRET_OCID")
-tunnel_token=$(read_secret "$CB_VAULT_TUNNEL_TOKEN_OCID")
-provider_keys=$(read_secret "$CB_VAULT_PROVIDER_KEYS_OCID")
-provider_keys=$(printf '%s' "$provider_keys" | sed -e 's/\r$//' -e '/^[[:space:]]*$/d')
+# Parses the operator's JSON into the four values, each in its own 0600 file inside the
+# private temporary directory, so a bad bundle leaves no partial environment behind.
+read_secrets_file() {
+  local path=$1
+  CB_SECRETS_PATH=$path CB_SECRETS_DIR=$tmp node --input-type=module -e '
+    import { readFileSync, writeFileSync } from "node:fs";
+    import { join } from "node:path";
+    const required = {
+      githubAppPrivateKeyBase64: "github-key",
+      sessionSecret: "session-secret",
+      tunnelToken: "tunnel-token",
+    };
+    let bundles;
+    try {
+      bundles = JSON.parse(readFileSync(process.env.CB_SECRETS_PATH, "utf8"));
+    } catch (error) {
+      process.stderr.write(`cannot parse the secret bundle file: ${error.message}\n`);
+      process.exit(1);
+    }
+    for (const [key, name] of Object.entries(required)) {
+      const value = bundles?.[key];
+      if (typeof value !== "string" || value === "") {
+        process.stderr.write(`the secret bundle file has no ${key}\n`);
+        process.exit(1);
+      }
+      writeFileSync(join(process.env.CB_SECRETS_DIR, name), value, { mode: 0o600 });
+    }
+    const providerKeys = bundles.providerKeys ?? "";
+    if (typeof providerKeys !== "string") {
+      process.stderr.write("the secret bundle file has a non-string providerKeys\n");
+      process.exit(1);
+    }
+    writeFileSync(join(process.env.CB_SECRETS_DIR, "provider-keys"), providerKeys, { mode: 0o600 });
+  ' || fail_step 2 "cannot read the secret bundles"
+  github_key=$(cat "$tmp/github-key")
+  session_secret=$(cat "$tmp/session-secret")
+  tunnel_token=$(cat "$tmp/tunnel-token")
+  provider_keys=$(sed -e 's/\r$//' -e '/^[[:space:]]*$/d' "$tmp/provider-keys")
+}
+
+bundles_path=$(rooted "$secret_bundles")
+if [ -f "$bundles_path" ]; then
+  read_secrets_file "$bundles_path"
+else
+  region=${CB_VAULT_REGION:-${OCI_CLI_REGION:-}}
+  [ -n "$region" ] || die 2 "CB_VAULT_REGION is empty"
+  need CB_VAULT_GITHUB_APP_SECRET_OCID CB_VAULT_SESSION_SECRET_OCID \
+    CB_VAULT_TUNNEL_TOKEN_OCID CB_VAULT_PROVIDER_KEYS_OCID
+  need_bin oci
+  github_key=$(read_secret "$CB_VAULT_GITHUB_APP_SECRET_OCID")
+  session_secret=$(read_secret "$CB_VAULT_SESSION_SECRET_OCID")
+  tunnel_token=$(read_secret "$CB_VAULT_TUNNEL_TOKEN_OCID")
+  provider_keys=$(read_secret "$CB_VAULT_PROVIDER_KEYS_OCID" |
+    sed -e 's/\r$//' -e '/^[[:space:]]*$/d')
+fi
 
 current_step=tunnel
 failure_message="cannot render the tunnel configuration"
