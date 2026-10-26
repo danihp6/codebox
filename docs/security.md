@@ -9,13 +9,13 @@ which control answers each risk. It describes the design; Batch 7 proves it.
 
 | Asset | Why it matters | Where it lives |
 | --- | --- | --- |
-| GitHub credential | Can write every allowlisted repository | `/etc/codebox/instance.env`, rendered from Vault |
+| GitHub credential | Can write every allowlisted repository | `/etc/codebox/instance.env`, rendered from the host's secret store: the bundles file, or OCI Vault on OCI |
 | Model provider keys | Spend money, leak prompts | Daemon env; allowlisted into OpenCode only |
 | Device refresh tokens | Command the box | Hashed in SQLite; plaintext only in the OS keystore |
 | Session secret | Mints access tokens | `instance.env` |
 | Tunnel token | Publishes the daemon | `instance.env` |
 | Source code and prompts | Private, possibly sensitive | Worktrees, SQLite, logs |
-| The VM itself | Hosts everything above | OCI tenancy |
+| The VM itself | Hosts everything above | One host: an OCI tenancy or an AWS account (D42) |
 
 ## 2. Adversaries
 
@@ -37,7 +37,8 @@ VM, or multi-tenant isolation (there are no tenants).
 - The daemon binds `127.0.0.1:8787`. `CB_BIND` on a non-loopback address in production is a
   startup failure, not a warning.
 - **Cloudflare Tunnel** is the only public path; `cloudflared` is an outbound connection
-  managed by systemd. No 80/443 is opened in the OCI security list.
+  managed by systemd. No 80/443 is opened in the OCI security list (`cb-sl`) or in the AWS
+  security group (`codebox-sg`); the resource names are in `docs/oci.md` §1 and `docs/aws.md` §1.
 - **SSH** is the only other door, restricted to the admin address (`/32`), key-only, no
   password, no root login.
 - **Cloudflare Access** is an outer layer, not the auth: the daemon verifies the Access JWT
@@ -156,9 +157,11 @@ own rule keep `main` for merges.
 
 - No secret in the repository, the image, a log, a prompt or a push payload. A commit that
   contains one is a release blocker.
-- Production secrets come from **OCI Vault** through the instance principal at boot, written
-  to `/etc/codebox/instance.env` (`0600`, `root:codebox`) and read by systemd. The dev
-  fallback is a local `.env` outside the repo.
+- Secrets come from the host's own store at first boot: `/etc/codebox/secret-bundles.json`
+  (`0600`, operator-written) when the host has it, and OCI Vault through the OCI instance
+  principal on OCI otherwise. Either way they are written to `/etc/codebox/instance.env`
+  (`0600`, `root:codebox`) and read by systemd. The dev fallback is a local `.env` outside the
+  repo.
 - Logs are structured JSON and pass through the redactor: keys matching `token`, `secret`,
   `password`, `key`, `authorization`, `cookie`, `private` and the provider key names are
   replaced with `[redacted]`. The redactor never mutates its input and is tested with a
@@ -172,9 +175,9 @@ own rule keep `main` for merges.
 
 | Data | At rest | Retention |
 | --- | --- | --- |
-| SQLite | On the encrypted OCI boot volume; file mode `0600` | Runs 90 d, events 14 d, chat 90 d (D28) |
+| SQLite | On the host's encrypted boot volume (`cb-boot` on OCI, the 100 GB `gp3` volume on AWS); file mode `0600` | Runs 90 d, events 14 d, chat 90 d (D28) |
 | Worktrees | Disk; removed after 168 h | Branch stays on GitHub |
-| Backups | age-encrypted in OCI Object Storage, 30 daily copies | 30 d |
+| Backups | age-encrypted in the host's object store (`cb-backups` on OCI, `s3://cb-codebox-backups` on AWS), 30 daily copies | 30 d |
 | Logs | journald + `logs/`, redacted | 30 d |
 | Prompts | Stored with the run; truncated tool output | 90 d with the run |
 
@@ -198,7 +201,7 @@ a file's contents, or a provider response body.
 | Auto-merge ships a bad change | The owner chose autonomy (D11) | G1–G8, protected paths, probation, revert, brake |
 | A poisoned repo steers the agent | The agent must read the repo | Envelope, deny `webfetch`, diff budget, review issue |
 | The phone is stolen unlocked | Convenience | OS lock, biometric gate, short tokens, revoke |
-| The VM is reclaimed when idle | OCI Always Free rule | Backups, reproducible image, repo as source of truth |
+| The VM is reclaimed when idle | OCI Always Free rule, and an AWS spot box is reclaimed with two minutes' notice | Backups, reproducible image, repo as source of truth |
 | A dependency compromise | Build needs packages | Lockfile, audit, no install scripts without a decision |
 | Model provider logs prompts | External inference | Choose the provider deliberately; no secret in a prompt |
 

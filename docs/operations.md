@@ -39,10 +39,12 @@ daemon that does not answer within `--health-timeout` puts `current` back on the
 release (exit 4). Migrations are **not** applied here: the daemon runs them at boot
 (`openStore`). No secret is read or written by the installer.
 
-First boot (cloud-init, `docs/vm-image.md`) writes `/etc/codebox/instance.env` from Vault,
-sets the hostname and the instance name, then starts the units — `codebox-opencode.service` is
-started, not enabled, because the daemon may own that child. The daemon fails fast if a
-required key is missing, naming the key and never its value.
+First boot (cloud-init, `docs/vm-image.md`) writes `/etc/codebox/instance.env` from
+`/etc/codebox/secret-bundles.json` when the operator delivered that file, and from OCI Vault
+on OCI when it is absent; it sets the hostname and the instance name, then starts the units —
+`codebox-opencode.service` is started, not enabled, because the daemon may own that child. The
+daemon fails fast if a required key is missing, naming the key and never its value. The AWS
+spot host runs the same first boot; its stack is in `docs/aws.md`.
 
 ## 3. Pair the first device
 
@@ -182,7 +184,7 @@ the installation, or prune.
 
 ### 10.5 The instance vanished
 
-Always Free compute can be reclaimed after a week of idleness. Launch from the image
+OCI Always Free compute can be reclaimed after a week of idleness. Launch from the image
 (`ops/oci/launch.sh`), restore the last backup, re-point the tunnel, pair the device. The
 repositories are on GitHub; the state is in the backup. Target RTO 45 minutes.
 

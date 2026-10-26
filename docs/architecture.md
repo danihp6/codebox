@@ -16,7 +16,7 @@ flowchart TB
     TUN[Tunnel<br/>cb.example.com]
     ACC[Access policy<br/>owner email / service token]
   end
-  subgraph OCI["OCI VM — Ubuntu 24.04 arm64"]
+  subgraph HOST["Host VM — Ubuntu 24.04 arm64 (OCI or AWS)"]
     subgraph Daemon["cbd (systemd, unprivileged user codebox)"]
       API[HTTP + SSE API]
       AUTH[Pairing & device tokens]
@@ -31,11 +31,13 @@ flowchart TB
     OC["opencode serve<br/>127.0.0.1:4096"]
     GIT[(bare clones + worktrees)]
   end
+  SECRETS[(Host secret store<br/>bundles file first, Vault on OCI)]
   GHUB[GitHub<br/>repos · PRs · checks]
   MODEL[Model providers]
 
   APP -->|HTTPS + SSE| TUN --> ACC --> API
   CLI -->|SSH tunnel| API
+  HOST -->|first boot| SECRETS
   API --> AUTH
   API --> SCHED
   API --> RUN
@@ -307,22 +309,20 @@ event, not raised as a notification storm.
 
 ```mermaid
 flowchart LR
-  subgraph OCI["OCI tenancy — home region"]
-    subgraph VCN["cb-vcn 10.0.0.0/16"]
-      SL["cb-sl: ingress 22 from admin/32 only"]
-      SUB["cb-subnet 10.0.1.0/24"]
-      VM["cb-instance<br/>A1.Flex 2/12 or 4/24<br/>Ubuntu 24.04 arm64"]
-      BV["cb-boot 100 GB"]
-      WV["cb-workspaces 100 GB (optional)"]
-    end
-    VLT["cb-vault"]
-    OBJ["cb-backups"]
+  subgraph HOST["Host — one VM, OCI or AWS"]
+    SL["Security list / security group<br/>ingress 22 from admin/32 only"]
+    SUB["Subnet in the host's VCN or VPC"]
+    VM["The instance<br/>arm64, Ubuntu 24.04"]
+    BV["Boot volume 100 GB"]
+    WV["Optional workspaces volume 100 GB"]
   end
+  SEC["Secret store: bundles file first, or OCI Vault"]
+  OBJ["Object store: nightly encrypted dumps"]
   CF["Cloudflare Tunnel + Access"]
   APP["Hybrid app"]
 
   APP --> CF --> VM
-  VM --> VLT
+  VM --> SEC
   VM --> OBJ
   VM --- BV
   VM --- WV
@@ -330,6 +330,14 @@ flowchart LR
 
 - **No inbound port** except 22 from the admin address (D18). Cloudflare Tunnel is an
   outbound connection from `cloudflared`.
+- **Names are per host.** On OCI: `cb-vcn`, `cb-subnet`, `cb-sl`, `cb-instance`, `cb-boot`,
+  `cb-vault`, `cb-backups`, and the instance is launched by `ops/oci/launch.sh` rather than
+  Terraform. On AWS: `codebox-vpc`, `codebox-subnet`, `codebox-sg`, `codebox-spot`,
+  `cb-codebox-backups`, all created by the `infra/aws` stack. The inventories are
+  `docs/oci.md` §1 and `docs/aws.md` §1; this document does not repeat them.
+- **One tunnel, one object store.** `cloudflared` is the only public path on either host, and
+  the nightly dump goes to that host's bucket: `cb-backups` on OCI, `s3://cb-codebox-backups`
+  on AWS (D33).
 - **Two disks**: boot (image + app + state) and an optional block volume for worktrees. If
   only the 100 GB boot volume exists, worktrees live under `/srv` on it and retention is
   tighter.
