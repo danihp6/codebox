@@ -665,7 +665,7 @@ is asked to hold three repositories at once.
       keeps the local archive; `[unit]` repeated notices run one backup, not two; `[live]` a
       simulated interruption leaves a dump that restores on a fresh box.
 
-- [ ] **[Task-44]** Concurrency three. Raise `CB_MAX_CONCURRENCY` to 3 (per repo stays 1) and
+- [x] **[Task-44]** Concurrency three. Raise `CB_MAX_CONCURRENCY` to 3 (per repo stays 1) and
       implement the admission the docs promise: a pure rule in `packages/core`, the waiting
       list in `packages/scheduler`, and the daemon creating at most three runs while the
       fourth stays `queued`, in repository order. Amend D15 with the measured sizing.

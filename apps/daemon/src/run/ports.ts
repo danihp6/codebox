@@ -11,6 +11,8 @@ export interface RunSettings {
   readonly gateShell: string;
   readonly gateTimeoutSeconds: number;
   readonly runTimeoutSeconds: number;
+  readonly maxConcurrency: number;
+  readonly maxPerRepo: number;
   readonly dailyCostUsd: number;
   readonly automerge: 'on' | 'off';
   readonly mergeMethod: 'squash' | 'merge';
@@ -86,6 +88,7 @@ export interface RunOutcome {
 export interface RunEngine {
   start(input: RunStartInput): Promise<RunOutcome>;
   cancel(runId: string, reason?: 'operator' | 'timeout' | 'cost_cap_reached'): Promise<boolean>;
+  /** The ids of the runs whose flow is running, in start order; a waiting run is not active. */
   active(): readonly string[];
 }
 

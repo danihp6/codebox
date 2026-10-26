@@ -121,8 +121,8 @@ explicit API call; a job cannot point at an arbitrary URL.
 
 | Key | Default | Meaning |
 | --- | --- | --- |
-| `CB_MAX_CONCURRENCY` | `2` | Global concurrent runs. |
-| `CB_MAX_CONCURRENCY_PER_REPO` | `1` | Per-repo concurrent runs. |
+| `CB_MAX_CONCURRENCY` | `3` | Global concurrent runs; `0` is rejected. |
+| `CB_MAX_CONCURRENCY_PER_REPO` | `1` | Per-repo concurrent runs; `0` is rejected. |
 | `CB_RUN_TIMEOUT_SECONDS` | `5400` | Hard run timeout. |
 | `CB_DAILY_COST_USD` | `10` | Cost cap per UTC day; `0` disables the cap (not recommended). |
 | `CB_AUTOMERGE` | `on` | Global kill switch. `off` leaves every PR open. |

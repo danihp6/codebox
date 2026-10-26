@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-26 (Task-44, concurrency three)
+
+- `CB_MAX_CONCURRENCY` defaults to 3 (per repository stays 1) and both keys reject 0 with a
+  `ContractParseError` at boot; the count of config keys is unchanged.
+- `canAdmitRun` in `@codebox/core` is the pure admission rule (`repo_busy` before
+  `slots_full`); `planAdmission` in `@codebox/scheduler` orders the waiting list by repository,
+  then `created_at`, then run id. The run engine consults them on start and on every
+  completion, so the fourth run stays `queued` (never `failed`), a freed slot goes to the
+  first waiting run whose repository is free, and a waiting run is cancellable.
+- D15, the `docs/jobs.md` concurrency bullet and the `docs/providers.md` rows carry the new
+  numbers; the daemon now links `@codebox/scheduler`.
+- `[live]` — three real repositories with Playwright at once and no out-of-memory kill — is
+  measured on the spot box; an `agent-review` issue carries it.
+
 ### Added — 2026-10-26 (Task-43, durable backups off the host)
 
 - `backup.sh --upload` PUTs the age-encrypted dump to any S3-compatible target named by

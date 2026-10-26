@@ -20,7 +20,7 @@ these IDs.
 | **D12** | Auto-merge requires all of: local gate exit 0; GitHub required checks green; PR mergeable and base unchanged; diff within budget; no protected path; no `do-not-merge` label; repo policy `auto`; global `CB_AUTOMERGE=on`. Otherwise the PR stays open and the owner is notified. | A single unmet condition fails closed. The list is duplicated in `docs/jobs.md` and tested. |
 | **D13** | Scheduling uses **5-field cron + IANA timezone**, DST-safe. A missed fire runs once if within `CB_MISFIRE_GRACE_SECONDS` (default 900), otherwise it is skipped and logged. | Predictable, no custom DSL, no silent double-runs. |
 | **D14** | Run lifecycle: `queued → preparing → running → gating → pr_open → merging → succeeded`; terminal alternatives `failed`, `cancelled`. | Every transition is persisted as an event, so the app and the audit log agree. |
-| **D15** | Concurrency: **1 run per repository, 2 globally** (configurable down, not up without a decision). | Protects the 2 OCPU box, avoids two agents fighting over one repo, keeps costs bounded. |
+| **D15** | Concurrency: **1 run per repository, 3 globally** (configurable down, never up without a decision); both settings must be at least 1. | Sized for the 8 vCPU / 16 GB spot floor: three repositories with their agent, build and Chromium run together and the fourth waits in `queued`; two agents never fight over one repository. The measurement that confirms the sizing is the bring-up of Task-46, recorded in `docs/aws.md`. |
 | **D16** | API is **REST `/v1` + SSE**, OpenAPI 3.1, cursor pagination, idempotency keys on mutations that start work. | SSE survives Cloudflare and mobile networks better than WebSockets for one-way events; REST is easy to test and generate clients from. |
 | **D17** | App auth is **device pairing**: one-time code → device keypair → short-lived access token + refresh. Cloudflare Access is an outer layer, not the only one. | A stolen tunnel URL is not enough to command the box; a lost phone can be revoked individually. |
 | **D18** | Exposure is **Cloudflare Tunnel only**; the daemon binds loopback. SSH is the only other door, restricted to the admin address. No 80/443 inbound. | Matches the OCI security model already proven in `pkm-randomlike`; removes certificate management and port scanning. |
@@ -73,7 +73,7 @@ documents that cite it.
 | `CB_STATE_DIR` | `/var/lib/codebox` |
 | `CB_REPO_ROOT` | `/srv/codebox/repos` |
 | `CB_WORKSPACE_ROOT` | `/srv/codebox/worktrees` |
-| `CB_MAX_CONCURRENCY` | `2` |
+| `CB_MAX_CONCURRENCY` | `3` |
 | `CB_MAX_CONCURRENCY_PER_REPO` | `1` |
 | `CB_AUTOMERGE` | `on` |
 | `CB_MERGE_METHOD` | `squash` |

@@ -28,10 +28,11 @@ import { runGate } from '../gate/run-gate.js';
 import { MAX_SECRET_SCAN_BYTES } from '../gate/secret-scan.js';
 import { createLogger } from '../logger.js';
 import { createRunEngine } from './engine.js';
-import type { RunPorts, RunSettings, RunStartInput } from './ports.js';
+import type { RunOutcome, RunPorts, RunSettings, RunStartInput } from './ports.js';
 
 const NOW = Date.parse('2026-10-25T10:00:00.000Z');
 const REPO_ID = 'repo_engine01';
+const SECOND_REPO_ID = 'repo_engine02';
 const RUN_ID = 'run_engine0001';
 const JOB_ID = 'job_engine0001';
 const BASE_SHA = 'a'.repeat(40);
@@ -441,6 +442,23 @@ function runInput(overrides: Partial<RunStartInput> = {}): RunStartInput {
   };
 }
 
+function seedRepo(store: Store, id: string, slug: string): void {
+  store.repos.create({
+    id,
+    slug,
+    defaultBranch: 'main',
+    gate: 'exit 0',
+    policy: 'auto',
+    protectedPaths: ['.github/**', 'ops/**'],
+    enabled: true,
+    createdAt: new Date(NOW).toISOString(),
+  });
+}
+
+function runInputFor(runId: string, repoId: string, slug: string): RunStartInput {
+  return runInput({ runId, repo: { ...runInput().repo, id: repoId, slug } });
+}
+
 interface Harness {
   readonly engine: ReturnType<typeof createRunEngine>;
   readonly store: Store;
@@ -476,16 +494,8 @@ function harness(options: HarnessOptions = {}): Harness {
   const worktreePath = join(root, 'worktrees', RUN_ID);
   mkdirSync(worktreePath, { recursive: true });
   const store = openInMemoryStore();
-  store.repos.create({
-    id: REPO_ID,
-    slug: 'acme/widgets',
-    defaultBranch: 'main',
-    gate: 'exit 0',
-    policy: 'auto',
-    protectedPaths: ['.github/**', 'ops/**'],
-    enabled: true,
-    createdAt: new Date(NOW).toISOString(),
-  });
+  seedRepo(store, REPO_ID, 'acme/widgets');
+  seedRepo(store, SECOND_REPO_ID, 'acme/gadgets');
   store.jobs.create({
     id: JOB_ID,
     repoId: REPO_ID,
@@ -529,6 +539,8 @@ function harness(options: HarnessOptions = {}): Harness {
     gateShell: '/bin/bash',
     gateTimeoutSeconds: 120,
     runTimeoutSeconds: 3_600,
+    maxConcurrency: 3,
+    maxPerRepo: 1,
     dailyCostUsd: 10,
     automerge: 'on',
     mergeMethod: 'squash',
@@ -572,7 +584,7 @@ function harness(options: HarnessOptions = {}): Harness {
     store: wrapped,
     clock: () => new Date(nowMs),
     logger: createLogger({
-      level: 'error',
+      level: 'info',
       sink: (line) => lines.push(JSON.parse(line) as Record<string, unknown>),
     }),
     emit: (record) => {
@@ -688,7 +700,7 @@ describe('run engine — happy path', () => {
     const test = harness();
     test.agent.script = [];
     const first = test.engine.start(runInput());
-    const second = test.engine.start(runInput({ runId: 'run_engine0002' }));
+    const second = test.engine.start(runInputFor('run_engine0002', SECOND_REPO_ID, 'acme/gadgets'));
     await waitFor(() => test.engine.active().length === 2, 'two live runs');
     expect([...test.engine.active()].sort()).toEqual([RUN_ID, 'run_engine0002']);
 
@@ -729,6 +741,190 @@ describe('run engine — happy path', () => {
     expect(test.gitRunner.calls).toEqual([
       ['diff', '--no-color', '--unified=0', '--no-ext-diff', BASE_SHA, '--'],
     ]);
+  });
+});
+
+describe('run engine — admission', () => {
+  interface FleetRun {
+    readonly runId: string;
+    readonly repoId: string;
+    readonly slug: string;
+  }
+
+  const FLEET = {
+    one: { runId: 'run_engine0001', repoId: 'repo_engine01', slug: 'acme/widgets' },
+    two: { runId: 'run_engine0002', repoId: 'repo_engine02', slug: 'acme/gadgets' },
+    three: { runId: 'run_engine0003', repoId: 'repo_engine03', slug: 'acme/gizmos' },
+    four: { runId: 'run_engine0004', repoId: 'repo_engine04', slug: 'acme/bolts' },
+    five: { runId: 'run_engine0005', repoId: 'repo_engine05', slug: 'acme/nuts' },
+  } satisfies Record<string, FleetRun>;
+  const SECOND_RUN_ON_ONE = 'run_engine0011';
+
+  function admissionHarness(): Harness {
+    const test = harness({ settings: { maxConcurrency: 3, maxPerRepo: 1 } });
+    seedRepo(test.store, FLEET.three.repoId, FLEET.three.slug);
+    seedRepo(test.store, FLEET.four.repoId, FLEET.four.slug);
+    seedRepo(test.store, FLEET.five.repoId, FLEET.five.slug);
+    test.agent.script = [];
+    return test;
+  }
+
+  function startFleet(test: Harness, run: FleetRun): Promise<RunOutcome> {
+    return test.engine.start(runInputFor(run.runId, run.repoId, run.slug));
+  }
+
+  function startedEvents(test: Harness): string[] {
+    return test.emitted
+      .filter((record) => record.type === 'run.started')
+      .map((record) => record.runId ?? '');
+  }
+
+  function logMessages(test: Harness, msg: string): Record<string, unknown>[] {
+    return test.lines.filter((line) => line['msg'] === msg);
+  }
+
+  async function drain(test: Harness, promises: readonly Promise<RunOutcome>[]): Promise<void> {
+    for (const run of Object.values(FLEET)) await test.engine.cancel(run.runId);
+    await test.engine.cancel(SECOND_RUN_ON_ONE);
+    await Promise.all(promises);
+  }
+
+  it('keeps the fourth run queued on three repositories', async () => {
+    const test = admissionHarness();
+    const promises = [
+      startFleet(test, FLEET.one),
+      startFleet(test, FLEET.two),
+      startFleet(test, FLEET.three),
+      startFleet(test, FLEET.four),
+    ];
+    await waitFor(() => startedEvents(test).length === 3, 'three live runs');
+
+    expect(test.engine.active()).toEqual([FLEET.one.runId, FLEET.two.runId, FLEET.three.runId]);
+    expect(test.store.runs.getRecord(FLEET.four.runId)?.state).toBe('queued');
+    expect(test.store.runs.getRecord(FLEET.four.runId)?.startedAt).toBeNull();
+    expect(startedEvents(test)).not.toContain(FLEET.four.runId);
+    expect(
+      test.emitted
+        .filter((record) => record.runId === FLEET.four.runId)
+        .map((record) => record.type),
+    ).toEqual(['run.queued']);
+    const waiting = logMessages(test, 'run_waiting');
+    expect(waiting).toHaveLength(1);
+    expect(waiting[0]).toMatchObject({
+      runId: FLEET.four.runId,
+      repoId: FLEET.four.repoId,
+      active: 3,
+      maxConcurrency: 3,
+    });
+
+    await drain(test, promises);
+  });
+
+  it('keeps a second run on a busy repository queued', async () => {
+    const test = admissionHarness();
+    const first = startFleet(test, FLEET.one);
+    const second = test.engine.start(
+      runInputFor(SECOND_RUN_ON_ONE, FLEET.one.repoId, FLEET.one.slug),
+    );
+    await waitFor(() => logMessages(test, 'run_waiting').length === 1, 'the waiting line');
+
+    expect(test.engine.active()).toEqual([FLEET.one.runId]);
+    expect(test.store.runs.getRecord(SECOND_RUN_ON_ONE)?.state).toBe('queued');
+    expect(logMessages(test, 'run_waiting')[0]).toMatchObject({
+      runId: SECOND_RUN_ON_ONE,
+      repoId: FLEET.one.repoId,
+      active: 1,
+    });
+    expect(logMessages(test, 'run_admitted')).toEqual([]);
+
+    await drain(test, [first, second]);
+  });
+
+  it('starts the waiting run when a slot frees', async () => {
+    const test = admissionHarness();
+    const promises = [
+      startFleet(test, FLEET.one),
+      startFleet(test, FLEET.two),
+      startFleet(test, FLEET.three),
+      startFleet(test, FLEET.four),
+    ];
+    await waitFor(() => startedEvents(test).length === 3, 'three live runs');
+    expect(test.store.runs.getRecord(FLEET.four.runId)?.state).toBe('queued');
+
+    expect(await test.engine.cancel(FLEET.one.runId)).toBe(true);
+    await waitFor(() => test.engine.active().includes(FLEET.four.runId), 'the fourth run admitted');
+
+    expect(test.store.runs.getRecord(FLEET.four.runId)?.state).not.toBe('queued');
+    const admitted = logMessages(test, 'run_admitted');
+    expect(admitted).toHaveLength(1);
+    expect(admitted[0]).toMatchObject({ runId: FLEET.four.runId, repoId: FLEET.four.repoId });
+
+    await drain(test, promises);
+  });
+
+  it('cancels a queued run before it starts', async () => {
+    const test = admissionHarness();
+    const first = startFleet(test, FLEET.one);
+    const second = test.engine.start(
+      runInputFor(SECOND_RUN_ON_ONE, FLEET.one.repoId, FLEET.one.slug),
+    );
+    await waitFor(
+      () => startedEvents(test).length === 1 && logMessages(test, 'run_waiting').length === 1,
+      'one live run and one waiting run',
+    );
+    const createsBefore = test.agent.createCalls;
+    expect(createsBefore).toBe(1);
+
+    expect(await test.engine.cancel(SECOND_RUN_ON_ONE)).toBe(true);
+    expect(await second).toMatchObject({ state: 'cancelled' });
+
+    expect(test.store.runs.getRecord(SECOND_RUN_ON_ONE)?.state).toBe('cancelled');
+    const cancelled = test.emitted.filter(
+      (record) => record.type === 'run.cancelled' && record.runId === SECOND_RUN_ON_ONE,
+    );
+    expect(cancelled).toHaveLength(1);
+    expect(cancelled[0]?.data).toMatchObject({ state: 'cancelled', reason: 'operator' });
+    expect(test.agent.createCalls).toBe(createsBefore);
+    expect(test.workspaces.calls.filter((call) => call.includes(SECOND_RUN_ON_ONE))).toHaveLength(
+      0,
+    );
+
+    expect(await test.engine.cancel(FLEET.one.runId)).toBe(true);
+    await first;
+  });
+
+  it('admits waiting runs in repository order', async () => {
+    const test = admissionHarness();
+    const promises = [
+      startFleet(test, FLEET.one),
+      startFleet(test, FLEET.two),
+      startFleet(test, FLEET.three),
+      startFleet(test, FLEET.five),
+      startFleet(test, FLEET.four),
+    ];
+    await waitFor(() => logMessages(test, 'run_waiting').length === 2, 'two waiting runs');
+    expect(test.engine.active()).toEqual([FLEET.one.runId, FLEET.two.runId, FLEET.three.runId]);
+
+    expect(await test.engine.cancel(FLEET.one.runId)).toBe(true);
+    await waitFor(
+      () => test.engine.active().includes(FLEET.four.runId),
+      'the fourth run admitted first',
+    );
+    expect(logMessages(test, 'run_admitted').map((line) => line['repoId'])).toEqual([
+      FLEET.four.repoId,
+    ]);
+
+    expect(await test.engine.cancel(FLEET.two.runId)).toBe(true);
+    await waitFor(
+      () => test.engine.active().includes(FLEET.five.runId),
+      'the fifth run admitted second',
+    );
+    expect(logMessages(test, 'run_admitted').map((line) => line['repoId'])).toEqual([
+      FLEET.four.repoId,
+      FLEET.five.repoId,
+    ]);
+
+    await drain(test, promises);
   });
 });
 
@@ -987,7 +1183,10 @@ describe('run engine — the secret scan gate step', () => {
 
     expect(outcome.state).toBe('succeeded');
     expect(outcome.gate?.status).toBe('passed');
-    expect(test.store.runs.getRecord(RUN_ID)?.gate).toMatchObject({ status: 'passed', exitCode: 0 });
+    expect(test.store.runs.getRecord(RUN_ID)?.gate).toMatchObject({
+      status: 'passed',
+      exitCode: 0,
+    });
     expect(test.lines.filter((line) => line['msg'] === 'secret_scan_failed')).toEqual([]);
     expect(test.git.pushes).toHaveLength(1);
   });

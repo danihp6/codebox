@@ -34,6 +34,10 @@ export { claimKey, planFires, planTick } from './tick.js';
 // Resume and pause: the next fire from `now`, or none at all.
 export { planPause, planResume } from './resume.js';
 
+// Admission: the D15 waiting list as a pure plan over the active runs.
+export { planAdmission } from './admission.js';
+export type { AdmissionDeps, AdmissionInput, AdmissionPlan, WaitingRun } from './admission.js';
+
 // Routines: the chat schedules of D38.
 export { fromUpdate, nextRoutineFire, planRoutineTick, toSchedule } from './routines.js';
 export type {

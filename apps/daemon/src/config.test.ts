@@ -56,7 +56,7 @@ describe('loadConfig', () => {
     expect(config.CB_TMP_DIR).toBe('/var/tmp/codebox');
     expect(config.CB_INSTALL_DIR).toBe('/opt/codebox');
     expect(config.CB_OPENCODE_HEALTH_PATH).toBe('/api/info');
-    expect(config.CB_MAX_CONCURRENCY).toBe(2);
+    expect(config.CB_MAX_CONCURRENCY).toBe(3);
     expect(config.CB_COMMIT).toBeNull();
   });
 

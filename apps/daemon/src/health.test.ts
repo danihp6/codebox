@@ -259,7 +259,7 @@ describe('createProbes', () => {
     const queue = createProbes(context).queue();
     expect(queue.pending).toBe(1);
     expect(queue.running).toBe(2);
-    expect(queue.maxConcurrency).toBe(2);
+    expect(queue.maxConcurrency).toBe(3);
   });
 
   it('keeps maxConcurrency positive when the configured value is zero', () => {
