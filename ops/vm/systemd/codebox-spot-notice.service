@@ -1,0 +1,23 @@
+[Unit]
+Description=Codebox spot interruption notice: one final backup
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=codebox
+Group=codebox
+# The metadata service carries the notice and the instance profile carries the credentials; the
+# S3 target, the age recipient and the endpoint come from a drop-in
+# (`systemctl edit codebox-spot-notice.service`), never from instance.env.
+ExecStart=/usr/local/lib/codebox/spot-notice.sh
+Restart=on-failure
+RestartSec=10
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ReadWritePaths=/var/lib/codebox /srv/codebox
+
+[Install]
+WantedBy=multi-user.target

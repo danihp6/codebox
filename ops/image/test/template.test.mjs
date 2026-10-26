@@ -177,9 +177,9 @@ describe('Packer template', () => {
       'source.amazon-ebs.codebox',
     ]);
 
-    expect(build.match(/provisioner "/g) ?? []).toHaveLength(17);
-    expect(source.match(/provisioner "/g) ?? []).toHaveLength(17);
-    expect(build.match(/provisioner "file" \{/g) ?? []).toHaveLength(15);
+    expect(build.match(/provisioner "/g) ?? []).toHaveLength(19);
+    expect(source.match(/provisioner "/g) ?? []).toHaveLength(19);
+    expect(build.match(/provisioner "file" \{/g) ?? []).toHaveLength(17);
     expect(build.match(/provisioner "shell" \{/g) ?? []).toHaveLength(2);
   });
 
@@ -268,11 +268,11 @@ describe('Packer template', () => {
   });
 });
 
-describe('the seven units', () => {
+describe('the eight units', () => {
   const unitDir = path.join(vmDir, 'systemd');
   const units = fs.readdirSync(unitDir).sort();
 
-  it('ships the five services and the two timers', () => {
+  it('ships the six services and the two timers', () => {
     expect(units).toEqual([
       'cloudflared.service',
       'codebox-backup.service',
@@ -280,6 +280,7 @@ describe('the seven units', () => {
       'codebox-keepalive.service',
       'codebox-keepalive.timer',
       'codebox-opencode.service',
+      'codebox-spot-notice.service',
       'codebox.service',
     ]);
   });
