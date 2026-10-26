@@ -2,9 +2,9 @@
 
 Two principals, two policies, no overlap. The statements below are copied verbatim from
 [`../../docs/oci.md`](../../docs/oci.md) §2, in the same order; this file adds no grant and
-narrows none.
+narrows none. `infra/oci/iam.tf` writes exactly these statements.
 
-## `cb-ci` — provisioning, from GitHub Actions
+## `cb-ci` — provisioning and Terraform, from GitHub Actions
 
 The API user the OCI CLI authenticates as (`OCI_CLI_USER`), with a key held as the
 `OCI_CLI_KEY_CONTENT` secret.
@@ -21,6 +21,8 @@ Allow group cb-ci to use security-lists in tenancy
 Allow group cb-ci to use route-tables in tenancy
 Allow group cb-ci to use internet-gateways in tenancy
 Allow group cb-ci to read instance-images in tenancy
+Allow group cb-ci to read objects in compartment <compartment> where target.bucket.name = 'cb-backups'
+Allow group cb-ci to manage objects in compartment <compartment> where target.bucket.name = 'cb-backups'
 ```
 
 ## `cb-instance` — runtime, through the instance principal
@@ -38,5 +40,9 @@ Allow dynamic-group cb-instance-dg to manage objects in compartment <compartment
 The instance holds no OCI API key: it authenticates with its instance principal, which is
 why the image can be rebuilt without carrying a credential (D20).
 
-Nothing in this file grants Vault, Object Storage or IAM itself to `cb-ci`; the `cb-ci`
-block stops at launch, volumes, VNIC and the network reads.
+The `cb-ci` block stops at launch, volumes, VNIC and the network reads, **plus the two Object
+Storage statements above**. Those two exist for Terraform and for nothing else: the state
+object `infra/oci/terraform.tfstate` and its `.tflock` sibling live in `cb-backups`, so a
+`terraform init`/`plan`/`apply` authenticated as `cb-ci` must read and write them. The grant is
+narrowed to `target.bucket.name = 'cb-backups'`, every other bucket stays out of reach, and
+`cb-ci` still has no Vault, IAM or bucket-administration grant.
