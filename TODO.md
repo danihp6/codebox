@@ -679,7 +679,7 @@ is asked to hold three repositories at once.
 
 ## Batch 13 — Host-neutral docs
 
-- [ ] **[Task-45]** Host-neutral docs and ADRs. Say what is true: the image is Ubuntu 24.04
+- [x] **[Task-45]** Host-neutral docs and ADRs. Say what is true: the image is Ubuntu 24.04
       arm64 with no provider in it, the builder and the secret source are per host, both hosts
       are Terraform stacks under `infra/`, and OCI stays the primary target. Amend D20/D21, add
       D40 (one image, two hosts, Terraform for both, spot while OCI capacity is pending), and

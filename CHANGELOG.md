@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-26 (Task-45, one image, two hosts: D42)
+
+- The docs say what is true: the Packer image is provider-neutral Ubuntu 24.04 arm64, the
+  builder (`oracle-oci` or `amazon-ebs`) and the secret source are per host, and both hosts are
+  Terraform stacks under `infra/{oci,aws}` with OCI as the primary target and the AWS spot box
+  while A1 capacity is pending.
+- **D42** records the decision; D20 (secrets) and D21 (image builder) are amended in place
+  without renumbering. The D40/D41 IDs stay with their own decisions.
+- `docs/vm-image.md`, `docs/security.md`, `docs/architecture.md`, `docs/operations.md`,
+  `docs/roadmap.md`, `AGENTS.md` and `README.md` drop the "OCI-only" claims, name the host on
+  every remaining host-specific line, and point at `docs/oci.md` and `docs/aws.md` for the
+  per-host detail. The roadmap stops claiming that a prompt routine spends the daily cap.
+
 ### Added — 2026-10-26 (Task-36, routines UI)
 
 - `/jobs` gains an in-page **Routines** tab: kind and cost label, the cron summarised in the

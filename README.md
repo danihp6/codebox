@@ -7,9 +7,10 @@ own cloud VM. A hybrid Angular app — iOS, Android and web — is the ground st
 with an agent bound to a repository, launch and schedule jobs, watch a run stream, answer
 permission prompts, and let a green run merge itself.
 
-> **Status: bootstrap (2026-10-24).** Task-01 shipped the npm workspace skeleton, the root
-> gate and CI, and the OCI wait already runs from this repository. There is no product code
-> yet: the daemon, the app and the agent pipeline are the next batches (`TODO.md`). The
+> **Status: bootstrapped (2026-10-26).** The npm workspace skeleton, the root gate and CI are in
+> place, and the tree holds the daemon, the app, the agent pipeline, one provider-neutral
+> Ubuntu 24.04 arm64 image and both Terraform stacks (`infra/oci`, `infra/aws`). The OCI A1
+> capacity wait is still open; the AWS spot host runs the same image until it lands. The
 > decisions in [`docs/decisions.md`](docs/decisions.md) are the contract; everything else
 > follows them.
 
@@ -38,7 +39,7 @@ flowchart LR
   subgraph Edge["Cloudflare edge"]
     T[Tunnel + Access]
   end
-  subgraph VM["OCI VM (Ubuntu 24.04 arm64)"]
+  subgraph VM["Host VM (Ubuntu 24.04 arm64, OCI or AWS)"]
     D[cbd daemon]
     O[opencode serve<br/>127.0.0.1:4096]
     W[Workspaces<br/>bare clones + worktrees]
@@ -78,6 +79,7 @@ flowchart LR
 | [`docs/providers.md`](docs/providers.md) | Every `CB_*` environment variable, providers and secret handling. |
 | [`docs/security.md`](docs/security.md) | Threat model, pairing, tokens, tunnel, sandbox, prompt injection. |
 | [`docs/oci.md`](docs/oci.md) | The extracted OCI resources and the renamed retry action. |
+| [`docs/aws.md`](docs/aws.md) | The AWS spot stack: inventory, image, single door, backups, cost. |
 | [`docs/vm-image.md`](docs/vm-image.md) | Building and updating the VM image. |
 | [`docs/operations.md`](docs/operations.md) | Install, upgrade, backup, brake, recovery, costs. |
 | [`docs/agent-pipeline.md`](docs/agent-pipeline.md) | The multi-agent batch workflow used to build this repo. |
@@ -101,7 +103,7 @@ flowchart LR
 | Exposure | Cloudflare Tunnel only; no inbound ports except admin SSH. |
 | Git | GitHub App first, fine-grained PAT as fallback. |
 | Autonomy | Branch + PR + gate, then **auto-merge when every guardrail is green**. |
-| Host | OCI Always Free Ampere, Ubuntu 24.04 arm64, built from a Packer image. |
+| Host | One provider-neutral Ubuntu 24.04 arm64 image; the OCI Always Free Ampere box first, an AWS spot box meanwhile (D42). |
 | Providers | The daemon is configured through `CB_*` env vars, validated at boot. |
 
 ## Name

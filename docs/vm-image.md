@@ -1,14 +1,16 @@
 # VM image
 
-The instance is rebuildable, not precious (D21). A **Packer** template bakes Ubuntu 24.04
-arm64 with the runtime, the CLI tools and the systemd units; **cloud-init** gives the fresh
-instance its identity and its secrets at first boot. Nothing secret is ever baked.
+The instance is rebuildable, not precious (D21, D42). One **Packer** template bakes Ubuntu
+24.04 arm64 with the runtime, the CLI tools and the systemd units; **cloud-init** gives the
+fresh instance its identity and its secrets at first boot. The same image boots on either host
+— an Oracle Cloud Ampere box or an AWS spot box — because no provider is baked into it: the
+builder and the secret source are selected per host. Nothing secret is ever baked.
 
 ## 1. What the image contains
 
 | Layer | Contents |
 | --- | --- |
-| Base | Canonical Ubuntu 24.04 LTS arm64 (OCI platform image). |
+| Base | Ubuntu 24.04 LTS arm64 with no provider in it; the base image is per host — an image OCID on OCI, Canonical's arm64 AMI on AWS. |
 | Runtime | Node 24 LTS from the official arm64 tarball, `npm`, `corepack`. |
 | Tools | `git`, `gh`, `curl`, `jq`, `age`, `unzip`, `build-essential`, `python3`, `sqlite3`. |
 | Agent | `opencode` pinned to the tested version. |
@@ -29,7 +31,7 @@ independently.
 
 ```
 ops/image/
-  codebox.pkr.hcl          # oracle-oci builder, arm64 shape, image name cb-image-<version>-<sha>
+  codebox.pkr.hcl          # one build block, two sources, image name cb-image-<version>-<sha>
   example.pkrvars.hcl      # dummy OCIDs, committed; prod.pkrvars.hcl is local
   http/cloud-init.yaml     # first boot only, passed as instance user-data
   scripts/
@@ -44,31 +46,49 @@ ops/image/
     90-verify.sh           # fails the build on any check in §4
 ```
 
-The builder uses the **Oracle OCI** plugin with an A1 Flex shape in the target compartment and
-subnet. Builds run in OCI (arm64 on arm64), not on the operator's machine, so the
-architecture and the kernel match. Provisioner paths are rooted at the template directory, so
-the commands below work from the repository root.
+One `build` block declares two sources — `source "oracle-oci" "codebox"` and
+`source "amazon-ebs" "codebox"` — and both run the same provisioner list, so one commit bakes
+the same image on either host. Without `-only` a build covers both sources; `-only` selects
+the host for one build. Neither source has a credential variable: the OCI build reads
+`oci_config_file` and the AWS build the ambient environment. The per-host builder detail is in
+`docs/oci.md` §3 and `docs/aws.md` §7. Provisioner paths are rooted at the template directory,
+so the commands below work from the repository root.
 
-The plugin has no boot-volume field: OCI creates the volume at launch, so the 100 GB of the
-Always Free shape is `ops/oci/launch.sh`'s `CB_OCI_BOOT_GB` (default `100`).
+The OCI plugin has no boot-volume field: OCI creates the volume at launch, so the 100 GB of the
+Always Free shape is `ops/oci/launch.sh`'s `CB_OCI_BOOT_GB` (default `100`). On AWS the root
+volume is the 100 GB `gp3` device the stack declares (`docs/aws.md` §4).
 
 ## 3. Build
 
 ```bash
-export PKR_VAR_oci_config_file="$HOME/.oci/config"
+export PKR_VAR_oci_config_file="$HOME/.oci/config"   # or edit ops/image/example.pkrvars.hcl
 packer init ops/image
 packer validate -var-file=prod.pkrvars.hcl ops/image
-packer build   -var-file=prod.pkrvars.hcl ops/image
+
+# both hosts: one build block, two sources
+packer build -var-file=prod.pkrvars.hcl ops/image
+
+# one host: -only selects the source
+packer build -var-file=prod.pkrvars.hcl -only=oracle-oci.codebox ops/image
+packer build -var-file=prod.pkrvars.hcl -only=amazon-ebs.codebox ops/image
 ```
 
-Variables: compartment, subnet, availability domain, base image OCID, image version and git
-sha (all required, no default); `node_version` (`24.22.1`), `opencode_version` (`1.19.4`) and
-`cloudflared_channel` (`stable`) carry the pinned defaults. `example.pkrvars.hcl` is committed
-with dummy OCIDs; a real `prod.pkrvars.hcl` is local, never committed and never carries a
-secret — the tenancy config it points at is the operator's `~/.oci/config`.
+Variables come in three groups. Both hosts share `node_version` (`24.22.1`),
+`opencode_version` (`1.19.4`) and `cloudflared_channel` (`stable`), the pinned defaults. The
+OCI group is `compartment_ocid`, `subnet_ocid`, `availability_domain`, `base_image_ocid`,
+`image_version`, `git_sha` and `oci_config_file` (default `~/.oci/config`), all required except
+the config path. The AWS group is `aws_region` (`eu-west-1`), `aws_subnet_id` (required),
+`aws_source_ami` (empty resolves the newest Canonical Ubuntu 24.04 arm64 AMI of the region),
+`aws_instance_type` (`c7g.xlarge`), `aws_ssh_username` (`ubuntu`) and `aws_spot_max_price`
+(empty builds on demand). `example.pkrvars.hcl` is committed with a dummy for both hosts; a
+real `prod.pkrvars.hcl` is local, never committed and never carries a secret — the tenancy
+config it points at is the operator's `~/.oci/config`, and the AWS build uses the ambient
+profile.
 
-Output: a custom image OCID. `CB_OCI_IMAGE_ID` is updated to it, and `launch.sh` uses it on
-the next attempt. The image is immutable; a change is a new image, never an in-place edit.
+Output is per host: the OCI build produces an image OCID, which `CB_OCI_IMAGE_ID` takes for the
+next `ops/oci/launch.sh` attempt; the AWS build produces an AMI id, which `infra/aws` takes as
+`ami_id` (`docs/aws.md` §7). The image is immutable; a change is a new image, never an in-place
+edit.
 
 Build time is ~15 minutes. A build that fails `90-verify.sh` produces no image.
 
@@ -97,10 +117,13 @@ greps two-sided without building an image.
 
 1. `ops/vm/cloud-init.sh` sets the hostname to `cb-<short-instance-id>` and appends
    `127.0.1.1 <hostname>` to `/etc/hosts` once.
-2. It reads the four secret bundles from **OCI Vault** through the instance principal — one
-   `oci secrets secret-bundle get` per secret, never a second call — and writes
-   `/etc/codebox/instance.env` (`0600`, `root:codebox`) last, so a failed read leaves no
-   partial environment behind.
+2. It takes the four secret bundles from `/etc/codebox/secret-bundles.json` (`0600`,
+   operator-written) when the operator delivered that file — `githubAppPrivateKeyBase64`,
+   `sessionSecret`, `tunnelToken`, `providerKeys` — and otherwise, on OCI, from Vault: one
+   `oci secrets secret-bundle get` per secret through the OCI instance principal, never a
+   second call.
+   Either way it writes `/etc/codebox/instance.env` (`0600`, `root:codebox`) last, so a failed
+   read leaves no partial environment behind.
 3. It renders `/etc/cloudflared/config.yml` and the tunnel credentials (`0600`, `root:root`)
    from the tunnel token, without printing the token.
 4. It starts `codebox-opencode`, then `codebox`, then `cloudflared` — the OpenCode unit is
@@ -113,7 +136,8 @@ greps two-sided without building an image.
 The user-data is `ops/image/http/cloud-init.yaml`: `#cloud-config`, the hostname from the
 `CB_INSTANCE_NAME` template variable, and one `runcmd` entry. It carries no SSH key, no
 password and no written file — the instance gets its SSH key from the launch metadata
-(`ops/oci/launch.sh`) and its secrets from Vault.
+(`ops/oci/launch.sh`) and its secrets from the bundles file the operator delivers, or from
+OCI Vault when the host runs on OCI. No secret is ever in the user-data.
 
 ```bash
 # render and launch by hand until launch.sh grows a --user-data flag
@@ -145,12 +169,14 @@ Two independent axes:
 ## 7. Secrets
 
 - None in the image, none in user-data, none in the Packer variables.
-- Vault is read with the instance principal; the policy is `cb-instance-policy` (see
-  `oci.md` §2).
+- The source is per host (D20, D42): the four bundles in `/etc/codebox/secret-bundles.json`
+  (`0600`, operator-written) when the host has that file; on OCI, Vault read with the instance
+  principal and the policy `cb-instance-policy` (`oci.md` §2) otherwise.
 - The tunnel token, GitHub App key, session secret and provider keys are written to
   `instance.env` at `0600`, `root:codebox`, and never echoed. systemd reads it as root through
   `EnvironmentFile=`; the `codebox` user reads it only through the daemon.
-- Rotating a secret is a Vault write plus a restart; it does not need a new image.
+- Rotating a secret is a write to the host's store — Vault on OCI, the bundles file elsewhere —
+  plus a restart; it does not need a new image.
 
 ## 8. arm64 notes
 
@@ -170,7 +196,8 @@ Two independent axes:
 - Journald capped at 200 MB; the app's own logs live in `/var/lib/codebox/logs`.
 - The image carries a build manifest at `/etc/codebox/image.json`: version, commit, build time,
   `node`, `opencode` and `cloudflared`. `cb doctor` prints it.
-- The image is tagged `cb-image-<semver>-<gitsha>`; the OCI display name matches the tag.
+- The image is tagged `cb-image-<version>-<sha>`: the OCI image display name and the AMI name
+  both carry it.
 
 ## 10. Checks
 

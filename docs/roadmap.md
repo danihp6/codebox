@@ -49,15 +49,15 @@ Mitigation: official starter (D31), PWA-first validation, reconnect with `Last-E
 
 ## Phase 4 — The box is reproducible (Batch 6)
 
-**Outcome:** an OCI instance can be launched from a Packer image, bootstrapped with no manual
-step, exposed through the tunnel and backed up nightly.
+**Outcome:** a host, either one, can be launched from the same Packer image, bootstrapped with
+no manual step, exposed through the tunnel and backed up nightly.
 
-**Exit criterion:** destroy the instance, launch a new one from the image, restore the
-backup, pair a device and see the same jobs and history. Target RTO: 45 minutes.
+**Exit criterion:** destroy the host, launch a new one — OCI or AWS — from the same image,
+restore the backup, pair a device and see the same jobs and history. Target RTO: 45 minutes.
 
-**Risks:** A1 capacity (the pkm wait), arm64 package availability, cloud-init idempotency.
-Mitigation: the existing retry chain (Task-24) and the 1/6 shape fallback; validate every
-package on arm64 in Task-25.
+**Risks:** OCI A1 capacity (the pkm wait), arm64 package availability, cloud-init idempotency.
+Mitigation: the existing retry chain (Task-24), the AWS spot host while capacity is pending, and
+the 1/6 shape fallback; validate every package on arm64 in Task-25.
 
 ## Phase 5 — Trustworthy autonomy (Batch 7)
 
@@ -85,14 +85,15 @@ push-first flows, measure time-to-action.
 
 **Outcome:** the operator says "remind me to take the pill at 10" or "summarise the repo every
 morning" in chat, the agent creates the routine, and it fires with a push. Reminders spend no
-tokens; prompt routines spend the daily cap.
+tokens; a prompt routine is a chat turn, and the chat path writes no usage row, so it is **not
+capped** in this release (`docs/jobs.md` §15).
 
 **Exit criterion:** a reminder and a prompt routine created from chat fire on time in
 `Europe/Madrid`, the reply lands in its session (created on the first fire when it had none),
 and the push deep-links to it.
 
-**Risks:** noisy schedules and cost creep. Mitigation: push preferences, quiet hours, the
-daily cap, and no routine tool in unattended runs (D38).
+**Risks:** noisy schedules and cost creep. Mitigation: push preferences, quiet hours, the cap
+once the chat path writes a usage row, and no routine tool in unattended runs (D38).
 
 ## Sequencing at a glance
 
@@ -120,7 +121,7 @@ The Gantt is ordinal, not a calendar. The critical path is
 
 | Signal | Response |
 | --- | --- |
-| OCI A1 never yields a slot | Launch on a 1/6 shape and resize later, or run the same image on a small PAYG instance; the image is provider-portable. |
+| OCI A1 never yields a slot | Run the same image on the AWS spot stack (`infra/aws`, `docs/aws.md`); the image is provider-neutral, so the host is a stack plus the same first boot, not a rebuild. |
 | OpenCode V2 API breaks repeatedly | Pin the client and the server version together; the wrapper isolates the blast radius. |
 | Auto-merge produces a bad merge | Turn `CB_AUTOMERGE=off` globally, revert, add the missing guardrail test, then re-enable per repo. |
 | The app is slower than SSH for daily work | Cut screens, keep chat + runs + push; the daemon API is the product, the app is a view. |

@@ -11,10 +11,13 @@ same task.
 
 ## Status
 
-**Bootstrap.** Task-01 shipped the npm workspaces, the root gate and CI; the OCI wait runs
-from `.github/workflows/oci-retry.yml`. The daemon, the app and the agent pipeline are not
-written yet — Batch 1 Task-02 is the next code task. A task that needs code the tree does not
-have is blocked, not improvised.
+**Bootstrapped; the box waits for capacity.** The npm workspaces, the root gate and CI are
+green, and the tree holds the daemon (`apps/daemon`), the app (`apps/app`), the agent pipeline,
+the provider-neutral Packer image (`ops/image`) and both Terraform roots (`infra/oci`,
+`infra/aws`). The OCI A1 wait is the only external clock and it still runs from
+`.github/workflows/oci-retry.yml`; the AWS spot host is the fallback that boots the same image.
+`TODO.md` is the backlog, and a task that needs code the tree does not have is blocked, not
+improvised.
 
 ## Product invariants
 
@@ -51,9 +54,11 @@ have is blocked, not improvised.
 - **Tests:** Vitest for daemon packages, Angular's supported unit runner for the app,
   Playwright for web end-to-end. A test that needs the VM is a `[live]` criterion and is
   measured, never assumed.
-- **Host:** OCI Always Free Ampere (`VM.Standard.A1.Flex`), Ubuntu 24.04 arm64, built from a
-  Packer image. The app and daemon are installed from a release artifact, never baked with
-  secrets.
+- **Host:** one provider-neutral Ubuntu 24.04 arm64 image (D21, D42). The OCI Always Free
+  Ampere box stays the primary target; an AWS `c7g.2xlarge` spot box runs the same image while
+  capacity is pending. The builder and the secret source are per host, and both hosts are
+  Terraform stacks under `infra/{oci,aws}`, with the per-host detail in `docs/oci.md` and
+  `docs/aws.md`.
 
 ## Repository layout
 
