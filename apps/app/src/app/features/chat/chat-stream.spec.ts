@@ -1,12 +1,17 @@
-import type { ChatMessage, Page, SseStreamEvent } from '@codebox/contracts';
+import type { ChatMessage, Page, PromptRoutine, ReminderRoutine, SseStreamEvent } from '@codebox/contracts';
 import { describe, expect, it } from 'vitest';
 import {
   EMPTY_CHAT,
+  ROUTINE_CREATE_WINDOW_SECONDS,
   appendMessage,
   applyChatEvent,
+  isRoutineMessage,
   markPermissionAnswered,
   mergeMessages,
+  pickCreatedRoutine,
+  withRoutineCard,
 } from './chat-stream';
+import type { ChatStreamState } from './chat-stream';
 
 const CHAT = 'chat_01JABCDEFGHJKMNPQRSV';
 const OTHER = 'chat_01JABCDEFGHJKMNPQRSW';
@@ -244,5 +249,128 @@ describe('markPermissionAnswered', () => {
     expect(answered.permissions[0]?.answered).toBe(true);
     expect(markPermissionAnswered(answered, APPROVAL)).toBe(answered);
     expect(markPermissionAnswered(state, OTHER_APPROVAL)).toBe(state);
+  });
+});
+
+const ROUTINE_ID = 'rtn_01JABCDEFGHJKMNPQRSV';
+const OTHER_ROUTINE_ID = 'rtn_01JABCDEFGHJKMNPQRSW';
+const REPO = 'repo_01JABCDEFGHJKMNPQRSV';
+const WINDOW_MS = ROUTINE_CREATE_WINDOW_SECONDS * 1000;
+
+function reminder(id: string, createdAt: string): ReminderRoutine {
+  return {
+    id,
+    kind: 'reminder',
+    title: 'Stand up',
+    cron: '0 7 * * *',
+    timezone: 'Europe/Madrid',
+    enabled: true,
+    notify: true,
+    createdAt,
+    nextFireAt: null,
+    lastFiredAt: null,
+  };
+}
+
+function prompt(id: string, createdAt: string, chatSessionId: string | null): PromptRoutine {
+  return {
+    id,
+    kind: 'prompt',
+    title: 'Morning summary',
+    cron: '0 8 * * *',
+    timezone: 'Europe/Madrid',
+    enabled: true,
+    notify: true,
+    repoId: REPO,
+    prompt: 'Summarise the repository.',
+    chatSessionId,
+    createdAt,
+    nextFireAt: null,
+    lastFiredAt: null,
+  };
+}
+
+function replied(chatId: string, messageId: string): SseStreamEvent {
+  return { event: 'routine.replied', data: { routineId: ROUTINE_ID, chatId, messageId, ts: TS } };
+}
+
+function at(offsetMs: number): string {
+  return new Date(Date.parse(TS) + offsetMs).toISOString();
+}
+
+describe('routine.replied', () => {
+  it('flags exactly its message id, idempotently and without touching lastSeq', () => {
+    const start = applyChatEvent(EMPTY_CHAT, CHAT, delta(3, 'answer'));
+    expect(start.lastSeq).toBe(3);
+
+    const once = applyChatEvent(start, CHAT, replied(CHAT, 'message_01JABCDEFGHJKMNPQRSV'));
+    expect(once.routineMessageIds).toEqual(['message_01JABCDEFGHJKMNPQRSV']);
+    expect(once.lastSeq).toBe(3);
+    expect(isRoutineMessage(once, 'message_01JABCDEFGHJKMNPQRSV')).toBe(true);
+    expect(isRoutineMessage(once, null)).toBe(false);
+
+    const twice = applyChatEvent(once, CHAT, replied(CHAT, 'message_01JABCDEFGHJKMNPQRSV'));
+    expect(twice).toBe(once);
+  });
+
+  it('ignores another chat', () => {
+    const state = applyChatEvent(EMPTY_CHAT, CHAT, delta(1, 'a'));
+    expect(applyChatEvent(state, CHAT, replied(OTHER, 'message_01JABCDEFGHJKMNPQRSV'))).toBe(state);
+  });
+});
+
+describe('pickCreatedRoutine', () => {
+  it('picks the newest prompt routine of this chat inside the window', () => {
+    const mine = prompt(ROUTINE_ID, at(-30_000), CHAT);
+    const foreign = prompt(OTHER_ROUTINE_ID, at(-10_000), OTHER);
+
+    expect(pickCreatedRoutine([foreign, mine], CHAT, TS)).toBe(mine);
+  });
+
+  it('falls back to a reminder', () => {
+    const reminderRoutine = reminder(ROUTINE_ID, at(-10_000));
+
+    expect(pickCreatedRoutine([reminderRoutine], CHAT, TS)).toBe(reminderRoutine);
+  });
+
+  it('returns null outside the 120 s window', () => {
+    expect(pickCreatedRoutine([reminder(ROUTINE_ID, at(-WINDOW_MS - 1000))], CHAT, TS)).toBeNull();
+  });
+
+  it('accepts a routine created exactly at the window edge', () => {
+    const edge = reminder(ROUTINE_ID, at(-WINDOW_MS));
+    expect(pickCreatedRoutine([edge], CHAT, TS)).toBe(edge);
+  });
+
+  it('returns null for another chat prompt routine', () => {
+    expect(pickCreatedRoutine([prompt(ROUTINE_ID, at(-10_000), OTHER)], CHAT, TS)).toBeNull();
+    expect(pickCreatedRoutine([prompt(ROUTINE_ID, at(-10_000), null)], CHAT, TS)).toBeNull();
+  });
+
+  it('returns null for an unparsable tool timestamp', () => {
+    expect(pickCreatedRoutine([reminder(ROUTINE_ID, at(-1000))], CHAT, 'not-a-date')).toBeNull();
+  });
+});
+
+describe('withRoutineCard', () => {
+  it('appends one card and never duplicates a routine id', () => {
+    const routine = reminder(ROUTINE_ID, TS);
+    const once = withRoutineCard(EMPTY_CHAT, routine);
+    const twice = withRoutineCard(once, routine);
+
+    expect(once.routines).toEqual([{ key: `routine:${ROUTINE_ID}`, routine }]);
+    expect(twice).toBe(once);
+
+    const other = withRoutineCard(once, reminder(OTHER_ROUTINE_ID, TS));
+    expect(other.routines.map((card) => card.routine.id)).toEqual([ROUTINE_ID, OTHER_ROUTINE_ID]);
+  });
+});
+
+describe('EMPTY_CHAT', () => {
+  it('starts with no cards and no routine message ids', () => {
+    const state: ChatStreamState = EMPTY_CHAT;
+
+    expect(state.routines).toEqual([]);
+    expect(state.routineMessageIds).toEqual([]);
   });
 });

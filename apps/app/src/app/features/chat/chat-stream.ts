@@ -1,6 +1,8 @@
-import type { ChatMessage, Page, SseStreamEvent } from '@codebox/contracts';
+import type { ChatMessage, Page, Routine, SseStreamEvent } from '@codebox/contracts';
 
 export type ChatRole = 'user' | 'assistant' | 'system';
+
+export const ROUTINE_CREATE_WINDOW_SECONDS = 120;
 
 export interface ChatStreamItem {
   readonly key: string;
@@ -26,10 +28,17 @@ export interface ChatPermissionCard {
   readonly answered: boolean;
 }
 
+export interface ChatRoutineCard {
+  readonly key: string;
+  readonly routine: Routine;
+}
+
 export interface ChatStreamState {
   readonly messages: readonly ChatStreamItem[];
   readonly tools: readonly ChatToolCard[];
   readonly permissions: readonly ChatPermissionCard[];
+  readonly routines: readonly ChatRoutineCard[];
+  readonly routineMessageIds: readonly string[];
   readonly working: boolean;
   readonly lastSeq: number;
 }
@@ -38,6 +47,8 @@ export const EMPTY_CHAT: ChatStreamState = Object.freeze({
   messages: Object.freeze([]),
   tools: Object.freeze([]),
   permissions: Object.freeze([]),
+  routines: Object.freeze([]),
+  routineMessageIds: Object.freeze([]),
   working: false,
   lastSeq: 0,
 });
@@ -70,6 +81,8 @@ export function applyChatEvent(
       return upsertPermission(state, event.data.approvalId, event.data.tool, event.data.title);
     case 'chat.idle':
       return { ...state, working: false, lastSeq: Math.max(state.lastSeq, event.data.seq) };
+    case 'routine.replied':
+      return appendRoutineMessage(state, event.data.messageId);
     default:
       return state;
   }
@@ -91,6 +104,43 @@ export function mergeMessages(state: ChatStreamState, page: Page<ChatMessage>): 
 
 export function appendMessage(state: ChatStreamState, message: ChatMessage): ChatStreamState {
   return mergeMessages(state, { data: [message], nextCursor: null });
+}
+
+/** `routine.replied` carries no `seq`; the badge is keyed by the message id it produced. */
+export function appendRoutineMessage(state: ChatStreamState, messageId: string): ChatStreamState {
+  if (state.routineMessageIds.includes(messageId)) return state;
+  return { ...state, routineMessageIds: [...state.routineMessageIds, messageId] };
+}
+
+/** `chat.tool.detail` never carries the routine, so the card is corroborated from the list. */
+export function pickCreatedRoutine(
+  routines: readonly Routine[],
+  chatId: string,
+  toolTs: string,
+): Routine | null {
+  const toolTime = Date.parse(toolTs);
+  if (Number.isNaN(toolTime)) return null;
+  const windowStart = toolTime - ROUTINE_CREATE_WINDOW_SECONDS * 1000;
+  for (const routine of routines) {
+    const created = Date.parse(routine.createdAt);
+    if (Number.isNaN(created) || created < windowStart) continue;
+    if (routine.kind === 'prompt' && routine.chatSessionId !== chatId) continue;
+    return routine;
+  }
+  return null;
+}
+
+export function withRoutineCard(state: ChatStreamState, routine: Routine): ChatStreamState {
+  if (state.routines.some((card) => card.routine.id === routine.id)) return state;
+  return {
+    ...state,
+    routines: [...state.routines, { key: `routine:${routine.id}`, routine }],
+  };
+}
+
+export function isRoutineMessage(state: ChatStreamState, messageId: string | null): boolean {
+  if (messageId === null) return false;
+  return state.routineMessageIds.includes(messageId);
 }
 
 export function markPermissionAnswered(

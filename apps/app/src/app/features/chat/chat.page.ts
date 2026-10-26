@@ -8,8 +8,12 @@ import {
   untracked,
 } from '@angular/core';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { RouterLink } from '@angular/router';
+import type { Routine } from '@codebox/contracts';
+import { routineNextFire, routineSchedule } from '../jobs/routines-format';
 import { SseService } from '../../core/events/sse.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { isRoutineMessage } from './chat-stream';
 import type { ChatPermissionCard } from './chat-stream';
 import { ChatStore } from './chat.store';
 import { translate } from './i18n';
@@ -19,7 +23,7 @@ import type { MarkdownBlock } from './markdown';
 @Component({
   selector: 'app-chat-page',
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar],
+  imports: [IonContent, IonHeader, IonTitle, IonToolbar, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [ChatStore],
   styles: [
@@ -54,14 +58,16 @@ import type { MarkdownBlock } from './markdown';
         background: var(--cb-bg);
       }
       .cb-chat-tools,
-      .cb-chat-permissions {
+      .cb-chat-permissions,
+      .cb-chat-routines {
         display: flex;
         flex-direction: column;
         gap: var(--cb-space);
         margin-block: calc(var(--cb-space) * 3);
       }
       .cb-chat-tool,
-      .cb-chat-permission {
+      .cb-chat-permission,
+      .cb-chat-routine {
         display: flex;
         flex-wrap: wrap;
         gap: var(--cb-space);
@@ -69,6 +75,13 @@ import type { MarkdownBlock } from './markdown';
         padding: calc(var(--cb-space) * 2);
         border: 1px solid var(--cb-muted);
         border-radius: var(--cb-radius);
+      }
+      .cb-chat-routine {
+        border-color: var(--cb-accent);
+      }
+      .cb-chat-routine p {
+        margin: 0;
+        font-weight: 600;
       }
       .cb-chat-tool[data-status='ok'] {
         border-color: var(--cb-accent);
@@ -152,9 +165,50 @@ import type { MarkdownBlock } from './markdown';
                     }
                   }
                 }
+                @if (isRoutine(item.messageId)) {
+                  <span data-testid="chat-routine-badge">{{ t('chat.routine.badge') }}</span>
+                  <a routerLink="/jobs" data-testid="chat-routine-link">
+                    {{ t('chat.routine.list') }}
+                  </a>
+                }
               </li>
             }
           </ol>
+        }
+
+        @if (store.stream().routines.length > 0) {
+          <div class="cb-chat-routines">
+            @for (card of store.stream().routines; track card.key) {
+              <div
+                class="cb-chat-routine"
+                data-testid="chat-routine-card"
+                [attr.data-routine-id]="card.routine.id"
+                [attr.data-kind]="card.routine.kind"
+              >
+                <p>{{ t('chat.routine.title') }}</p>
+                <span data-testid="chat-routine-kind">
+                  @if (card.routine.kind === 'prompt') {
+                    {{ t('chat.routine.kind.prompt') }}
+                  } @else {
+                    {{ t('chat.routine.kind.reminder') }}
+                  }
+                </span>
+                <span>{{ t('chat.routine.local') }}</span>
+                <span class="cb-mono" data-testid="chat-routine-local">
+                  {{ schedule(card.routine) }}
+                </span>
+                @if (card.routine.nextFireAt !== null) {
+                  <span>{{ t('chat.routine.next') }}</span>
+                  <span data-testid="chat-routine-next" [attr.data-at]="card.routine.nextFireAt">
+                    {{ nextFire(card.routine) }}
+                  </span>
+                }
+                <a routerLink="/jobs" data-testid="chat-routine-open">
+                  {{ t('chat.routine.open') }}
+                </a>
+              </div>
+            }
+          </div>
         }
 
         @if (store.stream().tools.length > 0) {
@@ -292,6 +346,18 @@ export class ChatPage {
 
   blocks(text: string): readonly MarkdownBlock[] {
     return parseMarkdown(text);
+  }
+
+  schedule(routine: Routine): string {
+    return routineSchedule(routine, this.i18n.locale());
+  }
+
+  nextFire(routine: Routine): string | null {
+    return routineNextFire(routine, this.i18n.locale());
+  }
+
+  isRoutine(messageId: string | null): boolean {
+    return isRoutineMessage(this.store.stream(), messageId);
   }
 
   onInput(event: Event): void {

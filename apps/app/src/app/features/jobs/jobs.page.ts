@@ -20,6 +20,7 @@ import { CronPickerComponent } from './cron-picker';
 import { translate } from './i18n';
 import { JobsApi } from './jobs.api';
 import { JobsStore } from './jobs.store';
+import { RoutinesPanel } from './routines-panel';
 import { formatFire } from './time-format';
 
 const DEFAULT_CRON = '0 3 * * *';
@@ -28,7 +29,15 @@ const FALLBACK_TIMEZONE = 'UTC';
 @Component({
   selector: 'app-jobs-page',
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar, RouterLink, CronPickerComponent],
+  imports: [
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    RouterLink,
+    CronPickerComponent,
+    RoutinesPanel,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [JobsStore],
   styles: [
@@ -39,6 +48,15 @@ const FALLBACK_TIMEZONE = 'UTC';
         flex-wrap: wrap;
         gap: calc(var(--cb-space) * 2);
         align-items: center;
+      }
+      .cb-jobs-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--cb-space);
+        margin-block-end: calc(var(--cb-space) * 3);
+      }
+      .cb-jobs-tabs [data-active='true'] {
+        border-block-end: 2px solid var(--cb-accent);
       }
       .cb-jobs-list,
       .cb-job-history {
@@ -70,158 +88,187 @@ const FALLBACK_TIMEZONE = 'UTC';
       </ion-toolbar>
     </ion-header>
     <ion-content class="ion-padding">
-      <div data-testid="page-jobs">
-        <section>
-          <div class="cb-jobs-head">
-            <h1>{{ t('jobs.title') }}</h1>
-            <button type="button" data-testid="job-create" (click)="openForm()">
-              {{ t('jobs.action.create') }}
-            </button>
-          </div>
+      <div data-testid="page-jobs" [attr.data-tab]="tab()">
+        <div class="cb-jobs-tabs" data-testid="jobs-tabs" role="tablist">
+          <button
+            type="button"
+            role="tab"
+            data-testid="jobs-tab-jobs"
+            [attr.data-active]="tab() === 'jobs'"
+            [attr.aria-selected]="tab() === 'jobs'"
+            (click)="tab.set('jobs')"
+          >
+            {{ t('jobs.tab.jobs') }}
+          </button>
+          <button
+            type="button"
+            role="tab"
+            data-testid="jobs-tab-routines"
+            [attr.data-active]="tab() === 'routines'"
+            [attr.aria-selected]="tab() === 'routines'"
+            (click)="tab.set('routines')"
+          >
+            {{ t('jobs.tab.routines') }}
+          </button>
+        </div>
 
-          @if (store.loading()) {
-            <div data-testid="jobs-loading">{{ t('jobs.loading') }}</div>
-          }
-
-          @if (store.error(); as failure) {
-            <div data-testid="jobs-error" [attr.data-code]="failure.code">
-              <p>{{ t('jobs.error') }}</p>
-              <button type="button" data-testid="jobs-retry" (click)="store.load()">
-                {{ t('jobs.retry') }}
+        @if (tab() === 'jobs') {
+          <section>
+            <div class="cb-jobs-head">
+              <h1>{{ t('jobs.title') }}</h1>
+              <button type="button" data-testid="job-create" (click)="openForm()">
+                {{ t('jobs.action.create') }}
               </button>
             </div>
-          }
 
-          @if (!store.loading() && store.error() === null && store.jobs().length === 0) {
-            <p data-testid="jobs-empty">{{ t('jobs.empty') }}</p>
-          }
-
-          <ul class="cb-jobs-list">
-            @for (job of store.jobs(); track job.id) {
-              <li
-                class="cb-job-row"
-                data-testid="job-row"
-                [attr.data-job-id]="job.id"
-                [attr.data-enabled]="job.enabled"
-                [attr.data-cron]="job.cron"
-              >
-                <a [routerLink]="['/jobs', job.id]">{{ job.title }}</a>
-                <span class="cb-mono">{{ job.cron }}</span>
-                <span class="cb-mono">{{ job.timezone }}</span>
-                @if (job.nextFireAt !== null) {
-                  <span data-testid="job-next" [attr.data-at]="job.nextFireAt">
-                    {{ fireLabel(job) }}
-                  </span>
-                }
-                <span>{{ job.enabled ? t('jobs.state.enabled') : t('jobs.state.paused') }}</span>
-                <span class="cb-job-actions">
-                  @if (job.enabled) {
-                    <button
-                      type="button"
-                      data-testid="job-pause"
-                      [disabled]="store.busy() === job.id"
-                      (click)="store.pause(job)"
-                    >
-                      {{ t('jobs.action.pause') }}
-                    </button>
-                  } @else {
-                    <button
-                      type="button"
-                      data-testid="job-resume"
-                      [disabled]="store.busy() === job.id"
-                      (click)="store.resume(job)"
-                    >
-                      {{ t('jobs.action.resume') }}
-                    </button>
-                  }
-                  <button
-                    type="button"
-                    data-testid="job-run-now"
-                    [disabled]="store.running() === job.id"
-                    (click)="store.runNow(job)"
-                  >
-                    {{ t('jobs.action.runNow') }}
-                  </button>
-                </span>
-              </li>
+            @if (store.loading()) {
+              <div data-testid="jobs-loading">{{ t('jobs.loading') }}</div>
             }
-          </ul>
-        </section>
 
-        @if (formOpen()) {
-          <form class="cb-job-form" data-testid="job-form" (submit)="submitForm($event)">
-            <h2>{{ t('jobs.action.create') }}</h2>
-            <label for="job-form-title">{{ t('jobs.form.title') }}</label>
-            <input
-              id="job-form-title"
-              data-testid="job-form-title"
-              type="text"
-              [value]="formTitle()"
-              (input)="formTitle.set(valueOf($event))"
-            />
+            @if (store.error(); as failure) {
+              <div data-testid="jobs-error" [attr.data-code]="failure.code">
+                <p>{{ t('jobs.error') }}</p>
+                <button type="button" data-testid="jobs-retry" (click)="store.load()">
+                  {{ t('jobs.retry') }}
+                </button>
+              </div>
+            }
 
-            <label for="job-form-prompt">{{ t('jobs.form.prompt') }}</label>
-            <textarea
-              id="job-form-prompt"
-              data-testid="job-form-prompt"
-              [value]="formPrompt()"
-              (input)="formPrompt.set(valueOf($event))"
-            ></textarea>
+            @if (!store.loading() && store.error() === null && store.jobs().length === 0) {
+              <p data-testid="jobs-empty">{{ t('jobs.empty') }}</p>
+            }
 
-            <label for="job-form-repo">{{ t('jobs.form.repo') }}</label>
-            <select
-              id="job-form-repo"
-              data-testid="job-form-repo"
-              [value]="formRepoId()"
-              (change)="formRepoId.set(valueOf($event))"
-            >
-              @for (repo of repos(); track repo.id) {
-                <option
-                  data-testid="job-form-repo-option"
-                  [attr.data-repo-id]="repo.id"
-                  [value]="repo.id"
-                  [selected]="repo.id === formRepoId()"
+            <ul class="cb-jobs-list">
+              @for (job of store.jobs(); track job.id) {
+                <li
+                  class="cb-job-row"
+                  data-testid="job-row"
+                  [attr.data-job-id]="job.id"
+                  [attr.data-enabled]="job.enabled"
+                  [attr.data-cron]="job.cron"
                 >
-                  {{ repo.slug }}
-                </option>
+                  <a [routerLink]="['/jobs', job.id]">{{ job.title }}</a>
+                  <span class="cb-mono">{{ job.cron }}</span>
+                  <span class="cb-mono">{{ job.timezone }}</span>
+                  @if (job.nextFireAt !== null) {
+                    <span data-testid="job-next" [attr.data-at]="job.nextFireAt">
+                      {{ fireLabel(job) }}
+                    </span>
+                  }
+                  <span>{{ job.enabled ? t('jobs.state.enabled') : t('jobs.state.paused') }}</span>
+                  <span class="cb-job-actions">
+                    @if (job.enabled) {
+                      <button
+                        type="button"
+                        data-testid="job-pause"
+                        [disabled]="store.busy() === job.id"
+                        (click)="store.pause(job)"
+                      >
+                        {{ t('jobs.action.pause') }}
+                      </button>
+                    } @else {
+                      <button
+                        type="button"
+                        data-testid="job-resume"
+                        [disabled]="store.busy() === job.id"
+                        (click)="store.resume(job)"
+                      >
+                        {{ t('jobs.action.resume') }}
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      data-testid="job-run-now"
+                      [disabled]="store.running() === job.id"
+                      (click)="store.runNow(job)"
+                    >
+                      {{ t('jobs.action.runNow') }}
+                    </button>
+                  </span>
+                </li>
               }
-            </select>
+            </ul>
+          </section>
 
-            <label for="job-form-timezone">{{ t('jobs.form.timezone') }}</label>
-            <input
-              id="job-form-timezone"
-              data-testid="job-form-timezone"
-              type="text"
-              [value]="formTimezone()"
-              (input)="formTimezone.set(valueOf($event))"
-            />
+          @if (formOpen()) {
+            <form class="cb-job-form" data-testid="job-form" (submit)="submitForm($event)">
+              <h2>{{ t('jobs.action.create') }}</h2>
+              <label for="job-form-title">{{ t('jobs.form.title') }}</label>
+              <input
+                id="job-form-title"
+                data-testid="job-form-title"
+                type="text"
+                [value]="formTitle()"
+                (input)="formTitle.set(valueOf($event))"
+              />
 
-            <app-cron-picker
-              [expression]="formCron()"
-              [locale]="locale()"
-              (changed)="formCron.set($event)"
-            />
+              <label for="job-form-prompt">{{ t('jobs.form.prompt') }}</label>
+              <textarea
+                id="job-form-prompt"
+                data-testid="job-form-prompt"
+                [value]="formPrompt()"
+                (input)="formPrompt.set(valueOf($event))"
+              ></textarea>
 
-            @if (formError(); as failure) {
-              <p data-testid="job-form-error" [attr.data-code]="failure.code">
-                {{ failure.message }}
-              </p>
-            }
-
-            <div class="cb-job-actions">
-              <button
-                type="button"
-                data-testid="job-form-submit"
-                [disabled]="submitting()"
-                (click)="submitForm()"
+              <label for="job-form-repo">{{ t('jobs.form.repo') }}</label>
+              <select
+                id="job-form-repo"
+                data-testid="job-form-repo"
+                [value]="formRepoId()"
+                (change)="formRepoId.set(valueOf($event))"
               >
-                {{ t('jobs.form.submit') }}
-              </button>
-              <button type="button" data-testid="job-form-cancel" (click)="closeForm()">
-                {{ t('jobs.form.cancel') }}
-              </button>
-            </div>
-          </form>
+                @for (repo of repos(); track repo.id) {
+                  <option
+                    data-testid="job-form-repo-option"
+                    [attr.data-repo-id]="repo.id"
+                    [value]="repo.id"
+                    [selected]="repo.id === formRepoId()"
+                  >
+                    {{ repo.slug }}
+                  </option>
+                }
+              </select>
+
+              <label for="job-form-timezone">{{ t('jobs.form.timezone') }}</label>
+              <input
+                id="job-form-timezone"
+                data-testid="job-form-timezone"
+                type="text"
+                [value]="formTimezone()"
+                (input)="formTimezone.set(valueOf($event))"
+              />
+
+              <app-cron-picker
+                [expression]="formCron()"
+                [locale]="locale()"
+                (changed)="formCron.set($event)"
+              />
+
+              @if (formError(); as failure) {
+                <p data-testid="job-form-error" [attr.data-code]="failure.code">
+                  {{ failure.message }}
+                </p>
+              }
+
+              <div class="cb-job-actions">
+                <button
+                  type="button"
+                  data-testid="job-form-submit"
+                  [disabled]="submitting()"
+                  (click)="submitForm()"
+                >
+                  {{ t('jobs.form.submit') }}
+                </button>
+                <button type="button" data-testid="job-form-cancel" (click)="closeForm()">
+                  {{ t('jobs.form.cancel') }}
+                </button>
+              </div>
+            </form>
+          }
+        }
+
+        @if (tab() === 'routines') {
+          <app-routines-panel />
         }
       </div>
     </ion-content>
@@ -237,6 +284,7 @@ export class JobsPage {
   readonly locale = this.i18n.locale;
   readonly t = (key: string): string => translate(this.locale(), key);
 
+  readonly tab = signal<'jobs' | 'routines'>('jobs');
   readonly formOpen = signal(false);
   readonly formTitle = signal('');
   readonly formPrompt = signal('');

@@ -6,6 +6,23 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-36, routines UI)
+
+- `/jobs` gains an in-page **Routines** tab: kind and cost label, the cron summarised in the
+  routine's own timezone, next and last fire, pause/resume (optimistic with rollback), run now,
+  an editor sheet for title, schedule, timezone, notify and — for a prompt routine only — the
+  prompt, and a delete that arms a confirmation before sending anything. No new route.
+- The chat screen renders a confirmation card when the agent creates a routine through
+  `routine.create`: kind, the cron's local time and the next fire, corroborated from
+  `GET /v1/routines?limit=10` inside a 120 s window because the tool frame carries no result.
+  A message a routine produced carries the `routine` badge and a link to the list, taken from
+  the `routine.replied` frame.
+- The routines tab refetches on activation and on every `routine.fired`, `routine.replied` or
+  `routine.failed` frame; the jobs and chat dictionaries gain their new en/es strings.
+- `[live]` — a routine created in a real chat on the VM appearing in the list without a reload
+  and its push arriving on the phone — is not measured on CI; an `agent-review` issue carries
+  it.
+
 ### Added — 2026-10-26 (Task-38, the routine tool, chat sessions only)
 
 - A daemon-owned loopback MCP server (`apps/daemon/src/chat/tools`) serves `routine.create`,

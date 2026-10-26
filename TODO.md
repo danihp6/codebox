@@ -524,7 +524,7 @@ turn and is not capped until the chat path writes a usage row (Task-35 records t
       push and no chat message; `[unit]` a prompt fire writes one message, streams the reply
       and never opens a PR; `[unit]` a prompt routine with no session creates one; `[live]` a
       seeded routine fires and its answer appears in that session.
-- [ ] **[Task-36]** Routines UI. A routines tab in the jobs screen: list, next fire, last
+- [x] **[Task-36]** Routines UI. A routines tab in the jobs screen: list, next fire, last
       result, pause/resume, run now and delete; the chat shows a confirmation card when the
       agent creates one (kind, local time, cost) and a badge on routine messages. Notification
       preference `routine`. *Paths:* `apps/app/src/app/features/jobs/**` (routines tab),
