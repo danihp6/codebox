@@ -16,14 +16,15 @@ Read in this order. `README.md` and `AGENTS.md` are the entry points; the rest i
 | 10 | [`providers.md`](providers.md) | You are adding, validating or rotating a configuration key. |
 | 11 | [`security.md`](security.md) | You are changing auth, exposure, sandboxing or audit. |
 | 12 | [`oci.md`](oci.md) | You are provisioning, resizing or migrating the OCI resources. |
-| 13 | [`vm-image.md`](vm-image.md) | You are building or updating the VM image. |
-| 14 | [`operations.md`](operations.md) | Something is running (or broken) in production. |
-| 15 | [`agent-pipeline.md`](agent-pipeline.md) | You are running a batch or writing a spec. |
-| 16 | [`agent-spec-template.md`](agent-spec-template.md) | You are the Architect writing a task. |
-| 17 | [`agent-ci.md`](agent-ci.md) | You are operating the GitHub Actions autopilot. |
-| 18 | [`agent-vm.md`](agent-vm.md) | You are operating the VM autopilot. |
-| 19 | [`roadmap.md`](roadmap.md) | You are planning the next phase. |
-| 20 | [`open-questions.md`](open-questions.md) | You need a decision that is not frozen yet. |
+| 13 | [`aws.md`](aws.md) | You are provisioning, destroying or budgeting the AWS spot host. |
+| 14 | [`vm-image.md`](vm-image.md) | You are building or updating the VM image. |
+| 15 | [`operations.md`](operations.md) | Something is running (or broken) in production. |
+| 16 | [`agent-pipeline.md`](agent-pipeline.md) | You are running a batch or writing a spec. |
+| 17 | [`agent-spec-template.md`](agent-spec-template.md) | You are the Architect writing a task. |
+| 18 | [`agent-ci.md`](agent-ci.md) | You are operating the GitHub Actions autopilot. |
+| 19 | [`agent-vm.md`](agent-vm.md) | You are operating the VM autopilot. |
+| 20 | [`roadmap.md`](roadmap.md) | You are planning the next phase. |
+| 21 | [`open-questions.md`](open-questions.md) | You need a decision that is not frozen yet. |
 
 ## Conventions used by these docs
 
