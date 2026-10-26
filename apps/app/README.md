@@ -52,10 +52,18 @@ Tasks 19–23 replace the placeholder feature pages in place.
 - `src/app/features/about/about.page.ts` — about/404 placeholder.
 - `src/app/features/approvals/approvals.page.ts` — approvals placeholder.
 - `src/app/features/chat/chat-list.page.ts` — chat list placeholder.
-- `src/app/features/chat/chat.page.ts` — chat detail placeholder.
+- `src/app/features/chat/chat.page.ts` — chat detail: streaming messages, tool and permission cards, promote, the routine confirmation card and the `routine` badge.
 - `src/app/features/dashboard/dashboard.page.ts` — dashboard placeholder.
 - `src/app/features/jobs/job.page.ts` — job detail placeholder.
-- `src/app/features/jobs/jobs.page.ts` — jobs placeholder.
+- `src/app/features/jobs/jobs.page.ts` — the Jobs tab: list, pause/resume, run-now and create, plus the in-page Routines tab.
+- `src/app/features/jobs/routines.api.ts` — `/v1/routines` list, get, patch, pause, resume, run-now and delete; no create.
+- `src/app/features/jobs/routines.api.spec.ts` — every routines URL and method, the query filters, the 204 and the boundary parse failure.
+- `src/app/features/jobs/routines-format.ts` — the cron summary with the routine timezone, the next fire and the last fire.
+- `src/app/features/jobs/routines-format.spec.ts` — the pinned schedule strings and the null timestamps.
+- `src/app/features/jobs/routines-panel.ts` — the routines tab: rows with kind and cost, actions, confirm-then-delete and the editor sheet.
+- `src/app/features/jobs/routines-panel.spec.ts` — reminder and prompt rows, the three actions, the confirmed delete, the editor rules and the empty/loading/error states.
+- `src/app/features/jobs/routines.store.ts` — the routines list, the optimistic toggles, run-now, delete and the routine event refetch.
+- `src/app/features/jobs/routines.store.spec.ts` — load, the pause rollback, resume, run-now, delete and the three refetch frames.
 - `src/app/features/pairing/pairing.page.ts` — pairing placeholder.
 - `src/app/features/repos/repo.page.ts` — repo detail placeholder.
 - `src/app/features/repos/repos.page.ts` — repos placeholder.

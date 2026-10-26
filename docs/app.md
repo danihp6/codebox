@@ -81,7 +81,7 @@ One feature folder owns its routes, components and store. A shared component mov
 | `/repos/:id` | Repo | Gate editor, protected paths, policy, recent runs. |
 | `/chat` | Chat list | Sessions by repo, last message, unread marker. |
 | `/chat/:id` | Chat | Streaming text, tool cards, permission cards, interrupt, promote. |
-| `/jobs` | Jobs | List, next fire, pause/resume, create; a **Routines** tab lists the chat schedules and opens the editor as a sheet. |
+| `/jobs` | Jobs | List, next fire, pause/resume, create; a **Routines** tab lists the chat schedules with their kind, the cron's local time and the next fire, and opens the editor as a sheet. |
 | `/jobs/:id` | Job | Cron and timezone editor, next fires, history. |
 | `/runs` | Runs | Filterable list with state chips and cost. |
 | `/runs/:id` | Run detail | Timeline, gate tail, guardrail checklist, PR link, cancel, revert. |
@@ -102,6 +102,10 @@ route.
   components read signals and call actions. No store reaches into another feature's store.
 - **Optimistic only for toggles** (pause/resume, notification preference) with a rollback on
   error. A run, a message or a job creation is never optimistic: it needs a server id.
+- **Routines refetch on activation.** The routines tab loads on every activation and on every
+  `routine.fired`, `routine.replied` or `routine.failed` frame; pause and resume are optimistic
+  with rollback, like a job toggle. Creation is not optimistic: the card corroborates the new
+  routine from `GET /v1/routines`.
 - **Caching:** the last successful payload per route in memory; a persisted snapshot of the
   dashboard and the last 50 runs for offline display. No chat history is persisted on the
   device beyond the current session (D36) — it is re-fetched.
@@ -147,9 +151,10 @@ The chat screen is the product's front door:
 - a composer that stays usable while the agent works, with a stop button;
 - "Promote to run" opens a confirmation with the repo, base branch and the prompt that will
   be used, then navigates to the new run;
-- a routine created in chat renders a confirmation card with its kind (`reminder` or
-  `prompt`), the local time and the next fire; routine messages carry a `routine` badge and a
-  link to the list.
+- a routine created in chat renders a confirmation card with its kind (`reminder` or `prompt`),
+  the cron's local time in the routine's own timezone and the next fire, corroborated from
+  `GET /v1/routines`; an answer a routine produced carries a `routine` badge and a link to the
+  list, taken from the `routine.replied` frame, so it is not redrawn after a full reload.
 
 Streaming text is appended with a single `requestAnimationFrame` flush per frame; the list
 sticks to the bottom only when the user is already at the bottom.

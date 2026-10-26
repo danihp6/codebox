@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
-import type { ChatMessage, ChatSession, Run, SseStreamEvent } from '@codebox/contracts';
+import type { ChatMessage, ChatSession, ReminderRoutine, Run, SseStreamEvent } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../core/api/api-client';
 import { ChatStore } from './chat.store';
@@ -61,6 +61,20 @@ const SESSION_URL = `/v1/chat/sessions/${CHAT}`;
 const MESSAGES_URL = `${SESSION_URL}/messages`;
 const PROMOTE_URL = `${SESSION_URL}/promote`;
 const REPLY_URL = `/v1/approvals/${APPROVAL}/reply`;
+const ROUTINES_URL = '/v1/routines?limit=10';
+
+const REMINDER: ReminderRoutine = {
+  id: 'rtn_01JABCDEFGHJKMNPQRSV',
+  kind: 'reminder',
+  title: 'Stand up',
+  cron: '0 7 * * *',
+  timezone: 'Europe/Madrid',
+  enabled: true,
+  notify: true,
+  createdAt: TS,
+  nextFireAt: '2026-10-25T06:00:00Z',
+  lastFiredAt: null,
+};
 
 function page(...messages: readonly ChatMessage[]): { data: ChatMessage[]; nextCursor: null } {
   return { data: [...messages], nextCursor: null };
@@ -74,6 +88,13 @@ function permission(seq: number): SseStreamEvent {
   return {
     event: 'chat.permission',
     data: { chatId: CHAT, seq, approvalId: APPROVAL, tool: 'bash', title: 'Run ls', ts: TS },
+  };
+}
+
+function routineTool(seq: number, status: 'ok' | 'error' | 'start'): SseStreamEvent {
+  return {
+    event: 'chat.tool',
+    data: { chatId: CHAT, seq, tool: 'routine.create', status, ts: TS },
   };
 }
 
@@ -237,5 +258,51 @@ describe('ChatStore', () => {
       `msg:${USER.id}`,
       `stream:${CHAT}`,
     ]);
+  });
+
+  it('corroborates a created routine from the routines list exactly once', () => {
+    load();
+
+    expect(store.applyStreamEvent(routineTool(7, 'ok'))).toBe('applied');
+
+    const request = http.expectOne(ROUTINES_URL);
+    expect(request.request.method).toBe('GET');
+    request.flush({ data: [REMINDER], nextCursor: null });
+
+    expect(store.stream().routines.map((card) => card.routine.id)).toEqual([REMINDER.id]);
+    expect(store.stream().routines[0]?.key).toBe(`routine:${REMINDER.id}`);
+
+    store.applyStreamEvent(routineTool(7, 'ok'));
+    http.expectNone(ROUTINES_URL);
+    expect(store.stream().routines).toHaveLength(1);
+  });
+
+  it('does not look up a routine when the tool failed', () => {
+    load();
+
+    store.applyStreamEvent(routineTool(8, 'error'));
+
+    http.expectNone(ROUTINES_URL);
+    expect(store.stream().routines).toHaveLength(0);
+  });
+
+  it('sets the error and keeps the messages when the routine lookup fails', () => {
+    load();
+
+    store.applyStreamEvent(routineTool(9, 'ok'));
+    http.expectOne(ROUTINES_URL).flush(
+      {
+        error: {
+          code: 'internal',
+          message: 'Boom',
+          requestId: 'req_01JABCDEFGHJKMNPQRSV',
+        },
+      },
+      { status: 500, statusText: 'Internal Server Error' },
+    );
+
+    expect(store.error()).toBeInstanceOf(ApiError);
+    expect(store.stream().messages).toHaveLength(1);
+    expect(store.stream().routines).toHaveLength(0);
   });
 });

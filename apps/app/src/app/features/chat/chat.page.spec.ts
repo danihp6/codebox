@@ -7,7 +7,7 @@ import { signal } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { Approval, ChatMessage, ChatSession, Page, SseStreamEvent } from '@codebox/contracts';
+import type { Approval, ChatMessage, ChatSession, Page, ReminderRoutine, SseStreamEvent } from '@codebox/contracts';
 import { provideIonicAngular } from '@ionic/angular';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SECURE_STORE } from '../../core/auth/secure-store';
@@ -48,6 +48,20 @@ const APPROVAL_BODY: Approval = {
 const SESSION_URL = `/v1/chat/sessions/${CHAT}`;
 const MESSAGES_URL = `${SESSION_URL}/messages`;
 const REPLY_URL = `/v1/approvals/${APPROVAL}/reply`;
+const ROUTINES_URL = '/v1/routines?limit=10';
+
+const REMINDER: ReminderRoutine = {
+  id: 'rtn_01JABCDEFGHJKMNPQRSV',
+  kind: 'reminder',
+  title: 'Stand up',
+  cron: '0 7 * * *',
+  timezone: 'Europe/Madrid',
+  enabled: true,
+  notify: true,
+  createdAt: TS,
+  nextFireAt: '2026-10-25T06:00:00Z',
+  lastFiredAt: null,
+};
 
 function message(
   id: string,
@@ -262,12 +276,68 @@ describe('ChatPage', () => {
     expect(hook(element, 'chat-loading')).toBeNull();
   });
 
+  it('renders a corroborated routine card with its local time and next fire', async () => {
+    const { fixture, element, sse, http } = await mount();
+
+    sse.set({
+      event: 'chat.tool',
+      data: { chatId: CHAT, seq: 4, tool: 'routine.create', status: 'ok', ts: TS },
+    });
+    await fixture.whenStable();
+
+    http.expectOne(ROUTINES_URL).flush({ data: [REMINDER], nextCursor: null });
+    await fixture.whenStable();
+
+    const card = hook(element, 'chat-routine-card');
+    expect(card?.getAttribute('data-routine-id')).toBe(REMINDER.id);
+    expect(card?.getAttribute('data-kind')).toBe('reminder');
+
+    const kind = (hook(element, 'chat-routine-kind')?.textContent ?? '').trim();
+    expect(['Reminder', 'Recordatorio']).toContain(kind);
+
+    const local = (hook(element, 'chat-routine-local')?.textContent ?? '').replace(/\s+/g, ' ');
+    expect(local).toContain('07:00');
+    expect(local).toContain('Europe/Madrid');
+
+    expect(hook(element, 'chat-routine-next')?.getAttribute('data-at')).toBe(REMINDER.nextFireAt);
+    expect(hook(element, 'chat-routine-open')?.getAttribute('href')).toBe('/jobs');
+  });
+
+  it('badges a message a routine produced and links to the routines list', async () => {
+    const id = 'msg_01JABCDEFGHJKMNPQRSV';
+    const { fixture, element, sse } = await mount(page(message(id, 'assistant', 'done', TS)));
+
+    sse.set({
+      event: 'routine.replied',
+      data: { routineId: REMINDER.id, chatId: CHAT, messageId: id, ts: TS },
+    });
+    await fixture.whenStable();
+
+    expect(hook(element, 'chat-routine-badge')).not.toBeNull();
+    expect(hook(element, 'chat-routine-link')?.getAttribute('href')).toBe('/jobs');
+  });
+
   it('ships both dictionaries with the same keys and no empty value', () => {
     const en = Object.keys(STRINGS.en).sort();
     const es = Object.keys(STRINGS.es).sort();
 
     expect(es).toEqual(en);
     for (const key of en) {
+      expect(STRINGS.en[key], `en ${key}`).toBeTruthy();
+      expect(STRINGS.es[key], `es ${key}`).toBeTruthy();
+    }
+
+    const routineKeys = [
+      'chat.routine.title',
+      'chat.routine.kind.prompt',
+      'chat.routine.kind.reminder',
+      'chat.routine.local',
+      'chat.routine.next',
+      'chat.routine.open',
+      'chat.routine.badge',
+      'chat.routine.list',
+    ];
+    for (const key of routineKeys) {
       expect(STRINGS.en[key], `en ${key}`).toBeTruthy();
       expect(STRINGS.es[key], `es ${key}`).toBeTruthy();
     }

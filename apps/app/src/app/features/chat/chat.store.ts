@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import type { ChatSession, SseStreamEvent } from '@codebox/contracts';
 import { finalize } from 'rxjs';
 import type { ApiError } from '../../core/api/api-client';
+import { RoutinesApi } from '../jobs/routines.api';
 import type { ApprovalReply } from './chat.api';
 import { ChatApi } from './chat.api';
 import {
@@ -12,9 +13,13 @@ import {
   applyChatEvent,
   markPermissionAnswered,
   mergeMessages,
+  pickCreatedRoutine,
+  withRoutineCard,
 } from './chat-stream';
+import type { ChatStreamState } from './chat-stream';
 
 const MESSAGES_LIMIT = 100;
+const ROUTINE_LOOKUP_LIMIT = 10;
 
 export type ChatBusy = 'send' | 'interrupt' | 'promote';
 
@@ -36,6 +41,7 @@ export class ChatStore {
   readonly canInterrupt = computed<boolean>(() => this.stream().working);
 
   private readonly api = inject(ChatApi);
+  private readonly routinesApi = inject(RoutinesApi);
   private readonly router = inject(Router);
   private readonly destroy = inject(DestroyRef);
   private promoteCounter = 0;
@@ -133,6 +139,16 @@ export class ChatStore {
     const next = applyChatEvent(current, chatId, event);
     if (next === current) return 'ignored';
     this.stream.set(next);
+
+    if (
+      event.event === 'chat.tool' &&
+      event.data.tool === 'routine.create' &&
+      event.data.status === 'ok' &&
+      event.data.chatId === chatId &&
+      !isSettledRoutineTool(current, event.data.seq)
+    ) {
+      this.lookupCreatedRoutine(chatId, event.data.ts);
+    }
     return 'applied';
   }
 
@@ -166,6 +182,20 @@ export class ChatStore {
       });
   }
 
+  private lookupCreatedRoutine(chatId: string, toolTs: string): void {
+    this.routinesApi
+      .list({ limit: ROUTINE_LOOKUP_LIMIT })
+      .pipe(takeUntilDestroyed(this.destroy))
+      .subscribe({
+        next: (page) => {
+          const routine = pickCreatedRoutine(page.data, chatId, toolTs);
+          if (routine === null) return;
+          this.stream.update((current) => withRoutineCard(current, routine));
+        },
+        error: (error: ApiError) => this.error.set(error),
+      });
+  }
+
   private fetchMessages(chatId: string): void {
     this.api
       .listMessages(chatId, { limit: MESSAGES_LIMIT })
@@ -175,4 +205,11 @@ export class ChatStore {
         error: (error: ApiError) => this.error.set(error),
       });
   }
+}
+
+/** A `chat.tool` frame that already landed as `ok` for this seq is a replay: no second lookup. */
+function isSettledRoutineTool(state: ChatStreamState, seq: number): boolean {
+  return state.tools.some(
+    (card) => card.seq === seq && card.tool === 'routine.create' && card.status === 'ok',
+  );
 }

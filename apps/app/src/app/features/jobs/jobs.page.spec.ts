@@ -24,6 +24,7 @@ const RUN_ID = 'run_01JABCDEFGHJKMNPQRSV';
 const TS = '2026-10-24T18:04:02Z';
 const JOBS_URL = '/v1/jobs?limit=100';
 const REPOS_URL = '/v1/repos?limit=200';
+const ROUTINES_URL = '/v1/routines?limit=100';
 
 const JOB: Job = {
   id: JOB_ID,
@@ -303,6 +304,40 @@ describe('JobsPage', () => {
     http.expectNone(JOBS_URL);
   });
 
+  it('switches between the Jobs and the Routines tab without a navigation', async () => {
+    const { fixture, element, http } = await mount();
+    http.expectOne(JOBS_URL).flush({ data: [JOB], nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'jobs-tab-jobs')).not.toBeNull();
+    expect(hook(element, 'jobs-tab-routines')).not.toBeNull();
+    expect(hook(element, 'page-jobs')?.getAttribute('data-tab')).toBe('jobs');
+    expect(hook(element, 'jobs-tab-jobs')?.getAttribute('data-active')).toBe('true');
+    expect(hook(element, 'jobs-tab-routines')?.getAttribute('data-active')).toBe('false');
+    expect(hook(element, 'routines-panel')).toBeNull();
+    http.expectNone(ROUTINES_URL);
+
+    hook(element, 'jobs-tab-routines')?.click();
+    await fixture.whenStable();
+
+    expect(hook(element, 'page-jobs')?.getAttribute('data-tab')).toBe('routines');
+    expect(hook(element, 'jobs-tab-routines')?.getAttribute('data-active')).toBe('true');
+    expect(hook(element, 'routines-panel')).not.toBeNull();
+    expect(hook(element, 'job-row')).toBeNull();
+
+    http.expectOne(ROUTINES_URL).flush({ data: [], nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'routines-empty')).not.toBeNull();
+
+    hook(element, 'jobs-tab-jobs')?.click();
+    await fixture.whenStable();
+
+    expect(hook(element, 'page-jobs')?.getAttribute('data-tab')).toBe('jobs');
+    http.expectNone(ROUTINES_URL);
+    expect(element.querySelectorAll('[data-testid="job-row"]')).toHaveLength(1);
+  });
+
   it('ships one dictionary with the same keys in both locales and resolves every template key', () => {
     const en = STRINGS.en;
     const es = STRINGS.es;
@@ -318,7 +353,11 @@ describe('JobsPage', () => {
       expect(translate('es', `jobs.detail.state.${state}`)).not.toBe(`jobs.detail.state.${state}`);
     }
 
-    const keys = [...templateKeys('jobs.page.ts'), ...templateKeys('job.page.ts')];
+    const keys = [
+      ...templateKeys('jobs.page.ts'),
+      ...templateKeys('job.page.ts'),
+      ...templateKeys('routines-panel.ts'),
+    ];
     expect(keys.length).toBeGreaterThan(0);
     for (const key of keys) {
       expect(translate('en', key), `en ${key}`).not.toBe(key);
