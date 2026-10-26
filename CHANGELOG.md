@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-40, second builder: AWS)
+
+- The Packer template gains an `amazon-ebs` source beside `oracle-oci` in one build block, so
+  the eight shared provisioners bake the same Ubuntu 24.04 arm64 image on either host;
+  `packer build -only` selects the host.
+- Region, subnet, base AMI, build instance type and name/tag come from `aws_*` variables with
+  dummies in `example.pkrvars.hcl`; the template carries no credential.
+- Build steps are discovered lexicographically from `scripts/*.sh`, so a new numbered step
+  needs no template edit.
+- `[live]` — an AMI whose `/etc/codebox/image.json` matches the OCI image from the same commit
+  — is measured on a built image only; an `agent-review` issue carries it.
+
 ### Added — 2026-10-26 (Task-35, routine fire engine and `/v1/routines`)
 
 - The routine tick claims `(routine_id, scheduled_for)` transactionally and applies D13: a

@@ -622,7 +622,7 @@ the app or the API.
       both name the host `cb-<id8>`; `[unit]` the Vault source keeps its eight reads over two
       boots and echoes no secret; `[unit]` the second boot rewrites byte-identical files.
 
-- [ ] **[Task-40]** Second builder: AWS. Add `amazon-ebs` beside `oracle-oci` in one build
+- [x] **[Task-40]** Second builder: AWS. Add `amazon-ebs` beside `oracle-oci` in one build
       block so the eight provisioners stay shared; variables for region, subnet, the base
       Ubuntu 24.04 arm64 AMI, the build instance and the name/tag `cb-image-<version>-<sha>`;
       the AWS dummies join `example.pkrvars.hcl`. `packer build -only` selects the host.
