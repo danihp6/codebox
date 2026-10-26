@@ -6,6 +6,10 @@ packer {
       version = ">= 1.0.2"
       source  = "github.com/hashicorp/oracle"
     }
+    amazon = {
+      version = ">= 1.3.0"
+      source  = "github.com/hashicorp/amazon"
+    }
   }
 }
 
@@ -63,6 +67,41 @@ variable "cloudflared_channel" {
   default     = "stable"
 }
 
+variable "aws_region" {
+  type        = string
+  description = "Region of the build instance and of the resulting AMI."
+  default     = "eu-west-1"
+}
+
+variable "aws_subnet_id" {
+  type        = string
+  description = "Subnet with egress, so the build instance can reach apt, Node and npm."
+}
+
+variable "aws_source_ami" {
+  type        = string
+  description = "Ubuntu 24.04 LTS arm64 base AMI; empty resolves the newest Canonical arm64 AMI in the region."
+  default     = ""
+}
+
+variable "aws_instance_type" {
+  type        = string
+  description = "Build instance type; arm64 so the image is arm64 on arm64."
+  default     = "c7g.xlarge"
+}
+
+variable "aws_ssh_username" {
+  type        = string
+  description = "SSH user of the AWS base image, the Canonical default."
+  default     = "ubuntu"
+}
+
+variable "aws_spot_max_price" {
+  type        = string
+  description = "Maximum hourly price of a spot build instance; empty builds on demand."
+  default     = ""
+}
+
 source "oracle-oci" "codebox" {
   availability_domain = var.availability_domain
   base_image_ocid     = var.base_image_ocid
@@ -82,8 +121,36 @@ source "oracle-oci" "codebox" {
   }
 }
 
+source "amazon-ebs" "codebox" {
+  region        = var.aws_region
+  subnet_id     = var.aws_subnet_id
+  source_ami    = var.aws_source_ami
+  instance_type = var.aws_instance_type
+  ssh_username  = var.aws_ssh_username
+  spot_price    = var.aws_spot_max_price
+  ami_name      = "cb-image-${var.image_version}-${var.git_sha}"
+
+  # Empty source_ami falls back to the newest Canonical Ubuntu 24.04 arm64 AMI of the region,
+  # so a build with -var aws_source_ami= works without pinning an ID that expires.
+  source_ami_filter {
+    filters = {
+      name                = "ubuntu/images/hvm-ssd/ubuntu-noble-24.04-arm64-server-*"
+      root-device-type    = "ebs"
+      virtualization-type = "hvm"
+    }
+    owners      = ["099720109477"]
+    most_recent = true
+  }
+
+  tags = {
+    Name              = "cb-image-${var.image_version}-${var.git_sha}"
+    "codebox:version" = var.image_version
+    "codebox:commit"  = var.git_sha
+  }
+}
+
 build {
-  sources = ["source.oracle-oci.codebox"]
+  sources = ["source.oracle-oci.codebox", "source.amazon-ebs.codebox"]
 
   provisioner "shell" {
     inline = ["mkdir -p /tmp/codebox/units /tmp/codebox/vm"]
@@ -164,6 +231,8 @@ build {
     destination = "/tmp/codebox/90-verify.sh"
   }
 
+  # Every scripts/NN-*.sh is a build step and the numeric prefix is the order, so a new step
+  # joins the build without a second edit of this template.
   provisioner "shell" {
     environment_vars = [
       "CB_IMAGE_VERSION=${var.image_version}",
@@ -173,15 +242,6 @@ build {
       "OPENCODE_VERSION=${var.opencode_version}",
     ]
     execute_command = "chmod +x {{.Path}}; {{.Vars}} sudo -E bash -eux '{{.Path}}'"
-    scripts = [
-      "${path.root}/scripts/10-base.sh",
-      "${path.root}/scripts/20-node.sh",
-      "${path.root}/scripts/30-tools.sh",
-      "${path.root}/scripts/40-opencode.sh",
-      "${path.root}/scripts/50-cloudflared.sh",
-      "${path.root}/scripts/60-service.sh",
-      "${path.root}/scripts/70-harden.sh",
-      "${path.root}/scripts/90-verify.sh",
-    ]
+    scripts         = [for f in fileset("${abspath(path.root)}/scripts", "*.sh") : "${abspath(path.root)}/scripts/${f}"]
   }
 }
