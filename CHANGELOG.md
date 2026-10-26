@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-42, `infra/aws` Terraform stack)
+
+- `infra/aws` creates the spot host: VPC, public subnet, IGW, a security group that admits SSH
+  only from the admin `/32` and nothing on 80/443, a `c7g.2xlarge` spot instance with IMDSv2
+  and a 100 GB gp3 volume, an instance profile granting SSM and the backup bucket only, the
+  versioned and SSE-encrypted `cb-backups` bucket with a 30-day lifecycle, and a monthly
+  budget alarm.
+- State is S3 with native locking; `bootstrap/` creates the bucket first. `ami_id` defaults to
+  the Canonical Ubuntu 24.04 arm64 lookup so the stack applies before the Codebox image.
+- `terraform test` with a mocked `aws` provider proves the invariants offline; `docs/aws.md`
+  documents the stack and joins the documentation index.
+- `[live]` — one `apply`/`destroy` on the L3 account — is measured there only; an
+  `agent-review` issue carries it.
+
 ### Added — 2026-10-26 (Task-41, browser in the image)
 
 - `ops/image/scripts/45-browser.sh` installs Playwright's pinned Chromium (1.64.1) with its

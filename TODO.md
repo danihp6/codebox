@@ -565,7 +565,7 @@ wait is still open**, and the spot host must be built the same way. One tool, tw
 the static resources on both sides; the instance stays with `ops/oci/launch.sh` on OCI, because
 no `apply` can wait for capacity.
 
-- [ ] **[Task-42]** `infra/aws`: Terraform for the spot host. One root module (Terraform 1.9+,
+- [x] **[Task-42]** `infra/aws`: Terraform for the spot host. One root module (Terraform 1.9+,
       the `aws` provider pinned, remote S3 state with native locking, and a one-file
       `bootstrap/` that creates the state bucket and its lock the first time): a VPC with a
       public subnet and **no inbound 80/443**, a security group allowing SSH only from the
