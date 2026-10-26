@@ -226,3 +226,14 @@ Everything that needs the account is `[live]` and is **not** measured by CI:
 
 No credential, key or account id belongs in this repository (D37); the account is supplied by
 the environment at run time.
+
+### 10.1 Measured spot cost
+
+The monthly figure is the measured spot price for `c7g.2xlarge` in `eu-west-1` multiplied by
+the hours in the table; the cap and the alarm it is compared against are `spot_max_price` and
+`budget_limit_usd` (§4, §8). Measure it with the commands of
+[`operations.md`](operations.md) §14.8 and record the result in the row below.
+
+| Date | Shape | Spot price | Hours/month | Monthly | Source |
+| --- | --- | --- | --- | --- | --- |
+| _to be filled at the measured bring-up (Task-46)_ | `c7g.2xlarge` | `—` | 730 | `—` | `aws ec2 describe-spot-price-history` |

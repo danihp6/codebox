@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-46, the measured AWS spot bring-up runbook)
+
+- `infra/aws/terraform.tfvars.example` carries the twelve module variables with safe
+  placeholders only (`203.0.113.7/32`, `operator@example.com`, an empty `ami_id`); the applied
+  `terraform.tfvars` stays ignored and is never committed.
+- `docs/operations.md` §14 is the end-to-end runbook: L3 preconditions, `terraform apply`, the
+  four secret bundles delivered over SSM and never in user-data or a var-file, first boot, the
+  tunnel hostname and pairing, the newest dump restored after a destroy, three repositories at
+  once under `CB_MAX_CONCURRENCY=3` with Playwright, teardown and rebuild from zero, and the
+  four measurements with their bounds.
+- `docs/aws.md` §10.1 reserves the measured-cost row with `—` cells: no figure is written
+  before the operator measures it.
+- `[live]` — the boot time, the three concurrent runs, the restore across a rebuild and the
+  spot cost — is not measured on CI (no AWS account, no `terraform`); an `agent-review` issue
+  carries it.
+
 ### Changed — 2026-10-26 (Task-45, one image, two hosts: D42)
 
 - The docs say what is true: the Packer image is provider-neutral Ubuntu 24.04 arm64, the

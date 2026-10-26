@@ -46,6 +46,9 @@ on OCI when it is absent; it sets the hostname and the instance name, then start
 daemon fails fast if a required key is missing, naming the key and never its value. The AWS
 spot host runs the same first boot; its stack is in `docs/aws.md`.
 
+The measured AWS bring-up, from `terraform apply` to `destroy`, is
+[§14](#14-aws-spot-bring-up).
+
 ## 3. Pair the first device
 
 ```bash
@@ -277,3 +280,331 @@ not a unix socket.
 - A configuration change is an env edit plus a restart; `cb doctor` proves it.
 - A migration is numbered, forward-only and tested against a copy of production data.
 - A runbook change ships with the incident that motivated it (Task-30 reconciles the docs).
+
+## 14. AWS spot bring-up
+
+Every command in this section runs from the operator's workstation with a named `AWS_PROFILE` —
+never with a key in this repository — and the box itself is reached over SSM. Neither CI nor the
+agent pipeline (`docs/agent-vm.md` §2) executes any step here: the run is the operator's from
+`terraform apply` to `terraform destroy`.
+
+### 14.1 Preconditions
+
+The L3 entry in `TODO.md` §"Local / human" is still an open checkbox (`- [ ]`): the dedicated IAM
+user with MFA, the pinned region and the budget alarm are the operator's, and this runbook does
+not create them. Confirm L3 before applying — `docs/aws.md` §10, first bullet, asks exactly that.
+Credentials come from the environment and never from a file in this tree (`docs/aws.md` §6, §10
+last paragraph; D37). The state bucket is created once by `infra/aws/bootstrap` and is not managed
+by the root module (`docs/aws.md` §5), and the dump bucket name must be globally unique because S3
+names are global (`docs/aws.md` §6).
+
+```bash
+export AWS_PROFILE=codebox-admin          # the L3 user's profile, never the root account
+aws sts get-caller-identity --query 'Arn' --output text
+aws configure get region                  # eu-west-1, the region backend.tf and bootstrap use
+aws s3api head-bucket --bucket cb-codebox-tfstate
+```
+
+Expected: an ARN ending `/user/<name>` — never `:root`, which means the profile is wrong and the
+run stops here; `eu-west-1`; and `head-bucket` exits 0. A `404` means the bucket does not exist
+yet: run the bootstrap block of `docs/aws.md` §5 once
+(`cd infra/aws/bootstrap && terraform init && terraform plan && terraform apply`), then re-run
+`head-bucket`.
+
+### 14.2 Deploy
+
+The module's backend and its native S3 locking are `infra/aws/backend.tf` and `docs/aws.md` §5:
+`use_lockfile = true` keeps the lock in a `.tflock` object beside the state, so there is no
+DynamoDB table to create or forget. `admin_cidr` is the only required variable and the four
+outputs are the contract (`infra/aws/outputs.tf`, `docs/aws.md` §6); the security group keeps the
+single ingress rule of `docs/aws.md` §3. `terraform test` asserts the same shape offline
+(`infra/aws/tests/stack.tftest.hcl`, `docs/aws.md` §9), and the operator still runs
+`terraform plan -var-file=terraform.tfvars` and reads the diff before applying.
+
+```bash
+cd infra/aws
+cp terraform.tfvars.example terraform.tfvars
+git check-ignore -q terraform.tfvars && echo "tfvars is ignored: it is never committed"
+$EDITOR terraform.tfvars                  # admin_cidr, budget_alert_email, backup_bucket_name, ami_id
+terraform init
+terraform plan  -var-file=terraform.tfvars
+terraform apply -var-file=terraform.tfvars
+terraform output instance_id
+terraform output public_ip
+terraform output backup_uri
+terraform output security_group_id
+```
+
+Expected: `init` writes state to `cb-codebox-tfstate/infra/aws/terraform.tfstate` with a `.tflock`
+object; `plan` shows additions only and one `aws_security_group` with a single `tcp/22` ingress;
+`apply` ends `Apply complete!`; the four outputs print an `i-…` id, an IPv4 address,
+`s3://<bucket>` and an `sg-…` id. `terraform output -raw instance_id` and
+`terraform output -raw backup_uri` are the two values the next steps paste into the box.
+
+### 14.3 The four secret bundles over SSM
+
+No secret is ever in user-data, in `terraform.tfvars` or in the Packer template
+(`docs/vm-image.md` §7; `docs/security.md` §7). `/etc/codebox/secret-bundles.json` is the only
+secret source on a host whose identity has no Vault grant (`ops/vm/cloud-init.sh`
+`read_secrets_file`; `ops/vm/README.md` §Commands), so the file must exist before first boot:
+without it `cloud-init.sh` falls through to Vault and refuses to boot on AWS.
+
+The bundle, built on the workstation, with placeholders only:
+
+```json
+{
+  "githubAppPrivateKeyBase64": "<base64 of the GitHub App private key PEM>",
+  "sessionSecret": "<base64 of 48 random bytes: openssl rand -base64 48>",
+  "tunnelToken": "<the tunnel token JSON exactly as Cloudflare prints it>",
+  "providerKeys": "ANTHROPIC_API_KEY=<key>\nOPENAI_API_KEY=<key>"
+}
+```
+
+| Key | Kind | Constraint |
+| --- | --- | --- |
+| `githubAppPrivateKeyBase64` | string | Non-empty; the PEM, base64-encoded (`docs/providers.md` §6 → `CB_GITHUB_APP_PRIVATE_KEY_BASE64`). |
+| `sessionSecret` | string | Non-empty; 32+ random bytes, base64 (`docs/providers.md` §4 → `CB_SESSION_SECRET`). |
+| `tunnelToken` | string | Non-empty; the Cloudflare tunnel token, a JSON object with `a`, `s` and `t`. |
+| `providerKeys` | string | May be empty; newline-separated `KEY=VALUE`, names exactly as `docs/providers.md` §2 documents them, written into `instance.env` verbatim. |
+
+`cloud-init.sh` reads `bundles.providerKeys ?? ""`, so an empty value still needs the key present,
+and a fifth key is ignored.
+
+```bash
+# workstation: one base64 line, so the value never sits in a file
+base64 < secret-bundles.json | tr -d '\n'
+terraform -chdir=infra/aws output -raw instance_id     # prints i-…
+aws ssm start-session --target i-…                    # paste the id
+```
+
+`-chdir=infra/aws` is why the `terraform` line runs from the repository root rather than from
+`infra/aws`.
+
+```bash
+# inside the session, on the box: the value is typed with echo off
+stty -echo; read -r B64; stty echo
+printf '%s' "$B64" | base64 -d | sudo tee /etc/codebox/secret-bundles.json >/dev/null
+unset B64
+sudo chown root:codebox /etc/codebox/secret-bundles.json
+sudo chmod 600 /etc/codebox/secret-bundles.json
+sudo stat -c '%a %U:%G %n' /etc/codebox/secret-bundles.json
+sudo jq -r 'keys[]' /etc/codebox/secret-bundles.json
+sudo jq -e 'has("githubAppPrivateKeyBase64") and has("sessionSecret") and has("tunnelToken") and has("providerKeys")' /etc/codebox/secret-bundles.json
+```
+
+Expected: `600 root:codebox /etc/codebox/secret-bundles.json`; the four keys one per line in `jq`
+order — `githubAppPrivateKeyBase64`, `providerKeys`, `sessionSecret`, `tunnelToken`; and `true`.
+
+Never print the file: the value is typed with echo off, `tee` writes to `/dev/null`, `jq` prints
+the keys and `stat` prints the mode, so no command shows a value. If the SSM session does not open
+— no agent, or SSM still registering — SSH from the admin `/32` is the break-glass path
+(`docs/aws.md` §3) and `scp` delivers the same file; the prohibition does not change.
+
+### 14.4 First boot
+
+`cloud-init.sh` writes `/etc/codebox/instance.env` (`0600`, `root:codebox`), renders
+`/etc/cloudflared/config.yml`, starts `codebox-opencode` (started, never enabled) and then
+`codebox` and `cloudflared`, and polls `/v1/health` for `--health-timeout` 120 s
+(`ops/vm/README.md` §Commands; `docs/vm-image.md` §5). `/etc/codebox/image.json` is baked by
+`ops/image/scripts/60-service.sh` (mode `0644`, `root:root`; version, commit, build time and the
+`node`, `opencode` and `cloudflared` versions — `docs/vm-image.md` §9). The box proves it with the
+`stat` and `jq` lines below, because `cb doctor` reads no image file: it asks the daemon for
+`/v1/health`, `/v1/providers` and `/v1/telemetry` and prints one line per dependency — `db`,
+`opencode`, `tunnel`, `github`, `disk`, `queue`, `cost` and `backup`
+(`apps/daemon/src/cli/doctor.ts`, `docs/operations.md` §7) — exiting `1` only when one of them
+fails. On this host nothing runs the script at launch —
+`infra/aws/compute.tf` declares no `user_data` — so the operator runs it once over the session;
+that is the one manual step besides the bundles, and the ≤ 5 minute bound starts at `T0`, not at
+launch.
+
+```bash
+# workstation
+terraform -chdir=infra/aws output -raw instance_id
+terraform -chdir=infra/aws output -raw public_ip
+```
+
+```bash
+# on the box
+INSTANCE_ID=i-…
+T0=$(date -u +%s)
+sudo env CB_INSTANCE_NAME=cb-spot CB_PUBLIC_URL=https://cb.<domain> \
+  /usr/local/lib/codebox/cloud-init.sh --instance-id "$INSTANCE_ID"
+T1=$(date -u +%s); echo "first boot took $((T1-T0)) s"
+sudo stat -c '%a %U:%G %n' /etc/codebox/instance.env /etc/cloudflared/config.yml /etc/codebox/image.json
+sudo jq -c '{version, commit, builtAt}' /etc/codebox/image.json
+systemctl status codebox.service cloudflared.service --no-pager
+cb doctor; echo "doctor=$?"
+curl -sS -o /dev/null -w '%{http_code}\n' http://127.0.0.1:8787/v1/health
+curl -sS http://127.0.0.1:8787/v1/health | jq -r '.status'
+sudo grep -cE '^(CB_INSTANCE_NAME|CB_PUBLIC_URL|CB_GITHUB_APP_PRIVATE_KEY_BASE64|CB_SESSION_SECRET|CB_TUNNEL_TOKEN)=' /etc/codebox/instance.env
+sudo tail -n 1 /var/lib/codebox/first-boot.jsonl
+```
+
+Expected: `600 root:codebox /etc/codebox/instance.env`,
+`640 root:codebox /etc/cloudflared/config.yml`, `644 root:root /etc/codebox/image.json`; one
+`{"version":…,"commit":…,"builtAt":…}` line from the manifest; both units `active (running)`;
+`doctor=0` on the eight dependency lines — a `warn` never fails, `docs/operations.md` §7; `200`;
+`ok`; `5`; and a JSON line ending `"result":"ok"`. The `systemctl` and `curl` lines are the only
+health evidence, and the probe never leaves the box.
+
+### 14.5 Tunnel hostname and pairing
+
+The tunnel credentials are rendered from the token at first boot into
+`/etc/cloudflared/config.yml` (`docs/vm-image.md` §5, step 3); the public hostname is attached to
+the tunnel in the Cloudflare dashboard and no origin port is opened (`docs/aws.md` §3, D18); the
+daemon trusts `CB_PUBLIC_URL` (`docs/providers.md` §2) and `CB_ALLOWED_ORIGINS`, which defaults to
+it (`docs/providers.md` §4); Q8 in `docs/open-questions.md` lists everything a hostname change
+touches.
+
+In the dashboard: Zero Trust → Networks → Tunnels → the tunnel → Public Hostname → `cb.<domain>` →
+`http://127.0.0.1:8787`. The DNS record stays proxied, and nothing is published on 80 or 443.
+
+```bash
+sudo sed -i 's|^CB_PUBLIC_URL=.*|CB_PUBLIC_URL=https://cb.<domain>|' /etc/codebox/instance.env
+sudo systemctl restart codebox.service
+curl -sS http://127.0.0.1:8787/v1/health | jq -r '.status'
+cb pair --name "<device name>"
+```
+
+```bash
+# from the operator's machine, through the tunnel only
+curl -sS https://cb.<domain>/v1/health | jq -r '.status'
+```
+
+Expected: `ok` inside and `ok` through the tunnel; `cb pair` prints the code, its expiry and a
+`codebox://pair?url=…&code=…` deep link (`docs/operations.md` §3, §12). Pairing is the operator's,
+on a real device, and a used or expired code never works twice.
+
+### 14.6 Backup and restore
+
+The nightly unit runs `backup.sh --upload` (`ops/vm/systemd/codebox-backup.service` line 13);
+`CB_BACKUP_S3_URI` and `CB_BACKUP_AGE_RECIPIENT` are host variables in a drop-in, never in
+`instance.env` (`ops/vm/README.md` §Units); the age private key never lives on the VM
+(`ops/vm/backup.sh` header; `docs/security.md` §8); `_latest` is the pointer `restore.sh --latest`
+reads, and `restore.sh` never starts or stops a unit (`ops/vm/README.md` §Commands). The key pair
+is made once on the operator's workstation — `age-keygen -o age.key` prints the `age1…` recipient
+— the recipient goes into the drop-in, and the identity is pasted into a session only for a
+restore, then shredded.
+
+```bash
+sudo systemctl edit codebox-backup.service
+# [Service]
+# Environment=CB_BACKUP_S3_URI=s3://<bucket>
+# Environment=CB_BACKUP_AGE_RECIPIENT=age1…
+sudo systemctl daemon-reload
+sudo systemctl start codebox-backup.service
+sudo journalctl -u codebox-backup.service -n 20 --no-pager
+aws s3 ls "s3://<bucket>/db/" --recursive            # workstation
+```
+
+Expected: one `db/<YYYY>/<MM>/<DD>.age` object and the `_latest` pointer (`ops/vm/README.md`
+§Commands). `<bucket>` is the name inside `backup_uri` from 14.2.
+
+```bash
+sudo systemctl stop codebox.service
+stty -echo; read -r AGEKEY; stty echo                 # paste base64 of the age identity
+printf '%s' "$AGEKEY" | base64 -d | sudo tee /root/age.key >/dev/null
+unset AGEKEY; sudo chmod 600 /root/age.key
+sudo env CB_BACKUP_S3_URI="s3://<bucket>" CB_BACKUP_AGE_IDENTITY=/root/age.key \
+  /usr/local/lib/codebox/restore.sh --latest --identity /root/age.key
+sudo shred -u /root/age.key
+sudo systemctl start codebox.service
+sudo sqlite3 /var/lib/codebox/state.db "SELECT (SELECT COUNT(*) FROM jobs)||'/'||(SELECT COUNT(*) FROM chat_messages);"
+cb jobs
+```
+
+Expected: `restore.sh` exits 0 after verifying the row counts it installs; the `jobs/messages`
+pair and `cb jobs` match the values recorded before the destroy (14.9). Both table names come from
+`packages/store/migrations/0001_init.sql` (`docs/architecture.md` §2).
+
+### 14.7 Three repositories at once
+
+`CB_MAX_CONCURRENCY` is `3` and the per-repository cap stays `1` (`docs/providers.md` §8,
+`docs/jobs.md` §2, D15 as amended by Task-44); `c7g.2xlarge` (8 vCPU / 16 GB) is the floor for
+three repositories, each with its agent, build and Chromium, beside the daemon, OpenCode and the
+tunnel (`docs/aws.md` §4); the browser is baked and nothing is downloaded at run time
+(`docs/vm-image.md` §4, §9). `PLAYWRIGHT_BROWSERS_PATH` is written into `/etc/environment` by
+`ops/image/scripts/45-browser.sh`, which systemd never reads, so it must also be in the unit's
+environment. Do not install the agent pipeline on this box for the measurement: its unit reserves
+10 GB of a 12 GB box and is not part of the product (`docs/agent-vm.md` §1, §6).
+
+```bash
+sudo install -d /etc/systemd/system/codebox.service.d
+sudo tee /etc/systemd/system/codebox.service.d/override.conf >/dev/null <<'EOF'
+[Service]
+Environment=CB_MAX_CONCURRENCY=3
+Environment=PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+EOF
+sudo systemctl daemon-reload && sudo systemctl restart codebox.service
+curl -sS http://127.0.0.1:8787/v1/health | jq '.queue'
+PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright npx playwright test --workers=1
+cb run <jobId-A>
+cb run <jobId-B>
+cb run <jobId-C>
+cb status
+```
+
+```bash
+# second session, while the three runs are in flight
+watch -n 10 'free -m'
+awk '/MemAvailable/{print int($2/1024)}' /proc/meminfo
+sudo journalctl -k --since '-20 min' | grep -ci 'out of memory'
+```
+
+Expected: `.queue.maxConcurrency` is `3`; one green `npx playwright test --workers=1` inside a
+worktree on the box, with no download; `cb status` prints `3 running, 0 pending, max 3` on its
+`queue` row and names the three run ids, comma-separated, on its `running` row — that row lists at
+most five, so three fit; `MemAvailable` never below `1024` MiB; the OOM count is `0`; and all three
+runs end `succeeded`. Each job's prompt is the repository's own gate, which includes
+`npx playwright test --workers=1` (`.agent_roles/qa.md`).
+
+### 14.8 Cost
+
+The cap is `spot_max_price` (default `0.40` an hour, `docs/aws.md` §4); a month is `730` hours;
+and the budget the stack alarms on is `budget_limit_usd` (`docs/aws.md` §8).
+
+```bash
+aws ec2 describe-spot-price-history --region eu-west-1 --instance-types c7g.2xlarge \
+  --product-descriptions "Linux/UNIX" --start-time "$(date -u +%Y-%m-%dT00:00:00Z)" \
+  --query 'SpotPriceHistory[0].[SpotPrice,Timestamp]' --output text
+aws ce get-cost-and-usage --time-period Start=$(date -u +%Y-%m-01),End=$(date -u +%Y-%m-%d) \
+  --granularity MONTHLY --metrics UnblendedCost     # only if the L3 user holds ce:GetCostAndUsage
+```
+
+Expected: a USD/hour price and its timestamp; the `ce` line is optional, and the spot price is the
+figure the criterion asks for. Record `price × 730` as `monthly_cost_usd` in
+[`docs/aws.md`](aws.md) §10.1 and in the Task-46 `agent-review` issue: the cell stays `—` until
+measured, and the bound is `monthly_cost_usd ≤ budget_limit_usd`.
+
+### 14.9 Teardown and rebuild
+
+`destroy` removes the network, the instance, the security group, the budget and the dump bucket;
+the state bucket and a **non-empty** dump bucket survive by design (`docs/aws.md` §6,
+`force_destroy = false` in `infra/aws/storage.tf`).
+
+```bash
+cd infra/aws
+terraform destroy -var-file=terraform.tfvars
+terraform state list                                   # no output
+aws s3api head-bucket --bucket cb-codebox-tfstate      # exits 0: the state bucket survives
+aws s3api head-bucket --bucket "$(sed -n 's/^backup_bucket_name *= *"\([^"]*\)"/\1/p' terraform.tfvars)"   # exits 0 while it holds dumps
+aws ec2 describe-instances --filters "Name=tag:Name,Values=codebox-spot" \
+  --query 'Reservations[].Instances[].State.Name' --output text   # empty
+```
+
+Expected: `Destroy complete!`; no state; both buckets still answer; no instance with the tag.
+Then **rebuild from zero**: `terraform apply -var-file=terraform.tfvars` again, then repeat 14.3
+(the bundles), 14.4 (first boot) and 14.6 (the restore) with the new `instance_id`. The rebuild is
+the same AMI, because an image is immutable (`docs/aws.md` §7).
+
+### 14.10 The four measurements
+
+One row per `[Task-46]` acceptance line. The account, the box and the tunnel are the operator's,
+so none of these is measured by CI:
+
+| Criterion | Command | Bound | Recorded in | Note |
+| --- | --- | --- | --- | --- |
+| boot to `/v1/health` | `T0`/`T1` around `cloud-init.sh`, then `curl … /v1/health` | `T1-T0 ≤ 300` s | `first-boot.jsonl` last line | operator-run; not measured by CI |
+| three runs, Playwright green, no OOM | `cb status`, `free -m`, `journalctl -k` | 3 running, `MemAvailable ≥ 1024` MiB, 0 OOM | the runs' gates and `journalctl` | operator-run; not measured by CI |
+| rebuilt box restores the newest dump | `restore.sh --latest`, then the `jobs/chat_messages` counts | equal counts, same `cb jobs` | the restore output | operator-run; not measured by CI |
+| monthly spot cost | `describe-spot-price-history` × 730 | `≤ budget_limit_usd` | `docs/aws.md` §10.1 | operator-run; not measured by CI |

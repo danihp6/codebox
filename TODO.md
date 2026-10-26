@@ -697,7 +697,7 @@ is asked to hold three repositories at once.
 
 ## Batch 14 — Measured bring-up
 
-- [ ] **[Task-46]** Spot bring-up, measured. Deploy the stack, deliver the four bundles with
+- [x] **[Task-46]** Spot bring-up, measured. Deploy the stack, deliver the four bundles with
       no secret in user-data or the template, run first boot over SSM, switch the tunnel
       hostname, restore the newest dump, pair a device, run three repositories at once with
       their browser tests, then `terraform destroy` and rebuild from zero. *Paths:* `infra/aws/**`
