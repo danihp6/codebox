@@ -1,6 +1,7 @@
 # Codebox — Roadmap (TODO)
 
-Private control plane for OpenCode on an OCI VM, controlled by a hybrid Angular app.
+Private control plane for OpenCode on your own VM — OCI Always Free, or an AWS spot host with
+its own CDK stack (`infra/aws`) — controlled by a hybrid Angular app.
 Backlog source of truth. One branch per task off `main` (`task-<ID>` for an agent batch).
 
 Legend: `[ ]` open, `[~]` in progress, `[!]` **blocked** (the mark carries its
@@ -46,11 +47,38 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 7 | Hardening, e2e, observability, release | 26–30 | 5 |
 | 8 | Beta, onboarding, migration of pkm | 31–32, 34 | 3 |
 | 9 | Chat routines and reminders | 35–36 | 1, then 2 |
+| 10 | Provider-neutral image: host-local secrets, AWS builder, browser | 39–41 | 3 |
+| 11 | AWS spot host: CDK stack, durable backups, concurrency three | 42–44 | 3 |
+| 12 | Host-neutral docs and ADRs | 45 | 1 |
+| 13 | Measured AWS spot bring-up | 46 | 1 |
+
+**Priority override — 2026-10-26.** The host track (Batches 10 and 11) is pulled **ahead of 7–9**.
+OCI Always Free capacity has no date and the box cannot be deployed until it lands; a spot host
+closes that gap with the same image, so it outranks the remaining app, hardening and routine work.
+Batches 7–9 keep their internal order behind it. Nothing is dropped, only displaced.
+
+**Cut — cycle after Task-37 (four of four slots used).** The host track takes every slot:
+Task-39, Task-40, Task-41 and Task-44. Their dependencies (Task-03, Task-09, Task-15, Task-25)
+are merged and their paths are pairwise disjoint: `ops/vm` first boot, `ops/image` template,
+`ops/image/scripts` plus `docs/vm-image.md`, and `packages/*` plus
+`docs/{jobs,providers,decisions}.md`. Task-44 holds `docs/decisions.md`, so Task-28 — the
+holder in the previous plan — moves to a later cut. Displaced and still eligible: Task-23,
+Task-27, Task-28, Task-35 and Task-43, which needs only Task-25 and fills the next cut beside
+Task-42 once Task-40 and Task-41 merge. Not eligible: Task-26 and Task-29 are `[!]` on the
+`workflows` permission (issue #11); Task-30 waits for Task-29; Task-36 waits for Task-35 and
+Task-38; Task-31 waits for Task-26/28/30; Task-32 for Task-31; Task-45 for Task-39/40/41/44;
+Task-46 for Task-42–45.
+**Hot-file holders in this cut:** Task-44 holds `docs/decisions.md`; `package.json`,
+`package-lock.json`, `tsconfig.base.json`, `packages/contracts/src/index.ts`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts` and `apps/daemon/src/main.ts` are held
+by no task.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
-`apps/daemon/src/main.ts`.
+`apps/daemon/src/main.ts`. The **host track** is its own chain — `39 → 40/41 → 42 → 46`, with
+`43` and `44` feeding the measured bring-up — and it is the path to a deployed box, not to the
+beta.
 
 **Serial resources:** `packages/contracts/src/index.ts` (Task-03 owns it for Batch 2; later
 contract changes are their own task), `apps/app/src/app/app.routes.ts` (Task-18 predeclares
@@ -404,12 +432,16 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
 
 ## Batch 7 — Hardening, e2e, observability, release
 
-- [ ] **[Task-26]** End-to-end happy path. Playwright against the built app with a fake
+- [!] **[Task-26]** End-to-end happy path. Playwright against the built app with a fake
       OpenCode and a fake GitHub: pair → add repo → run → gate → PR → merge → push. *Paths:*
       `e2e/**`, `.github/workflows/e2e.yml`. *Dependencies:* Task-20, Task-22, Task-14,
       Task-15. *Acceptance:* `[unit]` the suite is deterministic with a fixed clock and seed;
       `[live]` the full flow passes twice in a row on CI with no network access; `[live]` a
       forwarded push is observed by a service worker.
+      BLOCKED: its branch has to create `.github/workflows/e2e.yml`, and the runner's
+      installation token has no `workflows` permission (issue #11 — the same block as
+      Task-29), so the branch cannot be pushed. Grant the App `Workflows: read and write`, or
+      publish that one file manually and drop it from scope, then free this task.
 
 - [ ] **[Task-27]** Observability and cost. Telemetry endpoint, usage ledger, daily cost
       aggregation, disk/queue metrics, retention job, `cb doctor` checks. *Paths:*
@@ -478,29 +510,172 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
 ## Batch 9 — Chat routines and reminders
 
 A routine is not a run: no worktree, no gate, no PR (D38). The agent defines it from chat, the
-scheduler fires it, the app lists and pauses it. `reminder` costs no tokens; `prompt` counts
-against the daily cap.
+scheduler fires it, the app lists and pauses it. `reminder` costs no tokens; `prompt` is a chat
+turn and is not capped until the chat path writes a usage row (Task-35 records that gap).
 
-- [ ] **[Task-35]** Routine engine and the chat tool. On a fire: a `reminder` pushes and does
-      nothing else; a `prompt` appends an `origin: routine` message to its `chatSessionId`, or
-      creates a new chat session for the routine when it has none or the old one was archived,
-      sends it to OpenCode and streams the reply, pushing a summary at the end. Expose
-      `routine.create` / `list` / `pause` to **chat sessions only** — an unattended run never
-      gets the tool — and write the agent instructions for it. No worktree, no gate, no PR.
-      *Paths:* `apps/daemon/src/routines/**`, `docs/jobs.md` (routine execution section),
-      `docs/agent-runtime.md` (routine tool section). *Dependencies:* Task-13, Task-16,
-      Task-34. *Acceptance:* `[unit]` a reminder writes one push and no chat message; `[unit]`
-      a prompt fire writes one message, streams the reply and never opens a PR; `[unit]` a
-      prompt routine with no session creates one; `[unit]` a run agent cannot call the tool;
-      `[live]` a routine created from chat fires and its answer appears in that session.
+- [ ] **[Task-35]** Routine engine. On a fire: a `reminder` pushes and does nothing else; a
+      `prompt` appends an `origin: routine` message to its `chatSessionId`, or creates a new
+      chat session for the routine when it has none or the old one was archived, sends it to
+      OpenCode and streams the reply, pushing a summary at the end. Expose the `/v1/routines`
+      list, detail, patch, pause, resume, run-now and delete routes; creation stays with the
+      chat tool of Task-38. No run worktree, no gate, no PR. *Paths:*
+      `apps/daemon/src/routines/**`, `apps/daemon/src/chat/{service,index}.ts`,
+      `apps/daemon/src/push/{mapping,service}.ts`, `docs/jobs.md` (routine execution section).
+      *Dependencies:* Task-13, Task-16, Task-34. *Acceptance:* `[unit]` a reminder writes one
+      push and no chat message; `[unit]` a prompt fire writes one message, streams the reply
+      and never opens a PR; `[unit]` a prompt routine with no session creates one; `[live]` a
+      seeded routine fires and its answer appears in that session.
 - [ ] **[Task-36]** Routines UI. A routines tab in the jobs screen: list, next fire, last
       result, pause/resume, run now and delete; the chat shows a confirmation card when the
       agent creates one (kind, local time, cost) and a badge on routine messages. Notification
       preference `routine`. *Paths:* `apps/app/src/app/features/jobs/**` (routines tab),
-      `docs/app.md` (chat and jobs sections). *Dependencies:* Task-21, Task-35. *Acceptance:*
+      `docs/app.md` (chat and jobs sections). *Dependencies:* Task-21, Task-35 (the routines
+      tab), Task-38 (the chat confirmation card). *Acceptance:*
       `[unit]` pause/resume and delete call the contract; `[unit]` a reminder and a prompt
       routine render their distinct kind and cost; `[live]` a routine created in chat appears
       in the list without a reload and its push arrives on the phone.
+
+- [ ] **[Task-38]** Routine tool seam. Mount `routine.create` / `list` / `pause` in **chat
+      sessions only** — an unattended run never gets the tool — over a mechanism the pinned
+      OpenCode client actually exposes (a loopback MCP server owned by the daemon, or an
+      equivalent pinned-API surface), reclassify the three names as chat-allowed and run-denied
+      in the D27 matrix, and write the agent instructions that describe the tool. This is a
+      **security change**: it moves a tool across the permission boundary, so it owes
+      `docs/security.md` (§6), `docs/agent-runtime.md` (§2 and §6), an ADR in
+      `docs/decisions.md`, and the `packages/core` tests that today assert `routine.create` is
+      denied in chat mode. The chat confirmation card of Task-36 lands with this task; the
+      routines tab does not. *Paths:* the daemon seam the ADR names, `packages/core/**`,
+      `docs/security.md` (§6), `docs/agent-runtime.md` (§2, §6), `docs/decisions.md`.
+      *Dependencies:* Task-13 (the chat session and its permission replies), Task-35 (the
+      routine store, the fire engine and the target the tool writes to). *Acceptance:* `[unit]`
+      a chat session can create, list and pause a routine through the tool, and a run's tool
+      set does not contain it; `[unit]` `decidePermission` allows `routine.*` in chat and
+      denies it in run, with the matrix test updated and the reason recorded; `[unit]` the ADR
+      names the mechanism and the boundary; `[live]` a routine created from a real chat on the
+      VM appears in `GET /v1/routines` and fires.
+
+---
+
+## Batch 10 — Provider-neutral image
+
+The OCI wait has no date, so the image must boot on a host whose identity has no Vault grant:
+the same artefact runs on OCI later and on an AWS spot box now (D40). Nothing here touches
+the app or the API.
+
+- [x] **[Task-39]** First boot off the provider store. `ops/vm/cloud-init.sh` takes the four
+      bundles from `/etc/codebox/secret-bundles.json` (`0600`, operator-written) when it
+      exists and from OCI Vault otherwise, and names the host from `--instance-id`,
+      `CB_INSTANCE_ID` or the metadata service (the OCI bearer probe, then IMDSv2). *Paths:*
+      `ops/vm/cloud-init.sh`, `ops/vm/test/cloud-init.test.mjs`, `ops/vm/README.md`.
+      *Dependencies:* Task-25. *Acceptance:* `[unit]` the file source boots with no `oci`
+      binary and no Vault variables; `[unit]` a bundle missing a key exits 2, records step
+      `secrets` and writes no `instance.env`; `[unit]` `CB_INSTANCE_ID` and the IMDSv2 probe
+      both name the host `cb-<id8>`; `[unit]` the Vault source keeps its eight reads over two
+      boots and echoes no secret; `[unit]` the second boot rewrites byte-identical files.
+
+- [ ] **[Task-40]** Second builder: AWS. Add `amazon-ebs` beside `oracle-oci` in one build
+      block so the eight provisioners stay shared; variables for region, subnet, the base
+      Ubuntu 24.04 arm64 AMI, the build instance and the name/tag `cb-image-<version>-<sha>`;
+      the AWS dummies join `example.pkrvars.hcl`. `packer build -only` selects the host.
+      *Paths:* `ops/image/codebox.pkr.hcl`, `ops/image/example.pkrvars.hcl`,
+      `ops/image/test/template.test.mjs`, `ops/image/README.md`. *Dependencies:* Task-25.
+      *Acceptance:* `[unit]` `packer fmt -check` and `packer validate` pass for both
+      var-files; `[unit]` the test asserts both sources, the shared provisioner list and no
+      credential variable; `[live]` a build (after Task-39 merges) produces an arm64 AMI
+      whose `/etc/codebox/image.json` matches the OCI image built from the same commit.
+
+- [ ] **[Task-41]** A browser in the image. The e2e gate and the app's own checks need
+      Chromium: install Playwright's pinned browser with its apt dependencies, system-wide
+      and read-only for `codebox`, under `PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright`, with
+      no download at run time. `90-verify.sh` proves the binary, the shared libraries and one
+      headless launch. *Paths:* `ops/image/scripts/45-browser.sh`,
+      `ops/image/scripts/90-verify.sh`, `ops/vm/test/verify.test.mjs`, `docs/vm-image.md`
+      (§1, §4, §9). *Dependencies:* Task-25. *Acceptance:* `[unit]` the verify script fails
+      when the browser or a library is missing and passes on the built image; `[unit]`
+      nothing lives under `/root/.cache` (the runtime user owns the browser); `[live]` `npx
+      playwright test` runs one headless spec on the box without downloading anything.
+
+---
+
+## Batch 11 — AWS spot host
+
+One account, one stack, no inbound port but SSH from the admin `/32` (D18). The box is
+disposable (D33): the stack is destroyed and rebuilt from the image plus the newest dump.
+
+- [ ] **[Task-42]** `infra/aws`: CDK stack for the spot host. A TypeScript CDK v2 app with its
+      own `package.json`, `cdk.json`, `tsconfig.json` and `vitest` assertions
+      (`aws-cdk-lib/assertions`) that synthesises one VPC with a public subnet and **no
+      inbound 80/443**, a security group allowing SSH only from the admin `/32`, the
+      `cb-image-*` AMI behind a `CfnParameter`, a **spot** `c7g.2xlarge` (8 vCPU / 16 GB
+      arm64 — the measured floor for three repos × agent + build + Chromium plus the daemon,
+      OpenCode and the tunnel), a 100 GB gp3 volume, IMDSv2 required, an instance profile
+      that grants SSM Session Manager and the backup bucket only, an S3 bucket for the dumps
+      (SSE, versioned, 30-day lifecycle), a budget alarm and outputs (instance id, public IP,
+      backup URI). `c7g.xlarge` is documented as the degradation. *Paths:* `infra/aws/**`,
+      `docs/aws.md`, `docs/README.md` (index row), `AGENTS.md` (layout section).
+      *Dependencies:* Task-40, Task-41. *Acceptance:* `[unit]` `cdk synth` runs offline and
+      the assertions prove no `0.0.0.0/0` ingress, SSH as one `/32`, IMDSv2 required, spot
+      with a price cap, and the bucket with SSE and lifecycle; `[unit]` the stack destroys
+      cleanly and keeps the bucket; `[live]` `cdk deploy` launches a box that boots the image
+      and answers health.
+
+- [ ] **[Task-43]** Backups that survive a reclaimed host. `backup.sh` uploads the
+      age-encrypted dump to any S3-compatible target (`CB_BACKUP_S3_URI`, credentials from
+      the instance profile), keeps 30 daily copies and a `_latest` pointer, and verifies the
+      upload; `restore.sh` reads the same target; `codebox-spot-notice.service` polls the
+      two-minute interruption notice and takes one final backup. *Paths:*
+      `ops/vm/backup.sh`, `ops/vm/restore.sh`, `ops/vm/spot-notice.sh`,
+      `ops/vm/systemd/codebox-backup.service`,
+      `ops/vm/systemd/codebox-spot-notice.service`,
+      `ops/vm/test/{backup,restore,spot-notice}.test.mjs`, `ops/vm/README.md`.
+      *Dependencies:* Task-25. *Acceptance:* `[unit]` an upload against a fixture endpoint
+      writes the documented path and checksum; `[unit]` a missing target exits non-zero and
+      keeps the local archive; `[unit]` repeated notices run one backup, not two; `[live]` a
+      simulated interruption leaves a dump that restores on a fresh box.
+
+- [ ] **[Task-44]** Concurrency three. Raise `CB_MAX_CONCURRENCY` to 3 (per repo stays 1) and
+      implement the admission the docs promise: a pure rule in `packages/core`, the waiting
+      list in `packages/scheduler`, and the daemon creating at most three runs while the
+      fourth stays `queued`, in repository order. Amend D15 with the measured sizing.
+      *Paths:* `packages/core/**`, `packages/scheduler/**`, `apps/daemon/src/run/**`,
+      `packages/contracts/src/config.ts` (with its tests), `docs/jobs.md` (§ concurrency),
+      `docs/providers.md` (env table), `docs/decisions.md` (D15). *Dependencies:* Task-03,
+      Task-09, Task-15. *Acceptance:* `[unit]` the default parses to 3 and rejects 0;
+      `[unit]` three runs on three repos start and the fourth stays `queued`; `[unit]` two
+      runs on one repo are still refused; `[live]` three real repositories run at once with
+      their browser tests and no out-of-memory kill.
+
+---
+
+## Batch 12 — Host-neutral docs
+
+- [ ] **[Task-45]** Host-neutral docs and ADRs. Say what is true: the image is Ubuntu 24.04
+      arm64 with no provider in it, the builder and the secret source are per host, and OCI
+      stays the primary target. Amend D20/D21, add D40 (one image, two hosts, spot while OCI
+      capacity is pending), and reconcile `docs/vm-image.md`, `docs/security.md` (§7, §8),
+      `docs/architecture.md` (diagram), `docs/operations.md` (§2), `docs/roadmap.md` and the
+      host rows in `AGENTS.md` and `README.md`. *Paths:* `docs/vm-image.md`,
+      `docs/security.md`, `docs/architecture.md`, `docs/operations.md`, `docs/roadmap.md`,
+      `docs/decisions.md`, `AGENTS.md`, `README.md`. *Dependencies:* Task-39, Task-40,
+      Task-41, Task-44. *Acceptance:* `[unit]` no doc claims the image is OCI-only, and every
+      remaining OCI statement lives in `docs/oci.md`, `docs/aws.md` or a migration section;
+      `[unit]` every `CB_*` in code still appears in `docs/providers.md`; `[live]` none
+      (docs).
+
+---
+
+## Batch 13 — Measured bring-up
+
+- [ ] **[Task-46]** Spot bring-up, measured. Deploy the stack, deliver the four bundles with
+      no secret in user-data or the template, run first boot over SSM, switch the tunnel
+      hostname, restore the newest dump, pair a device, run three repositories at once with
+      their browser tests, then `cdk destroy` and rebuild from zero. *Paths:* `infra/aws/**`
+      (parameters), `docs/operations.md` (AWS runbook section). *Dependencies:* Task-42,
+      Task-43, Task-44, Task-45. *Acceptance:* `[live]` boot to `/v1/health` in ≤ 5 minutes
+      with no manual step but the bundles; `[live]` three parallel runs with Playwright are
+      green and the box stays under the memory ceiling; `[live]` the rebuilt box restores the
+      newest dump and serves the same jobs and chat; `[live]` the monthly cost at the spot
+      price is recorded in `docs/aws.md`.
 
 ---
 
@@ -515,6 +690,12 @@ construction. They need a local key, an external tool or a store account.
 - [ ] **L2 — Visual prototype.** A Figma file with the seven screens (pair, dashboard, repos,
       chat, jobs, run detail, settings) and the tokens in `docs/app.md` §9; export PNGs and a
       screen-to-route map into `design/`. Task-18 implements from it. *Dependencies:* none.
+- [ ] **L3 — AWS account guardrails.** A dedicated IAM user with MFA (never root), the region
+      pinned, the access keys rotated and a budget alarm above the spot cost; CDK deploys with
+      a named profile and no key in the repository. *Dependencies:* Task-42.
+- [ ] **L4 — OCI cutover.** When capacity lands: launch the OCI image, restore the newest
+      dump, repoint the tunnel, destroy the spot stack and keep `docs/aws.md` as the bench.
+      *Dependencies:* Task-42, Task-46.
 
 ---
 

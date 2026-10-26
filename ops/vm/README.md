@@ -10,7 +10,7 @@ stderr as `codebox: <message>`.
 | File | What it is |
 | --- | --- |
 | `lib.sh` | Shared helpers: `ROOT`, `die`, `log`, `rooted`, `need`, `need_bin`, `usage`. Sourced, never executed. |
-| `cloud-init.sh` | First boot: hostname, OCI Vault reads, `/etc/codebox/instance.env`, the tunnel config, the first-boot journal line. |
+| `cloud-init.sh` | First boot: hostname, the secret bundles (the host file first, OCI Vault otherwise), `/etc/codebox/instance.env`, the tunnel config, the first-boot journal line. |
 | `install.sh` | Verifies an artifact, unpacks it under `/opt/codebox/releases/<version>`, moves `current`, restarts and rolls back when the daemon stays down. |
 | `upgrade.sh` | `install.sh` plus `--rollback` (swap the two symlinks) and `--prune` (keep the two newest releases). |
 | `backup.sh` | Consistent SQLite snapshot plus a redacted `instance.env` and a manifest, age-encrypted by default, `--verify` and `--upload`. |
@@ -27,7 +27,7 @@ stderr as `codebox: <message>`.
 | `test/upgrade.test.mjs` | `--rollback` without a previous release, the swap, the second rollback, `--prune`. |
 | `test/backup.test.mjs` | Plaintext archive shape, redaction, manifest, `--verify` counts. |
 | `test/restore.test.mjs` | Overwrite refusal, restore into an empty root, corrupt archive. |
-| `test/cloud-init.test.mjs` | Two boots against one root: byte-identical files, two journal lines, eight Vault reads. |
+| `test/cloud-init.test.mjs` | Two boots against one root: byte-identical files, two journal lines, eight Vault reads, plus the bundle-file source, `CB_INSTANCE_ID` and the IMDSv2 probe. |
 | `test/verify.test.mjs` | `90-verify.sh --only secrets` on a clean and on a leaky stub root. |
 | `test/keepalive.test.mjs` | The sample on a stub `/proc`, the three step outcomes, the loopback-only rule, the units and the image wiring. |
 | `README.md` | This map. |
@@ -54,6 +54,12 @@ stderr as `codebox: <message>`.
 script every six hours. `restore.sh` never starts or stops a unit: stop `codebox.service` first.
 `backup.sh --verify` reads the newest archive; an `.age` one needs `CB_BACKUP_AGE_IDENTITY`, and
 the box does not hold that key by design.
+
+`cloud-init.sh` takes the four bundles from `CB_SECRETS_FILE` (default
+`/etc/codebox/secret-bundles.json`, `0600`, never in user-data) when that file exists, and from
+OCI Vault through the instance principal otherwise; a host with neither refuses to boot. The
+hostname is `cb-<id8>` from `--instance-id`, `CB_INSTANCE_ID` or the metadata service (the OCI
+bearer probe, then the AWS IMDSv2 handshake).
 
 Exit codes are the same in every script: `0` success, `2` usage or a missing input, `3`
 checksum mismatch, `4` unhealthy after a restart, `5` no previous release, `6` bad archive or

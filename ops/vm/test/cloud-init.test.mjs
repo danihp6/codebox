@@ -79,12 +79,68 @@ function fakeOci(mode = 'ok') {
 
 function isolatedEnv() {
   const env = {};
-  const dropped = ['ROOT', 'CB_FAKE_OCI_LOG'];
+  const dropped = ['ROOT', 'CB_FAKE_OCI_LOG', 'CB_FAKE_CURL_LOG'];
   for (const [key, value] of Object.entries(process.env)) {
     if (key.startsWith('CB_') || key.startsWith('OCI_') || dropped.includes(key)) continue;
     env[key] = value;
   }
   return env;
+}
+
+// The host-local alternative to Vault: the four bundles in one root-only JSON file, written by
+// the operator before the first boot. Nothing here is a real credential.
+function secretsFile(root, overrides = {}) {
+  const file = path.join(root, 'etc', 'codebox', 'secret-bundles.json');
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(
+    file,
+    JSON.stringify({
+      githubAppPrivateKeyBase64: payloads[ocids.githubApp],
+      sessionSecret: payloads[ocids.sessionSecret],
+      tunnelToken: payloads[ocids.tunnelToken],
+      providerKeys: payloads[ocids.providerKeys],
+      ...overrides,
+    }),
+  );
+  return file;
+}
+
+// No `oci` binary on this PATH: the file source must not need one.
+function fileEnv() {
+  return {
+    ...isolatedEnv(),
+    CB_INSTANCE_NAME: 'cb-test',
+    CB_PUBLIC_URL: 'https://cb.example.com',
+    PATH: process.env.PATH ?? '',
+  };
+}
+
+// Answers the OCI probe with a 401 and the AWS IMDSv2 handshake with a token and an id.
+function fakeCurl() {
+  const dir = tempDir();
+  const file = path.join(dir, 'curl');
+  fs.writeFileSync(
+    file,
+    [
+      '#!/usr/bin/env bash',
+      `printf '%s\\n' "$*" >> "$CB_FAKE_CURL_LOG"`,
+      'for arg in "$@"; do',
+      '  case "$arg" in',
+      '    *opc/v2/instance/id) exit 22 ;;',
+      "    *latest/api/token) printf '%s\\n' 'imds-token'; exit 0 ;;",
+      `    *latest/meta-data/instance-id) printf '%s\\n' '${instanceId}'; exit 0 ;;`,
+      '  esac',
+      'done',
+      'exit 22',
+      '',
+    ].join('\n'),
+  );
+  fs.chmodSync(file, 0o755);
+  return {
+    dir,
+    log: path.join(dir, 'curl.log'),
+    path: `${dir}${path.delimiter}${process.env.PATH ?? ''}`,
+  };
 }
 
 function baseEnv(fake) {
@@ -231,8 +287,97 @@ describe('cloud-init idempotency', () => {
     const records = bootLines(root).map((line) => JSON.parse(line));
     expect(records).toHaveLength(1);
     expect(records[0].result).toBe('failed');
-    expect(records[0].step).toBe('vault');
+    expect(records[0].step).toBe('secrets');
   });
+
+  it('cloud-init sources: a secret bundle file replaces the provider store', () => {
+    const root = tempDir();
+    secretsFile(root);
+
+    const result = run(
+      ['--root', root, '--no-services', '--instance-id', instanceId],
+      fileEnv(),
+    );
+
+    expect(result.status).toBe(0);
+    const lines = fs
+      .readFileSync(path.join(root, 'etc', 'codebox', 'instance.env'), 'utf8')
+      .split('\n')
+      .filter((line) => line !== '');
+    expect(lines.map((line) => line.split('=')[0])).toEqual([
+      'CB_ENV',
+      'CB_INSTANCE_NAME',
+      'CB_PUBLIC_URL',
+      'CB_GITHUB_APP_PRIVATE_KEY_BASE64',
+      'CB_SESSION_SECRET',
+      'CB_TUNNEL_TOKEN',
+      'ANTHROPIC_API_KEY',
+      'OPENAI_API_KEY',
+    ]);
+    expect(lines[3]).toBe(`CB_GITHUB_APP_PRIVATE_KEY_BASE64=${payloads[ocids.githubApp]}`);
+    expect(bootLines(root).map((line) => JSON.parse(line).result)).toEqual(['ok']);
+    expect(result.stderr).not.toContain(tunnelToken.s);
+  });
+
+  it('cloud-init sources: a bundle file without a required key writes nothing', () => {
+    const root = tempDir();
+    secretsFile(root, { githubAppPrivateKeyBase64: undefined });
+
+    const result = run(
+      ['--root', root, '--no-services', '--instance-id', instanceId],
+      fileEnv(),
+    );
+
+    expect(result.status).toBe(2);
+    expect(result.stderr).toContain('githubAppPrivateKeyBase64');
+    expect(fs.existsSync(path.join(root, 'etc', 'codebox', 'instance.env'))).toBe(false);
+    const records = bootLines(root).map((line) => JSON.parse(line));
+    expect(records).toHaveLength(1);
+    expect(records[0].step).toBe('secrets');
+  });
+
+  it('cloud-init sources: CB_INSTANCE_ID names the host with no metadata call', () => {
+    const root = tempDir();
+    secretsFile(root);
+    const env = { ...fileEnv(), CB_INSTANCE_ID: instanceId };
+
+    const result = run(['--root', root, '--no-services'], env);
+
+    expect(result.status).toBe(0);
+    const hosts = fs
+      .readFileSync(path.join(root, 'etc', 'hosts'), 'utf8')
+      .split('\n')
+      .filter((line) => line === '127.0.1.1 cb-abcdef12');
+    expect(hosts).toHaveLength(1);
+  });
+
+  // MSYS resolves `curl` ahead of the PATH fixture on win32, so this case runs on CI only.
+  it.skipIf(process.platform === 'win32')(
+    'cloud-init sources: the metadata probe falls back to the AWS handshake',
+    () => {
+      const root = tempDir();
+      secretsFile(root);
+      const fake = fakeCurl();
+
+      const result = run(['--root', root, '--no-services'], {
+        ...fileEnv(),
+        CB_FAKE_CURL_LOG: fake.log,
+        PATH: fake.path,
+      });
+
+      expect(result.status).toBe(0);
+      const hosts = fs
+        .readFileSync(path.join(root, 'etc', 'hosts'), 'utf8')
+        .split('\n')
+        .filter((line) => line === '127.0.1.1 cb-abcdef12');
+      expect(hosts).toHaveLength(1);
+      const calls = fs
+        .readFileSync(fake.log, 'utf8')
+        .split('\n')
+        .filter((line) => line !== '');
+      expect(calls).toHaveLength(3);
+    },
+  );
 
   it('cloud-init idempotency: a missing required variable exits 2 and writes nothing', () => {
     const fake = fakeOci();
