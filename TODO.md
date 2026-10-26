@@ -651,7 +651,7 @@ the app or the API.
 D33 owns the recovery path and D15 owns how many jobs are in flight; both move before the box
 is asked to hold three repositories at once.
 
-- [ ] **[Task-43]** Backups that survive a reclaimed host. `backup.sh` uploads the
+- [x] **[Task-43]** Backups that survive a reclaimed host. `backup.sh` uploads the
       age-encrypted dump to any S3-compatible target (`CB_BACKUP_S3_URI`, credentials from
       the instance profile), keeps 30 daily copies and a `_latest` pointer, and verifies the
       upload; `restore.sh` reads the same target; `codebox-spot-notice.service` polls the

@@ -7,9 +7,9 @@ Wants=network-online.target
 Type=oneshot
 User=codebox
 Group=codebox
-# CB_BACKUP_AGE_RECIPIENT and CB_BACKUP_BUCKET are host variables, never daemon configuration:
-# the operator sets them in a drop-in (`systemctl edit codebox-backup.service`), not in
-# instance.env.
+# CB_BACKUP_AGE_RECIPIENT, CB_BACKUP_S3_URI and CB_BACKUP_S3_ENDPOINT are host variables, never
+# daemon configuration: the operator sets them in a drop-in
+# (`systemctl edit codebox-backup.service`), not in instance.env.
 ExecStart=/usr/local/lib/codebox/backup.sh --upload
 NoNewPrivileges=true
 ProtectSystem=strict

@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-43, durable backups off the host)
+
+- `backup.sh --upload` PUTs the age-encrypted dump to any S3-compatible target named by
+  `CB_BACKUP_S3_URI` — SigV4 with the instance profile or explicit credentials — writes and
+  verifies `<archive>.sha256`, keeps the 30 newest daily objects and a `_latest` pointer;
+  `restore.sh --latest` and `--remote` read the same target. A missing target exits 2 and
+  keeps the local archive.
+- `codebox-spot-notice.service` and `spot-notice.sh` poll the two-minute interruption notice
+  and run exactly one final backup (flock plus a per-notice marker); `60-service.sh` and the
+  Packer template install the pair, so the image ships eight units.
+- `CB_BACKUP_BUCKET` retires in favour of `CB_BACKUP_S3_URI`, `CB_BACKUP_S3_ENDPOINT` and
+  `CB_BACKUP_S3_REGION`, documented as host drop-in variables in `ops/vm/README.md`.
+- `[live]` — a simulated interruption that leaves a restorable dump on a scratch host — is
+  measured on the box; an `agent-review` issue carries it.
+
 ### Changed — 2026-10-26 (Task-47, `infra/oci` Terraform module)
 
 - `infra/oci` owns the static OCI footprint: `cb-vcn`, the IGW, `cb-rt`, an SSH-only `/32`

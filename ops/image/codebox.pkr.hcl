@@ -192,6 +192,11 @@ build {
   }
 
   provisioner "file" {
+    source      = "${path.root}/../vm/systemd/codebox-spot-notice.service"
+    destination = "/tmp/codebox/units/codebox-spot-notice.service"
+  }
+
+  provisioner "file" {
     source      = "${path.root}/../vm/keepalive.sh"
     destination = "/tmp/codebox/vm/keepalive.sh"
   }
@@ -224,6 +229,11 @@ build {
   provisioner "file" {
     source      = "${path.root}/../vm/restore.sh"
     destination = "/tmp/codebox/vm/restore.sh"
+  }
+
+  provisioner "file" {
+    source      = "${path.root}/../vm/spot-notice.sh"
+    destination = "/tmp/codebox/vm/spot-notice.sh"
   }
 
   provisioner "file" {
