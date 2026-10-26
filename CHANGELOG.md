@@ -6,6 +6,17 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-27, observability and cost)
+
+- `GET /v1/telemetry` serves `1h`/`24h`/`7d`/`30d` windows: spend from the usage ledger, run
+  counts by state, disk and queue depth from the probes that already answer `/v1/health`.
+- The retention pass deletes terminal runs, expired events, archived chats, resolved approvals
+  and their log directories at the documented ages, in one report per pass.
+- `packages/core` gains the pure usage window and daily aggregation; `packages/store` gains
+  windowed run counts and forward-only pruning with no migration.
+- `[live]` — today's spend matching the dashboard within 5 % — is measured on the VM only; an
+  `agent-review` issue carries it.
+
 ### Added — 2026-10-26 (Task-23, settings, devices and notifications)
 
 - `/settings` becomes the operator's own screen: account time zone, push preferences per event

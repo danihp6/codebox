@@ -22,6 +22,7 @@ contract's `dist` exists.
 - `diff-budget.ts` — the D26 file and line budget.
 - `permissions.ts` — the D27 permission matrix, tool classes and the worktree containment check.
 - `limits.ts` — the D29 daily/job cost caps and the run timeout.
+- `usage.ts` — the telemetry ranges, their window, the UTC days it spans and the in-range summary.
 - `run-state.test.ts` — the 9 × 9 transition walk.
 - `guardrails.test.ts` — one red and one green case per guardrail.
 - `cron.test.ts` — parser failures, the Madrid DST rows and the impossible date.
@@ -30,6 +31,7 @@ contract's `dist` exists.
 - `diff-budget.test.ts` — the 40 files / 2 000 line boundary.
 - `permissions.test.ts` — the matrix and the fail-closed cases.
 - `limits.test.ts` — cost caps and timeouts.
+- `usage.test.ts` — the four windows, the midnight-spanning day list and the six-decimal sum.
 
 ## Checks
 

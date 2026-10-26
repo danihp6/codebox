@@ -302,4 +302,137 @@ describe('runs', () => {
     store.runs.update('run_0000002', { state: 'cancelled' });
     expect(store.runs.countLive()).toBe(0);
   });
+
+  it('counts every state in the window and zeroes the ones with no row', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(
+      runRecord('run_0000001', REPO.id, '2026-01-02T00:00:00.000Z', {
+        state: 'succeeded',
+        finishedAt: '2026-01-02T01:00:00.000Z',
+      }),
+    );
+    store.runs.create(
+      runRecord('run_0000002', REPO.id, '2026-01-02T02:00:00.000Z', { state: 'failed' }),
+    );
+    store.runs.create(
+      runRecord('run_0000003', REPO.id, '2026-01-02T03:00:00.000Z', { state: 'failed' }),
+    );
+    store.runs.create(
+      runRecord('run_0000004', REPO.id, '2026-01-02T04:00:00.000Z', { state: 'running' }),
+    );
+    store.runs.create(
+      runRecord('run_0000005', REPO.id, '2026-01-09T00:00:00.000Z', {
+        state: 'cancelled',
+        finishedAt: '2026-01-09T01:00:00.000Z',
+      }),
+    );
+
+    const counts = store.runs.countByState({
+      since: '2026-01-01T00:00:00.000Z',
+      until: '2026-01-07T23:59:59.999Z',
+    });
+    expect(Object.keys(counts)).toEqual([
+      'queued',
+      'preparing',
+      'running',
+      'gating',
+      'pr_open',
+      'merging',
+      'succeeded',
+      'failed',
+      'cancelled',
+    ]);
+    expect(counts).toEqual({
+      queued: 0,
+      preparing: 0,
+      running: 1,
+      gating: 0,
+      pr_open: 0,
+      merging: 0,
+      succeeded: 1,
+      failed: 2,
+      cancelled: 0,
+    });
+  });
+
+  it('counts rows on both window edges and nothing outside them', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(
+      runRecord('run_0000001', REPO.id, '2026-01-01T00:00:00.000Z', { state: 'queued' }),
+    );
+    store.runs.create(
+      runRecord('run_0000002', REPO.id, '2026-01-02T00:00:00.000Z', { state: 'queued' }),
+    );
+    store.runs.create(
+      runRecord('run_0000003', REPO.id, '2026-01-03T00:00:00.000Z', { state: 'queued' }),
+    );
+
+    const counts = store.runs.countByState({
+      since: '2026-01-01T00:00:00.000Z',
+      until: '2026-01-02T00:00:00.000Z',
+    });
+    expect(counts.queued).toBe(2);
+    expect(
+      store.runs.countByState({
+        since: '2026-02-01T00:00:00.000Z',
+        until: '2026-02-02T00:00:00.000Z',
+      }),
+    ).toEqual({
+      queued: 0,
+      preparing: 0,
+      running: 0,
+      gating: 0,
+      pr_open: 0,
+      merging: 0,
+      succeeded: 0,
+      failed: 0,
+      cancelled: 0,
+    });
+  });
+
+  it('prunes a finished run, keeps a live one and nulls the usage reference', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(
+      runRecord('run_0000001', REPO.id, '2026-01-01T00:00:00.000Z', {
+        state: 'succeeded',
+        finishedAt: '2026-01-01T01:00:00.000Z',
+      }),
+    );
+    store.runs.create(
+      runRecord('run_0000002', REPO.id, '2026-01-01T00:00:00.000Z', { state: 'running' }),
+    );
+    store.usage.record({
+      runId: 'run_0000001',
+      repoId: REPO.id,
+      day: '2026-01-01',
+      model: 'opencode-go/deepseek-v4.1-flash',
+      tokensIn: 10,
+      tokensOut: 5,
+      costUsd: 0.5,
+      createdAt: '2026-01-01T00:30:00.000Z',
+    });
+
+    expect(store.runs.pruneBefore('2026-01-02T00:00:00.000Z')).toBe(1);
+    expect(store.runs.get('run_0000001')).toBeNull();
+    expect(store.runs.get('run_0000002')?.state).toBe('running');
+    expect(store.usage.listByDay('2026-01-01').map((entry) => entry.runId)).toEqual([null]);
+    expect(store.runs.pruneBefore('2026-01-02T00:00:00.000Z')).toBe(0);
+  });
+
+  it('keeps a finished run that is newer than the cutoff', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(
+      runRecord('run_0000001', REPO.id, '2026-01-01T00:00:00.000Z', {
+        state: 'failed',
+        finishedAt: '2026-01-05T00:00:00.000Z',
+      }),
+    );
+    expect(store.runs.pruneBefore('2026-01-05T00:00:00.000Z')).toBe(0);
+    expect(store.runs.get('run_0000001')).not.toBeNull();
+    expect(store.runs.pruneBefore('2026-01-05T00:00:00.001Z')).toBe(1);
+  });
 });

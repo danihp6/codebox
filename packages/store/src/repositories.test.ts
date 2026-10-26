@@ -349,6 +349,32 @@ describe('approvals', () => {
       ),
     ).toBe('not_found');
   });
+
+  it('prunes a resolved approval, keeps a pending one and counts nothing twice', () => {
+    store.approvals.create(
+      approval('apv_0000001', '2026-01-01T00:00:00.000Z', {
+        state: 'allowed',
+        resolvedAt: '2026-01-01T00:05:00.000Z',
+      }),
+    );
+    store.approvals.create(
+      approval('apv_0000002', '2026-01-01T00:00:00.000Z', { state: 'expired' }),
+    );
+    store.approvals.create(approval('apv_0000003', '2026-01-01T00:00:00.000Z'));
+    store.approvals.create(
+      approval('apv_0000004', '2026-01-05T00:00:00.000Z', {
+        state: 'denied',
+        resolvedAt: '2026-01-05T00:05:00.000Z',
+      }),
+    );
+
+    expect(store.approvals.pruneResolvedBefore('2026-01-02T00:00:00.000Z')).toBe(2);
+    expect(store.approvals.get('apv_0000001')).toBeNull();
+    expect(store.approvals.get('apv_0000002')).toBeNull();
+    expect(store.approvals.get('apv_0000003')?.state).toBe('pending');
+    expect(store.approvals.get('apv_0000004')?.state).toBe('denied');
+    expect(store.approvals.pruneResolvedBefore('2026-01-02T00:00:00.000Z')).toBe(0);
+  });
 });
 
 describe('chats', () => {
@@ -445,6 +471,43 @@ describe('chats', () => {
         ),
       ),
     ).toBe('foreign_key_violation');
+  });
+
+  it('prunes an archived session with its messages and keeps an idle one', () => {
+    store.chats.createSession(
+      chatSession('chat_0000002', '2025-12-01T00:00:00.000Z', { status: 'archived' }),
+      { opencodeSessionId: null, worktree: null },
+    );
+    store.chats.createSession(
+      chatSession('chat_0000003', '2025-12-01T00:00:00.000Z', { status: 'idle' }),
+      { opencodeSessionId: null, worktree: null },
+    );
+    store.chats.createSession(
+      chatSession('chat_0000004', '2026-01-05T00:00:00.000Z', { status: 'archived' }),
+      { opencodeSessionId: null, worktree: null },
+    );
+    store.chats.appendMessage(
+      {
+        id: 'msg_000002',
+        chatId: 'chat_0000002',
+        role: 'user',
+        text: 'archived transcript',
+        createdAt: '2025-12-01T00:00:01.000Z',
+      },
+      { origin: 'user' },
+    );
+
+    expect(store.chats.pruneArchivedBefore('2026-01-01T00:00:00.000Z')).toBe(1);
+    expect(store.chats.getSession('chat_0000002')).toBeNull();
+    expect(
+      store.db
+        .prepare('SELECT COUNT(*) AS n FROM chat_messages WHERE chat_id = ?')
+        .get('chat_0000002'),
+    ).toEqual({ n: 0 });
+    expect(store.chats.getSession('chat_0000003')?.status).toBe('idle');
+    expect(store.chats.getSession('chat_0000004')?.status).toBe('archived');
+    expect(store.chats.getSession('chat_000001')).not.toBeNull();
+    expect(store.chats.pruneArchivedBefore('2026-01-01T00:00:00.000Z')).toBe(0);
   });
 });
 

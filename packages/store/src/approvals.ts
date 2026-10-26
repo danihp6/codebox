@@ -14,6 +14,8 @@ export interface ApprovalRepository {
     state: 'allowed' | 'denied' | 'expired';
     resolvedAt: string;
   }): Approval;
+  /** Deletes resolved or expired approvals created before `cutoff`; a pending one is kept. */
+  pruneResolvedBefore(cutoff: string): number;
 }
 
 const COLUMNS =
@@ -32,6 +34,9 @@ export function createApprovalRepository(db: DatabaseSync): ApprovalRepository {
   `);
   const resolvePending = db.prepare(
     "UPDATE approvals SET state = ?, resolved_at = ? WHERE id = ? AND state = 'pending'",
+  );
+  const deleteResolvedBefore = db.prepare(
+    "DELETE FROM approvals WHERE state <> 'pending' AND created_at < ?",
   );
 
   function findById(id: string): Approval | null {
@@ -107,6 +112,10 @@ export function createApprovalRepository(db: DatabaseSync): ApprovalRepository {
       const resolved = findById(input.id);
       if (resolved === null) throw new StoreError('invalid_row', 'approval was not stored');
       return resolved;
+    },
+
+    pruneResolvedBefore(cutoff: string): number {
+      return Number(deleteResolvedBefore.run(cutoff).changes);
     },
   };
 }

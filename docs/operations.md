@@ -200,6 +200,42 @@ file means the timer did not fire — a stopped instance runs no timers — so r
 - The OCI shape is Always Free; the billable surfaces are model tokens and egress. Both are
   visible in the dashboard and in `GET /v1/telemetry`.
 
+### 11.1 Telemetry
+
+`GET /v1/telemetry?range=1h|24h|7d|30d` (default `24h`, scope `read`) answers the `Telemetry`
+resource of `docs/api.md` §5.1: `range`, `since`, `spendUsd`, `runs`, `disk` and `queueDepth`.
+It is the only source the app and `cb doctor`'s `cost` check read; nothing recomputes spend
+elsewhere.
+
+- `spendUsd` is the sum of `usage.cost_usd` for the rows whose `created_at` falls in the
+  window, rounded to six decimals. A run that outlived the window contributes only the rows it
+  wrote inside it.
+- `since` is the inclusive start of the window (`until` is `now`); the window is computed from
+  the daemon clock, never from the client.
+- `runs.total` counts the runs created inside the window in any state, so a live run is in the
+  total and in none of `succeeded` / `failed` / `cancelled`.
+- `disk` and `queueDepth` are the probes `/v1/health` already uses.
+- A `range` outside the four values, a repeated key or an unknown key is a `422`
+  `validation_failed` with `details.path` starting `telemetry.`. A failing read is a `500`
+  `internal` whose `requestId` names the log line.
+
+Retention runs on the same timer table as `docs/security.md` §8 — runs 90 d, events 14 d, chat
+90 d, approvals 7 d, log directories 30 d, all from the `CB_RETENTION_*_DAYS` values — six
+hours apart, one minute after boot. It deletes whole rows and whole `logs/run-run_*/`
+directories, logs one `retention_done` line with the counts, and never touches a `usage` row:
+the ledger is the record of spend. Short windows go first, so a 14-day event is not kept until
+its 90-day run ages out. To reclaim disk sooner, use `cb prune`, which owns the worktrees and
+the bare clones.
+
+```bash
+curl -s -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8787/v1/telemetry?range=24h'
+sqlite3 /var/lib/codebox/state.db \
+  "SELECT SUM(cost_usd) FROM usage WHERE created_at >= strftime('%Y-%m-%dT%H:%M:%fZ','now','-24 hours')"
+```
+
+The two numbers agree within the rounding of the six-decimal sum; a gap larger than a cent
+means a row is outside the day list the query walks.
+
 ## 12. CLI reference
 
 | Command | Purpose |

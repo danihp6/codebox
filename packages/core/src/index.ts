@@ -53,3 +53,14 @@ export type {
 // Limits: the D29 cost and timeout guards.
 export { checkCost, checkRunTimeout } from './limits.js';
 export type { CostGuardCode, CostGuardResult, CostGuardInput, TimeoutCheck } from './limits.js';
+
+// Usage: the telemetry window and its in-range summary.
+export {
+  USAGE_RANGES,
+  RANGE_MILLISECONDS,
+  usageWindow,
+  utcDayOf,
+  daysInWindow,
+  summariseUsage,
+} from './usage.js';
+export type { UsageRange, UsageWindow, UsageEntry, UsageSummary } from './usage.js';

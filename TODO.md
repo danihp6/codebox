@@ -444,7 +444,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       Task-29), so the branch cannot be pushed. Grant the App `Workflows: read and write`, or
       publish that one file manually and drop it from scope, then free this task.
 
-- [ ] **[Task-27]** Observability and cost. Telemetry endpoint, usage ledger, daily cost
+- [x] **[Task-27]** Observability and cost. Telemetry endpoint, usage ledger, daily cost
       aggregation, disk/queue metrics, retention job, `cb doctor` checks. *Paths:*
       `apps/daemon/src/telemetry/**`, `packages/core/src/usage.ts`,
       `docs/operations.md` (telemetry section). *Dependencies:* Task-04, Task-11, Task-17.

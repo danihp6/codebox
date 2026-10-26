@@ -32,6 +32,8 @@ export interface ChatRepository {
   appendMessage(message: ChatMessage, extra: { origin: ChatMessageOrigin }): ChatMessage;
   listMessages(chatId: string, query: PageQuery): PageResult<ChatMessage>;
   lastMessage(chatId: string): ChatMessage | null;
+  /** Deletes archived sessions untouched since `cutoff`; messages cascade. */
+  pruneArchivedBefore(cutoff: string): number;
 }
 
 export function toChatSession(session: ChatSession, lastMessage: ChatMessage | null): ChatSession {
@@ -66,6 +68,9 @@ export function createChatRepository(db: DatabaseSync): ChatRepository {
     SELECT ${MESSAGE_COLUMNS} FROM chat_messages WHERE chat_id = ?
     ORDER BY created_at DESC, id DESC LIMIT 1
   `);
+  const deleteArchivedBefore = db.prepare(
+    "DELETE FROM chat_sessions WHERE status = 'archived' AND updated_at < ?",
+  );
 
   function lastMessageOf(chatId: string): ChatMessage | null {
     const value = selectLastMessage.get(chatId);
@@ -227,6 +232,10 @@ export function createChatRepository(db: DatabaseSync): ChatRepository {
 
     lastMessage(chatId: string): ChatMessage | null {
       return lastMessageOf(chatId);
+    },
+
+    pruneArchivedBefore(cutoff: string): number {
+      return Number(deleteArchivedBefore.run(cutoff).changes);
     },
   };
 }
