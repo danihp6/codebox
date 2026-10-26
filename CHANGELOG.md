@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-26 (Task-28, security hardening)
+
+- The gate scans the added lines of every diff for nine secret patterns before anything is
+  pushed, fails closed when git cannot produce the diff, and never logs the match or the diff.
+- Request security: the four security headers on every response, an origin allowlist for the
+  app, a 1 MiB body cap rejected before parsing, and per-device rate limits (`POST /v1/runs`
+  at 10/min, the rest at 120/min).
+- The three systemd units gain the documented sandboxing without `MemoryDenyWriteExecute`; the
+  redaction corpus pins 30 fixtures with no literal leaking; D40 records the origin allowlist.
+- `[live]` — the `systemd-analyze security` score and the tunnel origin check — is measured on
+  the VM only; an `agent-review` issue carries it.
+
 ### Added — 2026-10-26 (Task-27, observability and cost)
 
 - `GET /v1/telemetry` serves `1h`/`24h`/`7d`/`30d` windows: spend from the usage ledger, run

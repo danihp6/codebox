@@ -452,7 +452,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       retention deletes exactly the expired rows; `[live]` the dashboard shows today's spend
       within 5% of the ledger.
 
-- [ ] **[Task-28]** Security hardening. systemd sandboxing, per-job env allowlist, optional
+- [x] **[Task-28]** Security hardening. systemd sandboxing, per-job env allowlist, optional
       container/bubblewrap runner, rate limits, request size limits, CSRF/origin checks for
       the app, secret scanning in the gate, and the redaction test corpus. *Paths:*
       `packages/security/**`, `ops/vm/systemd/**`, `docs/security.md` (controls section).

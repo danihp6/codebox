@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -25,6 +25,7 @@ import type { EventRecord, RunPatch, Store } from '@codebox/store';
 import { openInMemoryStore } from '@codebox/store';
 import type { GitRunner, RunMarker, Worktree, WorkspaceStatus } from '@codebox/workspaces';
 import { runGate } from '../gate/run-gate.js';
+import { MAX_SECRET_SCAN_BYTES } from '../gate/secret-scan.js';
 import { createLogger } from '../logger.js';
 import { createRunEngine } from './engine.js';
 import type { RunPorts, RunSettings, RunStartInput } from './ports.js';
@@ -383,15 +384,32 @@ interface FakeGitRunner extends GitRunner {
   readonly calls: readonly string[][];
 }
 
-function fakeGitRunner(sha: string = HEAD_SHA): FakeGitRunner {
+interface FakeGitRunnerOptions {
+  readonly sha?: string;
+  readonly patch?: string;
+  readonly scanCode?: number;
+}
+
+function fakeGitRunner(options: FakeGitRunnerOptions = {}): FakeGitRunner {
   const calls: string[][] = [];
+  const sha = options.sha ?? HEAD_SHA;
   return {
     calls,
     run(input): Promise<{ code: number; stdout: string; stderr: string }> {
       calls.push([...input.args]);
       const [command] = input.args;
       if (command === 'add') return Promise.resolve({ code: 0, stdout: '', stderr: '' });
-      if (command === 'diff') return Promise.resolve({ code: 1, stdout: '', stderr: '' });
+      if (command === 'diff') {
+        // `diff --cached --quiet` is the commit step; anything else is the secret scan's patch.
+        if (input.args.includes('--cached')) {
+          return Promise.resolve({ code: 1, stdout: '', stderr: '' });
+        }
+        return Promise.resolve({
+          code: options.scanCode ?? 0,
+          stdout: options.patch ?? '',
+          stderr: '',
+        });
+      }
       if (input.args.includes('commit'))
         return Promise.resolve({ code: 0, stdout: '', stderr: '' });
       if (command === 'rev-parse')
@@ -433,6 +451,7 @@ interface Harness {
   readonly workspaces: FakeWorkspaces;
   readonly git: FakeGit;
   readonly gitRunner: FakeGitRunner;
+  readonly lines: Record<string, unknown>[];
   readonly gateCalls: {
     cwd: string;
     command: string;
@@ -449,6 +468,7 @@ interface HarnessOptions {
   readonly gate?: RunPorts['gate'];
   readonly settings?: Partial<RunSettings>;
   readonly status?: Partial<WorkspaceStatus>;
+  readonly git?: FakeGitRunnerOptions;
 }
 
 function harness(options: HarnessOptions = {}): Harness {
@@ -499,7 +519,8 @@ function harness(options: HarnessOptions = {}): Harness {
   const agent = new FakeAgent();
   const workspaces = fakeWorkspaces(worktreePath, workspaceStatus(options.status));
   const git = fakeGit();
-  const gitRunner = fakeGitRunner();
+  const gitRunner = fakeGitRunner(options.git);
+  const lines: Record<string, unknown>[] = [];
   const gateCalls: Harness['gateCalls'] = [];
   let nowMs = NOW;
   let spend = 0;
@@ -550,7 +571,10 @@ function harness(options: HarnessOptions = {}): Harness {
     gate: recordingGate,
     store: wrapped,
     clock: () => new Date(nowMs),
-    logger: createLogger({ level: 'error', sink: () => undefined }),
+    logger: createLogger({
+      level: 'error',
+      sink: (line) => lines.push(JSON.parse(line) as Record<string, unknown>),
+    }),
     emit: (record) => {
       emitted.push(record);
     },
@@ -567,6 +591,7 @@ function harness(options: HarnessOptions = {}): Harness {
     workspaces,
     git,
     gitRunner,
+    lines,
     gateCalls,
     advance: (ms: number) => {
       nowMs += ms;
@@ -701,7 +726,9 @@ describe('run engine — happy path', () => {
     const test = harness();
     test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
     await test.engine.start(runInput());
-    expect(test.gitRunner.calls).toEqual([]);
+    expect(test.gitRunner.calls).toEqual([
+      ['diff', '--no-color', '--unified=0', '--no-ext-diff', BASE_SHA, '--'],
+    ]);
   });
 });
 
@@ -861,6 +888,108 @@ describe('run engine — failures before the merge', () => {
     expect(test.states).toContain('merging');
     expect(test.states.at(-1)).toBe('pr_open');
     expect(eventTypes(test.emitted)).not.toContain('run.merged');
+  });
+});
+
+describe('run engine — the secret scan gate step', () => {
+  const SECRET = `ghp_${'A'.repeat(36)}`;
+
+  function patchWithSecret(path = 'src/x.ts'): string {
+    return [
+      `diff --git a/${path} b/${path}`,
+      'index 1111111..2222222 100644',
+      `--- a/${path}`,
+      `+++ b/${path}`,
+      '@@ -1,3 +1,4 @@',
+      ' const a = 1;',
+      ' const b = 2;',
+      `+const cred = '${SECRET}';`,
+      ' const c = 3;',
+      '',
+    ].join('\n');
+  }
+
+  it('fails the run with gate_failed and keeps the literal out of the tail and the logs', async () => {
+    const test = harness({ git: { patch: patchWithSecret() } });
+    const logDir = join(test.settings.logsDir, `run-${RUN_ID}`);
+    mkdirSync(logDir, { recursive: true });
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('failed');
+    expect(outcome.failure?.code).toBe('gate_failed');
+    expect(outcome.gate?.status).toBe('failed');
+    expect(outcome.gate?.exitCode).toBe(1);
+    expect(outcome.gate?.tail).toContain('src/x.ts:3 github_token');
+    expect(test.store.runs.getRecord(RUN_ID)?.gate).toMatchObject({
+      status: 'failed',
+      exitCode: 1,
+    });
+    expect(test.store.runs.getRecord(RUN_ID)?.failureCode).toBe('gate_failed');
+    expect(test.git.pushes).toEqual([]);
+    expect(test.git.opened).toEqual([]);
+    expect(eventTypes(test.emitted)).not.toContain('run.pr');
+    expect(eventTypes(test.emitted).at(-1)).toBe('run.failed');
+
+    const log = readFileSync(join(logDir, 'gate.log'), 'utf8');
+    expect(log).toContain('src/x.ts:3 github_token');
+    expect(log).not.toContain(SECRET);
+    expect((outcome.gate?.tail ?? []).join('\n')).not.toContain(SECRET);
+    expect(JSON.stringify(test.lines)).not.toContain(SECRET);
+    const scanLogs = test.lines.filter((line) => line['msg'] === 'secret_scan_failed');
+    expect(scanLogs).toHaveLength(1);
+    expect(scanLogs[0]).toMatchObject({
+      level: 'error',
+      runId: RUN_ID,
+      findings: 1,
+      oversized: false,
+    });
+  });
+
+  it('fails closed when the diff cannot be read', async () => {
+    const test = harness({ git: { scanCode: 1 } });
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('failed');
+    expect(outcome.failure?.code).toBe('gate_failed');
+    expect(outcome.gate?.tail).toContain('secret_scan: git_failed');
+    expect(test.store.runs.getRecord(RUN_ID)?.gate).toMatchObject({
+      status: 'failed',
+      exitCode: 1,
+    });
+    expect(test.git.pushes).toEqual([]);
+    const scanLogs = test.lines.filter((line) => line['msg'] === 'secret_scan_failed');
+    expect(scanLogs).toHaveLength(1);
+    expect(scanLogs[0]).toMatchObject({ runId: RUN_ID, code: 'git_failed' });
+  });
+
+  it('fails an oversized patch without scanning it', async () => {
+    const test = harness({ git: { patch: 'x'.repeat(MAX_SECRET_SCAN_BYTES + 1) } });
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('failed');
+    expect(outcome.failure?.code).toBe('gate_failed');
+    expect(outcome.gate?.tail).toContain('secret_scan: patch exceeded 4194304 bytes');
+    const scanLogs = test.lines.filter((line) => line['msg'] === 'secret_scan_failed');
+    expect(scanLogs[0]).toMatchObject({ runId: RUN_ID, findings: 0, oversized: true });
+  });
+
+  it('leaves a clean diff on the existing success path', async () => {
+    const test = harness();
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('succeeded');
+    expect(outcome.gate?.status).toBe('passed');
+    expect(test.store.runs.getRecord(RUN_ID)?.gate).toMatchObject({ status: 'passed', exitCode: 0 });
+    expect(test.lines.filter((line) => line['msg'] === 'secret_scan_failed')).toEqual([]);
+    expect(test.git.pushes).toHaveLength(1);
   });
 });
 

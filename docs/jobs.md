@@ -132,6 +132,18 @@ The gate is the repository's own check, run in the worktree before any PR exists
   daemon's environment is not visible to the gate.
 - Output is captured to `logs/run-<id>/gate.log` (directory mode `0750`); the last 100 lines
   (each at most 2 000 characters) and the exit code are attached to the run and the PR.
+- **A green gate is scanned for secrets before anything is pushed.** The daemon reads
+  `git diff --no-color --unified=0 --no-ext-diff <baseSha> --` in the worktree and scans the
+  **added** lines of that patch for nine patterns: a PEM private key, `github_pat_`, `ghp_`/
+  `gho_`/`ghu_`/`ghs_`/`ghr_`, `sk-ant-`, `sk-`, an `AKIA`/`ASIA` access key, a JWT, a
+  `xox?-` Slack token and a `secret|token|password|api_key = "<value>"` assignment. A hit, or a
+  patch over 4 MiB, turns the gate result into `failed` with exit `1`, appends
+  `<path>:<line> <pattern>` (or `secret_scan: patch exceeded 4194304 bytes`) to the gate tail and
+  its log, and logs one `secret_scan_failed` line with the count and the flags — never the
+  matched text, never the diff. A diff git cannot produce is `secret_scan: git_failed` and fails
+  the same way: a gate that cannot read the diff does not pass. A line carrying
+  `codebox-secret-scan: allow`, or a value that is obviously a placeholder (`[redacted]`,
+  `example`, `placeholder`, `changeme`, `dummy`, `replace`, `your_`, `xxxx`), is skipped.
 - A red gate stops the run **before** the PR: it pushes nothing, opens no PR, and the run ends
   `failed` with `gate_failed`. The worktree is kept for inspection.
 

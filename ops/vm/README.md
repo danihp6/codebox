@@ -30,6 +30,7 @@ stderr as `codebox: <message>`.
 | `test/cloud-init.test.mjs` | Two boots against one root: byte-identical files, two journal lines, eight Vault reads, plus the bundle-file source, `CB_INSTANCE_ID` and the IMDSv2 probe. |
 | `test/verify.test.mjs` | `90-verify.sh --only secrets` on a clean and on a leaky stub root. |
 | `test/keepalive.test.mjs` | The sample on a stub `/proc`, the three step outcomes, the loopback-only rule, the units and the image wiring. |
+| `test/systemd.test.mjs` | The sandbox block in the three long-running units, its position, the surviving directives and the absent `MemoryDenyWriteExecute`. |
 | `README.md` | This map. |
 
 ## Commands
@@ -69,7 +70,19 @@ bad database.
 
 The five service units carry the sandbox block from `docs/providers.md` §14
 (`NoNewPrivileges`, `ProtectSystem=strict`, `ProtectHome`, `PrivateTmp` and the two writable
-paths). The two timers have no `[Service]` section, so they have nothing to sandbox.
+paths). The three long-running services — `codebox`, `codebox-opencode` and `cloudflared` — add
+the extended block after `PrivateTmp=true` and before `ReadWritePaths=`: no capabilities, no
+ambient capabilities, `LockPersonality`, `PrivateDevices`, `ProtectClock`,
+`ProtectControlGroups`, `ProtectHostname`, `ProtectKernelLogs`, `ProtectKernelModules`,
+`ProtectKernelTunables`, `RemoveIPC`, `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6`,
+`RestrictNamespaces`, `RestrictRealtime`, `RestrictSUIDSGID`,
+`SystemCallArchitectures=native`, `SystemCallFilter=@system-service` with
+`SystemCallErrorNumber=EPERM`, and `UMask=0027`. That block, not a container, is the agent's
+isolation boundary (`docs/security.md` §6).
+
+`MemoryDenyWriteExecute=yes` must never be added to them: it removes the write-execute mapping
+V8's JIT needs and Node dies at boot. `test/systemd.test.mjs` fails if it appears. The two
+timers have no `[Service]` section, so they have nothing to sandbox.
 
 `CB_BACKUP_AGE_RECIPIENT` and `CB_BACKUP_BUCKET` are host variables, not daemon configuration:
 the operator sets them in a drop-in (`systemctl edit codebox-backup.service`) and they never

@@ -1,9 +1,10 @@
 # `@codebox/security`
 
-Pairing, device tokens, redaction and request signing. Every secret that leaves a process and
+Pairing, device tokens, redaction and credential scanning. Every secret that leaves a process and
 every comparison that could leak one through timing is decided here; the daemon maps a typed
-failure to an HTTP status and never re-implements a token format, a comparison or a redaction
-rule. No I/O, no network, no `process.env`: the caller passes the secret, the TTL and `now`.
+failure to an HTTP status and never re-implements a token format, a comparison, a redaction rule
+or a credential pattern. No I/O, no network, no `process.env`: the caller passes the secret, the
+TTL and `now`.
 
 ## Files
 
@@ -19,12 +20,16 @@ rule. No I/O, no network, no `process.env`: the caller passes the secret, the TT
 - `pairing.ts` — the 10-character Crockford code, its normaliser and the single-use, TTL-bounded `verifyPairingCode`.
 - `tokens.ts` — `cb1` access tokens, HMAC refresh-token hashes, `hasScope` and `authorizeDevice`.
 - `redact.ts` — the log redactor, its `[redacted]` placeholder and the documented key patterns.
+- `redact-corpus.ts` — thirty fixtures (nested, array, numeric key, `Error`, `Date`, binary, cycle, `BigInt`, `undefined`) with the literals that must not survive.
+- `secret-scan.ts` — the nine credential patterns and the added-line diff scanner the gate runs.
 - `access-jwt.ts` — the Cloudflare Access RS256 verifier; the daemon fetches the JWKS, this package never does.
 - `constant-time.test.ts` — comparison, lengths and the SHA-256 hex vector.
 - `hash.test.ts` — scrypt format, fresh salt, verification and malformed stored hashes.
 - `pairing.test.ts` — the alphabet, the injected byte source, normalisation and single use.
 - `tokens.test.ts` — expiry boundaries, tampered signatures, refresh-token stability and scope authorisation.
 - `redact.test.ts` — the nested fixture, non-mutation, cycles, dates, errors and binary.
+- `redact-corpus.test.ts` — the thirty fixtures, the twelve key patterns and non-mutation over each.
+- `secret-scan.test.ts` — every pattern source, added-line line numbering, context and removed lines, the allow marker, placeholders, dedupe and ordering.
 - `access-jwt.test.ts` — a real RSA pair, the valid claims and every rejection reason.
 
 ## Checks

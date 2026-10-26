@@ -1,4 +1,5 @@
 import { join } from 'node:path';
+import { appendFileSync } from 'node:fs';
 import type { RunPatch, RunRecord, EventRecord } from '@codebox/store';
 import type { PullRequest, CheckRun, MergeReason } from '@codebox/git-provider';
 import { toPullRequestRef } from '@codebox/git-provider';
@@ -20,12 +21,14 @@ import type {
   NormalisedEvent,
   RawAgentEvent,
 } from '@codebox/opencode';
-import { sha256Hex } from '@codebox/security';
+import { sha256Hex, formatSecretFinding } from '@codebox/security';
 import { withTransaction } from '@codebox/store';
 import { WorkspaceError, branchName } from '@codebox/workspaces';
 import type { RepoInfo } from '@codebox/git-provider';
 import type { Worktree, WorkspaceStatus } from '@codebox/workspaces';
+import { GATE_TAIL_LINES } from '../gate/run-gate.js';
 import type { GateExecutionResult } from '../gate/run-gate.js';
+import { SecretScanError, scanWorktree } from '../gate/secret-scan.js';
 import { commitWorktree } from './commit.js';
 import { createRunEventWriter, mintApprovalId } from './events.js';
 import type { RunEventName, RunEventWriter } from './events.js';
@@ -171,6 +174,15 @@ function blockerForMerge(reason: MergeReason): MergeBlocker {
 function validSha(sha: string | null, fallback: string): string {
   if (sha !== null && SHA_PATTERN.test(sha)) return sha;
   return fallback;
+}
+
+/** The tail is the decision; the log is evidence, so a write failure never changes the verdict. */
+function appendToGateLog(logFile: string, lines: readonly string[]): void {
+  try {
+    appendFileSync(logFile, `${lines.join('\n')}\n`, 'utf8');
+  } catch {
+    // Swallowed on purpose: the gate tail already carries the same lines.
+  }
 }
 
 export function createRunEngine(ports: RunPorts): RunEngine {
@@ -669,13 +681,56 @@ export function createRunEngine(ports: RunPorts): RunEngine {
     });
     ctx.gate = result;
     if (ctx.cancelled) return result;
+    const scanned = result.status === 'passed' ? await secretScanStep(ctx, result) : result;
+    ctx.gate = scanned;
     const gate = {
-      status: result.status,
-      exitCode: result.exitCode,
-      durationMs: result.durationMs,
+      status: scanned.status,
+      exitCode: scanned.exitCode,
+      durationMs: scanned.durationMs,
     };
     amend(ctx, { gate, diff: diffStatOf(status.diff) }, [{ event: 'run.gate', data: { gate } }]);
-    return result;
+    return scanned;
+  }
+
+  /**
+   * A run that adds a credential fails here, before the branch is pushed: the scan is a gate
+   * step, not a ninth guardrail, so G1 keeps its meaning and the diff never reaches a PR.
+   */
+  async function secretScanStep(
+    ctx: RunContext,
+    result: GateExecutionResult,
+  ): Promise<GateExecutionResult> {
+    const worktree = ctx.worktree;
+    if (worktree === null) throw new RunFailure('internal', 'no worktree');
+    let lines: readonly string[];
+    try {
+      const scan = await scanWorktree(ports.gitRunner, {
+        cwd: worktree.path,
+        baseSha: worktree.baseSha,
+        timeoutMs: settings.gitTimeoutMs,
+      });
+      if (scan.findings.length === 0 && !scan.oversized) return result;
+      lines = scan.oversized
+        ? ['secret_scan: patch exceeded 4194304 bytes']
+        : scan.findings.map((finding) => formatSecretFinding(finding));
+      logger.error({
+        msg: 'secret_scan_failed',
+        runId: ctx.input.runId,
+        findings: scan.findings.length,
+        oversized: scan.oversized,
+      });
+    } catch (error) {
+      if (!(error instanceof SecretScanError)) throw error;
+      lines = [`secret_scan: ${error.code}`];
+      logger.error({ msg: 'secret_scan_failed', runId: ctx.input.runId, code: error.code });
+    }
+    appendToGateLog(result.logFile, lines);
+    return {
+      ...result,
+      status: 'failed',
+      exitCode: 1,
+      tail: [...result.tail, ...lines].slice(-GATE_TAIL_LINES),
+    };
   }
 
   function protectedPaths(ctx: RunContext): readonly string[] {
