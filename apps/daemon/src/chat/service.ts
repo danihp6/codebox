@@ -3,7 +3,12 @@ import { parseSseEvent } from '@codebox/contracts';
 import type { SseEventName } from '@codebox/contracts';
 import { matchesGlob } from '@codebox/core';
 import { AgentError, createAgentRuntime } from '@codebox/opencode';
-import type { AgentRuntime, RawAgentEvent, SessionRef } from '@codebox/opencode';
+import type {
+  AgentRuntime,
+  CreateSessionInput,
+  RawAgentEvent,
+  SessionRef,
+} from '@codebox/opencode';
 import { redact } from '@codebox/security';
 import { withTransaction } from '@codebox/store';
 import type { ChatMessageOrigin, EventRecord, Store } from '@codebox/store';
@@ -19,6 +24,8 @@ import type { DaemonContext } from '../modules.js';
 import { mintApprovalId } from '../run/events.js';
 import { ChatError } from './errors.js';
 import { newChatId, newMessageId } from './ids.js';
+import { createRoutineToolServer } from './tools/index.js';
+import type { RoutineToolServer } from './tools/index.js';
 
 export const CHAT_POLL_MS = 500;
 export const MAX_TEXT_CHARS = 32_000;
@@ -40,6 +47,7 @@ export interface CreateChatServiceOptions {
   readonly context: DaemonContext;
   readonly agent?: ChatAgent;
   readonly workspaces?: ChatWorkspaces;
+  readonly routineTools?: () => RoutineToolServer;
 }
 
 export interface SendMessageInput {
@@ -170,6 +178,7 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
 
   let agentRuntime: ChatAgent | null = options.agent ?? null;
   let workspaceManager: ChatWorkspaces | null = options.workspaces ?? null;
+  let routineToolServer: RoutineToolServer | null = null;
 
   const turns = new Map<string, Turn>();
   const queues = new Map<string, string[]>();
@@ -213,6 +222,14 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
       });
     }
     return workspaceManager;
+  }
+
+  function tools(): RoutineToolServer {
+    if (routineToolServer === null) {
+      routineToolServer =
+        options.routineTools?.() ?? createRoutineToolServer({ store, now: clock, logger });
+    }
+    return routineToolServer;
   }
 
   function requireSession(chatId: string): ChatSession {
@@ -586,13 +603,38 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     }
   }
 
+  /** The routine tool descriptor of a chat, or `null` when the loopback server cannot start. */
+  async function routineMcp(
+    chatId: string,
+    repoId: string,
+  ): Promise<NonNullable<CreateSessionInput['mcp']> | null> {
+    try {
+      const mount = await tools().start({ chatId, repoId });
+      return {
+        codebox: {
+          type: 'remote',
+          url: mount.url,
+          headers: { authorization: `Bearer ${mount.token}` },
+        },
+      };
+    } catch {
+      // A chat still works without the tool server; the reason stays out of the message.
+      logger.warn({ msg: 'routine_tools_unavailable' });
+      return null;
+    }
+  }
+
   async function createAgentSession(directory: string, chatId: string): Promise<SessionRef> {
+    const session = store.chats.getSession(chatId);
+    if (session === null) throw new ChatError('not_found', 404, { path: 'chat.id' });
+    const mcp = await routineMcp(chatId, session.repoId);
     try {
       return await agent().createSession({
         directory,
         title: `cb-chat-${chatId}`,
         agent: config.CB_DEFAULT_AGENT,
         model: config.CB_DEFAULT_MODEL,
+        ...(mcp === null ? {} : { mcp }),
       });
     } catch (error) {
       throwAgentFailure(error);
@@ -692,6 +734,14 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     permissionLinks.clear();
     agentSessions.clear();
     worktreeDirectories.clear();
+    try {
+      const server = tools();
+      routineToolServer = null;
+      void server.close().catch(() => undefined);
+    } catch {
+      // A tool server that cannot be built has nothing to close, and shutdown never throws.
+      routineToolServer = null;
+    }
   }
 
   const service: ChatService = {

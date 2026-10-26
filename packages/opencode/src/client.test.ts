@@ -150,6 +150,65 @@ describe('AgentRuntime session lifecycle', () => {
     }
   });
 
+  it('forwards mcp verbatim when given and omits the key otherwise', async () => {
+    const server = await fakeServer();
+    const bodies: Record<string, unknown>[] = [];
+    try {
+      const runtime = createAgentRuntime({
+        baseUrl: server.url,
+        token: null,
+        healthPath: HEALTH,
+        fetch: async (url, init) => {
+          if (init.body !== undefined) {
+            bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+          }
+          return globalThis.fetch(url, init);
+        },
+        requestTimeoutMs: 5_000,
+        reconnectDelayMs: 0,
+        sleep: async () => {},
+      });
+
+      const mcp = {
+        codebox: {
+          type: 'remote',
+          url: 'http://127.0.0.1:40123/mcp',
+          headers: { authorization: 'Bearer fixture-mcp-token' },
+        },
+      } as const;
+      await runtime.createSession({
+        directory: '/tmp/cb-chat-fixture01',
+        title: 'cb-chat-fixture01',
+        agent: 'build',
+        model: null,
+        mcp,
+      });
+      expect(bodies[0]).toEqual({
+        title: 'cb-chat-fixture01',
+        directory: '/tmp/cb-chat-fixture01',
+        agent: 'build',
+        model: null,
+        mcp,
+      });
+
+      await runtime.createSession({
+        directory: '/tmp/cb-run-fixture01',
+        title: 'cb-run-fixture01',
+        agent: 'build',
+        model: null,
+      });
+      expect(bodies[1]).toEqual({
+        title: 'cb-run-fixture01',
+        directory: '/tmp/cb-run-fixture01',
+        agent: 'build',
+        model: null,
+      });
+      expect(bodies[1]).not.toHaveProperty('mcp');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('posts the prompt and closes the session', async () => {
     const server = await fakeServer();
     try {

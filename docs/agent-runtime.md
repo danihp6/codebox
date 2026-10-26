@@ -36,9 +36,11 @@ worktree. The daemon never lets a session see `/`, the repository cache or the s
 directory.
 
 A **routine tool** (`routine.create` / `list` / `pause`) is mounted in chat sessions only: it
-writes a schedule through the daemon, never the filesystem. Run sessions never receive it
-(D38); a run that could create schedules would turn prompt injection into persistence. A
-`prompt` routine without a session creates one on its first fire.
+writes a schedule through the daemon, never the filesystem. The daemon owns a small MCP server
+on `127.0.0.1` (an ephemeral port), one bearer token per chat session bound to that chat and its
+repository, and the `mcp` descriptor travels **only** in the create body of a chat session.
+Run sessions never receive it (D38, D41); a run that could create schedules would turn prompt
+injection into persistence. A `prompt` routine without a session creates one on its first fire.
 
 Sessions are named `cb-run-<runId>` and `cb-chat-<chatId>`, so a leaked session id in a log
 is traceable to a row without exposing a prompt.
@@ -69,7 +71,7 @@ The pinned endpoints:
 | Operation | Request |
 | --- | --- |
 | health | `GET <healthPath>` → `200 {"version": string}` |
-| create session | `POST /api/session` `{title, directory, agent, model}` → `200 {id, title, directory}` |
+| create session | `POST /api/session` `{title, directory, agent, model, mcp?}` → `200 {id, title, directory}` |
 | prompt | `POST /api/session/{id}/prompt` `{text}` → `202`, empty body |
 | interrupt | `POST /api/session/{id}/interrupt` → `204` |
 | permission reply | `POST /api/session/{id}/permissions/{permissionId}` `{reply}` → `204` |
@@ -97,6 +99,10 @@ Rules:
 - A dropped stream reconnects **once** after `reconnectDelayMs`; a second drop is
   `stream_lost`, and a reconnect that cannot reach the server is `agent_unavailable`. No
   event is buffered or re-sent.
+- `mcp` is sent only when the caller provides it, and only a chat session provides it (D41):
+  `{codebox: {type: "remote", url: "http://127.0.0.1:<port>/mcp", headers: {authorization:
+  "Bearer <token>"}}}`. The key is absent from every other create body, so a run has no routine
+  tool to call.
 - The normaliser maps events into `packages/contracts` types. It is pure and fixture-tested:
   a recorded session replays into the exact timeline the app expects.
 - `FakeOpenCode` implements the same interface for tests and for the e2e suite: it can stream,
@@ -163,9 +169,10 @@ Two policies (D27):
 - The policy is data in `packages/core`, not scattered `if`s in the daemon.
 - A denial is `approval.resolved` with `decision: "deny"` and `reason: "policy"`; the agent
   receives a rejection and may adapt.
-- `routine.create/list/pause` is a **chat-only** tool (D38). It is not in the run tool set and
-  never appears in a run's prompt; a schedule is created by a human conversation, not by an
-  unattended agent.
+- `routine.create/list/pause` is a **chat-only** tool (D38, D41): a daemon-owned MCP server on
+  `127.0.0.1` with one bearer token per chat session. It is not in the run tool set and never
+  appears in a run's prompt; a schedule is created by a human conversation, not by an unattended
+  agent, and the matrix denies `routine` in run mode even if a descriptor leaked.
 
 The job environment is an allowlist (`CB_MODEL_PROVIDER_KEYS` plus `PATH`, `HOME`, `LANG`
 and the git identity). GitHub credentials, the session secret, the Vault token and the

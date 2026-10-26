@@ -140,6 +140,7 @@ The agent is capable by design; the boundary is what it can reach (D27).
 | --- | --- |
 | Working directory | One worktree per session; the process cwd is that directory. |
 | Permissions | Edits and in-worktree bash allowed for runs; `webfetch` denied; outside-worktree denied (`agent-runtime.md` §6). |
+| Routine tool | A daemon-owned MCP server on `127.0.0.1:<ephemeral>`, mounted only in a chat session create body; one bearer token per chat, bound to that chat and repository, never logged; `routine.*` is denied in run mode (D41). |
 | Environment | Allowlist: `PATH`, `HOME`, `LANG`, git identity, model keys. No GitHub token, no session secret, no Vault token. |
 | Network | No inbound listener and no listener of its own. Outbound is **allowed and not filtered**: no egress filter ships in v1, so the permission policy and the sandbox below are the boundary. |
 | Secrets in the repo | The gate runs a secret scan over the run's own diff; a hit fails the run with `gate_failed` before the branch is pushed and no PR exists. |
