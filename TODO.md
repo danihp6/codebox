@@ -1,7 +1,7 @@
 # Codebox — Roadmap (TODO)
 
 Private control plane for OpenCode on your own VM — OCI Always Free, or an AWS spot host with
-its own CDK stack (`infra/aws`) — controlled by a hybrid Angular app.
+its own Terraform stack (`infra/aws`) — controlled by a hybrid Angular app.
 Backlog source of truth. One branch per task off `main` (`task-<ID>` for an agent batch).
 
 Legend: `[ ]` open, `[~]` in progress, `[!]` **blocked** (the mark carries its
@@ -47,38 +47,39 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 7 | Hardening, e2e, observability, release | 26–30 | 5 |
 | 8 | Beta, onboarding, migration of pkm | 31–32, 34 | 3 |
 | 9 | Chat routines and reminders | 35–36 | 1, then 2 |
-| 10 | Provider-neutral image: host-local secrets, AWS builder, browser | 39–41 | 3 |
-| 11 | AWS spot host: CDK stack, durable backups, concurrency three | 42–44 | 3 |
-| 12 | Host-neutral docs and ADRs | 45 | 1 |
-| 13 | Measured AWS spot bring-up | 46 | 1 |
+| 10 | Terraform for both hosts (OCI first) | 42, 47 | 2 |
+| 11 | Provider-neutral image: host-local secrets, AWS builder, browser | 39–41 | 3 |
+| 12 | Durable backups and concurrency three | 43–44 | 2 |
+| 13 | Host-neutral docs and ADRs | 45 | 1 |
+| 14 | Measured AWS spot bring-up | 46 | 1 |
 
-**Priority override — 2026-10-26.** The host track (Batches 10 and 11) is pulled **ahead of 7–9**.
-OCI Always Free capacity has no date and the box cannot be deployed until it lands; a spot host
-closes that gap with the same image, so it outranks the remaining app, hardening and routine work.
-Batches 7–9 keep their internal order behind it. Nothing is dropped, only displaced.
+**Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
+OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
+goes first because it is what lets the operator create and destroy the OCI footprint while the
+wait is still open; the spot host reuses the same tool with the same image. Batches 7–9 keep
+their internal order behind it. Nothing is dropped, only displaced.
 
 **Cut — cycle after Task-37 (four of four slots used).** The host track takes every slot:
-Task-39, Task-40, Task-41 and Task-44. Their dependencies (Task-03, Task-09, Task-15, Task-25)
-are merged and their paths are pairwise disjoint: `ops/vm` first boot, `ops/image` template,
-`ops/image/scripts` plus `docs/vm-image.md`, and `packages/*` plus
-`docs/{jobs,providers,decisions}.md`. Task-44 holds `docs/decisions.md`, so Task-28 — the
-holder in the previous plan — moves to a later cut. Displaced and still eligible: Task-23,
-Task-27, Task-28, Task-35 and Task-43, which needs only Task-25 and fills the next cut beside
-Task-42 once Task-40 and Task-41 merge. Not eligible: Task-26 and Task-29 are `[!]` on the
-`workflows` permission (issue #11); Task-30 waits for Task-29; Task-36 waits for Task-35 and
-Task-38; Task-31 waits for Task-26/28/30; Task-32 for Task-31; Task-45 for Task-39/40/41/44;
-Task-46 for Task-42–45.
-**Hot-file holders in this cut:** Task-44 holds `docs/decisions.md`; `package.json`,
-`package-lock.json`, `tsconfig.base.json`, `packages/contracts/src/index.ts`,
-`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts` and `apps/daemon/src/main.ts` are held
-by no task.
+Task-47 and Task-42 (Terraform for OCI and AWS), Task-40 (the `amazon-ebs` builder) and Task-41
+(the browser). Task-47 descends from Task-24, Task-40 and Task-41 from Task-25 — all merged — and
+the four are path-disjoint: `infra/oci`, `infra/aws`, the `ops/image` template, and
+`ops/image/scripts` plus `docs/vm-image.md`. Displaced and still eligible: Task-23, Task-27,
+Task-28, Task-35, Task-43 and Task-44; Task-44 holds `docs/decisions.md` when its cut arrives,
+so Task-28 waits for that one. No task holds a hot file in this cut. Not eligible: Task-26 and
+Task-29 are `[!]` on the `workflows` permission (issue #11); Task-30 waits for Task-29;
+Task-36 waits for Task-35 and Task-38; Task-31 waits for Task-26/28/30; Task-32 for Task-31;
+Task-45 for Task-39/40/41/42/44/47; Task-46 for Task-42–45.
+**Hot-file holders in this cut:** none; `package.json`, `package-lock.json`,
+`tsconfig.base.json`, `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`,
+`CHANGELOG.md` and `docs/decisions.md` are held by no task.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
-`apps/daemon/src/main.ts`. The **host track** is its own chain — `39 → 40/41 → 42 → 46`, with
-`43` and `44` feeding the measured bring-up — and it is the path to a deployed box, not to the
-beta.
+`apps/daemon/src/main.ts`. The **host track** is its own chain — `47 → 42 → 46` for Terraform
+and `40/41 → 46` for the image, with `43` and `44` feeding the measured bring-up — and it is the
+path to a deployed box, not to the beta.
 
 **Serial resources:** `packages/contracts/src/index.ts` (Task-03 owns it for Batch 2; later
 contract changes are their own task), `apps/app/src/app/app.routes.ts` (Task-18 predeclares
@@ -556,7 +557,54 @@ turn and is not capped until the chat path writes a usage row (Task-35 records t
 
 ---
 
-## Batch 10 — Provider-neutral image
+## Batch 10 — Terraform for both hosts
+
+The operator has to be able to create and destroy the OCI footprint **while the A1 capacity
+wait is still open**, and the spot host must be built the same way. One tool, two providers:
+`plan` is the `--plan` the shell scripts hand-rolled and `destroy` is the brake. Terraform owns
+the static resources on both sides; the instance stays with `ops/oci/launch.sh` on OCI, because
+no `apply` can wait for capacity.
+
+- [ ] **[Task-42]** `infra/aws`: Terraform for the spot host. One root module (Terraform 1.9+,
+      the `aws` provider pinned, remote S3 state with native locking): a VPC with a public
+      subnet and **no inbound 80/443**, a security group allowing SSH only from the admin
+      `/32`, `ami_id` defaulting to the current Canonical Ubuntu 24.04 arm64 image from a
+      `data` source so the stack applies before the Codebox image exists, a **spot**
+      `c7g.2xlarge` (8 vCPU / 16 GB arm64 — the floor for three repos × agent + build +
+      Chromium plus the daemon, OpenCode and the tunnel) with a 100 GB gp3 volume and IMDSv2
+      required, an instance profile that grants SSM Session Manager and the backup bucket
+      only, the S3 dump bucket (SSE, versioned, 30-day lifecycle), a budget alarm and outputs
+      (instance id, public IP, backup URI). `c7g.xlarge` is the documented degradation.
+      *Paths:* `infra/aws/**`, `docs/aws.md`, `docs/README.md` (index row).
+      *Dependencies:* none (Task-40 supplies the AMI later). *Acceptance:*
+      `[unit]` `terraform fmt -check` and `terraform validate` pass offline, and `terraform
+      test` with a mocked `aws` provider proves no `0.0.0.0/0` ingress, SSH as one `/32`,
+      IMDSv2 required, spot with a price cap, and the bucket with SSE and lifecycle;
+      `[unit]` a second `plan` after `apply` is empty; `[live]` `apply` creates the stack and
+      `destroy` keeps only the bucket.
+
+- [ ] **[Task-47]** `infra/oci`: Terraform for the OCI resources. One root module (the `oci`
+      provider pinned, remote state in the existing `cb-backups` bucket) describing `cb-vcn`,
+      the IGW, the route table, the security list (SSH only from the admin `/32`, no 80/443),
+      `cb-subnet`, the dynamic group, the `cb-ci` and `cb-instance` policies, `cb-vault` with
+      its four secret placeholders and `cb-backups`. The instance stays out on purpose: no
+      `apply` can wait for A1 capacity, so `ops/oci/launch.sh` keeps that job and consumes
+      the stack outputs. That split is what lets the operator apply and `destroy` the network
+      while the capacity wait is open. `provision.sh` and its test retire once `plan` against
+      the live tenancy is empty; `launch.sh` stays. *Paths:* `infra/oci/**`,
+      `ops/oci/provision.sh` (deleted), `ops/oci/test/provision.test.mjs` (deleted),
+      `ops/oci/README.md`, `docs/oci.md`, `AGENTS.md` (layout section, with both `infra/aws/`
+      and `infra/oci/`). *Dependencies:* Task-24. *Acceptance:* `[unit]` `terraform fmt -check`
+      and `terraform validate` pass
+      offline, and `terraform test` with a mocked `oci` provider proves the CIDRs, the `/32`
+      ingress and the four secret placeholders; `[unit]` no state file or credential is
+      committed; `[live]` a `plan` against the existing tenancy shows no drift, `destroy`
+      removes the network and keeps the bucket and the image, and a second `apply` rebuilds
+      it.
+
+---
+
+## Batch 11 — Provider-neutral image
 
 The OCI wait has no date, so the image must boot on a host whose identity has no Vault grant:
 the same artefact runs on OCI later and on an AWS spot box now (D40). Nothing here touches
@@ -597,27 +645,10 @@ the app or the API.
 
 ---
 
-## Batch 11 — AWS spot host
+## Batch 12 — Durable backups and concurrency three
 
-One account, one stack, no inbound port but SSH from the admin `/32` (D18). The box is
-disposable (D33): the stack is destroyed and rebuilt from the image plus the newest dump.
-
-- [ ] **[Task-42]** `infra/aws`: CDK stack for the spot host. A TypeScript CDK v2 app with its
-      own `package.json`, `cdk.json`, `tsconfig.json` and `vitest` assertions
-      (`aws-cdk-lib/assertions`) that synthesises one VPC with a public subnet and **no
-      inbound 80/443**, a security group allowing SSH only from the admin `/32`, the
-      `cb-image-*` AMI behind a `CfnParameter`, a **spot** `c7g.2xlarge` (8 vCPU / 16 GB
-      arm64 — the measured floor for three repos × agent + build + Chromium plus the daemon,
-      OpenCode and the tunnel), a 100 GB gp3 volume, IMDSv2 required, an instance profile
-      that grants SSM Session Manager and the backup bucket only, an S3 bucket for the dumps
-      (SSE, versioned, 30-day lifecycle), a budget alarm and outputs (instance id, public IP,
-      backup URI). `c7g.xlarge` is documented as the degradation. *Paths:* `infra/aws/**`,
-      `docs/aws.md`, `docs/README.md` (index row), `AGENTS.md` (layout section).
-      *Dependencies:* Task-40, Task-41. *Acceptance:* `[unit]` `cdk synth` runs offline and
-      the assertions prove no `0.0.0.0/0` ingress, SSH as one `/32`, IMDSv2 required, spot
-      with a price cap, and the bucket with SSE and lifecycle; `[unit]` the stack destroys
-      cleanly and keeps the bucket; `[live]` `cdk deploy` launches a box that boots the image
-      and answers health.
+D33 owns the recovery path and D15 owns how many jobs are in flight; both move before the box
+is asked to hold three repositories at once.
 
 - [ ] **[Task-43]** Backups that survive a reclaimed host. `backup.sh` uploads the
       age-encrypted dump to any S3-compatible target (`CB_BACKUP_S3_URI`, credentials from
@@ -647,29 +678,30 @@ disposable (D33): the stack is destroyed and rebuilt from the image plus the new
 
 ---
 
-## Batch 12 — Host-neutral docs
+## Batch 13 — Host-neutral docs
 
 - [ ] **[Task-45]** Host-neutral docs and ADRs. Say what is true: the image is Ubuntu 24.04
-      arm64 with no provider in it, the builder and the secret source are per host, and OCI
-      stays the primary target. Amend D20/D21, add D40 (one image, two hosts, spot while OCI
-      capacity is pending), and reconcile `docs/vm-image.md`, `docs/security.md` (§7, §8),
+      arm64 with no provider in it, the builder and the secret source are per host, both hosts
+      are Terraform stacks under `infra/`, and OCI stays the primary target. Amend D20/D21, add
+      D40 (one image, two hosts, Terraform for both, spot while OCI capacity is pending), and
+      reconcile `docs/vm-image.md`, `docs/security.md` (§7, §8),
       `docs/architecture.md` (diagram), `docs/operations.md` (§2), `docs/roadmap.md` and the
       host rows in `AGENTS.md` and `README.md`. *Paths:* `docs/vm-image.md`,
       `docs/security.md`, `docs/architecture.md`, `docs/operations.md`, `docs/roadmap.md`,
       `docs/decisions.md`, `AGENTS.md`, `README.md`. *Dependencies:* Task-39, Task-40,
-      Task-41, Task-44. *Acceptance:* `[unit]` no doc claims the image is OCI-only, and every
-      remaining OCI statement lives in `docs/oci.md`, `docs/aws.md` or a migration section;
-      `[unit]` every `CB_*` in code still appears in `docs/providers.md`; `[live]` none
-      (docs).
+      Task-41, Task-42, Task-44, Task-47. *Acceptance:* `[unit]` no doc claims the image is
+      OCI-only, and every remaining OCI statement lives in `docs/oci.md`, `docs/aws.md` or a
+      migration section; `[unit]` every `CB_*` in code still appears in `docs/providers.md`;
+      `[live]` none (docs).
 
 ---
 
-## Batch 13 — Measured bring-up
+## Batch 14 — Measured bring-up
 
 - [ ] **[Task-46]** Spot bring-up, measured. Deploy the stack, deliver the four bundles with
       no secret in user-data or the template, run first boot over SSM, switch the tunnel
       hostname, restore the newest dump, pair a device, run three repositories at once with
-      their browser tests, then `cdk destroy` and rebuild from zero. *Paths:* `infra/aws/**`
+      their browser tests, then `terraform destroy` and rebuild from zero. *Paths:* `infra/aws/**`
       (parameters), `docs/operations.md` (AWS runbook section). *Dependencies:* Task-42,
       Task-43, Task-44, Task-45. *Acceptance:* `[live]` boot to `/v1/health` in ≤ 5 minutes
       with no manual step but the bundles; `[live]` three parallel runs with Playwright are
@@ -691,11 +723,11 @@ construction. They need a local key, an external tool or a store account.
       chat, jobs, run detail, settings) and the tokens in `docs/app.md` §9; export PNGs and a
       screen-to-route map into `design/`. Task-18 implements from it. *Dependencies:* none.
 - [ ] **L3 — AWS account guardrails.** A dedicated IAM user with MFA (never root), the region
-      pinned, the access keys rotated and a budget alarm above the spot cost; CDK deploys with
-      a named profile and no key in the repository. *Dependencies:* Task-42.
+      pinned, the access keys rotated and a budget alarm above the spot cost; `terraform` deploys
+      with a named profile and no key in the repository. *Dependencies:* Task-42.
 - [ ] **L4 — OCI cutover.** When capacity lands: launch the OCI image, restore the newest
       dump, repoint the tunnel, destroy the spot stack and keep `docs/aws.md` as the bench.
-      *Dependencies:* Task-42, Task-46.
+      *Dependencies:* Task-42, Task-46, Task-47.
 
 ---
 
