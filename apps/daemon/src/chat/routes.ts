@@ -30,9 +30,11 @@ const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' } as co
 const SESSIONS_PATH = `${API_PREFIX}/chat/sessions`;
 
 const createSessionSchema = z.strictObject({
-  repoId: RepoId,
+  repoId: RepoId.optional(),
   title: z.string().min(1).optional(),
 });
+
+const bindRepoSchema = z.strictObject({ repoId: RepoId });
 
 const sendMessageSchema = z.strictObject({
   text: z
@@ -124,6 +126,18 @@ function runtimeOf(service: ChatService): ChatRuntime {
   return chatRuntimeOf(service);
 }
 
+/** Any shape failure of the bind body is reported against the one field the route reads. */
+async function bindRepoBody(c: AppContext): Promise<{ readonly repoId: string }> {
+  try {
+    return parseOrThrow(bindRepoSchema, await readJson(c), 'chat');
+  } catch (error) {
+    if (error instanceof ContractParseError) {
+      throw new ChatError('invalid_payload', 422, { path: 'chat.repoId' });
+    }
+    throw error;
+  }
+}
+
 export function registerChatRoutes(app: DaemonApp, service: ChatService): void {
   app.get(SESSIONS_PATH, (c) =>
     handle(c, () => {
@@ -149,23 +163,30 @@ export function registerChatRoutes(app: DaemonApp, service: ChatService): void {
       requireChatScope(c);
       const runtime = runtimeOf(service);
       const body = parseOrThrow(createSessionSchema, await readJson(c), 'chat.session');
-      if (runtime.store.repos.get(body.repoId) === null) {
+      const repoId = body.repoId;
+      if (repoId !== undefined && runtime.store.repos.get(repoId) === null) {
         throw new ChatError('not_found', 404, { path: 'chat.repoId' });
       }
       const at = runtime.clock().toISOString();
       const session: ChatSession = {
         id: runtime.newChatId(),
-        repoId: body.repoId,
+        repoId: repoId ?? null,
+        kind: repoId === undefined ? 'free' : 'repo',
         title: body.title ?? DEFAULT_CHAT_TITLE,
         status: 'idle',
         createdAt: at,
         updatedAt: at,
         lastMessage: null,
       };
-      runtime.store.chats.createSession(session, { opencodeSessionId: null, worktree: null });
+      const created = runtime.store.chats.createSession(session, {
+        opencodeSessionId: null,
+        worktree: null,
+      });
+      // A free chat opens no OpenCode session: its directory is made on the first message.
+      if (repoId === undefined) return json(c, parseChatSession(created), 201);
       // The row survives a failed prepare with `opencodeSessionId = null`, so the client keeps
       // the id it was given and the session can be prepared again on the next message.
-      const prepared = await service.prepare(session.id);
+      const prepared = await service.prepare(created.id);
       return json(c, parseChatSession(prepared), 201);
     }),
   );
@@ -230,6 +251,37 @@ export function registerChatRoutes(app: DaemonApp, service: ChatService): void {
       requireChatScope(c);
       const session = await service.interrupt(c.req.param('id'));
       return json(c, parseChatSession(session), 200);
+    }),
+  );
+
+  app.post(`${SESSIONS_PATH}/:id/repo`, (c) =>
+    handle(c, async () => {
+      requireChatScope(c);
+      const runtime = runtimeOf(service);
+      const id = c.req.param('id');
+      if (runtime.store.chats.getSession(id) === null) throw notFound();
+      const body = await bindRepoBody(c);
+      return json(c, parseChatSession(await service.bind(id, body.repoId)), 200);
+    }),
+  );
+
+  app.post(`${SESSIONS_PATH}/:id/compact`, (c) =>
+    handle(c, async () => {
+      requireChatScope(c);
+      return json(c, parseChatSession(await service.compact(c.req.param('id'))), 200);
+    }),
+  );
+
+  app.post(`${SESSIONS_PATH}/:id/reviewed`, (c) =>
+    handle(c, () => {
+      requireChatScope(c);
+      const runtime = runtimeOf(service);
+      const id = c.req.param('id');
+      if (runtime.store.chats.getSession(id) === null) throw notFound();
+      const at = runtime.clock().toISOString();
+      // The store writes `reviewed_at` with COALESCE, so a second review keeps the first stamp.
+      const reviewed = runtime.store.chats.updateSession(id, { reviewedAt: at, updatedAt: at });
+      return json(c, parseChatSession(reviewed), 200);
     }),
   );
 }

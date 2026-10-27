@@ -1,10 +1,19 @@
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { ChatMessage, ChatSession } from '@codebox/contracts';
 import { parseSseEvent } from '@codebox/contracts';
 import type { SseEventName } from '@codebox/contracts';
 import { matchesGlob } from '@codebox/core';
-import { AgentError, createAgentRuntime } from '@codebox/opencode';
+import {
+  AgentError,
+  CHAT_HANDOFF_TURNS,
+  buildChatHandoff,
+  createAgentRuntime,
+} from '@codebox/opencode';
 import type {
   AgentRuntime,
+  ChatHandoffReason,
+  ChatHandoffTurn,
   CreateSessionInput,
   RawAgentEvent,
   SessionRef,
@@ -29,6 +38,17 @@ import type { RoutineToolServer } from './tools/index.js';
 
 export const CHAT_POLL_MS = 500;
 export const MAX_TEXT_CHARS = 32_000;
+
+/** Free chats live under this dot-directory, which the workspace cleanup never lists. */
+export const FREE_CHAT_DIRECTORY = '.chat';
+
+export const BIND_DIVIDER = 'The recent turns were re-injected into a new session.';
+
+export const COMPACT_DIVIDER = `Context compacted. ${BIND_DIVIDER}`;
+
+export function bindDividerText(repoSlug: string): string {
+  return `Connected repository ${repoSlug}. ${BIND_DIVIDER}`;
+}
 
 const AGENT_REQUEST_TIMEOUT_MS = 30_000;
 const AGENT_RECONNECT_DELAY_MS = 1_000;
@@ -73,6 +93,10 @@ export interface ChatService {
   interrupt(chatId: string): Promise<ChatSession>;
   /** Creates the worktree and the OpenCode session for a stored chat row. */
   prepare(chatId: string): Promise<ChatSession>;
+  /** Binds a free chat to a repository: forget the free session, then `prepare`. */
+  bind(chatId: string, repoId: string): Promise<ChatSession>;
+  /** Starts a new OpenCode session in the same directory and bumps the context epoch. */
+  compact(chatId: string): Promise<ChatSession>;
   /** Clears timers and stops every pump; idempotent. */
   stop(): void;
 }
@@ -98,7 +122,8 @@ export function chatRuntimeOf(service: ChatService): ChatRuntime {
   return runtime;
 }
 
-type ChatEventName = 'chat.message' | 'chat.delta' | 'chat.tool' | 'chat.permission' | 'chat.idle';
+type ChatEventName =
+  'chat.message' | 'chat.delta' | 'chat.tool' | 'chat.permission' | 'chat.idle' | 'chat.compacted';
 
 type PermissionEvent = Extract<RawAgentEvent, { readonly type: 'permission.updated' }>;
 
@@ -319,6 +344,54 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     });
     notifier.notify();
     return stored;
+  }
+
+  /**
+   * The handoff divider is a `system` row written straight through the repository: it is part
+   * of the transcript, so it must survive a restart, but it never moves the session to `working`.
+   */
+  function appendDivider(chatId: string, text: string): ChatMessage {
+    const ts = clock().toISOString();
+    const message: ChatMessage = {
+      id: newMessageId(),
+      chatId,
+      role: 'system',
+      text,
+      createdAt: ts,
+    };
+    const stored = withTransaction(store.db, () => {
+      const row = store.chats.appendMessage(message, { origin: 'assistant' });
+      const seq = store.events.nextSeq({ chatId });
+      persistChatEvent(chatId, 'chat.message', seq, ts, { message: row });
+      return row;
+    });
+    notifier.notify();
+    return stored;
+  }
+
+  /**
+   * The preamble the next prompt of a rebound or compacted chat carries. It is built from the
+   * persisted transcript, so a daemon restart between the divider and the next turn loses nothing.
+   */
+  function pendingHandoff(chatId: string): string | null {
+    const rows = store.chats.recentMessages(chatId, CHAT_HANDOFF_TURNS + 1);
+    const newest = rows.at(-1);
+    if (newest === undefined || newest.role !== 'system') return null;
+    const session = store.chats.getSession(chatId);
+    const repo =
+      session === null || session.repoId === null ? null : store.repos.get(session.repoId);
+    if (repo === null) return null;
+    const turns: ChatHandoffTurn[] = rows
+      .slice(0, -1)
+      .filter((row) => row.role === 'user' || row.role === 'assistant')
+      .map((row) => ({ role: row.role === 'user' ? 'user' : 'assistant', text: row.text }));
+    const reason: ChatHandoffReason = newest.text === COMPACT_DIVIDER ? 'compact' : 'bind';
+    return buildChatHandoff({
+      repo: repo.slug,
+      baseBranch: repo.defaultBranch,
+      reason,
+      turns,
+    });
   }
 
   function appendTool(chatId: string, tool: string, status: 'start' | 'ok' | 'error'): void {
@@ -606,8 +679,10 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
   /** The routine tool descriptor of a chat, or `null` when the loopback server cannot start. */
   async function routineMcp(
     chatId: string,
-    repoId: string,
+    repoId: string | null,
   ): Promise<NonNullable<CreateSessionInput['mcp']> | null> {
+    // A free chat has no repository, and the routine tools refuse to start without one.
+    if (repoId === null) return null;
     try {
       const mount = await tools().start({ chatId, repoId });
       return {
@@ -624,10 +699,12 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     }
   }
 
-  async function createAgentSession(directory: string, chatId: string): Promise<SessionRef> {
-    const session = store.chats.getSession(chatId);
-    if (session === null) throw new ChatError('not_found', 404, { path: 'chat.id' });
-    const mcp = await routineMcp(chatId, session.repoId);
+  async function createAgentSession(
+    directory: string,
+    chatId: string,
+    repoId: string | null,
+  ): Promise<SessionRef> {
+    const mcp = await routineMcp(chatId, repoId);
     try {
       return await agent().createSession({
         directory,
@@ -641,36 +718,130 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     }
   }
 
+  /** The private directory of a free chat: not a worktree, and never stored in `worktree`. */
+  async function freeDirectory(chatId: string): Promise<string> {
+    const directory = join(config.CB_WORKSPACE_ROOT, FREE_CHAT_DIRECTORY, chatId);
+    await mkdir(directory, { recursive: true });
+    return directory;
+  }
+
   async function prepare(chatId: string): Promise<ChatSession> {
     const session = requireSession(chatId);
     const liveSession = agentSessions.get(chatId);
     const liveDirectory = worktreeDirectories.get(chatId);
     if (liveSession !== undefined && liveDirectory !== undefined) return session;
-    const repo = store.repos.get(session.repoId);
-    if (repo === null) throw new ChatError('not_found', 404, { path: 'chat.repoId' });
+    const repo = session.repoId === null ? null : store.repos.get(session.repoId);
+    if (session.repoId !== null && repo === null) {
+      throw new ChatError('not_found', 404, { path: 'chat.repoId' });
+    }
     let current = session;
     let directory = liveDirectory;
     if (directory === undefined) {
-      const ref: RepoRef = {
-        slug: repo.slug,
-        defaultBranch: repo.defaultBranch,
-        cloneUrl: `https://github.com/${repo.slug}.git`,
-      };
-      directory = await ensureWorktree(session, ref, repo.defaultBranch);
+      if (repo === null) {
+        directory = await freeDirectory(session.id);
+      } else {
+        const ref: RepoRef = {
+          slug: repo.slug,
+          defaultBranch: repo.defaultBranch,
+          cloneUrl: `https://github.com/${repo.slug}.git`,
+        };
+        directory = await ensureWorktree(session, ref, repo.defaultBranch);
+        current = store.chats.updateSession(session.id, {
+          worktree: directory,
+          updatedAt: clock().toISOString(),
+        });
+      }
       worktreeDirectories.set(session.id, directory);
-      current = store.chats.updateSession(session.id, {
-        worktree: directory,
-        updatedAt: clock().toISOString(),
-      });
     }
     if (liveSession !== undefined) return current;
-    const reference = await createAgentSession(directory, session.id);
+    const reference = await createAgentSession(directory, session.id, session.repoId);
     agentSessions.set(session.id, reference.sessionId);
     return store.chats.updateSession(session.id, {
       opencodeSessionId: reference.sessionId,
       status: 'idle',
       updatedAt: clock().toISOString(),
     });
+  }
+
+  /** Closes the live OpenCode session and forgets both maps; a refused close is only warned. */
+  async function forgetLiveSession(chatId: string): Promise<void> {
+    const sessionId = agentSessions.get(chatId);
+    agentSessions.delete(chatId);
+    worktreeDirectories.delete(chatId);
+    if (sessionId === undefined) return;
+    try {
+      await agent().closeSession(sessionId);
+    } catch (error) {
+      logger.warn({
+        msg: 'chat_session_close_failed',
+        chatId,
+        reason: error instanceof Error ? error.name : 'unknown',
+      });
+    }
+  }
+
+  async function bind(chatId: string, repoId: string): Promise<ChatSession> {
+    const session = requireSession(chatId);
+    if (session.status === 'archived') throw archived();
+    if ((session.kind ?? 'repo') !== 'free' || session.repoId !== null) {
+      throw new ChatError('chat_already_bound', 409, { reason: 'chat_already_bound' });
+    }
+    const repo = store.repos.get(repoId);
+    if (repo === null) throw new ChatError('not_found', 404, { path: 'chat.repoId' });
+    await forgetLiveSession(chatId);
+    store.chats.updateSession(chatId, {
+      repoId,
+      kind: 'repo',
+      updatedAt: clock().toISOString(),
+    });
+    try {
+      await prepare(chatId);
+    } catch (error) {
+      agentSessions.delete(chatId);
+      worktreeDirectories.delete(chatId);
+      store.chats.updateSession(chatId, {
+        repoId: null,
+        kind: 'free',
+        updatedAt: clock().toISOString(),
+      });
+      logger.warn({
+        msg: 'chat_bind_failed',
+        chatId,
+        reason: error instanceof Error ? error.name : 'unknown',
+      });
+      throw error;
+    }
+    appendDivider(chatId, bindDividerText(repo.slug));
+    logger.info({ msg: 'chat_bound', chatId, repoId });
+    return requireSession(chatId);
+  }
+
+  async function compact(chatId: string): Promise<ChatSession> {
+    const session = requireSession(chatId);
+    if (session.status === 'archived') throw archived();
+    await prepare(chatId);
+    const directory = worktreeDirectories.get(chatId);
+    if (directory === undefined) {
+      throw new ChatError('workspace_unavailable', 503, { reason: 'workspace_unavailable' });
+    }
+    await forgetLiveSession(chatId);
+    const reference = await createAgentSession(directory, chatId, session.repoId);
+    agentSessions.set(chatId, reference.sessionId);
+    const epoch = (store.chats.getSession(chatId)?.contextEpoch ?? 1) + 1;
+    const ts = clock().toISOString();
+    store.chats.updateSession(chatId, {
+      opencodeSessionId: reference.sessionId,
+      contextEpoch: epoch,
+      updatedAt: ts,
+    });
+    appendDivider(chatId, COMPACT_DIVIDER);
+    withTransaction(store.db, () => {
+      const seq = store.events.nextSeq({ chatId });
+      persistChatEvent(chatId, 'chat.compacted', seq, ts, { contextEpoch: epoch });
+    });
+    notifier.notify();
+    logger.info({ msg: 'chat_compacted', chatId, contextEpoch: epoch });
+    return requireSession(chatId);
   }
 
   async function writeAndQueue(
@@ -684,8 +855,9 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     const session = requireSession(chatId);
     if (session.status === 'archived') throw archived();
     if (!agentSessions.has(session.id)) await prepare(session.id);
+    const handoff = pendingHandoff(session.id);
     const message = appendMessage(session.id, text, origin);
-    queueText(session.id, text);
+    queueText(session.id, handoff === null ? text : `${handoff}\n${text}`);
     void startTurn(session.id);
     return message;
   }
@@ -751,6 +923,8 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     tick,
     interrupt,
     prepare,
+    bind,
+    compact,
     stop,
   };
   RUNTIMES.set(service, {

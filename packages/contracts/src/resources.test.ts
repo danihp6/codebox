@@ -4,6 +4,7 @@ import {
   GUARDRAIL_IDS,
   blockerCodeSchema,
   chatMessageSchema,
+  chatSessionSchema,
   guardrailIdSchema,
   jobSchema,
   parseApproval,
@@ -98,6 +99,16 @@ const chatMessage = {
   createdAt: ts,
 };
 
+const chatSession = {
+  id: chatId,
+  repoId,
+  title: 'Scratch',
+  status: 'idle',
+  createdAt: ts,
+  updatedAt: ts,
+  lastMessage: chatMessage,
+};
+
 const schedule = {
   id: 'sch_01JABCDEFG',
   repoId,
@@ -187,15 +198,7 @@ const fixtures: ReadonlyArray<{
   },
   {
     name: 'ChatSession',
-    fixture: {
-      id: chatId,
-      repoId,
-      title: 'Scratch',
-      status: 'idle',
-      createdAt: ts,
-      updatedAt: ts,
-      lastMessage: chatMessage,
-    },
+    fixture: chatSession,
     parse: parseChatSession,
   },
   { name: 'ChatMessage', fixture: chatMessage, parse: parseChatMessage },
@@ -479,6 +482,16 @@ describe('resources', () => {
     expect(repoSchema.safeParse(repo).success).toBe(true);
     expect(chatMessageSchema.safeParse({ ...chatMessage, role: 'tool' }).success).toBe(false);
     expect(jobSchema.safeParse({ ...job, model: 42 }).success).toBe(false);
+  });
+
+  it('accepts a free chat with a null repoId and demands the key', () => {
+    const free = { ...chatSession, repoId: null };
+    expect(parseChatSession(free)).toEqual(free);
+    expect(chatSessionSchema.safeParse(free).success).toBe(true);
+    expect(chatSessionSchema.safeParse({ ...chatSession, repoId: undefined }).success).toBe(false);
+    expect(chatSessionSchema.safeParse({ ...chatSession, repoId: 'not-a-repo-id' }).success).toBe(
+      false,
+    );
   });
 });
 

@@ -10,7 +10,7 @@ import {
 
 describe('entry point', () => {
   it('re-exports the primitives through index.js', () => {
-    expect(SSE_EVENT_NAMES).toHaveLength(23);
+    expect(SSE_EVENT_NAMES).toHaveLength(24);
     expect(idSchema('run').safeParse('run_01JABCDEFG').success).toBe(true);
     expect(timestampSchema.safeParse('2026-10-24T18:03:11Z').success).toBe(true);
   });

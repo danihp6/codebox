@@ -156,7 +156,7 @@ describe('enums', () => {
 
 describe('events', () => {
   it('the event name list is the D14 list', () => {
-    expect(SSE_EVENT_NAMES).toHaveLength(23);
+    expect(SSE_EVENT_NAMES).toHaveLength(24);
     expect([...SSE_EVENT_NAMES]).toEqual([
       'run.queued',
       'run.started',
@@ -174,6 +174,7 @@ describe('events', () => {
       'chat.tool',
       'chat.permission',
       'chat.idle',
+      'chat.compacted',
       'job.changed',
       'approval.created',
       'approval.resolved',
@@ -188,7 +189,8 @@ describe('events', () => {
       'routine.failed',
     ]);
     expect([...SSE_EVENT_NAMES].slice(-3)).toEqual([...ROUTINE_EVENT_NAMES]);
-    expect([...SSE_EVENT_NAMES].indexOf('telemetry')).toBe(19);
+    expect([...SSE_EVENT_NAMES].indexOf('chat.compacted')).toBe(16);
+    expect([...SSE_EVENT_NAMES].indexOf('telemetry')).toBe(20);
     expect([...SSE_CONTROL_EVENT_NAMES]).toEqual(['gap']);
     for (const control of SSE_CONTROL_EVENT_NAMES) {
       expect((SSE_EVENT_NAMES as readonly string[]).includes(control)).toBe(false);

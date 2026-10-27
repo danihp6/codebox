@@ -70,7 +70,20 @@ path), Task-53 and Task-54 both claim `docs/jobs.md`, Task-52 and Task-58 both c
 `docs/api.md`, and Task-54 and Task-58 both claim `packages/security/**`. The only legal pair
 inside the batch is Task-53 + Task-58, filled to four slots with Task-55 and Task-66 from Batch
 17 (both depend only on the merged Task-51 and their paths are disjoint from the pair). Task-52
-and Task-54 are deferred to the next cut; Task-67 waits.
+and Task-54 were deferred to the next cut; **Task-52 shipped 2026-10-27**, so only Task-54 stays
+deferred; Task-67 waits.
+**Cut — cycle after Task-66 (three of four slots used).** Task-52, the deferred half of Batch 16,
+is the dependency root of five Batch 17 screens, so it goes first and excludes Task-54, which
+edits the same `apps/daemon/src/chat/**`. Filled with Task-62 and Task-69. The fourth slot has no
+legal candidate: every other open task is blocked on an unmerged dependency (56, 57, 59, 60, 65
+on Task-52; 30, 31, 32 on Task-29/Task-26; 68 on 51–67), blocked outright (02, 26, 29), or an app
+task that would collide on `apps/app/README.md` and `app.routes.ts` with Task-62 (61, 63, 64, 67)
+— one app task per batch, because `readme.spec.ts` makes every app task a writer of that README.
+**Hot-file holders in this cut:** Task-62 holds `apps/app/src/app/app.routes.ts`. No task holds
+`package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`,
+`opencode.json`, `TODO.md`, `CHANGELOG.md` or `docs/decisions.md`; Task-52 deliberately did not
+need `packages/contracts/src/index.ts` because its named re-exports already carried the surface.
 **Hot-file holders in this cut:** Task-53 holds `packages/contracts/src/index.ts`; Task-55
 holds `apps/app/src/app/app.routes.ts`. `package.json`, `package-lock.json`,
 `tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/main.ts`,
@@ -787,7 +800,7 @@ A task here that disagrees with a decision reopens it before any code moves.
       `chat_sessions` (its `repo_id` is still `NOT NULL`), so they move to Task-52, which owns
       those paths. The scope columns, the `kind = 'repo'` backfill and the accounting shipped
       here.
-- [ ] **[Task-52]** Chat lifecycle routes. `POST /v1/chat/sessions/{id}/repo` (clone, worktree,
+- [x] **[Task-52]** Chat lifecycle routes. `POST /v1/chat/sessions/{id}/repo` (clone, worktree,
       new OpenCode session, deterministic ten-turn handoff), `POST .../compact` (same worktree,
       new session, `chat.compacted`), `POST .../reviewed`, and `POST .../promote` restricted to
       `kind = 'repo'`. *Paths:* `apps/daemon/src/chat/`, `packages/opencode/src/`,

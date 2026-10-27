@@ -184,6 +184,25 @@ describe('ChatApi', () => {
     await expect(pending).resolves.toEqual(SESSION);
   });
 
+  it('posts an empty body for a free chat and keeps the title when given', async () => {
+    const free = firstValueFrom(api.createSession({}));
+
+    const created = http.expectOne({ method: 'POST', url: SESSIONS_URL });
+    expect(created.request.body).toEqual({});
+    created.flush(
+      { ...SESSION, repoId: null, kind: 'free' },
+      { status: 201, statusText: 'Created' },
+    );
+
+    await expect(free).resolves.toMatchObject({ repoId: null, kind: 'free' });
+
+    const titled = firstValueFrom(api.createSession({ title: 'Scratch' }));
+    const withTitle = http.expectOne({ method: 'POST', url: SESSIONS_URL });
+    expect(withTitle.request.body).toEqual({ title: 'Scratch' });
+    withTitle.flush(SESSION, { status: 201, statusText: 'Created' });
+    await expect(titled).resolves.toEqual(SESSION);
+  });
+
   it('lists the repositories with the page limit', async () => {
     const pending = firstValueFrom(api.listRepos());
 

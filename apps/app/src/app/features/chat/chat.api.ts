@@ -44,8 +44,10 @@ export class ChatApi {
     return this.request(this.http.get<unknown>(this.url(`/chat/sessions/${id}`)), parseChatSession);
   }
 
-  createSession(body: { repoId: string; title?: string }): Observable<ChatSession> {
-    const payload = body.title === undefined ? { repoId: body.repoId } : body;
+  createSession(body: { repoId?: string; title?: string }): Observable<ChatSession> {
+    const payload: { repoId?: string; title?: string } = {};
+    if (body.repoId !== undefined) payload.repoId = body.repoId;
+    if (body.title !== undefined) payload.title = body.title;
     return this.request(
       this.http.post<unknown>(this.url('/chat/sessions'), payload),
       parseChatSession,

@@ -146,6 +146,7 @@ export const SSE_EVENT_NAMES = [
   'chat.tool',
   'chat.permission',
   'chat.idle',
+  'chat.compacted',
   'job.changed',
   'approval.created',
   'approval.resolved',

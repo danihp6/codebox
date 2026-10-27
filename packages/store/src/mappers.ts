@@ -85,6 +85,7 @@ const SSE_EVENT_NAMES = [
   'chat.tool',
   'chat.permission',
   'chat.idle',
+  'chat.compacted',
   'job.changed',
   'approval.created',
   'approval.resolved',
@@ -459,7 +460,7 @@ export function chatMessageFromRow(rowValue: Row): ChatMessage {
 export function chatSessionFromRow(rowValue: Row, lastMessage: ChatMessage | null): ChatSession {
   return {
     id: textColumn(rowValue, 'id'),
-    repoId: textColumn(rowValue, 'repo_id'),
+    repoId: nullableTextColumn(rowValue, 'repo_id'),
     title: textColumn(rowValue, 'title'),
     status: enumColumn(rowValue, 'status', CHAT_STATUSES),
     createdAt: textColumn(rowValue, 'created_at'),

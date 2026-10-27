@@ -375,6 +375,32 @@ describe('promote', () => {
     expect(error.details).toEqual({ path: 'chat.messages' });
   });
 
+  it('refuses a session that is not bound to a repository', () => {
+    const test = harness();
+    const at = test.now().toISOString();
+    test.store.chats.createSession(
+      {
+        id: 'chat_free01',
+        repoId: null,
+        kind: 'free',
+        title: 'Free chat',
+        status: 'idle',
+        createdAt: at,
+        updatedAt: at,
+        lastMessage: null,
+      },
+      { opencodeSessionId: null, worktree: null },
+    );
+
+    // The kind guard precedes the message check: a free chat is refused before it is read.
+    const error = refusal(() =>
+      test.service.promote({ chatId: 'chat_free01', deviceId: DEVICE, idempotencyKey: 'p-free' }),
+    );
+    expect(error.status).toBe(409);
+    expect(error.details).toEqual({ reason: 'chat_not_repo' });
+    expect(test.engine.starts).toHaveLength(0);
+  });
+
   it('refuses an archived session and an unknown one', () => {
     const test = harness();
     seedChat(test.store, test.now, 'archived');

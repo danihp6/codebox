@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -6,6 +6,7 @@ import {
   parseChatMessage,
   parseChatSession,
   parseErrorEnvelope,
+  parseRun,
   pageOfChatMessage,
   pageOfChatSession,
 } from '@codebox/contracts';
@@ -21,6 +22,10 @@ import { loadConfig, readBuildInfo, resolvePaths } from '../config.js';
 import { createLogger } from '../logger.js';
 import { DEFAULT_SUBSYSTEM_FLAGS, createShutdownRegistry } from '../modules.js';
 import type { DaemonApp, DaemonContext } from '../modules.js';
+import type { RunEngine, RunOutcome } from '../run/ports.js';
+import { registerRunsRoutes } from '../runs/routes.js';
+import { createRunsService } from '../runs/service.js';
+import type { RunsService } from '../runs/service.js';
 import { registerChatRoutes } from './routes.js';
 import { createChatService } from './service.js';
 import type { ChatAgent, ChatWorkspaces } from './service.js';
@@ -48,6 +53,7 @@ class FakeAgent implements ChatAgent {
   readonly created: CreateSessionInput[] = [];
   readonly prompts: { readonly sessionId: string; readonly text: string }[] = [];
   readonly interrupts: string[] = [];
+  readonly closes: string[] = [];
   failCreate: unknown = null;
   private readonly scripts = new Map<string, RawAgentEvent[]>();
   private readonly queues = new Map<string, RawAgentEvent[]>();
@@ -89,7 +95,8 @@ class FakeAgent implements ChatAgent {
     return Promise.resolve();
   }
 
-  closeSession(): Promise<void> {
+  closeSession(sessionId: string): Promise<void> {
+    this.closes.push(sessionId);
     return Promise.resolve();
   }
 
@@ -124,6 +131,11 @@ class FakeAgent implements ChatAgent {
 
 class FakeWorkspaces implements ChatWorkspaces {
   readonly trees: CreateWorktreeInput[] = [];
+  private readonly root: string;
+
+  constructor(root: string) {
+    this.root = root;
+  }
 
   async ensureClone(repo: RepoRef): Promise<{ path: string; created: boolean; headSha: string }> {
     return { path: `/tmp/cb-clone/${repo.slug}.git`, created: true, headSha: 'a'.repeat(40) };
@@ -134,7 +146,7 @@ class FakeWorkspaces implements ChatWorkspaces {
     return {
       runId: input.runId,
       repoSlug: input.repo.slug,
-      path: `/tmp/cb-worktrees/${input.runId}`,
+      path: join(this.root, input.runId),
       branch: `cb/${input.runId}-chat`,
       baseRef: input.baseRef,
       baseSha: 'a'.repeat(40),
@@ -150,20 +162,38 @@ interface Harness {
   readonly app: DaemonApp;
   readonly store: Store;
   readonly agent: FakeAgent;
+  readonly workspaces: FakeWorkspaces;
   readonly lines: string[];
+  readonly workspaceRoot: string;
 }
 
-function harness(): Harness {
+function fakeRunEngine(): RunEngine {
+  return {
+    start(): Promise<RunOutcome> {
+      // A live run: the route answers while the flow is still in flight.
+      return new Promise<RunOutcome>(() => undefined);
+    },
+    cancel(): Promise<boolean> {
+      return Promise.resolve(true);
+    },
+    active(): readonly string[] {
+      return [];
+    },
+  };
+}
+
+function harness(options: { readonly promote?: boolean } = {}): Harness {
   const directory = mkdtempSync(join(tmpdir(), 'cb-13-chat-routes-'));
   directories.push(directory);
   const appDir = join(directory, 'app');
   mkdirSync(appDir, { recursive: true });
+  const workspaceRoot = join(directory, 'worktrees');
   const config = loadConfig({
     CB_ENV: 'test',
     CB_SESSION_SECRET: SESSION_SECRET,
     CB_STATE_DIR: join(directory, 'state'),
     CB_REPO_ROOT: join(directory, 'repos'),
-    CB_WORKSPACE_ROOT: join(directory, 'worktrees'),
+    CB_WORKSPACE_ROOT: workspaceRoot,
     CB_LOG_LEVEL: 'info',
   });
   const store = openInMemoryStore();
@@ -181,11 +211,12 @@ function harness(): Harness {
   const lines: string[] = [];
   const logger = createLogger({ level: 'info', sink: (line) => lines.push(line) });
   let tick = 0;
+  const clock = (): Date => new Date(Date.parse(TS) + tick++ * 1000);
   const context: DaemonContext = {
     config,
     store,
     logger,
-    clock: () => new Date(Date.parse(TS) + tick++ * 1000),
+    clock,
     flags: DEFAULT_SUBSYSTEM_FLAGS,
     build: readBuildInfo(config),
     paths: resolvePaths(config),
@@ -193,12 +224,22 @@ function harness(): Harness {
     shutdown: createShutdownRegistry(logger),
   };
   const agent = new FakeAgent();
-  const service = createChatService({ context, agent, workspaces: new FakeWorkspaces() });
+  const workspaces = new FakeWorkspaces(config.CB_WORKSPACE_ROOT);
+  const service = createChatService({ context, agent, workspaces });
   stops.push(() => service.stop());
   const app = createApp({ context });
   createAuthModule(context).register(app, context);
   registerChatRoutes(app, service);
-  return { app, store, agent, lines };
+  if (options.promote === true) {
+    const runs: RunsService = createRunsService({
+      context,
+      engine: fakeRunEngine(),
+      now: clock,
+    });
+    stops.push(() => runs.stop());
+    registerRunsRoutes(app, runs);
+  }
+  return { app, store, agent, workspaces, lines, workspaceRoot: config.CB_WORKSPACE_ROOT };
 }
 
 function jsonInit(body: unknown, token?: string, method = 'POST'): RequestInit {
@@ -510,5 +551,361 @@ describe('chat routes', () => {
     expect(log).not.toContain(token);
     expect(log).not.toContain('authorization');
     expect(log).toContain('POST');
+  });
+});
+
+describe('chat lifecycle', () => {
+  async function createFree(
+    app: DaemonApp,
+    token: string,
+    body: unknown = {},
+  ): Promise<ChatSession> {
+    const response = await app.request('/v1/chat/sessions', jsonInit(body, token));
+    expect(response.status).toBe(201);
+    const session = parseChatSession(await bodyOf(response));
+    expect(session.kind).toBe('free');
+    expect(session.repoId).toBeNull();
+    return session;
+  }
+
+  function rowOf(store: Store, chatId: string): Record<string, unknown> {
+    return (
+      store.db
+        .prepare(
+          'SELECT repo_id, kind, worktree, context_epoch, reviewed_at FROM chat_sessions WHERE id = ?',
+        )
+        .get(chatId) ?? {}
+    );
+  }
+
+  function compactEvents(store: Store, chatId: string) {
+    return store.events
+      .readAfterId(0, 200)
+      .filter((record) => record.chatId === chatId && record.type === 'chat.compacted');
+  }
+
+  async function post(
+    app: DaemonApp,
+    path: string,
+    token: string,
+    body?: unknown,
+  ): Promise<Response> {
+    return app.request(
+      path,
+      body === undefined ? { method: 'POST', headers: auth(token) } : jsonInit(body, token),
+    );
+  }
+
+  it('creates a free chat with no worktree and no agent session', async () => {
+    const { app, agent } = harness();
+    const token = await paired(app);
+
+    const free = await createFree(app, token);
+    expect(free.title).toBe('New chat');
+    expect(free.status).toBe('idle');
+    expect(free.contextEpoch).toBe(1);
+    expect(free.reviewedAt ?? null).toBeNull();
+    expect(agent.created).toHaveLength(0);
+
+    const titled = await createFree(app, token, { title: 'Scratch' });
+    expect(titled.title).toBe('Scratch');
+    expect(agent.created).toHaveLength(0);
+
+    const listed = await app.request('/v1/chat/sessions', { headers: auth(token) });
+    const page = pageOfChatSession.parse(await bodyOf(listed));
+    expect(page.data.map((session) => session.repoId)).toEqual([null, null]);
+  });
+
+  it('runs the first message of a free chat in its own directory', async () => {
+    const { app, store, agent, workspaceRoot } = harness();
+    const token = await paired(app);
+    const free = await createFree(app, token);
+    agent.script(FIRST_SESSION, [
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'idle' },
+    ]);
+
+    const posted = await post(app, `/v1/chat/sessions/${free.id}/messages`, token, {
+      text: 'hello',
+    });
+    expect(posted.status).toBe(202);
+    await waitFor(() => agent.created.length === 1, 'the free agent session');
+
+    const directory = join(workspaceRoot, '.chat', free.id);
+    expect(agent.created[0]?.directory).toBe(directory);
+    expect(agent.created[0]?.mcp).toBeUndefined();
+    expect(existsSync(directory)).toBe(true);
+    await waitFor(() => store.chats.getSession(free.id)?.status === 'idle', 'the idle round');
+    expect(rowOf(store, free.id)).toMatchObject({ repo_id: null, kind: 'free', worktree: null });
+  });
+
+  it('binds a free chat to a repository and cuts the worktree', async () => {
+    const { app, store, agent, workspaces, workspaceRoot } = harness();
+    const token = await paired(app);
+    const free = await createFree(app, token);
+
+    const bound = await post(app, `/v1/chat/sessions/${free.id}/repo`, token, { repoId: REPO_ID });
+    expect(bound.status).toBe(200);
+    const session = parseChatSession(await bodyOf(bound));
+    expect(session.repoId).toBe(REPO_ID);
+    expect(session.kind).toBe('repo');
+    expect(session.lastMessage?.role).toBe('system');
+    expect(session.lastMessage?.text).toBe(
+      'Connected repository acme/widgets. The recent turns were re-injected into a new session.',
+    );
+
+    expect(agent.created).toHaveLength(1);
+    expect(agent.created[0]?.directory).toBe(join(workspaceRoot, free.id));
+    expect(agent.prompts).toHaveLength(0);
+    expect(workspaces.trees).toHaveLength(1);
+    expect(rowOf(store, free.id)).toMatchObject({
+      repo_id: REPO_ID,
+      kind: 'repo',
+      worktree: join(workspaceRoot, free.id),
+    });
+
+    const again = await post(app, `/v1/chat/sessions/${free.id}/repo`, token, { repoId: REPO_ID });
+    expect(again.status).toBe(409);
+    expect(parseErrorEnvelope(await bodyOf(again)).error.details?.['reason']).toBe(
+      'chat_already_bound',
+    );
+    expect(agent.created).toHaveLength(1);
+    expect(workspaces.trees).toHaveLength(1);
+  });
+
+  it('closes the free session and hands the last turns to the bound one', async () => {
+    const { app, store, agent } = harness();
+    const token = await paired(app);
+    const free = await createFree(app, token);
+    agent.script(FIRST_SESSION, [
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'idle' },
+    ]);
+    await post(app, `/v1/chat/sessions/${free.id}/messages`, token, { text: 'the answer is 42' });
+    await waitFor(() => agent.created.length === 1, 'the free agent session');
+    await waitFor(() => store.chats.getSession(free.id)?.status === 'idle', 'the free round');
+
+    const bound = await post(app, `/v1/chat/sessions/${free.id}/repo`, token, { repoId: REPO_ID });
+    expect(bound.status).toBe(200);
+    expect(agent.closes).toEqual([FIRST_SESSION]);
+    expect(agent.prompts.at(-1)?.text).toBe('the answer is 42');
+    expect(agent.created).toHaveLength(2);
+
+    const second = 'ses_chat2';
+    agent.script(second, [{ type: 'session.updated', sessionId: second, status: 'idle' }]);
+    const posted = await post(app, `/v1/chat/sessions/${free.id}/messages`, token, {
+      text: 'what did we decide?',
+    });
+    expect(posted.status).toBe(202);
+    await waitFor(() => agent.prompts.length === 2, 'the handoff prompt');
+
+    const prompt = agent.prompts[1];
+    expect(prompt?.sessionId).toBe(second);
+    expect(prompt?.text.startsWith('You are continuing a chat in a git worktree.\n')).toBe(true);
+    expect(prompt?.text).toContain('Repository: acme/widgets');
+    expect(prompt?.text).toContain('Base branch: main');
+    expect(prompt?.text).toContain('Continuation: connected repository');
+    expect(prompt?.text).toContain('User: the answer is 42');
+    expect(prompt?.text.endsWith('\nwhat did we decide?')).toBe(true);
+    expect(agent.prompts[0]?.text).toBe('the answer is 42');
+
+    const stored = store.chats.listMessages(free.id, { limit: 20, cursor: null }).data;
+    expect(stored.at(-1)?.text).toBe('what did we decide?');
+    expect(stored.filter((message) => message.role === 'system')).toHaveLength(1);
+  });
+
+  it('keeps a failed bind free and retryable', async () => {
+    const { app, store, agent, workspaces } = harness();
+    const token = await paired(app);
+    const free = await createFree(app, token);
+    agent.failCreate = new AgentError('agent_unavailable', 'down', null, true);
+
+    const failed = await post(app, `/v1/chat/sessions/${free.id}/repo`, token, { repoId: REPO_ID });
+    expect(failed.status).toBe(502);
+    expect(parseErrorEnvelope(await bodyOf(failed)).error.code).toBe('agent_unavailable');
+    const afterFailure = parseChatSession(
+      await bodyOf(await app.request(`/v1/chat/sessions/${free.id}`, { headers: auth(token) })),
+    );
+    expect(afterFailure.kind).toBe('free');
+    expect(afterFailure.repoId).toBeNull();
+    expect(agent.created).toHaveLength(0);
+
+    agent.failCreate = null;
+    const retried = await post(app, `/v1/chat/sessions/${free.id}/repo`, token, {
+      repoId: REPO_ID,
+    });
+    expect(retried.status).toBe(200);
+    expect(parseChatSession(await bodyOf(retried)).repoId).toBe(REPO_ID);
+    expect(agent.created).toHaveLength(1);
+    expect(workspaces.trees.length).toBeGreaterThanOrEqual(1);
+    expect(rowOf(store, free.id)).toMatchObject({ repo_id: REPO_ID, kind: 'repo' });
+  });
+
+  it('answers a bind body or repository failure with its documented reason', async () => {
+    const { app, store } = harness();
+    const token = await paired(app);
+    const free = await createFree(app, token);
+
+    const badBody = await post(app, `/v1/chat/sessions/${free.id}/repo`, token, {
+      repoId: 'not-a-repo-id',
+    });
+    expect(badBody.status).toBe(422);
+    expect(parseErrorEnvelope(await bodyOf(badBody)).error.details?.['path']).toBe('chat.repoId');
+
+    const unknownRepo = await post(app, `/v1/chat/sessions/${free.id}/repo`, token, {
+      repoId: 'repo_missing01',
+    });
+    expect(unknownRepo.status).toBe(404);
+    expect(parseErrorEnvelope(await bodyOf(unknownRepo)).error.details?.['path']).toBe(
+      'chat.repoId',
+    );
+
+    const unknownChat = await post(app, '/v1/chat/sessions/chat_missing01/repo', token, {
+      repoId: REPO_ID,
+    });
+    expect(unknownChat.status).toBe(404);
+    expect(parseErrorEnvelope(await bodyOf(unknownChat)).error.details?.['path']).toBe('chat.id');
+
+    store.chats.updateSession(free.id, { status: 'archived', updatedAt: TS });
+    const archived = await post(app, `/v1/chat/sessions/${free.id}/repo`, token, {
+      repoId: REPO_ID,
+    });
+    expect(archived.status).toBe(409);
+    expect(parseErrorEnvelope(await bodyOf(archived)).error.details?.['reason']).toBe(
+      'chat_archived',
+    );
+  });
+
+  it('compacts into a new session in the same directory', async () => {
+    const { app, store, agent, workspaceRoot } = harness();
+    const token = await paired(app);
+    const created = await createSession(app, token);
+    expect(agent.created).toHaveLength(1);
+    const worktree = rowOf(store, created.id)['worktree'];
+    expect(worktree).toBe(join(workspaceRoot, created.id));
+
+    const response = await post(app, `/v1/chat/sessions/${created.id}/compact`, token);
+    expect(response.status).toBe(200);
+    const compacted = parseChatSession(await bodyOf(response));
+    expect(compacted.contextEpoch).toBe(2);
+    expect(compacted.lastMessage?.role).toBe('system');
+    expect(compacted.lastMessage?.text).toBe(
+      'Context compacted. The recent turns were re-injected into a new session.',
+    );
+
+    expect(agent.created).toHaveLength(2);
+    expect(agent.closes).toEqual([FIRST_SESSION]);
+    expect(agent.created[1]?.directory).toBe(agent.created[0]?.directory);
+    expect(agent.prompts).toHaveLength(0);
+    expect(rowOf(store, created.id)).toMatchObject({ worktree, context_epoch: 2 });
+
+    const events = compactEvents(store, created.id);
+    expect(events).toHaveLength(1);
+    expect(events[0]?.data).toMatchObject({ chatId: created.id, contextEpoch: 2 });
+
+    await app.request(`/v1/chat/sessions/${created.id}`, {
+      method: 'DELETE',
+      headers: auth(token),
+    });
+    const refused = await post(app, `/v1/chat/sessions/${created.id}/compact`, token);
+    expect(refused.status).toBe(409);
+    expect(parseErrorEnvelope(await bodyOf(refused)).error.details?.['reason']).toBe(
+      'chat_archived',
+    );
+  });
+
+  it('marks a chat reviewed once', async () => {
+    const { app, store } = harness();
+    const token = await paired(app);
+    const created = await createSession(app, token);
+
+    const first = await post(app, `/v1/chat/sessions/${created.id}/reviewed`, token);
+    expect(first.status).toBe(200);
+    const firstAt = parseChatSession(await bodyOf(first)).reviewedAt;
+    expect(typeof firstAt).toBe('string');
+
+    const second = await post(app, `/v1/chat/sessions/${created.id}/reviewed`, token);
+    expect(second.status).toBe(200);
+    expect(parseChatSession(await bodyOf(second)).reviewedAt).toBe(firstAt);
+    expect(rowOf(store, created.id)['reviewed_at']).toBe(firstAt);
+
+    await app.request(`/v1/chat/sessions/${created.id}`, {
+      method: 'DELETE',
+      headers: auth(token),
+    });
+    const archived = await post(app, `/v1/chat/sessions/${created.id}/reviewed`, token);
+    expect(archived.status).toBe(200);
+
+    const unknown = await post(app, '/v1/chat/sessions/chat_missing01/reviewed', token);
+    expect(unknown.status).toBe(404);
+    expect(parseErrorEnvelope(await bodyOf(unknown)).error.details?.['path']).toBe('chat.id');
+  });
+
+  it('refuses to promote a chat that is not bound to a repository', async () => {
+    const { app, store, agent } = harness({ promote: true });
+    const token = await paired(app);
+    const free = await createFree(app, token);
+    store.chats.appendMessage(
+      {
+        id: 'msg_promote01',
+        chatId: free.id,
+        role: 'assistant',
+        text: 'I fixed the lockfile.',
+        createdAt: TS,
+      },
+      { origin: 'assistant' },
+    );
+
+    const refused = await app.request(`/v1/chat/sessions/${free.id}/promote`, {
+      method: 'POST',
+      headers: { ...auth(token), 'idempotency-key': 'promote-free-1' },
+      body: JSON.stringify({}),
+    });
+    expect(refused.status).toBe(409);
+    const envelope = parseErrorEnvelope(await bodyOf(refused));
+    expect(envelope.error.code).toBe('conflict');
+    expect(envelope.error.details?.['reason']).toBe('chat_not_repo');
+    expect(agent.created).toHaveLength(0);
+
+    const bound = await createSession(app, token);
+    store.chats.appendMessage(
+      {
+        id: 'msg_promote02',
+        chatId: bound.id,
+        role: 'assistant',
+        text: 'I fixed the lockfile.',
+        createdAt: TS,
+      },
+      { origin: 'assistant' },
+    );
+    const promoted = await app.request(`/v1/chat/sessions/${bound.id}/promote`, {
+      method: 'POST',
+      headers: { ...auth(token), 'idempotency-key': 'promote-repo-1' },
+      body: JSON.stringify({}),
+    });
+    expect(promoted.status).toBe(202);
+    const run = parseRun(await bodyOf(promoted));
+    expect(run.trigger).toBe('promote');
+    expect(run.repoId).toBe(REPO_ID);
+  });
+
+  it('requires the chat scope on the lifecycle routes', async () => {
+    const { app, store } = harness();
+    const reader = await paired(app, ['read']);
+    const owner = await paired(app);
+    const free = await createFree(app, owner);
+    const bound = await createSession(app, owner);
+
+    const paths = [
+      `/v1/chat/sessions/${free.id}/repo`,
+      `/v1/chat/sessions/${bound.id}/compact`,
+      `/v1/chat/sessions/${bound.id}/reviewed`,
+    ];
+    for (const path of paths) {
+      const response = await app.request(path, { method: 'POST', headers: auth(reader) });
+      expect(response.status, path).toBe(403);
+      expect(parseErrorEnvelope(await bodyOf(response)).error.details?.['reason']).toBe(
+        'insufficient_scope',
+      );
+    }
+    expect(store.chats.getSession(free.id)?.kind).toBe('free');
   });
 });

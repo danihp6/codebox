@@ -6,6 +6,29 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-52, chat lifecycle routes)
+
+- `chatSessionSchema.repoId` is nullable and `createSessionSchema.repoId` is optional, so a chat
+  can be born free and take a repository later. The five Task-51 accounting fields stay optional
+  on the wire; requiring them is a Task-56/57 follow-up, recorded in the spec.
+- Four lifecycle routes under `/v1/chat/sessions/{id}`: `repo` (clone, worktree, a new OpenCode
+  session and the deterministic last-ten-turn handoff), `compact` (same worktree, new session,
+  `chat.compacted`, `contextEpoch` + 1), `reviewed` (stamps `reviewedAt` once) and `promote`,
+  which answers `409 chat_not_repo` unless the chat carries a repository.
+- Migration `0005_chat_free.sql` rebuilds `chat_sessions` with a nullable `repo_id` and keeps
+  every child row (`chat_messages`, `run_events`, `approvals`, `routines`, `schedules`,
+  `schedule_fires`) and both indexes alive; the runner turns foreign-key enforcement off around
+  the transaction and refuses the migration when `PRAGMA foreign_key_check` finds an orphan.
+- `chat.compacted` is the 24th SSE event name, the OpenAPI document grows from 54 to 57 paths,
+  and `docs/api.md` §5.6 and §6 carry the four routes and the new event.
+- `packages/opencode` gains `CHAT_HANDOFF_VERSION = 1` and the handoff preamble builder — the
+  last ten non-empty turns, `bind` and `compact` variants, exactly one trailing newline.
+- The app ripple only: a create with no repository posts `{}`, and a `repoId: null` session
+  renders in the chat list under the existing unknown-repo label. The app suite grows from 402
+  to 410 tests; the workspace runs 1 475 green with one pre-existing skip.
+- `[live]` — a bound chat answering from the pre-bind transcript on a real model — needs the box;
+  it is recorded as `[?]`, never as passing (issue #43).
+
 ### Added — 2026-10-27 (Task-66, unpaired and offline)
 
 - A 401 has one hand-off: `AuthStore.logout()`, the reason kept in one module signal

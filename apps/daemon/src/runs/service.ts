@@ -338,6 +338,9 @@ export function createRunsService(options: CreateRunsServiceOptions): RunsServic
           if (session.status === 'archived') {
             throw new RunApiError('conflict', 409, { reason: 'chat_archived' });
           }
+          if ((session.kind ?? 'repo') !== 'repo' || session.repoId === null) {
+            throw new RunApiError('conflict', 409, { reason: 'chat_not_repo' });
+          }
           const last = store.chats.lastMessage(input.chatId);
           if (last === null || last.role !== 'assistant' || last.text.trim() === '') {
             throw new RunApiError('validation_failed', 422, { path: 'chat.messages' });

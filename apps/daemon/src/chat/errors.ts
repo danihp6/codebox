@@ -8,6 +8,7 @@ export type ChatFailureReason =
   | 'unauthorized'
   | 'insufficient_scope'
   | 'chat_archived'
+  | 'chat_already_bound'
   | 'chat_not_working'
   | 'invalid_payload'
   | 'agent_unavailable'
@@ -24,6 +25,7 @@ const MESSAGES: Readonly<Record<ChatFailureReason, string>> = Object.freeze({
   unauthorized: 'Unauthorized',
   insufficient_scope: 'Forbidden',
   chat_archived: 'The chat session is archived',
+  chat_already_bound: 'The chat session is already bound to a repository',
   chat_not_working: 'The chat session is not working',
   invalid_payload: 'Invalid request',
   agent_unavailable: 'The agent was unavailable',
