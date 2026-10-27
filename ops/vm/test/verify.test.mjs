@@ -38,6 +38,19 @@ function stubRoot() {
   return root;
 }
 
+const agentUnit = path.resolve(import.meta.dirname, '..', 'systemd', 'codebox-opencode.service');
+
+// A root whose `/etc/codebox` has the baked mode and whose agent unit is the real one.
+function isolationRoot(mode = 0o750) {
+  const root = stubRoot();
+  const etc = path.join(root, 'etc', 'codebox');
+  fs.chmodSync(etc, mode);
+  const units = path.join(root, 'etc', 'systemd', 'system');
+  fs.mkdirSync(units, { recursive: true });
+  fs.copyFileSync(agentUnit, path.join(units, 'codebox-opencode.service'));
+  return { root, etc, units };
+}
+
 function run(args, extraEnv = {}) {
   return spawnSync('bash', [script, ...args], {
     env: { ...isolatedEnv(), ...extraEnv },
@@ -218,7 +231,109 @@ describe('90-verify.sh', () => {
 
     expect(help.status).toBe(0);
     expect(help.stdout).toContain(
-      'checks: runtime tools units user layout secrets image browser   (default: all)',
+      'checks: runtime tools units user layout secrets image browser isolation   (default: all)',
     );
+  });
+});
+
+describe('90-verify.sh --only isolation', () => {
+  it('accepts the baked mode and the agent unit', () => {
+    const { root } = isolationRoot();
+
+    const result = run(['--root', root, '--only', 'isolation']);
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toBe('ok isolation\n');
+  });
+
+  it('fails when /etc/codebox is missing', () => {
+    const root = tempDir();
+
+    const result = run(['--root', root, '--only', 'isolation']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe(`fail isolation ${path.join(root, 'etc', 'codebox')} is missing\n`);
+  });
+
+  it('fails when a mode drifted, naming the directory and the observed mode', () => {
+    const { root, etc } = isolationRoot();
+    fs.chmodSync(etc, 0o755);
+
+    const result = run(['--root', root, '--only', 'isolation']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe(`fail isolation ${etc} is 755, expected 750\n`);
+  });
+
+  it('fails when the agent unit reads the instance environment', () => {
+    const { root, units } = isolationRoot();
+    const unit = path.join(units, 'codebox-opencode.service');
+    fs.writeFileSync(
+      unit,
+      `${fs.readFileSync(unit, 'utf8')}EnvironmentFile=/etc/codebox/instance.env\n`,
+    );
+
+    const result = run(['--root', root, '--only', 'isolation']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe('fail isolation the agent unit reads the instance environment\n');
+  });
+
+  it('fails when the agent unit names only the instance environment', () => {
+    const { root, units } = isolationRoot();
+    const unit = path.join(units, 'codebox-opencode.service');
+    fs.writeFileSync(
+      unit,
+      fs
+        .readFileSync(unit, 'utf8')
+        .replace(
+          'EnvironmentFile=/etc/codebox/agent.env',
+          'EnvironmentFile=/etc/codebox/instance.env',
+        ),
+    );
+
+    const result = run(['--root', root, '--only', 'isolation']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe(
+      'fail isolation the agent unit does not name /etc/codebox/agent.env\n',
+    );
+  });
+
+  it('fails when the agent unit is missing', () => {
+    const { root, units } = isolationRoot();
+    fs.rmSync(path.join(units, 'codebox-opencode.service'));
+
+    const result = run(['--root', root, '--only', 'isolation']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe('fail isolation the agent unit is missing\n');
+  });
+
+  it('fails when the unit does not name the agent user', () => {
+    const { root, units } = isolationRoot();
+    const unit = path.join(units, 'codebox-opencode.service');
+    fs.writeFileSync(
+      unit,
+      fs.readFileSync(unit, 'utf8').replace('User=codebox-agent', 'User=codebox'),
+    );
+
+    const result = run(['--root', root, '--only', 'isolation']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe('fail isolation the agent unit does not name codebox-agent\n');
+  });
+
+  it('fails when the agent environment carries a CB_ key', () => {
+    const { root, etc } = isolationRoot();
+    fs.writeFileSync(
+      path.join(etc, 'agent.env'),
+      'ANTHROPIC_API_KEY=dummy\nCB_SESSION_SECRET=dummy\n',
+    );
+
+    const result = run(['--root', root, '--only', 'isolation']);
+
+    expect(result.status).toBe(1);
+    expect(result.stdout).toBe(`fail isolation ${path.join(etc, 'agent.env')} carries a CB_ key\n`);
   });
 });

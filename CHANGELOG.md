@@ -6,6 +6,28 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-27 (Task-54, interactive approvals retired)
+
+- The chat path no longer files an approval and waits for a human: a `permission.updated` is
+  answered inline through `decidePermission` in chat mode (`allow` → `once`, `deny` and `ask` →
+  `reject`), the reply ticker is gone, and no daemon source calls `store.approvals.create` any
+  more. `apps/daemon/src/run/approvals-retired.test.ts` walks every non-test daemon file and
+  fails if a row writer comes back; the run engine's `ask` branch now rejects in place instead
+  of parking a pending row nobody can answer (D45).
+- OpenCode runs as `codebox-agent`, in a `codebox-workspace` group, with its own
+  `EnvironmentFile=/etc/codebox/agent.env` holding only the model keys — no `instance.env`, no
+  secret bundle, no `~/.ssh`. `/srv/codebox` is `0750`, the checkouts `2770` setgid with
+  `UMask=0007` so the daemon can still clean them, and `90-verify.sh` gained the `isolation`
+  check that fails the bake when a mode drifts.
+- The boundary is documented where it is enforced: `docs/security.md` §6, `docs/jobs.md`
+  §13–14, `docs/providers.md` §3/§5/§14 and `docs/agent-runtime.md` §4/§6/§10 stop promising
+  the approval prompt they used to describe.
+- The cost of the decision, stated: a chat can no longer edit a file or run a shell, because
+  the frozen matrix answers `ask` and `ask` now fails closed. Work becomes a run; widening the
+  chat matrix is a `packages/core` change and its own decision.
+- `[live]` — the `EACCES` proof on the box and a run still opening a PR — is not measured in
+  CI; it is recorded as `[?]`, never as passing (issue #46).
+
 ### Added — 2026-10-27 (Task-69, licence and third-party notices)
 
 - `LICENSE` is the MIT text with `Copyright (c) 2026 Codebox contributors`. The repository shipped

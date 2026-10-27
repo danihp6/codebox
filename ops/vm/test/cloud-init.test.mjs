@@ -186,8 +186,13 @@ describe('cloud-init idempotency', () => {
     expect(first.stdout).not.toContain('tunnel-secret-value');
 
     const instanceEnv = path.join(root, 'etc', 'codebox', 'instance.env');
+    const agentEnv = path.join(root, 'etc', 'codebox', 'agent.env');
     const config = path.join(root, 'etc', 'cloudflared', 'config.yml');
-    const firstHashes = { env: sha256(instanceEnv), config: sha256(config) };
+    const firstHashes = {
+      env: sha256(instanceEnv),
+      agent: sha256(agentEnv),
+      config: sha256(config),
+    };
 
     const second = run(args, baseEnv(fake));
     expect(second.status).toBe(0);
@@ -195,6 +200,7 @@ describe('cloud-init idempotency', () => {
     expect(second.stdout).not.toContain('tunnel-secret-value');
 
     expect(sha256(instanceEnv)).toBe(firstHashes.env);
+    expect(sha256(agentEnv)).toBe(firstHashes.agent);
     expect(sha256(config)).toBe(firstHashes.config);
 
     const lines = bootLines(root);
@@ -294,10 +300,7 @@ describe('cloud-init idempotency', () => {
     const root = tempDir();
     secretsFile(root);
 
-    const result = run(
-      ['--root', root, '--no-services', '--instance-id', instanceId],
-      fileEnv(),
-    );
+    const result = run(['--root', root, '--no-services', '--instance-id', instanceId], fileEnv());
 
     expect(result.status).toBe(0);
     const lines = fs
@@ -323,10 +326,7 @@ describe('cloud-init idempotency', () => {
     const root = tempDir();
     secretsFile(root, { githubAppPrivateKeyBase64: undefined });
 
-    const result = run(
-      ['--root', root, '--no-services', '--instance-id', instanceId],
-      fileEnv(),
-    );
+    const result = run(['--root', root, '--no-services', '--instance-id', instanceId], fileEnv());
 
     expect(result.status).toBe(2);
     expect(result.stderr).toContain('githubAppPrivateKeyBase64');
@@ -394,10 +394,80 @@ describe('cloud-init idempotency', () => {
   });
 });
 
+// The agent's own environment file: the model provider keys, no `CB_` line and nothing from the
+// other three bundles. A process that cannot read `/etc/codebox` still must not be handed them.
+describe('cloud-init agent environment', () => {
+  function agentEnvPath(root) {
+    return path.join(root, 'etc', 'codebox', 'agent.env');
+  }
+
+  it('cloud-init agent env: agent.env carries the model keys and no secret', () => {
+    const fake = fakeOci();
+    const root = tempDir();
+
+    const result = run(
+      ['--root', root, '--no-services', '--instance-id', instanceId],
+      baseEnv(fake),
+    );
+
+    expect(result.status).toBe(0);
+    const file = agentEnvPath(root);
+    expect(fs.existsSync(file)).toBe(true);
+    const text = fs.readFileSync(file, 'utf8');
+    const lines = text.split('\n').filter((line) => line !== '');
+    expect(lines).toEqual([
+      'ANTHROPIC_API_KEY=not-a-real-key',
+      'OPENAI_API_KEY=not-a-real-key-either',
+    ]);
+    expect(lines.map((line) => line.split('=')[0])).toEqual([
+      'ANTHROPIC_API_KEY',
+      'OPENAI_API_KEY',
+    ]);
+    expect(lines.some((line) => line.startsWith('CB_'))).toBe(false);
+    for (const secret of [
+      payloads[ocids.sessionSecret],
+      payloads[ocids.githubApp],
+      tunnelToken.s,
+    ]) {
+      expect(text).not.toContain(secret);
+    }
+    expect(result.stderr).not.toContain(payloads[ocids.sessionSecret]);
+  });
+
+  it('cloud-init agent env: a CB_ provider key fails the boot and writes nothing', () => {
+    const root = tempDir();
+    secretsFile(root, { providerKeys: `CB_SESSION_SECRET=${payloads[ocids.sessionSecret]}\n` });
+
+    const result = run(['--root', root, '--no-services', '--instance-id', instanceId], fileEnv());
+
+    expect(result.status).toBe(2);
+    expect(fs.existsSync(agentEnvPath(root))).toBe(false);
+    const records = bootLines(root).map((line) => JSON.parse(line));
+    expect(records).toHaveLength(1);
+    expect(records[0].step).toBe('agent-env');
+    expect(records[0].message).toContain('CB_SESSION_SECRET');
+    expect(records[0].message).not.toContain(payloads[ocids.sessionSecret]);
+  });
+
+  it('cloud-init agent env: a provider key that is not KEY=value fails the boot', () => {
+    const root = tempDir();
+    secretsFile(root, { providerKeys: 'anthropic_api_key=not-a-real-key\n' });
+
+    const result = run(['--root', root, '--no-services', '--instance-id', instanceId], fileEnv());
+
+    expect(result.status).toBe(2);
+    expect(fs.existsSync(agentEnvPath(root))).toBe(false);
+    const records = bootLines(root).map((line) => JSON.parse(line));
+    expect(records[0].step).toBe('agent-env');
+    expect(records[0].message).toContain('anthropic_api_key');
+  });
+});
+
 const asRoot = typeof process.getuid === 'function' && process.getuid() === 0;
 const hasCodeboxGroup =
   asRoot && spawnSync('getent', ['group', 'codebox'], { encoding: 'utf8' }).status === 0;
-
+const hasWorkspaceGroup =
+  asRoot && spawnSync('getent', ['group', 'codebox-workspace'], { encoding: 'utf8' }).status === 0;
 describe('cloud-init permissions', () => {
   it.skipIf(!asRoot || !hasCodeboxGroup)(
     'cloud-init permissions: instance.env is 0600 root:codebox (skipped unless the suite runs as root with the codebox group)',
@@ -416,6 +486,30 @@ describe('cloud-init permissions', () => {
       expect(stat.uid).toBe(0);
       const gid = Number(
         spawnSync('getent', ['group', 'codebox'], { encoding: 'utf8' }).stdout.split(':')[2],
+      );
+      expect(stat.gid).toBe(gid);
+    },
+  );
+
+  it.skipIf(!asRoot || !hasWorkspaceGroup)(
+    'cloud-init permissions: agent.env is 0640 root:codebox-workspace (skipped unless the suite runs as root with the workspace group)',
+    () => {
+      const fake = fakeOci();
+      const root = tempDir();
+
+      const result = run(
+        ['--root', root, '--no-services', '--instance-id', instanceId],
+        baseEnv(fake),
+      );
+
+      expect(result.status).toBe(0);
+      const stat = fs.statSync(path.join(root, 'etc', 'codebox', 'agent.env'));
+      expect(stat.mode & 0o777).toBe(0o640);
+      expect(stat.uid).toBe(0);
+      const gid = Number(
+        spawnSync('getent', ['group', 'codebox-workspace'], { encoding: 'utf8' }).stdout.split(
+          ':',
+        )[2],
       );
       expect(stat.gid).toBe(gid);
     },

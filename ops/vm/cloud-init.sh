@@ -98,6 +98,7 @@ etc_cloudflared=$(rooted /etc/cloudflared)
 var_lib=$(rooted /var/lib/codebox)
 first_boot=$var_lib/first-boot.jsonl
 instance_env=$etc_codebox/instance.env
+agent_env=$etc_codebox/agent.env
 config=$etc_cloudflared/config.yml
 
 as_root=0
@@ -278,6 +279,35 @@ else
 fi
 rm -f "$instance_env.tmp"
 log "wrote $instance_env"
+
+# The agent gets its own environment file: the model provider keys and nothing else, so a
+# process that cannot read `/etc/codebox` is also not handed the session secret, the GitHub App
+# key or the tunnel token through systemd.
+current_step=agent-env
+failure_message="cannot write the agent environment"
+if [ -n "$provider_keys" ]; then
+  while IFS= read -r line; do
+    key=${line%%=*}
+    if [[ ! "$line" =~ ^[A-Z][A-Z0-9_]*= ]]; then
+      fail_step 2 "the provider key $key is not KEY=value"
+    fi
+    if [[ "$key" == CB_* ]]; then
+      fail_step 2 "the provider key $key is a CB_ key"
+    fi
+  done <<<"$provider_keys"
+fi
+if [ -n "$provider_keys" ]; then
+  printf '%s\n' "$provider_keys" >"$tmp/agent.env"
+else
+  : >"$tmp/agent.env"
+fi
+chmod 0640 "$tmp/agent.env"
+if [ "$as_root" -eq 1 ] && getent group codebox-workspace >/dev/null 2>&1; then
+  install -m 0640 -o root -g codebox-workspace "$tmp/agent.env" "$agent_env"
+else
+  install -m 0640 "$tmp/agent.env" "$agent_env"
+fi
+log "wrote $agent_env"
 
 current_step=services
 if [ "$no_services" -eq 0 ]; then

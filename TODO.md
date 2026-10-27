@@ -824,7 +824,7 @@ A task here that disagrees with a decision reopens it before any code moves.
       zero fires and never two; `[unit]` the third failure pauses; `[unit]` `maxFires` and
       `maxCostPerFire` both stop the loop; `[live]` a window drains a repo overnight and every
       fire opens a PR.
-- [ ] **[Task-54]** Remove interactive approvals and isolate the agent. Delete the permission
+- [x] **[Task-54]** Remove interactive approvals and isolate the agent. Delete the permission
       bridge and the approval queue from the chat path; run the agent as an unprivileged user
       that cannot read `/etc/codebox/`, the secret bundles or `~/.ssh`; prove it with a test
       that tries. *Paths:* `apps/daemon/src/permissions/` (removal), `ops/vm/**`,

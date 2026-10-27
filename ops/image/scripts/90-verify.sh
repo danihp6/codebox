@@ -18,7 +18,7 @@ else
 fi
 
 usage_text='usage: 90-verify.sh [--root DIR] [--only CHECK] [--help]
-checks: runtime tools units user layout secrets image browser   (default: all)'
+checks: runtime tools units user layout secrets image browser isolation   (default: all)'
 
 only=all
 
@@ -44,7 +44,7 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-checks=(runtime tools units user layout secrets image browser)
+checks=(runtime tools units user layout secrets image browser isolation)
 case " ${checks[*]} " in
   *" $only "*) ;;
   *) printf '%s\n' "$usage_text" >&2; die 2 "$only is not a check" ;;
@@ -200,6 +200,66 @@ check_image() {
     done <"$file"
   done
   printf 'ok image\n'
+}
+
+# The half of D45 the bake can see: the agent has its own user and group, the state directory
+# and `/etc/codebox` are closed to it, and its unit reads only the model provider keys.
+check_isolation() {
+  local dir mode group unit file line
+  dir=$(rooted /etc/codebox)
+  if [ ! -d "$dir" ]; then
+    printf 'fail isolation %s is missing\n' "$dir"
+    return 1
+  fi
+  mode=$(find "$dir" -maxdepth 0 -printf '%m\n')
+  if [ "$mode" != 750 ]; then
+    printf 'fail isolation %s is %s, expected 750\n' "$dir" "$mode"
+    return 1
+  fi
+  if getent group codebox >/dev/null 2>&1; then
+    group=$(find "$dir" -maxdepth 0 -printf '%g\n')
+    if [ "$group" != codebox ]; then
+      printf 'fail isolation %s belongs to %s, expected codebox\n' "$dir" "$group"
+      return 1
+    fi
+    if id -nG codebox-agent 2>/dev/null | tr ' ' '\n' | grep -qx codebox; then
+      printf 'fail isolation codebox-agent is in group codebox\n'
+      return 1
+    fi
+  fi
+  unit=$(rooted /etc/systemd/system)/codebox-opencode.service
+  if [ ! -f "$unit" ]; then
+    printf 'fail isolation the agent unit is missing\n'
+    return 1
+  fi
+  if ! grep -qx 'User=codebox-agent' "$unit"; then
+    printf 'fail isolation the agent unit does not name codebox-agent\n'
+    return 1
+  fi
+  if ! grep -qx 'Group=codebox-workspace' "$unit"; then
+    printf 'fail isolation the agent unit does not name codebox-workspace\n'
+    return 1
+  fi
+  if ! grep -qx 'EnvironmentFile=/etc/codebox/agent.env' "$unit"; then
+    printf 'fail isolation the agent unit does not name /etc/codebox/agent.env\n'
+    return 1
+  fi
+  if grep -q 'instance.env' "$unit"; then
+    printf 'fail isolation the agent unit reads the instance environment\n'
+    return 1
+  fi
+  file=$dir/agent.env
+  if [ -f "$file" ]; then
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        CB_*)
+          printf 'fail isolation %s carries a CB_ key\n' "$file"
+          return 1
+          ;;
+      esac
+    done <"$file"
+  fi
+  printf 'ok isolation\n'
 }
 
 check_browser() {

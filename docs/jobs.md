@@ -321,16 +321,19 @@ One push per **outcome**, not per event:
 | `run.finished` (succeeded) | "Merged: <job title>" with the PR link. |
 | `run.failed` | "Run failed: <code>" with the run link. |
 | `run.pr` with blockers | "Waiting on you: <first blocker>". |
-| `approval.created` | The permission card. |
+| `approval.created` | The permission card, for a row written before the inline decision landed; a fresh install's inbox is empty by construction. |
 | `telemetry` with `disk_low` / `cost_cap` | A blocking banner plus one push. |
 
-Quiet hours hold everything except `approval.created` and failures of a job marked critical.
+Quiet hours hold everything except a legacy `approval.created` and failures of a job marked
+critical.
 
 ## 14. What a run never does
 
 - Never pushes to `main` or to the base branch.
 - Never merges without the full G1–G8 set.
 - Never touches a protected path with auto-merge on.
+- Never waits for a permission answer: an `ask` is answered `reject` in place, so no run stalls
+  on an operator who is asleep (D45).
 - Never retries itself in a loop, and never reuses a worktree.
 - Never rewrites history: no force-push, no amend of a pushed commit.
 

@@ -39,7 +39,7 @@ import { GATE_TAIL_LINES } from '../gate/run-gate.js';
 import type { GateExecutionResult } from '../gate/run-gate.js';
 import { SecretScanError, scanWorktree } from '../gate/secret-scan.js';
 import { commitWorktree } from './commit.js';
-import { createRunEventWriter, mintApprovalId } from './events.js';
+import { createRunEventWriter } from './events.js';
 import type { RunEventName, RunEventWriter } from './events.js';
 import { buildPrBody } from './pr-body.js';
 import type { RunEngine, RunOutcome, RunPorts, RunStartInput } from './ports.js';
@@ -154,7 +154,11 @@ function failureMessage(code: RunFailureCode): string {
   return FAILURE_MESSAGES[code];
 }
 
-function permissionPath(input: Readonly<Record<string, unknown>>): string | null {
+/**
+ * The one extractor for the path a permission request names: `filePath` first, then `path`, and a
+ * non-string value is skipped. The chat path reuses it, so the two policies read the same field.
+ */
+export function permissionPath(input: Readonly<Record<string, unknown>>): string | null {
   for (const key of PERMISSION_PATH_KEYS) {
     const value = input[key];
     if (typeof value === 'string') return value;
@@ -527,42 +531,11 @@ export function createRunEngine(ports: RunPorts): RunEngine {
       await ports.agent.replyPermission(sessionId, signal.permissionId, 'reject');
       return signal.permissionId;
     }
-    // `ask` cannot be answered in an unattended run: the row is kept pending for the app's
-    // expiry sweep, and OpenCode gets `reject` now so the session never stalls on a human.
-    const createdAt = ports.clock();
-    const expiresAt = new Date(
-      createdAt.getTime() + settings.approvalTtlSeconds * 1_000,
-    ).toISOString();
-    const approvalId = mintApprovalId();
-    const records: EventRecord[] = [];
-    withTransaction(store.db, () => {
-      store.approvals.create({
-        id: approvalId,
-        state: 'pending',
-        tool: signal.tool,
-        title: signal.title,
-        runId: ctx.input.runId,
-        chatId: null,
-        input: asRecord(signal.input),
-        createdAt: createdAt.toISOString(),
-        expiresAt,
-        resolvedAt: null,
-      });
-      records.push(
-        ctx.events.appendRaw('approval.created', {
-          approvalId,
-          runId: ctx.input.runId,
-          chatId: null,
-          tool: signal.tool,
-          title: signal.title,
-          expiresAt,
-          ts: createdAt.toISOString(),
-        }),
-      );
-    });
-    for (const record of records) ports.emit(record);
+    // `ask` cannot be answered in an unattended run, and a prompt nobody answers at 03:00 is not
+    // a control (D45): the request is rejected in place and the run keeps going.
+    logger.warn({ msg: 'run_permission_ask_rejected', runId: ctx.input.runId, tool: signal.tool });
     await ports.agent.replyPermission(sessionId, signal.permissionId, 'reject');
-    return approvalId;
+    return signal.permissionId;
   }
 
   function persistNormalised(ctx: RunContext, event: NormalisedEvent): void {

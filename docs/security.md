@@ -135,19 +135,29 @@ invents a format of its own.
 
 ## 6. The agent as an untrusted process
 
-The agent is capable by design; the boundary is what it can reach (D27).
+The agent is capable by design; the boundary is what it can reach (D27). It runs as its own
+unprivileged identity, `codebox-agent`, in group `codebox-workspace`, so a policy mistake is not
+a filesystem-wide permission.
 
 | Control | Implementation |
 | --- | --- |
 | Working directory | One worktree per session; the process cwd is that directory. |
-| Permissions | Edits and in-worktree bash allowed for runs; `webfetch` denied; outside-worktree denied (`agent-runtime.md` §6). |
+| Permissions | Every request is answered inline from `decidePermission`: `allow` replies `once`, `ask` and `deny` reply `reject`. Runs allow in-worktree edits and bash; chat mode is `ask` for both, so a chat reads and drafts and the work is a run (`agent-runtime.md` §6). Nothing waits for an operator. |
 | Routine tool | A daemon-owned MCP server on `127.0.0.1:<ephemeral>`, mounted only in a chat session create body; one bearer token per chat, bound to that chat and repository, never logged; `routine.*` is denied in run mode (D41). |
-| Environment | Allowlist: `PATH`, `HOME`, `LANG`, git identity, model keys. No GitHub token, no session secret, no Vault token. |
+| Environment | Allowlist through `/etc/codebox/agent.env` (`0640 root:codebox-workspace`): the model provider keys only, and no line of it starts with `CB_`. `HOME` is `/var/lib/codebox-agent`; `PATH` and `LANG` are systemd's. No GitHub token, no session secret, no Vault token, no tunnel token. |
 | Network | No inbound listener and no listener of its own. Outbound is **allowed and not filtered**: no egress filter ships in v1, so the permission policy and the sandbox below are the boundary. |
 | Secrets in the repo | The gate runs a secret scan over the run's own diff; a hit fails the run with `gate_failed` before the branch is pushed and no PR exists. |
 | Prompt injection | Repository text is data, not instructions; the envelope says so; protected paths stop the dangerous diffs. |
 | Resource use | Timeout, cost cap, concurrency cap, disk guard. |
-| Isolation | **No** bubblewrap or container runner in v1. The systemd unit is the isolation boundary: `CapabilityBoundingSet=`, `SystemCallFilter=@system-service`, `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6`, `ProtectSystem=strict`, `ProtectHome=true`, `PrivateTmp=true`, `UMask=0027`, and only `/var/lib/codebox` and `/srv/codebox` are writable. `MemoryDenyWriteExecute` is never set: it would kill V8's JIT. |
+| Isolation | **No** bubblewrap or container runner in v1. The systemd unit is the isolation boundary: `User=codebox-agent`, `Group=codebox-workspace` (never `codebox`), `CapabilityBoundingSet=`, `SystemCallFilter=@system-service`, `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6`, `ProtectSystem=strict`, `ProtectHome=true`, `PrivateTmp=true`, `UMask=0007`, and only `/srv/codebox` and `/var/lib/codebox-agent` are writable. `MemoryDenyWriteExecute` is never set: it would kill V8's JIT. |
+
+`/etc/codebox` stays `0750 root:codebox` and `/var/lib/codebox` — SQLite, logs, the sealed
+credential store — stays `0750 codebox:codebox`, so the agent can read neither even though it
+shares the worktrees. The two writable trees are `2770 codebox:codebox-workspace` with the
+setgid bit, so every file either process writes inherits the shared group and the daemon can
+still run the gate, commit, push and delete a finished worktree. The boundary is measured, not
+assumed: `90-verify.sh --only isolation` fails the bake when a mode or a unit directive is
+wrong.
 
 The agent never gets a credential that can push to `main`: the installation token is scoped to
 the selected repositories, and branch protection (where the plan allows it) plus the cycle's

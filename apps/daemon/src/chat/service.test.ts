@@ -457,64 +457,17 @@ describe('chat service', () => {
     });
   });
 
-  it('turns a permission request into one approval and delivers the reply', async () => {
+  it('exposes no approval tick on the service surface', () => {
+    const { service } = harness();
+
+    expect((service as unknown as Record<string, unknown>)['tick']).toBeUndefined();
+  });
+
+  it('answers a chat permission inline and writes no approval row', async () => {
     const { service, store, agent } = harness();
     const chat = seedChat(store);
     agent.script(FIRST_SESSION, [
       { type: 'session.updated', sessionId: FIRST_SESSION, status: 'busy' },
-      {
-        type: 'permission.updated',
-        sessionId: FIRST_SESSION,
-        permissionId: 'per_1',
-        tool: 'edit',
-        title: 'Edit src/app.ts',
-        input: { filePath: '/tmp/cb-worktrees/chat_seed0001/src/app.ts', token: 'fixture-token' },
-      },
-      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'idle' },
-    ]);
-
-    await service.send({ chatId: chat.id, text: 'edit the file' });
-    await service.pump(chat.id);
-
-    const pending = store.approvals.listPending(10);
-    expect(pending).toHaveLength(1);
-    const approval = pending[0];
-    if (approval === undefined) throw new Error('no approval');
-    expect(approval.chatId).toBe(chat.id);
-    expect(approval.runId).toBeNull();
-    expect(approval.state).toBe('pending');
-    expect(approval.tool).toBe('edit');
-    expect(approval.title).toBe('Edit src/app.ts');
-    expect(approval.input['token']).toBe('[redacted]');
-    expect(Date.parse(approval.expiresAt) - Date.parse(approval.createdAt)).toBe(600_000);
-
-    expect(eventTypes(store, chat.id)).toEqual(['chat.message', 'chat.permission', 'chat.idle']);
-    const created = store.events
-      .readAfterId(0, 200)
-      .filter((record) => record.type === 'approval.created');
-    expect(created).toHaveLength(1);
-    expect(created[0]?.data['chatId']).toBe(chat.id);
-    expect(created[0]?.data['approvalId']).toBe(approval.id);
-    expect(created[0]?.seq).toBeNull();
-    expect(JSON.stringify(store.events.readAfterId(0, 200))).not.toContain('fixture-token');
-
-    store.approvals.resolve({
-      id: approval.id,
-      state: 'allowed',
-      resolvedAt: '2026-10-25T10:00:30.000Z',
-    });
-    await service.tick();
-    expect(agent.replies).toEqual([
-      { sessionId: FIRST_SESSION, requestId: 'per_1', reply: 'once' },
-    ]);
-    await service.tick();
-    expect(agent.replies).toHaveLength(1);
-  });
-
-  it('rejects a permission with reject when the operator denies it', async () => {
-    const { service, store, agent } = harness();
-    const chat = seedChat(store);
-    agent.script(FIRST_SESSION, [
       {
         type: 'permission.updated',
         sessionId: FIRST_SESSION,
@@ -528,17 +481,90 @@ describe('chat service', () => {
 
     await service.send({ chatId: chat.id, text: 'run the tests' });
     await service.pump(chat.id);
-    const approval = store.approvals.listPending(10)[0];
-    if (approval === undefined) throw new Error('no approval');
-    store.approvals.resolve({
-      id: approval.id,
-      state: 'denied',
-      resolvedAt: '2026-10-25T10:00:30.000Z',
-    });
-    await service.tick();
+
+    expect(store.approvals.listPending(10)).toEqual([]);
+    const stored = store.events.readAfterId(0, 200);
+    expect(stored.filter((record) => record.type === 'approval.created')).toEqual([]);
+    expect(stored.filter((record) => record.type === 'chat.permission')).toEqual([]);
+    expect(eventTypes(store, chat.id)).toEqual(['chat.message', 'chat.idle']);
     expect(agent.replies).toEqual([
       { sessionId: FIRST_SESSION, requestId: 'per_2', reply: 'reject' },
     ]);
+  });
+
+  it('allows a chat read inside the worktree and writes no approval row', async () => {
+    const { service, store, agent } = harness();
+    const chat = seedChat(store);
+    agent.script(FIRST_SESSION, [
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'busy' },
+      {
+        type: 'permission.updated',
+        sessionId: FIRST_SESSION,
+        permissionId: 'per_3',
+        tool: 'read',
+        title: 'Read the README',
+        input: { filePath: '/tmp/cb-worktrees/chat_seed0001/README.md' },
+      },
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'idle' },
+    ]);
+
+    await service.send({ chatId: chat.id, text: 'read the README' });
+    await service.pump(chat.id);
+
+    expect(agent.replies).toEqual([
+      { sessionId: FIRST_SESSION, requestId: 'per_3', reply: 'once' },
+    ]);
+    expect(store.approvals.listPending(10)).toEqual([]);
+  });
+
+  it('refuses a chat read outside the worktree and writes no approval row', async () => {
+    const { service, store, agent } = harness();
+    const chat = seedChat(store);
+    agent.script(FIRST_SESSION, [
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'busy' },
+      {
+        type: 'permission.updated',
+        sessionId: FIRST_SESSION,
+        permissionId: 'per_4',
+        tool: 'read',
+        title: 'Read the passwd file',
+        input: { filePath: '/etc/passwd' },
+      },
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'idle' },
+    ]);
+
+    await service.send({ chatId: chat.id, text: 'read the passwd file' });
+    await service.pump(chat.id);
+
+    expect(agent.replies).toEqual([
+      { sessionId: FIRST_SESSION, requestId: 'per_4', reply: 'reject' },
+    ]);
+    expect(store.approvals.listPending(10)).toEqual([]);
+  });
+
+  it('refuses a chat webfetch and writes no approval row', async () => {
+    const { service, store, agent } = harness();
+    const chat = seedChat(store);
+    agent.script(FIRST_SESSION, [
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'busy' },
+      {
+        type: 'permission.updated',
+        sessionId: FIRST_SESSION,
+        permissionId: 'per_5',
+        tool: 'webfetch',
+        title: 'Fetch a page',
+        input: { url: 'https://example.com' },
+      },
+      { type: 'session.updated', sessionId: FIRST_SESSION, status: 'idle' },
+    ]);
+
+    await service.send({ chatId: chat.id, text: 'fetch the page' });
+    await service.pump(chat.id);
+
+    expect(agent.replies).toEqual([
+      { sessionId: FIRST_SESSION, requestId: 'per_5', reply: 'reject' },
+    ]);
+    expect(store.approvals.listPending(10)).toEqual([]);
   });
 });
 
