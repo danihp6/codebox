@@ -912,7 +912,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       *Acceptance:* `[unit]` saving requires the confirm step; `[unit]` an `env` credential
       renders its warning and the others do not; `[live]` an agent-tool credential never
       appears in the agent's environment.
-- [ ] **[Task-63]** Settings, Devices and Providers. The three rows that reach real actions,
+- [x] **[Task-63]** Settings, Devices and Providers. The three rows that reach real actions,
       scopes per device, revoke, and the model choice with the "running sessions keep theirs"
       rule. *Paths:* `features/settings/settings.page.ts`, `devices.*`, `providers.*`.
       *Dependencies:* Task-55. *Acceptance:* `[unit]` the current device cannot revoke itself;

@@ -43,6 +43,7 @@ const USED_KEYS: readonly string[] = [
   'devices.title',
   'devices.empty',
   'devices.current',
+  'devices.current.hint',
   'devices.revoke',
   'devices.revoke.confirm',
   'devices.lastSeen',
@@ -71,6 +72,10 @@ function memoryStore(): SecureStore {
 
 function hook(element: HTMLElement, id: string): HTMLElement | null {
   return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+}
+
+function row(element: HTMLElement, id: string): HTMLElement | null {
+  return element.querySelector<HTMLElement>(`[data-testid="device-row"][data-device-id="${id}"]`);
 }
 
 interface Mounted {
@@ -123,39 +128,82 @@ describe('DevicesPage', () => {
     expect(hook(element, 'devices-empty')).toBeNull();
   });
 
-  it('asks once and then revokes the device', async () => {
+  it('renders one scope line per device and never a revoke control on this device', async () => {
+    const { element } = await mount([CURRENT, OTHER]);
+
+    const current = row(element, CURRENT.id);
+    const other = row(element, OTHER.id);
+    expect(current?.querySelector('.cb-mono')?.textContent).toContain('ios');
+    expect(current?.textContent).toContain('read write admin');
+    expect(other?.textContent).toContain('read');
+
+    expect(current?.querySelector('[data-testid="device-current"]')).not.toBeNull();
+    expect(current?.querySelector('[data-testid="device-current-hint"]')).not.toBeNull();
+    expect(current?.querySelector('[data-testid="device-revoke"]')).toBeNull();
+    expect(current?.querySelector('[data-testid="device-revoke-confirm"]')).toBeNull();
+    expect(other?.querySelector('[data-testid="device-current"]')).toBeNull();
+    expect(other?.querySelector('[data-testid="device-revoke"]')).not.toBeNull();
+  });
+
+  it('asks once and then revokes another device, refreshing the list', async () => {
     const { fixture, element, http } = await mount([CURRENT, OTHER]);
 
     expect(hook(element, 'device-revoke-confirm')).toBeNull();
 
-    hook(element, 'device-revoke')?.click();
+    row(element, OTHER.id)?.querySelector<HTMLElement>('[data-testid="device-revoke"]')?.click();
     await fixture.whenStable();
 
-    expect(hook(element, 'device-revoke-confirm')).not.toBeNull();
-    http.expectNone({ method: 'DELETE', url: `/v1/devices/${CURRENT.id}` });
+    expect(row(element, OTHER.id)?.querySelector('[data-testid="device-revoke-confirm"]')).not.toBeNull();
+    http.expectNone({ method: 'DELETE', url: `/v1/devices/${OTHER.id}` });
 
-    hook(element, 'device-revoke-confirm')?.click();
+    row(element, OTHER.id)?.querySelector<HTMLElement>('[data-testid="device-revoke-confirm"]')?.click();
     await fixture.whenStable();
 
-    const request = http.expectOne({ method: 'DELETE', url: `/v1/devices/${CURRENT.id}` });
-    request.flush(null, { status: 204, statusText: 'No Content' });
+    const deletes = http.match({ method: 'DELETE' });
+    expect(deletes).toHaveLength(1);
+    deletes[0]?.flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+
+    http.expectOne(DEVICES_URL).flush({ data: [CURRENT], nextCursor: null });
     await fixture.whenStable();
 
     const rows = element.querySelectorAll<HTMLElement>('[data-testid="device-row"]');
     expect(rows).toHaveLength(1);
-    expect(rows[0]?.getAttribute('data-device-id')).toBe(OTHER.id);
+    expect(rows[0]?.getAttribute('data-device-id')).toBe(CURRENT.id);
+  });
+
+  it('issues nothing on a second tap while a revoke is in flight', async () => {
+    const { fixture, element, http } = await mount([CURRENT, OTHER]);
+
+    row(element, OTHER.id)?.querySelector<HTMLElement>('[data-testid="device-revoke"]')?.click();
+    await fixture.whenStable();
+    row(element, OTHER.id)?.querySelector<HTMLElement>('[data-testid="device-revoke-confirm"]')?.click();
+    await fixture.whenStable();
+
+    const button = row(element, OTHER.id)?.querySelector<HTMLButtonElement>(
+      '[data-testid="device-revoke"]',
+    );
+    expect(button?.disabled).toBe(true);
+    button?.click();
+    await fixture.whenStable();
+
+    const request = http.expectOne({ method: 'DELETE', url: `/v1/devices/${OTHER.id}` });
+    request.flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+    http.expectOne(DEVICES_URL).flush({ data: [CURRENT], nextCursor: null });
+    await fixture.whenStable();
   });
 
   it('cancels a pending revoke without calling the daemon', async () => {
     const { fixture, element, http } = await mount([CURRENT, OTHER]);
 
-    hook(element, 'device-revoke')?.click();
+    row(element, OTHER.id)?.querySelector<HTMLElement>('[data-testid="device-revoke"]')?.click();
     await fixture.whenStable();
-    hook(element, 'device-revoke-cancel')?.click();
+    row(element, OTHER.id)?.querySelector<HTMLElement>('[data-testid="device-revoke-cancel"]')?.click();
     await fixture.whenStable();
 
     expect(hook(element, 'device-revoke-confirm')).toBeNull();
-    http.expectNone({ method: 'DELETE', url: `/v1/devices/${CURRENT.id}` });
+    http.expectNone({ method: 'DELETE', url: `/v1/devices/${OTHER.id}` });
   });
 
   it('renders the error block when the list fails', async () => {

@@ -16,7 +16,8 @@ export class DevicesStore {
   readonly currentDeviceId = signal<string | null>(null);
   readonly loading = signal(true);
   readonly error = signal<ApiError | null>(null);
-  readonly revoking = signal<string | null>(null);
+  /** The device whose revoke is in flight, so the screen issues one `DELETE` at a time. */
+  readonly revokingId = signal<string | null>(null);
 
   load(): void {
     this.loading.set(true);
@@ -41,7 +42,8 @@ export class DevicesStore {
   }
 
   revoke(id: string): void {
-    this.revoking.set(id);
+    if (this.revokingId() !== null) return;
+    this.revokingId.set(id);
     this.error.set(null);
     this.api
       .revokeDevice(id)
@@ -52,13 +54,28 @@ export class DevicesStore {
       .subscribe({
         next: () => {
           this.devices.update((devices) => devices.filter((device) => device.id !== id));
-          if (id === this.currentDeviceId()) void this.auth.logout();
+          if (id === this.currentDeviceId()) {
+            void this.auth.logout();
+            return;
+          }
+          this.refresh();
         },
         error: (error: ApiError) => this.error.set(error),
       });
   }
 
+  /** docs/app.md §5: the server is the state, so a revoke is corroborated by a new read. */
+  private refresh(): void {
+    this.api
+      .devices()
+      .pipe(takeUntilDestroyed(this.destroy))
+      .subscribe({
+        next: (page) => this.devices.set(page.data),
+        error: (error: ApiError) => this.error.set(error),
+      });
+  }
+
   private release(id: string): void {
-    if (this.revoking() === id) this.revoking.set(null);
+    if (this.revokingId() === id) this.revokingId.set(null);
   }
 }

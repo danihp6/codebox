@@ -42,6 +42,10 @@ import { translate } from './i18n';
       .cb-muted {
         color: var(--cb-muted);
       }
+      .cb-current-hint {
+        inline-size: 100%;
+        color: var(--cb-muted);
+      }
       .cb-confirm {
         display: flex;
         flex-wrap: wrap;
@@ -99,17 +103,19 @@ import { translate } from './i18n';
                   {{ t('devices.lastSeen') }}:
                   {{ device.lastSeenAt ?? t('devices.never') }}
                 </span>
-                @if (device.id === store.currentDeviceId()) {
-                  <span>{{ t('devices.current') }}</span>
-                }
 
-                @if (confirming() === device.id) {
+                @if (device.id === store.currentDeviceId()) {
+                  <span data-testid="device-current">{{ t('devices.current') }}</span>
+                  <span class="cb-current-hint" data-testid="device-current-hint">
+                    {{ t('devices.current.hint') }}
+                  </span>
+                } @else if (confirming() === device.id) {
                   <div class="cb-confirm" data-testid="device-revoke-confirm-block">
                     <span>{{ t('devices.revoke.confirm') }}</span>
                     <button
                       type="button"
                       data-testid="device-revoke-confirm"
-                      [disabled]="store.revoking() === device.id"
+                      [disabled]="store.revokingId() !== null"
                       (click)="revoke(device.id)"
                     >
                       {{ t('devices.revoke') }}
@@ -122,7 +128,7 @@ import { translate } from './i18n';
                   <button
                     type="button"
                     data-testid="device-revoke"
-                    [disabled]="store.revoking() === device.id"
+                    [disabled]="store.revokingId() !== null"
                     (click)="ask(device.id)"
                   >
                     {{ t('devices.revoke') }}

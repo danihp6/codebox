@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-63, settings, devices and providers)
+
+- `/settings` owns four rows that reach a real action: Devices and Credentials link to their
+  routes, Notifications opens the panel it already had, and Providers opens a new inline panel
+  built from `GET /v1/providers` (one row per provider, `configured`, `mode`, `lastOkAt`), with
+  a `404`/`503` rendering the unavailable copy rather than an empty list.
+- `/settings/devices` pins the promise: one scope line per device, the current-device marker, no
+  revoke control on this device at all, one `DELETE` per confirmed revoke with the row disabled
+  while it is in flight, and a refreshed list afterwards.
+- The **model choice** is deliberately not built: `settingsSchema` has no `model` key,
+  `PATCH /v1/settings` is a strict schema and no route lists models, so a selector here would
+  invent a second source of truth. It needs a contract task first.
+- `[live]` — a revoked device's next request being a 401 and `/settings` handing off to `/pair`
+  with the reason — needs the box, a second device and a browser; it is recorded as `[?]`, never
+  as passing (issue #52).
+
 ### Added — 2026-10-27 (Task-61, proposed schedules and the schedule filter)
 
 - `ScheduleProposeCard` renders the assumption block for a proposed schedule — the cron summary
