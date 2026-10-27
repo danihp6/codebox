@@ -5,8 +5,6 @@
   "tabs": {
     "dashboard": "Panel",
     "chat": "Chat",
-    "jobs": "Tareas",
-    "runs": "Ejecuciones",
     "settings": "Ajustes"
   },
   "pair": {

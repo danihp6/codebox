@@ -1,26 +1,8 @@
 import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
-import {
-  IonLabel,
-  IonRouterLink,
-  IonTabBar,
-  IonTabButton,
-} from '@ionic/angular';
+import { IonLabel, IonRouterLink, IonTabBar, IonTabButton } from '@ionic/angular';
+import { SHELL_TABS } from '../app.routes';
 import { I18nService } from '../core/i18n/i18n.service';
-
-interface Tab {
-  readonly id: string;
-  readonly path: string;
-  readonly labelKey: string;
-}
-
-export const SHELL_TABS: readonly Tab[] = Object.freeze([
-  { id: 'dashboard', path: '/dashboard', labelKey: 'tabs.dashboard' },
-  { id: 'chat', path: '/chat', labelKey: 'tabs.chat' },
-  { id: 'jobs', path: '/jobs', labelKey: 'tabs.jobs' },
-  { id: 'runs', path: '/runs', labelKey: 'tabs.runs' },
-  { id: 'settings', path: '/settings', labelKey: 'tabs.settings' },
-]);
 
 @Component({
   selector: 'app-tabs',
