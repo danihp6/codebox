@@ -895,7 +895,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       card cannot create without a tap; `[unit]` the filter groups by schedule and marks the
       unreviewed fire; `[live]` a sentence in a chat creates a schedule whose first fire lands
       unreviewed.
-- [ ] **[Task-62]** Credentials screens. The catalog (services and open credentials), the
+- [x] **[Task-62]** Credentials screens. The catalog (services and open credentials), the
       connect-a-service sheet and the add-credential sheet with the three visibility modes.
       *Paths:* `apps/app/src/app/features/credentials/**`. *Dependencies:* Task-58.
       *Acceptance:* `[unit]` saving requires the confirm step; `[unit]` an `env` credential

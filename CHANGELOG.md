@@ -6,6 +6,26 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-62, credentials screens)
+
+- `/settings/credentials` ships the catalog (connected services and open credentials), the
+  connect-a-service sheet and the add-credential sheet. Saving is two steps: the form, then a
+  review that renders only the last four characters of the value; the input is `type="password"`
+  and is cleared on save, so the sheet never holds the secret in its text.
+- The three visibility modes are the contract's `daemon` / `tool` / `env`. `env` renders its
+  warning, and `env` on anything but a `model_key` renders `credential-env-blocked` with the form
+  frozen, so the daemon's `403` is not the only guard.
+- `CredentialsApi` is the app's only door to the §5.9 surface: the eight calls and six parsers
+  mirror `docs/api.md` key for key, because that wire shape still lives daemon-side in
+  `apps/daemon/src/credentials/schemas.ts`. Lifting it into `packages/contracts` is a recorded
+  follow-up, not a second source of truth invented here.
+- The route joins the frozen router table after `settings/devices`, the app README maps the
+  eleven new files, and `docs/app.md` §4 gains its row. The app suite runs 462 tests after the
+  merge.
+- `[live]` — a `tool` credential staying out of the agent's environment, and the GitHub App
+  manifest flow completing against GitHub — needs the box; it is recorded as `[?]`, never as
+  passing (issue #44).
+
 ### Added — 2026-10-27 (Task-52, chat lifecycle routes)
 
 - `chatSessionSchema.repoId` is nullable and `createSessionSchema.repoId` is optional, so a chat

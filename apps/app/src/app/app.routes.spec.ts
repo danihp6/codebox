@@ -21,6 +21,7 @@ const EXPECTED_PATHS = [
   'runs/:id',
   'approvals',
   'settings/devices',
+  'settings/credentials',
   'about',
   '**',
 ] as const;
@@ -37,6 +38,7 @@ const UNTABBED_PATHS = [
   'runs/:id',
   'approvals',
   'settings/devices',
+  'settings/credentials',
   'about',
   '**',
 ] as const;

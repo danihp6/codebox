@@ -88,7 +88,7 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | `/chat?filter=repo` | Repo filter | Registered repositories, clone state, policy badges, add. |
 | `/chat?filter=schedule` | Schedule filter | The running window and the fires grouped by schedule. |
 | `/settings` | Settings | Credentials, schedules, devices, notifications, appearance, danger zone. |
-| `/settings/credentials` | Credentials | Adapters (manifest or OAuth) and open credentials, write-only. |
+| `/settings/credentials` | Credentials | Connected services (GitHub App by manifest, integrations) and open credentials, write-only; the add sheet has the three `expose` modes, `env` is limited to the model key and shows its warning, saving passes a confirm step, and a value is only ever shown as its last four characters. |
 | `/settings/devices` | Devices | Scopes per device, revoke, last seen; this device cannot revoke itself. |
 | `/settings/notifications` | Notifications | Five toggleable events plus the non-toggleable credential alert, and quiet hours. |
 | `/about` | About | Version, commit, server health, licences. |
