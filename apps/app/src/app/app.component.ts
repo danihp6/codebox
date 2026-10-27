@@ -6,12 +6,13 @@ import { filter, map } from 'rxjs';
 import { AuthStore } from './core/auth/auth.store';
 import { SseService } from './core/events/sse.service';
 import { I18nService } from './core/i18n/i18n.service';
+import { OfflineBanner } from './shared/offline-banner';
 import { TabsPage } from './shell/tabs.page';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [IonApp, IonRouterOutlet, TabsPage],
+  imports: [IonApp, IonRouterOutlet, TabsPage, OfflineBanner],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <ion-app>
@@ -19,6 +20,7 @@ import { TabsPage } from './shell/tabs.page';
       @if (showTabs()) {
         <app-tabs />
       }
+      <app-offline-banner />
       <span
         class="cb-sse"
         data-testid="sse-connection"
