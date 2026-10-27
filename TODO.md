@@ -913,7 +913,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       Task-55. *Acceptance:* `[unit]` the payload builder emits `{type, id, title}` and nothing
       else; `[unit]` `Credential changed` has no toggle; `[live]` a question interrupts quiet
       hours and a finished run does not.
-- [ ] **[Task-65]** Dashboard and first run. The five blocks, `Needs you` summing its four
+- [x] **[Task-65]** Dashboard and first run. The five blocks, `Needs you` summing its four
       sources, and the start card that replaces an empty dashboard. *Paths:*
       `features/dashboard/**`. *Dependencies:* Task-52, Task-53. *Acceptance:* `[unit]` every
       block renders from a zero fixture; `[unit]` `Needs you` sums questions, approvals retired

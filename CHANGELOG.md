@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-65, dashboard and first run)
+
+- `/dashboard` is the five blocks the design signs off: `Needs you`, working, ready for review,
+  today's spend and health, each rendered from its own read (`/v1/health`, `/v1/telemetry`,
+  `/v1/runs`, `/v1/repos`) and each from a zero fixture without a crash.
+- `Needs you` sums the two sources the contracts actually carry — chats waiting for an answer and
+  chats nobody has reviewed — and says so in one place. The other two the backlog names (runs
+  failed since the last review, a schedule fire left unreviewed) have no contract field; adding
+  them is a `packages/contracts` change and its own task, not a local guess.
+- A fresh box shows the start card instead of a dashboard of zeros: it offers a repository or a
+  chat and disappears as soon as `/v1/repos` reports one.
+- `[live]` — a freshly paired box showing the start card in under 3 s — needs the box and a
+  device; it is recorded as `[?]`, never as passing (issue #50).
+
 ### Added — 2026-10-27 (Task-64, notifications)
 
 - Settings gains a notifications panel: the five toggleable events — run finished, run merged,
