@@ -17,6 +17,7 @@ before `npm run build`.
 - `migrations/0001_init.sql` — the ten v1 tables and their indexes.
 - `migrations/0002_routines.sql` — the two routine tables, their kind CHECKs and the three indexes.
 - `migrations/0003_chat_scope.sql` — the chat scope, its usage ledger, the context epoch and `reviewed_at`.
+- `migrations/0004_schedules.sql` — the schedule object, its fires and the three indexes, additively.
 
 ## `src/`
 
@@ -38,6 +39,8 @@ before `npm run build`.
 - `usage.ts` — the token/cost ledger and its per-day aggregate.
 - `routines.ts` — chat schedules: the discriminated union, the newest-first page and the due queue.
 - `routine-fires.ts` — the transactional claim on `(routine_id, scheduled_for)`, skip and outcome.
+- `schedules.ts` — the schedule object: the newest-first page, the patch and the due queue; a patch stamps `updated_at` from SQLite because the frozen patch carries no timestamp.
+- `schedule-fires.ts` — the transactional claim on `(schedule_id, scheduled_for)`, skip, outcome and the cost ledger.
 - `migrate.test.ts` — migration application, idempotency, checksum and failure rollback.
 - `store.test.ts` — open/close, WAL, file format, the in-memory fake and the cursor.
 - `runs.test.ts` — the claim race, run round-trip, paging and live-state counting.
@@ -45,6 +48,8 @@ before `npm run build`.
 - `repositories.test.ts` — repos, jobs, approvals, chats, devices, settings, usage and the deleted-repo rules.
 - `routines.test.ts` — the routine round-trip, the list filters, the patches and the two delete rules.
 - `routine-fires.test.ts` — the claim race, the claim guards, skip, finish and the reads.
+- `schedules.test.ts` — the round-trip, the SQL CHECKs, the page, the patch, the due queue and the reopen.
+- `schedule-fires.test.ts` — the claim race, the guards, skip, finish, the spend and the failure streak.
 
 ## Checks
 

@@ -51,6 +51,7 @@ export interface RunPatch {
   readonly sessionId?: string | null;
   readonly gateCommand?: string | null;
   readonly promptHash?: string | null;
+  readonly scheduledFor?: string | null;
   readonly attempt?: number;
   readonly failureCode?: string | null;
   readonly failureMessage?: string | null;
@@ -147,6 +148,7 @@ type ScalarPatchKey =
   | 'sessionId'
   | 'gateCommand'
   | 'promptHash'
+  | 'scheduledFor'
   | 'attempt'
   | 'failureCode'
   | 'failureMessage'
@@ -212,6 +214,7 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
     ['sessionId', 'session_id'],
     ['gateCommand', 'gate_command'],
     ['promptHash', 'prompt_hash'],
+    ['scheduledFor', 'scheduled_for'],
     ['attempt', 'attempt'],
     ['failureCode', 'failure_code'],
     ['failureMessage', 'failure_message'],

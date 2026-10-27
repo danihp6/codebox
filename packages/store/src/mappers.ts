@@ -6,6 +6,7 @@ import type {
   Repo,
   Routine,
   Run,
+  Schedule,
 } from '@codebox/contracts';
 import type { Device, RunState, SseEventName } from '@codebox/contracts';
 import type { SQLOutputValue } from 'node:sqlite';
@@ -13,6 +14,7 @@ import type { DeviceRecord } from './devices.js';
 import type { EventRecord } from './events.js';
 import { StoreError } from './errors.js';
 import type { RoutineFireRecord } from './routine-fires.js';
+import type { ScheduleFireRecord } from './schedule-fires.js';
 import type { RunRecord } from './runs.js';
 import type { UsageRecord } from './usage.js';
 
@@ -62,6 +64,9 @@ const BLOCKER_CODES = [
   'not_mergeable',
 ] as const;
 const ROUTINE_KINDS = ['prompt', 'reminder'] as const;
+const SCHEDULE_MODES = ['once', 'every', 'window'] as const;
+const SCHEDULE_FIRE_POLICIES = ['new_chat', 'continue'] as const;
+const SCHEDULE_FIRE_OUTCOMES = ['claimed', 'fired', 'skipped', 'failed'] as const;
 const ROUTINE_FIRE_OUTCOMES = ['claimed', 'sent', 'replied', 'failed', 'skipped'] as const;
 const SSE_EVENT_NAMES = [
   'run.queued',
@@ -132,6 +137,12 @@ export function realColumn(rowValue: Row, column: string): number {
   const value = rowValue[column];
   if (typeof value !== 'number' || !Number.isFinite(value)) throw invalidColumn(column);
   return value;
+}
+
+export function nullableRealColumn(rowValue: Row, column: string): number | null {
+  const value = rowValue[column];
+  if (value === null) return null;
+  return realColumn(rowValue, column);
 }
 
 export function booleanColumn(rowValue: Row, column: string): boolean {
@@ -325,6 +336,48 @@ export function routineFireFromRow(rowValue: Row): RoutineFireRecord {
     scheduledFor: textColumn(rowValue, 'scheduled_for'),
     firedAt: textColumn(rowValue, 'fired_at'),
     outcome: enumColumn(rowValue, 'outcome', ROUTINE_FIRE_OUTCOMES),
+    detail: nullableTextColumn(rowValue, 'detail'),
+  };
+}
+
+export function scheduleFromRow(rowValue: Row): Schedule {
+  return {
+    id: textColumn(rowValue, 'id'),
+    repoId: nullableTextColumn(rowValue, 'repo_id'),
+    chatSessionId: nullableTextColumn(rowValue, 'chat_session_id'),
+    title: textColumn(rowValue, 'title'),
+    prompt: textColumn(rowValue, 'prompt'),
+    mode: enumColumn(rowValue, 'mode', SCHEDULE_MODES),
+    cron: nullableTextColumn(rowValue, 'cron'),
+    timezone: textColumn(rowValue, 'timezone'),
+    windowStart: nullableTextColumn(rowValue, 'window_start'),
+    windowEnd: nullableTextColumn(rowValue, 'window_end'),
+    cooldownMinutes: integerColumn(rowValue, 'cooldown_minutes'),
+    maxFires: nullableIntegerColumn(rowValue, 'max_fires'),
+    maxCostPerFireUsd: nullableRealColumn(rowValue, 'max_cost_per_fire_usd'),
+    firePolicy: enumColumn(rowValue, 'fire_policy', SCHEDULE_FIRE_POLICIES),
+    consecutiveFailures: integerColumn(rowValue, 'consecutive_failures'),
+    firesCount: integerColumn(rowValue, 'fires_count'),
+    spendUsd: realColumn(rowValue, 'spend_usd'),
+    enabled: booleanColumn(rowValue, 'enabled'),
+    policy: enumColumn(rowValue, 'policy', REPO_POLICIES),
+    nextFireAt: nullableTextColumn(rowValue, 'next_fire_at'),
+    lastFiredAt: nullableTextColumn(rowValue, 'last_fired_at'),
+    createdAt: textColumn(rowValue, 'created_at'),
+    updatedAt: textColumn(rowValue, 'updated_at'),
+  };
+}
+
+export function scheduleFireFromRow(rowValue: Row): ScheduleFireRecord {
+  return {
+    id: integerColumn(rowValue, 'id'),
+    scheduleId: textColumn(rowValue, 'schedule_id'),
+    scheduledFor: textColumn(rowValue, 'scheduled_for'),
+    firedAt: textColumn(rowValue, 'fired_at'),
+    outcome: enumColumn(rowValue, 'outcome', SCHEDULE_FIRE_OUTCOMES),
+    runId: nullableTextColumn(rowValue, 'run_id'),
+    chatId: nullableTextColumn(rowValue, 'chat_id'),
+    costUsd: realColumn(rowValue, 'cost_usd'),
     detail: nullableTextColumn(rowValue, 'detail'),
   };
 }

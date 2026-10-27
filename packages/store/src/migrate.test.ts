@@ -21,6 +21,8 @@ const TABLES = [
   'usage',
   'routines',
   'routine_fires',
+  'schedules',
+  'schedule_fires',
 ];
 
 const INDEXES = [
@@ -40,6 +42,9 @@ const INDEXES = [
   'routines_due',
   'routines_created',
   'routine_fires_routine',
+  'schedules_due',
+  'schedules_repo',
+  'schedule_fires_schedule',
 ];
 
 const FIXED_NOW = '2026-10-24T18:03:11.000Z';
@@ -83,19 +88,20 @@ describe('migrations', () => {
   it('migrations apply to an empty database and are idempotent', () => {
     const files = loadMigrationsFromDisk(MIGRATIONS_DIRECTORY);
     expect(files.length).toBeGreaterThanOrEqual(1);
-    expect(files.map((file) => file.version)).toEqual([1, 2, 3]);
+    expect(files.map((file) => file.version)).toEqual([1, 2, 3, 4]);
 
     const first = runMigrations(db, files, () => FIXED_NOW);
-    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3]);
-    expect(first.currentVersion).toBe(3);
+    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4]);
+    expect(first.currentVersion).toBe(4);
     expect(first.applied.map((migration) => migration.name)).toEqual([
       '0001_init.sql',
       '0002_routines.sql',
       '0003_chat_scope.sql',
+      '0004_schedules.sql',
     ]);
 
     const userVersion = db.prepare('PRAGMA user_version').get()?.['user_version'];
-    expect(Number(userVersion)).toBe(3);
+    expect(Number(userVersion)).toBe(4);
 
     const tables = names(db, 'table');
     for (const table of TABLES) expect(tables).toContain(table);
@@ -105,7 +111,7 @@ describe('migrations', () => {
 
     const second = runMigrations(db, files, () => FIXED_NOW);
     expect(second.applied).toEqual([]);
-    expect(second.currentVersion).toBe(3);
+    expect(second.currentVersion).toBe(4);
 
     const tampered = files.map((file) =>
       file.version === 2 ? { ...file, checksum: 'deadbeef' } : file,
