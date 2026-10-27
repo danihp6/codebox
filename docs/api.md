@@ -446,6 +446,20 @@ whose `decision` is `"expired"`.
 | `POST` | `/v1/chat/sessions/{id}/interrupt` | `chat` | Stops the agent; the session returns to `idle`. |
 | `POST` | `/v1/chat/sessions/{id}/promote` | `runs` | `{ title? }` → a run in the same worktree. |
 
+A session carries its scope and its context accounting (D43, D48):
+
+- `kind` — `free`, `repo` or `schedule`. A payload without it is read as `repo`, which is what
+  every session created before this field existed is.
+- `repoId` — the repository the chat is bound to. Still required in this version; it becomes
+  nullable when the daemon can create a free chat.
+- `usage` — `{ usd, tokensIn, tokensOut }`, the chat's own ledger; `{ 0, 0, 0 }` when it has
+  not spent anything.
+- `contextTokens` — the last measured window size in tokens; `0` before the first turn.
+- `contextEpoch` — which OpenCode session the numbers belong to; `1` until a compact starts a
+  new one (D48).
+- `reviewedAt` — when the operator last reviewed the chat, or `null`. It is written once: the
+  first timestamp wins and a later write is ignored.
+
 Promote starts a new run with `trigger: "promote"` from the repository's default branch. The
 prompt is the text of the last `assistant` message of the session; a session with no assistant
 message is `422` with `details.path: "chat.messages"`. The response is `202` with the new `Run`.

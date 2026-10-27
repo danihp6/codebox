@@ -83,18 +83,19 @@ describe('migrations', () => {
   it('migrations apply to an empty database and are idempotent', () => {
     const files = loadMigrationsFromDisk(MIGRATIONS_DIRECTORY);
     expect(files.length).toBeGreaterThanOrEqual(1);
-    expect(files.map((file) => file.version)).toEqual([1, 2]);
+    expect(files.map((file) => file.version)).toEqual([1, 2, 3]);
 
     const first = runMigrations(db, files, () => FIXED_NOW);
-    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2]);
-    expect(first.currentVersion).toBe(2);
+    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3]);
+    expect(first.currentVersion).toBe(3);
     expect(first.applied.map((migration) => migration.name)).toEqual([
       '0001_init.sql',
       '0002_routines.sql',
+      '0003_chat_scope.sql',
     ]);
 
     const userVersion = db.prepare('PRAGMA user_version').get()?.['user_version'];
-    expect(Number(userVersion)).toBe(2);
+    expect(Number(userVersion)).toBe(3);
 
     const tables = names(db, 'table');
     for (const table of TABLES) expect(tables).toContain(table);
@@ -104,7 +105,7 @@ describe('migrations', () => {
 
     const second = runMigrations(db, files, () => FIXED_NOW);
     expect(second.applied).toEqual([]);
-    expect(second.currentVersion).toBe(2);
+    expect(second.currentVersion).toBe(3);
 
     const tampered = files.map((file) =>
       file.version === 2 ? { ...file, checksum: 'deadbeef' } : file,

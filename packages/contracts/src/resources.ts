@@ -267,8 +267,13 @@ export const chatStatusSchema = z.enum(CHAT_STATUSES);
 export const chatSessionSchema = z.strictObject({
   id: ChatId,
   repoId: RepoId,
+  kind: z.enum(['free', 'repo', 'schedule']).optional(),
   title: z.string().min(1),
   status: chatStatusSchema,
+  usage: costSchema.optional(),
+  contextTokens: z.number().int().nonnegative().optional(),
+  contextEpoch: z.number().int().min(1).optional(),
+  reviewedAt: timestampSchema.nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
   lastMessage: chatMessageSchema.nullable(),

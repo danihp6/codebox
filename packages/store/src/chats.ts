@@ -3,9 +3,22 @@ import type { DatabaseSync } from 'node:sqlite';
 import { decodeCursor, encodeCursor, type PageQuery, type PageResult } from './cursor.js';
 import { isForeignKeyViolation } from './db.js';
 import { StoreError } from './errors.js';
-import { chatMessageFromRow, chatSessionFromRow, row } from './mappers.js';
+import {
+  chatMessageFromRow,
+  chatSessionFromRow,
+  enumColumn,
+  integerColumn,
+  nullableTextColumn,
+  realColumn,
+  row,
+} from './mappers.js';
+import type { Row } from './mappers.js';
 
 export type ChatMessageOrigin = 'user' | 'assistant' | 'routine';
+
+const CHAT_KINDS = ['free', 'repo', 'schedule'] as const;
+
+type ChatKind = (typeof CHAT_KINDS)[number];
 
 export interface ChatSessionExtra {
   readonly opencodeSessionId: string | null;
@@ -17,6 +30,15 @@ export interface ChatSessionPatch {
   readonly status?: 'idle' | 'working' | 'archived';
   readonly opencodeSessionId?: string | null;
   readonly worktree?: string | null;
+  readonly kind?: ChatKind;
+  readonly usage?: {
+    readonly usd: number;
+    readonly tokensIn: number;
+    readonly tokensOut: number;
+  };
+  readonly contextTokens?: number;
+  readonly contextEpoch?: number;
+  readonly reviewedAt?: string | null;
   readonly updatedAt: string;
 }
 
@@ -37,27 +59,48 @@ export interface ChatRepository {
 }
 
 export function toChatSession(session: ChatSession, lastMessage: ChatMessage | null): ChatSession {
-  return {
-    id: session.id,
-    repoId: session.repoId,
-    title: session.title,
-    status: session.status,
-    createdAt: session.createdAt,
-    updatedAt: session.updatedAt,
-    lastMessage,
-  };
+  return { ...session, lastMessage };
 }
 
-const SESSION_COLUMNS =
-  'id, repo_id, title, status, opencode_session_id, worktree, created_at, updated_at';
+const SESSION_COLUMNS = [
+  'id, repo_id, kind, usage_usd, usage_tokens_in, usage_tokens_out',
+  'context_tokens, context_epoch, reviewed_at, title, status',
+  'opencode_session_id, worktree, created_at, updated_at',
+].join(', ');
 const MESSAGE_COLUMNS = 'id, chat_id, role, text, created_at';
+
+interface SessionScope {
+  readonly kind: ChatKind;
+  readonly usage: {
+    readonly usd: number;
+    readonly tokensIn: number;
+    readonly tokensOut: number;
+  };
+  readonly contextTokens: number;
+  readonly contextEpoch: number;
+  readonly reviewedAt: string | null;
+}
+
+function sessionScope(rowValue: Row): SessionScope {
+  return {
+    kind: enumColumn(rowValue, 'kind', CHAT_KINDS),
+    usage: {
+      usd: realColumn(rowValue, 'usage_usd'),
+      tokensIn: integerColumn(rowValue, 'usage_tokens_in'),
+      tokensOut: integerColumn(rowValue, 'usage_tokens_out'),
+    },
+    contextTokens: integerColumn(rowValue, 'context_tokens'),
+    contextEpoch: integerColumn(rowValue, 'context_epoch'),
+    reviewedAt: nullableTextColumn(rowValue, 'reviewed_at'),
+  };
+}
 
 export function createChatRepository(db: DatabaseSync): ChatRepository {
   const selectSession = db.prepare(`SELECT ${SESSION_COLUMNS} FROM chat_sessions WHERE id = ?`);
   const insertSession = db.prepare(`
     INSERT INTO chat_sessions (
-      id, repo_id, title, status, opencode_session_id, worktree, created_at, updated_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      id, repo_id, kind, title, status, opencode_session_id, worktree, created_at, updated_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const insertMessage = db.prepare(`
     INSERT INTO chat_messages (id, chat_id, role, text, origin, created_at)
@@ -80,7 +123,8 @@ export function createChatRepository(db: DatabaseSync): ChatRepository {
   function findSession(id: string): ChatSession | null {
     const value = selectSession.get(id);
     if (value === undefined) return null;
-    return chatSessionFromRow(row(value), lastMessageOf(id));
+    const record = row(value);
+    return { ...chatSessionFromRow(record, lastMessageOf(id)), ...sessionScope(record) };
   }
 
   return {
@@ -115,8 +159,7 @@ export function createChatRepository(db: DatabaseSync): ChatRepository {
         .map((value) => row(value));
       const sessions = values.slice(0, limit).map((value) => {
         const session = chatSessionFromRow(value, null);
-        const last = lastMessageOf(session.id);
-        return toChatSession(session, last);
+        return toChatSession({ ...session, ...sessionScope(value) }, lastMessageOf(session.id));
       });
       const last = values.at(limit - 1);
       const lastCursor = last === undefined ? null : chatSessionFromRow(last, null);
@@ -134,6 +177,7 @@ export function createChatRepository(db: DatabaseSync): ChatRepository {
         insertSession.run(
           session.id,
           session.repoId,
+          session.kind ?? 'repo',
           session.title,
           session.status,
           extra.opencodeSessionId,
@@ -170,6 +214,27 @@ export function createChatRepository(db: DatabaseSync): ChatRepository {
       if (patch.worktree !== undefined) {
         assignments.push('worktree = ?');
         parameters.push(patch.worktree);
+      }
+      if (patch.kind !== undefined) {
+        assignments.push('kind = ?');
+        parameters.push(patch.kind);
+      }
+      if (patch.usage !== undefined) {
+        assignments.push('usage_usd = ?', 'usage_tokens_in = ?', 'usage_tokens_out = ?');
+        parameters.push(patch.usage.usd, patch.usage.tokensIn, patch.usage.tokensOut);
+      }
+      if (patch.contextTokens !== undefined) {
+        assignments.push('context_tokens = ?');
+        parameters.push(patch.contextTokens);
+      }
+      if (patch.contextEpoch !== undefined) {
+        assignments.push('context_epoch = ?');
+        parameters.push(patch.contextEpoch);
+      }
+      // reviewed_at is write-once: the first review wins and a null patch never clears it.
+      if (patch.reviewedAt !== undefined && patch.reviewedAt !== null) {
+        assignments.push('reviewed_at = COALESCE(reviewed_at, ?)');
+        parameters.push(patch.reviewedAt);
       }
       assignments.push('updated_at = ?');
       parameters.push(patch.updatedAt);

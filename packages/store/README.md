@@ -16,6 +16,7 @@ before `npm run build`.
 - `README.md` — this file map.
 - `migrations/0001_init.sql` — the ten v1 tables and their indexes.
 - `migrations/0002_routines.sql` — the two routine tables, their kind CHECKs and the three indexes.
+- `migrations/0003_chat_scope.sql` — the chat scope, its usage ledger, the context epoch and `reviewed_at`.
 
 ## `src/`
 
