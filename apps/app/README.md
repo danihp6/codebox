@@ -92,11 +92,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/credentials/credentials.store.ts` — the two independent catalog reads, create/remove and the manifest reload.
 - `src/app/features/credentials/credentials.store.spec.ts` — load, a failed half, create, remove, the manifest start and completion.
 - `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`.
-- `src/app/features/dashboard/dashboard.page.ts` — health cards, today's spend, recent runs and the loading/error/stale states.
-- `src/app/features/dashboard/dashboard.page.spec.ts` — the health cards, the spend value and the empty/error blocks.
-- `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry` read behind the spend card.
-- `src/app/features/dashboard/dashboard.store.ts` — health, telemetry and recent-run signals plus the stream refetch.
-- `src/app/features/dashboard/dashboard.store.spec.ts` — the three reads, a failed read and the run stream frames.
+- `src/app/features/dashboard/dashboard.page.ts` — the five blocks (needs you, working, ready, spend, health), the recent runs, the first-run start card and the loading/error/stale states.
+- `src/app/features/dashboard/dashboard.page.spec.ts` — every block from a zero fixture, the start card, the rows of the run blocks, the needs-you counts and the dictionary parity.
+- `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry`, `/v1/chat/sessions`, `/v1/runs` and `/v1/repos` reads behind the blocks.
+- `src/app/features/dashboard/dashboard.api.spec.ts` — the three new page URLs, the explicit limit, the contract failures and the envelope mapping.
+- `src/app/features/dashboard/dashboard.store.ts` — health, telemetry, the computed `Needs you` counts, the working/ready/recent run signals and the run stream refetch.
+- `src/app/features/dashboard/dashboard.store.spec.ts` — the five reads, the needs-you sum over the chat page, the zero fixture, the first-run probe and the run stream frames.
 - `src/app/features/dashboard/i18n.ts` — the dashboard dictionary in `en` and `es`.
 - `src/app/features/jobs/jobs.page.ts` — the Jobs tab: list, pause/resume, run-now and create, plus the in-page Routines tab.
 - `src/app/features/jobs/jobs.page.spec.ts` — the list hooks, the create sheet and dictionary completeness.

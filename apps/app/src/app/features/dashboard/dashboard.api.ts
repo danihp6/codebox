@@ -1,7 +1,15 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { errorCodeSchema, errorEnvelopeSchema, parseTelemetry } from '@codebox/contracts';
-import type { Telemetry } from '@codebox/contracts';
+import {
+  chatSessionSchema,
+  errorCodeSchema,
+  errorEnvelopeSchema,
+  parsePage,
+  parseTelemetry,
+  repoSchema,
+  runSchema,
+} from '@codebox/contracts';
+import type { ChatSession, Page, Repo, Run, Telemetry } from '@codebox/contracts';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { ApiError } from '../../core/api/api-client';
 import { API_BASE_URL, API_PREFIX } from '../../core/api/http';
@@ -15,6 +23,32 @@ export class DashboardApi {
       .get<unknown>(`${API_BASE_URL}${API_PREFIX}/telemetry`, { params: { range } })
       .pipe(
         map((body) => this.parse(body, parseTelemetry)),
+        catchError((error: unknown) => throwError(() => toApiError(error))),
+      );
+  }
+
+  /** GET /v1/chat/sessions?limit=50 */
+  sessions(limit = 50): Observable<Page<ChatSession>> {
+    return this.page('/chat/sessions', limit, (input) =>
+      parsePage(chatSessionSchema, input, 'chat.sessions'),
+    );
+  }
+
+  /** GET /v1/runs?limit=50 */
+  runs(limit = 50): Observable<Page<Run>> {
+    return this.page('/runs', limit, (input) => parsePage(runSchema, input, 'runs'));
+  }
+
+  /** GET /v1/repos?limit=1 — the first-run probe. */
+  repos(limit = 1): Observable<Page<Repo>> {
+    return this.page('/repos', limit, (input) => parsePage(repoSchema, input, 'repos'));
+  }
+
+  private page<T>(path: string, limit: number, parser: (input: unknown) => T): Observable<T> {
+    return this.http
+      .get<unknown>(`${API_BASE_URL}${API_PREFIX}${path}`, { params: { limit } })
+      .pipe(
+        map((body) => this.parse(body, parser)),
         catchError((error: unknown) => throwError(() => toApiError(error))),
       );
   }
