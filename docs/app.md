@@ -69,7 +69,8 @@ apps/app/src/
 ```
 
 One feature folder owns its routes, components and store. A shared component moves to
-`shared/` only when a second feature needs it.
+`shared/` only when a second feature needs it. A feature's copy lives beside it in its own
+`i18n.ts`; the shared dictionaries hold the shell keys only (see §9).
 
 ## 4. Screens
 
@@ -170,6 +171,11 @@ sticks to the bottom only when the user is already at the bottom.
 - **320 px** is the reference width: no horizontal scroll anywhere; tables become cards.
 - **Motion** is functional (route transitions, a pulsing dot while a run is live) and
   respects `prefers-reduced-motion`.
+- **Copy and localisation**: `src/assets/i18n/{en,es}.json` holds the shell keys (`app`,
+  `tabs`, `pair`, `common`, `run`) and nothing feature-specific; each feature folder ships its
+  own `i18n.ts` with both locales and a spec that proves EN/ES parity. Features are written in
+  parallel and the shared dictionaries are a hot file, so a feature never edits them: it adds a
+  key to its own module in both languages in the same change.
 
 ## 10. Offline and failure
 

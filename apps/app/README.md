@@ -3,7 +3,11 @@
 The hybrid client: Angular 22 + Ionic 9 + Capacitor, standalone components, signals and a
 zoneless change detector. Task-18 scaffolds the workspace: the shell, the frozen router, the
 API client, auth, SSE, i18n, the theme tokens, the PWA manifest and the service worker.
-Tasks 19–23 replace the placeholder feature pages in place.
+Tasks 19–23 and 36 replace the placeholder feature pages with the shipped dashboard, repos,
+chat, jobs/runs, run detail and settings screens.
+
+The shared dictionaries in `src/assets/i18n/{en,es}.json` hold the shell keys; each feature
+folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 
 ## Files
 
@@ -22,14 +26,15 @@ Tasks 19–23 replace the placeholder feature pages in place.
 - `src/main.ts` — `bootstrapApplication(AppComponent, appConfig)`.
 - `src/styles.css` — global layout, tab and stream-state styles.
 - `src/manifest.webmanifest` — PWA manifest.
-- `src/assets/i18n/en.json` — English dictionary.
-- `src/assets/i18n/es.json` — Spanish dictionary (default locale).
+- `src/assets/i18n/en.json` — the shared English dictionary: shell, pairing, common and run keys.
+- `src/assets/i18n/es.json` — the shared Spanish dictionary (default locale), same key set.
 - `src/theme/variables.css` — the `--cb-*` tokens and the light override.
 - `src/theme/tokens.ts` — the same tokens for TypeScript consumers.
 - `src/app/app.component.ts` — `ion-app`, router outlet, tab bar and stream-state hook.
 - `src/app/app.config.ts` — zoneless, Ionic, router, HTTP, service-worker providers.
 - `src/app/app.routes.ts` — every route of `docs/app.md` §4, lazy and guarded.
 - `src/app/app.routes.spec.ts` — path table and lazy-loader resolution.
+- `src/app/readme.spec.ts` — every `src/app` file appears in this map and every map entry exists.
 - `src/app/shell/tabs.page.ts` — the five bottom tabs.
 - `src/app/shell/tabs.page.spec.ts` — tab order and rendered hooks.
 - `src/app/core/api/api-client.ts` — typed `/v1` client, `ApiError`, pair parsing, the run detail reads, cancel and revert.
@@ -51,11 +56,42 @@ Tasks 19–23 replace the placeholder feature pages in place.
 - `src/app/core/settings/settings.store.ts` — locale and theme persisted in the secure store.
 - `src/app/features/about/about.page.ts` — about/404 placeholder.
 - `src/app/features/approvals/approvals.page.ts` — approvals placeholder.
-- `src/app/features/chat/chat-list.page.ts` — chat list placeholder.
+- `src/app/features/chat/chat-list.page.ts` — the chat list: sessions, repo filter and a start-chat action.
+- `src/app/features/chat/chat-list.page.spec.ts` — the list hooks, the empty state and the filter.
+- `src/app/features/chat/chat-list.store.ts` — the session list, the repo filter, start-chat and the list stream frames.
+- `src/app/features/chat/chat-list.store.spec.ts` — load, filter, create and the refetch frames.
 - `src/app/features/chat/chat.page.ts` — chat detail: streaming messages, tool and permission cards, promote, the routine confirmation card and the `routine` badge.
-- `src/app/features/dashboard/dashboard.page.ts` — dashboard placeholder.
-- `src/app/features/jobs/job.page.ts` — job detail placeholder.
+- `src/app/features/chat/chat.page.spec.ts` — streaming hooks, the permission reply, promote and dictionary completeness.
+- `src/app/features/chat/chat.api.ts` — sessions, send, interrupt, promote, approval reply and the repo list.
+- `src/app/features/chat/chat.api.spec.ts` — every chat URL and method, the approval reply and the boundary parse failure.
+- `src/app/features/chat/chat.store.ts` — one session's state: load, draft, send, interrupt, promote, approval reply and the refetch hook.
+- `src/app/features/chat/chat.store.spec.ts` — load, send, interrupt, promote, the approval reply and the stream frames.
+- `src/app/features/chat/chat-stream.ts` — the pure stream state: message merge, tool/permission/routine cards and event application.
+- `src/app/features/chat/chat-stream.spec.ts` — ordered deltas, dedupe by `(messageId, seq)`, the cards and the routine window.
+- `src/app/features/chat/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
+- `src/app/features/chat/markdown.spec.ts` — fences, lists and unclosed markup.
+- `src/app/features/chat/i18n.ts` — the chat dictionary in `en` and `es`.
+- `src/app/features/dashboard/dashboard.page.ts` — health cards, today's spend, recent runs and the loading/error/stale states.
+- `src/app/features/dashboard/dashboard.page.spec.ts` — the health cards, the spend value and the empty/error blocks.
+- `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry` read behind the spend card.
+- `src/app/features/dashboard/dashboard.store.ts` — health, telemetry and recent-run signals plus the stream refetch.
+- `src/app/features/dashboard/dashboard.store.spec.ts` — the three reads, a failed read and the run stream frames.
+- `src/app/features/dashboard/i18n.ts` — the dashboard dictionary in `en` and `es`.
 - `src/app/features/jobs/jobs.page.ts` — the Jobs tab: list, pause/resume, run-now and create, plus the in-page Routines tab.
+- `src/app/features/jobs/jobs.page.spec.ts` — the list hooks, the create sheet and dictionary completeness.
+- `src/app/features/jobs/job.page.ts` — job detail: cron and timezone editor, enable toggle, run-now and the next-fire preview.
+- `src/app/features/jobs/job.page.spec.ts` — the editor rules, the toggle, run-now and the next-fire preview.
+- `src/app/features/jobs/jobs.api.ts` — `/v1/jobs` list, detail, create, patch, delete, pause, resume, run-now and next-fire.
+- `src/app/features/jobs/jobs.api.spec.ts` — every jobs URL and method, the idempotency key and the boundary parse failure.
+- `src/app/features/jobs/jobs.store.ts` — the list, optimistic pause/resume, run-now, create and the job stream frames.
+- `src/app/features/jobs/jobs.store.spec.ts` — load, the pause rollback, resume, run-now, create and the stream frames.
+- `src/app/features/jobs/job.store.ts` — one job: load, cron/timezone save, enable toggle, run-now and next-fire refresh.
+- `src/app/features/jobs/job.store.spec.ts` — load, the save, the toggle, run-now and the next-fire refresh.
+- `src/app/features/jobs/cron.ts` — 5-field cron validation, expression building and the `en`/`es` summary.
+- `src/app/features/jobs/cron.spec.ts` — the field table, the range failures and the pinned summaries.
+- `src/app/features/jobs/cron-picker.ts` — the cron editor with presets and the live summary.
+- `src/app/features/jobs/time-format.ts` — next-fire parts and formatting in the job's timezone.
+- `src/app/features/jobs/time-format.spec.ts` — the pinned parts and the null timestamp.
 - `src/app/features/jobs/routines.api.ts` — `/v1/routines` list, get, patch, pause, resume, run-now and delete; no create.
 - `src/app/features/jobs/routines.api.spec.ts` — every routines URL and method, the query filters, the 204 and the boundary parse failure.
 - `src/app/features/jobs/routines-format.ts` — the cron summary with the routine timezone, the next fire and the last fire.
@@ -64,24 +100,40 @@ Tasks 19–23 replace the placeholder feature pages in place.
 - `src/app/features/jobs/routines-panel.spec.ts` — reminder and prompt rows, the three actions, the confirmed delete, the editor rules and the empty/loading/error states.
 - `src/app/features/jobs/routines.store.ts` — the routines list, the optimistic toggles, run-now, delete and the routine event refetch.
 - `src/app/features/jobs/routines.store.spec.ts` — load, the pause rollback, resume, run-now, delete and the three refetch frames.
+- `src/app/features/jobs/i18n.ts` — the jobs, job detail and routines dictionary in `en` and `es`.
 - `src/app/features/pairing/pairing.page.ts` — pairing placeholder.
-- `src/app/features/repos/repo.page.ts` — repo detail placeholder.
-- `src/app/features/repos/repos.page.ts` — repos placeholder.
+- `src/app/features/repos/repos.page.ts` — the repo list, the add wizard entry and the gate/policy badges.
+- `src/app/features/repos/repos.page.spec.ts` — the list hooks, the wizard and the empty/error blocks.
+- `src/app/features/repos/repo.page.ts` — repo detail: verification, the policy editor and the protected-paths preview.
+- `src/app/features/repos/repo.page.spec.ts` — the detail hooks, the policy patch and the preview.
+- `src/app/features/repos/repos.api.ts` — `/v1/repos` list, get, create, patch, remove and verify.
+- `src/app/features/repos/repos.api.spec.ts` — every repos URL and method and the boundary parse failure.
+- `src/app/features/repos/repos.store.ts` — the list, create and verify with their optimistic state.
+- `src/app/features/repos/repos.store.spec.ts` — load, create, verify and the error rollbacks.
+- `src/app/features/repos/repo.store.ts` — one repo: detail, the policy patch and verify.
+- `src/app/features/repos/repo.store.spec.ts` — load, the optimistic policy patch and verify.
+- `src/app/features/repos/repo-form.ts` — the `owner/name` slug rules and the form parse.
+- `src/app/features/repos/repo-form.spec.ts` — a missing owner, a bad slug and the trimmed value.
+- `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`.
 - `src/app/features/run-detail/run.page.ts` — run detail: timeline, gate, guardrails, blockers, diff, PR, cost, cancel and revert.
 - `src/app/features/run-detail/run.page.spec.ts` — run hooks, guardrail states, actions and dictionary completeness.
 - `src/app/features/run-detail/run-detail.store.ts` — the run projection, its two actions and the stream reducer.
 - `src/app/features/run-detail/run-detail.store.spec.ts` — loading, cancel confirmation, revert and stream handling.
 - `src/app/features/run-detail/timeline.ts` — dedupe keys and one-line details for the event timeline.
 - `src/app/features/run-detail/timeline.spec.ts` — key precedence, detail rendering and page merging.
-- `src/app/features/runs-list/runs.page.ts` — runs placeholder.
+- `src/app/features/runs-list/runs.page.ts` — the runs list with state filters and status chips.
+- `src/app/features/runs-list/runs.page.spec.ts` — the filter, the chips, the empty state and dictionary completeness.
+- `src/app/features/runs-list/runs.store.ts` — the paged runs list, the state filter and the run stream frames.
+- `src/app/features/runs-list/runs.store.spec.ts` — load, filter, more and the stream frames.
+- `src/app/features/runs-list/i18n.ts` — the runs list dictionary in `en` and `es`.
+- `src/app/features/settings/settings.page.ts` — profile, time zone, notifications, providers, danger zone and about, with explicit `unavailable` blocks.
+- `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, every section, the preference toggle and dictionary completeness.
+- `src/app/features/settings/settings.api.ts` — `/v1/me`, version, settings, providers, brake, cache wipe, devices and notification preferences; a missing route is not an error.
+- `src/app/features/settings/settings.api.spec.ts` — every URL, 404-as-absent, the 403 scope refusal and boundary parsing.
+- `src/app/features/settings/settings.store.ts` — five independent reads, the time zone, the brake, the cache wipe and optimistic preference toggles.
+- `src/app/features/settings/settings.store.spec.ts` — independent reads, a 404 per resource, optimistic toggles and their rollbacks.
 - `src/app/features/settings/devices.page.ts` — paired devices, current-device marker and a confirmed revoke per row.
 - `src/app/features/settings/devices.page.spec.ts` — empty state, current-device row, confirm-then-revoke and the error block.
 - `src/app/features/settings/devices.store.ts` — paired devices, the calling device and revoke (with logout of the calling device).
 - `src/app/features/settings/devices.store.spec.ts` — load, revoke another device and revoke the calling one down to an empty secure store.
 - `src/app/features/settings/i18n.ts` — the settings and devices dictionary in `en` and `es`.
-- `src/app/features/settings/settings.api.ts` — `/v1/me`, version, settings, providers, brake, cache wipe, devices and notification preferences; a missing route is not an error.
-- `src/app/features/settings/settings.api.spec.ts` — every URL, 404-as-absent, the 403 scope refusal and boundary parsing.
-- `src/app/features/settings/settings.page.ts` — profile, time zone, notifications, providers, danger zone and about, with explicit `unavailable` blocks.
-- `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, every section, the preference toggle and dictionary completeness.
-- `src/app/features/settings/settings.store.ts` — five independent reads, the time zone, the brake, the cache wipe and optimistic preference toggles.
-- `src/app/features/settings/settings.store.spec.ts` — independent reads, a 404 per resource, optimistic toggles and their rollbacks.
