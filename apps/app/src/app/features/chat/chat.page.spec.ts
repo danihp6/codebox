@@ -7,12 +7,22 @@ import { signal } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { Approval, ChatMessage, ChatSession, Page, ReminderRoutine, SseStreamEvent } from '@codebox/contracts';
+import type {
+  Approval,
+  ChatMessage,
+  ChatSession,
+  Page,
+  ReminderRoutine,
+  Repo,
+  Run,
+  SseStreamEvent,
+} from '@codebox/contracts';
 import { provideIonicAngular } from '@ionic/angular';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SECURE_STORE } from '../../core/auth/secure-store';
 import type { SecureStore } from '../../core/auth/secure-store';
 import { SseService } from '../../core/events/sse.service';
+import { ChatRunLink } from './chat-store';
 import { ChatPage } from './chat.page';
 import { STRINGS, translate } from './i18n';
 import type { Locale } from './i18n';
@@ -21,6 +31,8 @@ const TS = '2026-10-24T18:04:02Z';
 const CHAT = 'chat_01JABCDEFGHJKMNPQRSV';
 const REPO = 'repo_01JABCDEFGHJKMNPQRSV';
 const APPROVAL = 'apv_01JABCDEFGHJKMNPQRSV';
+const RUN_ID = 'run_01JABCDEFGHJKMNPQRSV';
+const PR_URL = 'https://github.com/o/r/pull/42';
 
 const SESSION: ChatSession = {
   id: CHAT,
@@ -47,8 +59,41 @@ const APPROVAL_BODY: Approval = {
 
 const SESSION_URL = `/v1/chat/sessions/${CHAT}`;
 const MESSAGES_URL = `${SESSION_URL}/messages`;
+const INTERRUPT_URL = `${SESSION_URL}/interrupt`;
+const PROMOTE_URL = `${SESSION_URL}/promote`;
 const REPLY_URL = `/v1/approvals/${APPROVAL}/reply`;
 const ROUTINES_URL = '/v1/routines?limit=10';
+const REPOS_URL = '/v1/repos?limit=200';
+const RUN_URL = `/v1/runs/${RUN_ID}`;
+
+const RUN: Run = {
+  id: RUN_ID,
+  repoId: REPO,
+  jobId: null,
+  state: 'pr_open',
+  trigger: 'promote',
+  branch: 'cb/run-x',
+  baseRef: 'main',
+  pr: { number: 42, url: PR_URL, mergeable: true },
+  gate: { status: 'passed', exitCode: 0, durationMs: 900 },
+  guardrails: [],
+  blockers: [],
+  diff: null,
+  cost: { usd: 0, tokensIn: 0, tokensOut: 0 },
+  createdAt: TS,
+  finishedAt: null,
+};
+
+const REPO_ROW: Repo = {
+  id: REPO,
+  slug: 'acme/widgets',
+  defaultBranch: 'main',
+  gate: 'npm test',
+  policy: 'auto',
+  protectedPaths: ['.github/**'],
+  enabled: true,
+  createdAt: TS,
+};
 
 const REMINDER: ReminderRoutine = {
   id: 'rtn_01JABCDEFGHJKMNPQRSV',
@@ -113,7 +158,7 @@ interface Mounted {
   readonly http: HttpTestingController;
 }
 
-async function mount(messages: Page<ChatMessage> = page()): Promise<Mounted> {
+async function mount(messages: Page<ChatMessage> = page(), run?: Run): Promise<Mounted> {
   const sse = signal<SseStreamEvent | null>(null);
   TestBed.configureTestingModule({
     providers: [
@@ -125,6 +170,7 @@ async function mount(messages: Page<ChatMessage> = page()): Promise<Mounted> {
       { provide: SseService, useValue: { event: sse } },
     ],
   });
+  if (run !== undefined) TestBed.inject(ChatRunLink).remember(CHAT, run.id);
   const fixture = TestBed.createComponent(ChatPage);
   fixture.componentRef.setInput('id', CHAT);
   await fixture.whenStable();
@@ -132,6 +178,9 @@ async function mount(messages: Page<ChatMessage> = page()): Promise<Mounted> {
   const http = TestBed.inject(HttpTestingController);
   http.expectOne(SESSION_URL).flush(SESSION);
   http.expectOne((request) => request.url === MESSAGES_URL).flush(messages);
+  if (run !== undefined) {
+    http.expectOne(RUN_URL).flush(run);
+  }
   await fixture.whenStable();
 
   return { fixture, element: fixture.nativeElement as HTMLElement, sse, http };
@@ -241,6 +290,106 @@ describe('ChatPage', () => {
     expect(card?.textContent).toContain('exit 0');
   });
 
+  it('renders the gate and PR cards from the run object and never from prose', async () => {
+    const prose = await mount(
+      page(
+        message(
+          'msg_01JABCDEFGHJKMNPQRSV',
+          'assistant',
+          'Gate passed. Pull request #99 opened.',
+          TS,
+        ),
+      ),
+    );
+    expect(prose.element.querySelectorAll('[data-testid="chat-system"]')).toHaveLength(0);
+    expect(hook(prose.element, 'chat-message')?.textContent).toContain('Pull request #99');
+    TestBed.resetTestingModule();
+
+    const { element } = await mount(
+      page(message('msg_01JABCDEFGHJKMNPQRSV', 'assistant', 'done', TS)),
+      RUN,
+    );
+    const cards = element.querySelectorAll<HTMLElement>('[data-testid="chat-system"]');
+    expect(cards).toHaveLength(2);
+
+    const gate = cards[0];
+    expect(gate?.getAttribute('data-kind')).toBe('gate');
+    expect(gate?.getAttribute('data-role')).toBe('system');
+    expect(gate?.getAttribute('data-run-id')).toBe(RUN_ID);
+    expect(gate?.getAttribute('data-status')).toBe('passed');
+    expect(gate?.querySelector('[data-testid="chat-system-link"]')).toBeNull();
+
+    const pr = cards[1];
+    expect(pr?.getAttribute('data-kind')).toBe('pr');
+    expect(pr?.getAttribute('data-status')).toBe('open');
+    expect(pr?.getAttribute('data-run-id')).toBe(RUN_ID);
+    expect(
+      pr
+        ?.querySelector<HTMLAnchorElement>('[data-testid="chat-system-link"]')
+        ?.getAttribute('href'),
+    ).toBe(PR_URL);
+  });
+
+  it('updates the gate card from a live frame without reading the run again', async () => {
+    const { fixture, element, sse, http } = await mount(
+      page(message('msg_01JABCDEFGHJKMNPQRSV', 'assistant', 'done', TS)),
+      RUN,
+    );
+
+    expect(hook(element, 'chat-system')?.getAttribute('data-status')).toBe('passed');
+
+    sse.set({
+      event: 'run.gate',
+      data: {
+        runId: RUN_ID,
+        seq: 4,
+        ts: TS,
+        gate: { status: 'failed', exitCode: 1, durationMs: 1200 },
+      },
+    });
+    await fixture.whenStable();
+
+    expect(hook(element, 'chat-system')?.getAttribute('data-status')).toBe('failed');
+    http.expectNone(RUN_URL);
+  });
+
+  it('stops the agent once when the stop button is pressed', async () => {
+    const { fixture, element, sse, http } = await mount();
+
+    sse.set(delta(1, 'working'));
+    await fixture.whenStable();
+
+    button(element, 'composer-stop')?.click();
+    const request = http.expectOne({ method: 'POST', url: INTERRUPT_URL });
+    expect(request.request.body).toBeNull();
+    request.flush({ ...SESSION, status: 'idle' });
+    await fixture.whenStable();
+
+    http.expectNone(INTERRUPT_URL);
+  });
+
+  it('confirms the repository, base branch and prompt before promoting', async () => {
+    const { fixture, element, http } = await mount(
+      page(message('msg_01JABCDEFGHJKMNPQRSV', 'assistant', 'fix the failing gate', TS)),
+    );
+
+    button(element, 'chat-promote')?.click();
+    await fixture.whenStable();
+    http.expectOne(REPOS_URL).flush({ data: [REPO_ROW], nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'chat-promote-confirm')).not.toBeNull();
+    expect(hook(element, 'promote-repo')?.textContent?.trim()).toBe('acme/widgets');
+    expect(hook(element, 'promote-base')?.textContent?.trim()).toBe('main');
+    expect(hook(element, 'promote-prompt')?.textContent?.trim()).toBe('fix the failing gate');
+
+    button(element, 'promote-cancel')?.click();
+    await fixture.whenStable();
+
+    expect(hook(element, 'chat-promote-confirm')).toBeNull();
+    http.expectNone({ method: 'POST', url: PROMOTE_URL });
+  });
+
   it('renders the error block with its code when the session cannot be read', async () => {
     const sse = signal<SseStreamEvent | null>(null);
     TestBed.configureTestingModule({
@@ -340,6 +489,29 @@ describe('ChatPage', () => {
     for (const key of routineKeys) {
       expect(STRINGS.en[key], `en ${key}`).toBeTruthy();
       expect(STRINGS.es[key], `es ${key}`).toBeTruthy();
+    }
+
+    const systemKeys = [
+      'chat.system.label',
+      'chat.system.gate',
+      'chat.system.pr',
+      'chat.system.gate.passed',
+      'chat.system.gate.failed',
+      'chat.system.gate.skipped',
+      'chat.system.pr.open',
+      'chat.system.pr.merged',
+      'chat.promote.title',
+      'chat.promote.repo',
+      'chat.promote.base',
+      'chat.promote.prompt',
+      'chat.promote.confirm',
+      'chat.promote.cancel',
+      'chat.promote.loading',
+    ];
+    for (const locale of ['en', 'es'] as const satisfies readonly Locale[]) {
+      for (const key of systemKeys) {
+        expect(translate(locale, key), `${locale} ${key}`).not.toBe(key);
+      }
     }
   });
 

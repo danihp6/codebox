@@ -1,4 +1,11 @@
-import type { ChatMessage, Page, PromptRoutine, ReminderRoutine, SseStreamEvent } from '@codebox/contracts';
+import type {
+  ChatMessage,
+  Page,
+  PromptRoutine,
+  ReminderRoutine,
+  Run,
+  SseStreamEvent,
+} from '@codebox/contracts';
 import { describe, expect, it } from 'vitest';
 import {
   EMPTY_CHAT,
@@ -9,7 +16,9 @@ import {
   markPermissionAnswered,
   mergeMessages,
   pickCreatedRoutine,
+  systemCardsOf,
   withRoutineCard,
+  withRunCards,
 } from './chat-stream';
 import type { ChatStreamState } from './chat-stream';
 
@@ -372,5 +381,109 @@ describe('EMPTY_CHAT', () => {
 
     expect(state.routines).toEqual([]);
     expect(state.routineMessageIds).toEqual([]);
+    expect(state.system).toEqual([]);
+  });
+});
+
+const RUN_ID = 'run_01JABCDEFGHJKMNPQRSV';
+const PR_URL = 'https://github.com/o/r/pull/42';
+
+function runFixture(overrides: Partial<Run> = {}): Run {
+  return {
+    id: RUN_ID,
+    repoId: REPO,
+    jobId: null,
+    state: 'pr_open',
+    trigger: 'promote',
+    branch: 'cb/run-x',
+    baseRef: 'main',
+    pr: { number: 42, url: PR_URL, mergeable: true },
+    gate: { status: 'failed', exitCode: 2, durationMs: 1400 },
+    guardrails: [],
+    blockers: [],
+    diff: null,
+    cost: { usd: 0, tokensIn: 0, tokensOut: 0 },
+    createdAt: TS,
+    finishedAt: null,
+    ...overrides,
+  };
+}
+
+describe('systemCardsOf', () => {
+  it('builds the gate card then the PR card from the run object', () => {
+    expect(systemCardsOf(runFixture())).toEqual([
+      {
+        key: `gate:${RUN_ID}`,
+        kind: 'gate',
+        runId: RUN_ID,
+        status: 'failed',
+        detail: 'exit 2 · 1400 ms',
+        href: null,
+      },
+      {
+        key: `pr:${RUN_ID}`,
+        kind: 'pr',
+        runId: RUN_ID,
+        status: 'open',
+        detail: '#42',
+        href: PR_URL,
+      },
+    ]);
+  });
+
+  it('marks the PR merged once the run succeeded', () => {
+    const cards = systemCardsOf(runFixture({ state: 'succeeded' }));
+
+    expect(cards.map((card) => card.status)).toEqual(['failed', 'merged']);
+  });
+
+  it('returns no card for a run with neither a gate nor a PR', () => {
+    expect(systemCardsOf(runFixture({ gate: null, pr: null }))).toEqual([]);
+  });
+});
+
+describe('withRunCards', () => {
+  it('replaces the cards of one run and is idempotent', () => {
+    const run = runFixture();
+    const once = withRunCards(EMPTY_CHAT, run);
+
+    expect(once.system.map((card) => card.key)).toEqual([`gate:${RUN_ID}`, `pr:${RUN_ID}`]);
+
+    const twice = withRunCards(once, run);
+    expect(withRunCards(twice, run)).toBe(twice);
+  });
+
+  it('leaves the state alone for a run with no cards', () => {
+    const state: ChatStreamState = EMPTY_CHAT;
+    expect(withRunCards(state, runFixture({ gate: null, pr: null }))).toBe(state);
+  });
+});
+
+describe('replayed frame batch', () => {
+  it('leaves the thread identical when the same four frames arrive twice', () => {
+    const persisted = message('msg_01JABCDEFGHJKMNPQRSV', 'assistant', 'Hello', TS);
+    const batch: readonly SseStreamEvent[] = [
+      delta(1, 'Hel'),
+      delta(2, 'lo'),
+      messageEvent(persisted, 3),
+      {
+        event: 'chat.tool',
+        data: { chatId: CHAT, seq: 3, tool: 'bash', status: 'ok', detail: 'exit 0', ts: TS },
+      },
+    ];
+
+    let first = EMPTY_CHAT;
+    for (const frame of batch) first = applyChatEvent(first, CHAT, frame);
+
+    let replayed = first;
+    for (const frame of batch) replayed = applyChatEvent(replayed, CHAT, frame);
+
+    expect(replayed).toBe(first);
+
+    const assistants = first.messages.filter((item) => item.role === 'assistant');
+    expect(assistants).toHaveLength(1);
+    expect(assistants[0]?.text).toBe('Hello');
+    expect(first.tools).toHaveLength(1);
+    expect(first.tools[0]?.key).toBe('tool:3');
   });
 });

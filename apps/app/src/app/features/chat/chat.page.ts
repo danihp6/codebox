@@ -14,7 +14,7 @@ import { routineNextFire, routineSchedule } from '../jobs/routines-format';
 import { SseService } from '../../core/events/sse.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { isRoutineMessage } from './chat-stream';
-import type { ChatPermissionCard } from './chat-stream';
+import type { ChatPermissionCard, ChatSystemCard } from './chat-stream';
 import { ChatStore } from './chat.store';
 import { translate } from './i18n';
 import { parseMarkdown } from './markdown';
@@ -110,6 +110,21 @@ import type { MarkdownBlock } from './markdown';
         color: var(--cb-muted);
         font-size: 0.85rem;
       }
+      .cb-chat-system {
+        border-style: dashed;
+      }
+      .cb-chat-promote {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cb-space);
+        margin-block-start: calc(var(--cb-space) * 3);
+        padding: calc(var(--cb-space) * 2);
+        border: 1px solid var(--cb-accent);
+        border-radius: var(--cb-radius);
+      }
+      .cb-chat-promote p {
+        margin: 0;
+      }
     `,
   ],
   template: `
@@ -133,7 +148,7 @@ import type { MarkdownBlock } from './markdown';
           </div>
         }
 
-        @if (store.stream().messages.length === 0) {
+        @if (store.stream().messages.length === 0 && store.stream().system.length === 0) {
           <p data-testid="chat-message-empty">{{ t('chat.empty.messages') }}</p>
         } @else {
           <ol class="cb-chat-messages">
@@ -169,6 +184,36 @@ import type { MarkdownBlock } from './markdown';
                   <span data-testid="chat-routine-badge">{{ t('chat.routine.badge') }}</span>
                   <a routerLink="/jobs" data-testid="chat-routine-link">
                     {{ t('chat.routine.list') }}
+                  </a>
+                }
+              </li>
+            }
+            @for (card of store.stream().system; track card.key) {
+              <li
+                class="cb-chat-message cb-chat-system"
+                data-testid="chat-system"
+                data-role="system"
+                [attr.data-key]="card.key"
+                [attr.data-kind]="card.kind"
+                [attr.data-run-id]="card.runId"
+                [attr.data-status]="card.status"
+              >
+                <span>{{ t('chat.system.label') }}</span>
+                @if (card.kind === 'gate') {
+                  <span>{{ t('chat.system.gate') }}</span>
+                } @else {
+                  <span>{{ t('chat.system.pr') }}</span>
+                }
+                <span>{{ statusLabel(card) }}</span>
+                <span class="cb-mono">{{ card.detail }}</span>
+                @if (card.href !== null) {
+                  <a
+                    data-testid="chat-system-link"
+                    [href]="card.href"
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {{ card.detail }}
                   </a>
                 }
               </li>
@@ -306,12 +351,43 @@ import type { MarkdownBlock } from './markdown';
               type="button"
               data-testid="chat-promote"
               [disabled]="store.busy() !== null"
-              (click)="store.promote()"
+              (click)="store.openPromote()"
             >
               {{ t('chat.action.promote') }}
             </button>
           }
         </div>
+
+        @if (store.promoting()) {
+          <div class="cb-chat-promote" data-testid="chat-promote-confirm">
+            <p>{{ t('chat.promote.title') }}</p>
+            @if (store.promoteTarget(); as target) {
+              <p>
+                <span>{{ t('chat.promote.repo') }}</span>
+                <span class="cb-mono" data-testid="promote-repo">{{ target.repoSlug }}</span>
+              </p>
+              <p>
+                <span>{{ t('chat.promote.base') }}</span>
+                <span class="cb-mono" data-testid="promote-base">{{ target.baseBranch }}</span>
+              </p>
+              <p>{{ t('chat.promote.prompt') }}</p>
+              <p data-testid="promote-prompt">{{ target.prompt }}</p>
+            } @else {
+              <p data-testid="promote-loading">{{ t('chat.promote.loading') }}</p>
+            }
+            <button
+              type="button"
+              data-testid="promote-confirm"
+              [disabled]="store.busy() !== null"
+              (click)="store.confirmPromote()"
+            >
+              {{ t('chat.promote.confirm') }}
+            </button>
+            <button type="button" data-testid="promote-cancel" (click)="store.cancelPromote()">
+              {{ t('chat.promote.cancel') }}
+            </button>
+          </div>
+        }
       </div>
     </ion-content>
   `,
@@ -339,6 +415,7 @@ export class ChatPage {
       const event = this.sse.event();
       if (event === null) return;
       untracked(() => {
+        if (this.store.applyRunEvent(event) === 'applied') return;
         if (this.store.applyStreamEvent(event) === 'refetch') this.store.reload();
       });
     });
@@ -346,6 +423,21 @@ export class ChatPage {
 
   blocks(text: string): readonly MarkdownBlock[] {
     return parseMarkdown(text);
+  }
+
+  statusLabel(card: ChatSystemCard): string {
+    switch (card.status) {
+      case 'passed':
+        return this.t('chat.system.gate.passed');
+      case 'failed':
+        return this.t('chat.system.gate.failed');
+      case 'skipped':
+        return this.t('chat.system.gate.skipped');
+      case 'open':
+        return this.t('chat.system.pr.open');
+      case 'merged':
+        return this.t('chat.system.pr.merged');
+    }
   }
 
   schedule(routine: Routine): string {

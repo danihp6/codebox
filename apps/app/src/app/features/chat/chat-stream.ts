@@ -1,4 +1,4 @@
-import type { ChatMessage, Page, Routine, SseStreamEvent } from '@codebox/contracts';
+import type { ChatMessage, Page, Routine, Run, SseStreamEvent } from '@codebox/contracts';
 
 export type ChatRole = 'user' | 'assistant' | 'system';
 
@@ -33,12 +33,22 @@ export interface ChatRoutineCard {
   readonly routine: Routine;
 }
 
+export interface ChatSystemCard {
+  readonly key: string;
+  readonly kind: 'gate' | 'pr';
+  readonly runId: string;
+  readonly status: 'passed' | 'failed' | 'skipped' | 'open' | 'merged';
+  readonly detail: string;
+  readonly href: string | null;
+}
+
 export interface ChatStreamState {
   readonly messages: readonly ChatStreamItem[];
   readonly tools: readonly ChatToolCard[];
   readonly permissions: readonly ChatPermissionCard[];
   readonly routines: readonly ChatRoutineCard[];
   readonly routineMessageIds: readonly string[];
+  readonly system: readonly ChatSystemCard[];
   readonly working: boolean;
   readonly lastSeq: number;
 }
@@ -49,9 +59,43 @@ export const EMPTY_CHAT: ChatStreamState = Object.freeze({
   permissions: Object.freeze([]),
   routines: Object.freeze([]),
   routineMessageIds: Object.freeze([]),
+  system: Object.freeze([]),
   working: false,
   lastSeq: 0,
 });
+
+/** Built from the `Run` object only: a gate or PR mentioned in prose never becomes a card. */
+export function systemCardsOf(run: Run): readonly ChatSystemCard[] {
+  const cards: ChatSystemCard[] = [];
+  if (run.gate !== null) {
+    cards.push({
+      key: `gate:${run.id}`,
+      kind: 'gate',
+      runId: run.id,
+      status: run.gate.status,
+      detail: `exit ${run.gate.exitCode} · ${run.gate.durationMs} ms`,
+      href: null,
+    });
+  }
+  if (run.pr !== null) {
+    cards.push({
+      key: `pr:${run.id}`,
+      kind: 'pr',
+      runId: run.id,
+      status: run.state === 'succeeded' ? 'merged' : 'open',
+      detail: `#${run.pr.number}`,
+      href: run.pr.url,
+    });
+  }
+  return cards;
+}
+
+export function withRunCards(state: ChatStreamState, run: Run): ChatStreamState {
+  const kept = state.system.filter((card) => card.runId !== run.id);
+  const system = [...kept, ...systemCardsOf(run)];
+  if (sameCards(state.system, system)) return state;
+  return { ...state, system };
+}
 
 export function applyChatEvent(
   state: ChatStreamState,
@@ -174,6 +218,44 @@ function toItem(message: ChatMessage): ChatStreamItem {
   };
 }
 
+function sameItem(left: ChatStreamItem | undefined, right: ChatStreamItem): boolean {
+  if (left === undefined) return false;
+  return (
+    left.key === right.key &&
+    left.role === right.role &&
+    left.text === right.text &&
+    left.messageId === right.messageId &&
+    left.createdAt === right.createdAt
+  );
+}
+
+function sameTool(left: ChatToolCard | undefined, right: ChatToolCard): boolean {
+  if (left === undefined) return false;
+  return (
+    left.key === right.key &&
+    left.tool === right.tool &&
+    left.status === right.status &&
+    left.detail === right.detail &&
+    left.seq === right.seq
+  );
+}
+
+function sameCards(left: readonly ChatSystemCard[], right: readonly ChatSystemCard[]): boolean {
+  if (left.length !== right.length) return false;
+  return left.every((card, position) => {
+    const other = right[position];
+    return (
+      other !== undefined &&
+      card.key === other.key &&
+      card.kind === other.kind &&
+      card.runId === other.runId &&
+      card.status === other.status &&
+      card.detail === other.detail &&
+      card.href === other.href
+    );
+  });
+}
+
 function appendDelta(
   state: ChatStreamState,
   chatId: string,
@@ -202,8 +284,14 @@ function upsertMessage(
   const item = toItem(message);
   const lastSeq = Math.max(state.lastSeq, seq);
 
-  if (state.messages.some((existing) => existing.key === key)) {
-    const messages = state.messages.map((existing) => (existing.key === key ? item : existing));
+  const existingAt = state.messages.findIndex((existing) => existing.key === key);
+  if (existingAt !== -1) {
+    if (sameItem(state.messages[existingAt], item)) {
+      return state.lastSeq === lastSeq ? state : { ...state, lastSeq };
+    }
+    const messages = state.messages.map((existing, position) =>
+      position === existingAt ? item : existing,
+    );
     return { ...state, messages, lastSeq };
   }
 
@@ -228,11 +316,18 @@ function upsertTool(
 ): ChatStreamState {
   const key = `tool:${seq}`;
   const card: ChatToolCard = { key, tool, status, detail, seq };
-  const present = state.tools.some((existing) => existing.key === key);
-  const tools = present
-    ? state.tools.map((existing) => (existing.key === key ? card : existing))
-    : [...state.tools, card];
-  return { ...state, tools, lastSeq: Math.max(state.lastSeq, seq) };
+  const lastSeq = Math.max(state.lastSeq, seq);
+  const existingAt = state.tools.findIndex((existing) => existing.key === key);
+  if (existingAt !== -1) {
+    if (sameTool(state.tools[existingAt], card)) {
+      return state.lastSeq === lastSeq ? state : { ...state, lastSeq };
+    }
+    const tools = state.tools.map((existing, position) =>
+      position === existingAt ? card : existing,
+    );
+    return { ...state, tools, lastSeq };
+  }
+  return { ...state, tools: [...state.tools, card], lastSeq };
 }
 
 function upsertPermission(

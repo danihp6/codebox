@@ -70,14 +70,16 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/chat/chat-list.page.spec.ts` — the chips, the filter order, both signals, the search, the error and the empty states.
 - `src/app/features/chat/chat-list.store.ts` — the session page, the per-device read markers, the client-side filters, start-chat and the list stream frames.
 - `src/app/features/chat/chat-list.store.spec.ts` — the two reads, the row helpers, the read markers, the filters, create and the stream frames.
-- `src/app/features/chat/chat.page.ts` — chat detail: streaming messages, tool and permission cards, promote, the routine confirmation card and the `routine` badge.
-- `src/app/features/chat/chat.page.spec.ts` — streaming hooks, the permission reply, promote and dictionary completeness.
+- `src/app/features/chat/chat.page.ts` — chat detail: streaming messages, tool and permission cards, the system gate/PR cards, the promote confirmation and the routine badge.
+- `src/app/features/chat/chat.page.spec.ts` — streaming hooks, the permission reply, the system cards, the promote confirmation, stop and dictionary completeness.
 - `src/app/features/chat/chat.api.ts` — sessions, send, interrupt, promote, approval reply and the repo list.
 - `src/app/features/chat/chat.api.spec.ts` — every chat URL and method, the approval reply and the boundary parse failure.
-- `src/app/features/chat/chat.store.ts` — one session's state: load, draft, send, interrupt, promote, approval reply and the refetch hook.
-- `src/app/features/chat/chat.store.spec.ts` — load, send, interrupt, promote, the approval reply and the stream frames.
-- `src/app/features/chat/chat-stream.ts` — the pure stream state: message merge, tool/permission/routine cards and event application.
-- `src/app/features/chat/chat-stream.spec.ts` — ordered deltas, dedupe by `(messageId, seq)`, the cards and the routine window.
+- `src/app/features/chat/chat.store.ts` — one session's state: load, draft, send, interrupt, promote confirmation, the run link and its gate/PR cards.
+- `src/app/features/chat/chat.store.spec.ts` — load, send, interrupt, the promote flow, the run frames and the stream frames.
+- `src/app/features/chat/chat-store.ts` — the session-scoped chat-to-run link, in memory only.
+- `src/app/features/chat/chat-store.spec.ts` — remember, read, forget and clear of the chat-to-run link.
+- `src/app/features/chat/chat-stream.ts` — the pure stream state: message merge, tool/permission/routine/system cards and event application.
+- `src/app/features/chat/chat-stream.spec.ts` — ordered deltas, replay identity, the cards from run state and the routine window.
 - `src/app/features/chat/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/chat/markdown.spec.ts` — fences, lists and unclosed markup.
 - `src/app/features/chat/i18n.ts` — the chat dictionary in `en` and `es`.
