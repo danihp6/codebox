@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-27 (Task-55, the three-tab shell and the router)
+
+- D47's shell has exactly three tabs — Dashboard, Chat and Settings — from one `SHELL_TABS`
+  list in `app.routes.ts`; `tabs.page.ts` renders from that list and a fourth tab cannot appear
+  in one place without the other.
+- The router's 16 paths are frozen and every one but `/pair` carries the single `authGuard`;
+  `chat/:id` keeps the Chat tab highlighted, and a cold deep link restores the session through
+  `provideAppInitializer(restoreSession)` before the first navigation.
+- The shared dictionaries drop the dead `tabs.jobs`/`tabs.runs` keys with EN/ES parity, and the
+  app suite grows from 380 to 386 tests.
+- `[live]` — no screen scrolls horizontally at 320 px — needs a browser; it is recorded as
+  `[?]`, never as passing.
+
 ### Added — 2026-10-27 (Task-53, one recurring object: the schedule)
 
 - `@codebox/contracts` gains `Schedule` and `ScheduleDetail` — `mode` (`once`/`every`/`window`),

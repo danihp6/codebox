@@ -5,8 +5,6 @@
   "tabs": {
     "dashboard": "Dashboard",
     "chat": "Chat",
-    "jobs": "Jobs",
-    "runs": "Runs",
     "settings": "Settings"
   },
   "pair": {

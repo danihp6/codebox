@@ -842,7 +842,7 @@ every other task owns one feature folder, and the two shared components are name
 All of them read the Batch 16 types and none of them invents a shape: a screen that needs a
 field the contract lacks is a Task-51 amendment, not a local type.
 
-- [ ] **[Task-55]** Shell, three tabs and the router (D47). `app.routes.ts` gains the three tab
+- [x] **[Task-55]** Shell, three tabs and the router (D47). `app.routes.ts` gains the three tab
       roots plus the pushed screens; `tabs.page.ts` renders `Dashboard · Chat · Settings`;
       `app.config.ts` wires the guard. *Paths:* `apps/app/src/app/shell/**`,
       `apps/app/src/app/app.routes.ts`, `apps/app/src/app/app.config.ts`. *Dependencies:*
