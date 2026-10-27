@@ -52,7 +52,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 12 | Durable backups and concurrency three | 43–44 | 2 |
 | 13 | Host-neutral docs and ADRs | 45 | 1 |
 | 14 | Measured AWS spot bring-up | 46 | 1 |
-| 15 | Agent pipeline hygiene | 48 | 1 |
+| 15 | Agent pipeline hygiene | 48–49 | 2 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -63,12 +63,13 @@ their internal order behind it. Nothing is dropped, only displaced.
 **Cut — cycle after Task-46 (one of four slots used).** The queue is empty for cause, not for
 lack of planning: Task-26 and Task-29 are `[!]` on the `workflows` permission (issue #11), and
 Task-30 waits for Task-29, Task-31 for Task-26/28/30 and Task-32 for Task-31, so the whole
-remaining chain hangs on #11 plus the human `[live]` measurements. Task-48 (Batch 15) is the
-only eligible task and is path-disjoint from every blocked branch. **Hot-file holders in this
-cut:** none; Task-48 owns `scripts/agent/**` and `docs/agent-ci.md`, and `package.json`,
-`package-lock.json`, `tsconfig.base.json`, `packages/contracts/src/index.ts`,
-`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
-`opencode.json`, `TODO.md` and `CHANGELOG.md` are held by no task.
+remaining chain hangs on #11 plus the human `[live]` measurements. Task-48 and Task-49
+(Batch 15) are the only eligible tasks and are path-disjoint from every blocked branch.
+**Hot-file holders in this cut:** Task-49 holds `package.json`; Task-48 owns `scripts/agent/**`
+and `docs/agent-ci.md`. `package-lock.json`, `tsconfig.base.json`,
+`packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md` and
+`CHANGELOG.md` are held by no task.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -710,9 +711,10 @@ is asked to hold three repositories at once.
 
 ## Batch 15 — Agent pipeline hygiene
 
-One bug in the loop that writes the loop's own work orders. It is a one-task batch because it
-is the only task left outside the blocked chain; it shares no path with Batch 1 (Task-02 is
-blocked on its `[live]` criterion and does not touch these files again).
+Two gaps in the harness that the 2026-10-26 cycles exposed: the loop can duplicate its own work
+orders, and the app unit suite is not in the gate. Both are path-disjoint, so they run together;
+they share no path with Batch 1 (Task-02 is blocked on its `[live]` criterion and does not touch
+these files again).
 
 - [ ] **[Task-48]** Issue dedupe. The cycle of 2026-10-26 opened #22 and #23 with the same
       batch, the same body and one minute apart, doubling the measurement backlog; a retry of
@@ -727,6 +729,19 @@ blocked on its `[live]` criterion and does not touch these files again).
       issue; `[unit]` the prompt, the role file and `docs/agent-ci.md` point at the helper
       instead of a bare `gh issue create`; `[live]` a cycle that finishes two batches leaves
       two issues, and re-running the same batch leaves the count unchanged.
+
+- [ ] **[Task-49]** The app unit suite is outside the gate. Root `npm test` runs the Vitest
+      projects in `vitest.config.ts`; `apps/app` is not one of them, and neither the CI job nor
+      `npm run build` invokes `ng test`, so 364 app specs never run on a PR. Make the documented
+      gate run the app suite exactly once — the root `test` script is the natural place, so
+      `npm test` means the same thing in CI and on a laptop — and add the guard that keeps a
+      workspace with a `test` script from silently falling out of the gate again. *Paths:*
+      `package.json` (the `test` script), `.github/workflows/ci.yml`, `docs/agent-pipeline.md`
+      (gate table), `AGENTS.md` (Workflow section). *Dependencies:* none. *Acceptance:*
+      `[unit]` a fresh `npm ci && npm test` runs the app suite and fails when one app spec is
+      deliberately broken; `[unit]` a workspace whose `test` script is not covered fails the
+      guard; `[live]` a PR's CI log shows the app suite and the job stays under the documented
+      time budget.
 
 ---
 
