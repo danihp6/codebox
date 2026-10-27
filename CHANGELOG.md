@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-67, About)
+
+- `/about` is a real screen: version, commit, build time and Node from `GET /v1/version`, the
+  server's health rows from `GET /v1/health`, and the licences the shipped `NOTICE` holds. No
+  value is a literal in the template; the page renders what the parsed responses carry.
+- `notice.ts` ships the repository `NOTICE` verbatim and parses it into one record per package,
+  split at the last `@` so a scoped name keeps its scope, and a spec fails when the constant and
+  the repository file drift apart.
+- Every row has a data attribute for the value it shows, so the `[live]` measurement can compare
+  the screen with `curl -s /v1/health` instead of reading pixels.
+- `[live]` — the rendered health rows matching `GET /v1/health` on the box — needs the daemon and
+  a browser; it is recorded as `[?]`, never as passing (issue #51). The app still has no
+  compile-time build identity (that needs a define in `apps/app/angular.json`), so the screen
+  reports the daemon's build identity.
+
 ### Added — 2026-10-27 (Task-65, dashboard and first run)
 
 - `/dashboard` is the five blocks the design signs off: `Needs you`, working, ready for review,

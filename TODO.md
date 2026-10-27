@@ -79,6 +79,17 @@ legal candidate: every other open task is blocked on an unmerged dependency (56,
 on Task-52; 30, 31, 32 on Task-29/Task-26; 68 on 51–67), blocked outright (02, 26, 29), or an app
 task that would collide on `apps/app/README.md` and `app.routes.ts` with Task-62 (61, 63, 64, 67)
 — one app task per batch, because `readme.spec.ts` makes every app task a writer of that README.
+**Cut — cycle after Task-56/Task-54 (four of four slots used).** No task branch was alive, so
+the lowest open work was Batch 17, and all four slots were filled with tasks whose dependencies
+are merged: Task-57, Task-64, Task-65 and Task-67. Their paths are disjoint except
+`apps/app/README.md`, which `readme.spec.ts` forces every app task to write; it was claimed by
+section — each task owned only the lines of its own feature folder — and the four merged without
+a conflict. No hot file was claimed. Nothing else was legal: 59, 60 and 61 would collide with
+57 on the `features/chat/` README block, 63 would collide with 64 on `features/settings/`, 68
+waits on 51–67, and 30, 31 and 32 wait on the blocked Task-29/Task-26. Four deviations are
+recorded in the measurement issues #48–#51: no durable chat→run link (57), no
+`/settings/notifications` route in the frozen router (64), two `Needs you` sources absent from
+the contracts (65), and no compile-time build identity (67).
 **Hot-file holders in this cut:** Task-62 holds `apps/app/src/app/app.routes.ts`. No task holds
 `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
 `apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`,
@@ -925,7 +936,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       *Dependencies:* Task-51. *Acceptance:* `[unit]` a 401 clears the session and routes to
       `/pair` with the reason; `[unit]` an offline tap fails loudly instead of queueing;
       `[live]` the banner disappears on the first successful refetch.
-- [ ] **[Task-67]** About. Version, commit and build time injected at build, server health and
+- [x] **[Task-67]** About. Version, commit and build time injected at build, server health and
       the licences row. *Paths:* `features/about/**`. *Dependencies:* none. *Acceptance:*
       `[unit]` version and commit come from the build, never from a literal; `[live]` the health
       rows match `GET /v1/health`.
