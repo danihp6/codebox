@@ -10,7 +10,7 @@ stderr as `codebox: <message>`.
 | File | What it is |
 | --- | --- |
 | `lib.sh` | Shared helpers: `ROOT`, `die`, `log`, `rooted`, `need`, `need_bin`, `usage`. Sourced, never executed. |
-| `cloud-init.sh` | First boot: hostname, the secret bundles (the host file first, OCI Vault otherwise), `/etc/codebox/instance.env`, the tunnel config, the first-boot journal line. |
+| `cloud-init.sh` | First boot: hostname, the secret bundles (the host file first, OCI Vault otherwise), `/etc/codebox/instance.env`, `/etc/codebox/agent.env` with the model keys only, the tunnel config, the first-boot journal line. |
 | `install.sh` | Verifies an artifact, unpacks it under `/opt/codebox/releases/<version>`, moves `current`, restarts and rolls back when the daemon stays down. |
 | `upgrade.sh` | `install.sh` plus `--rollback` (swap the two symlinks) and `--prune` (keep the two newest releases). |
 | `backup.sh` | Consistent SQLite snapshot plus a redacted `instance.env` and a manifest, age-encrypted by default; `--verify` reads the newest local archive, `--upload` sends it to any S3-compatible target and `--fetch` reads one object back. |
@@ -18,7 +18,7 @@ stderr as `codebox: <message>`.
 | `spot-notice.sh` | Polls the two-minute spot interruption notice and runs one final `backup.sh --upload`, guarded by a marker and a lock so a retry never uploads twice. |
 | `keepalive.sh` | Two `/proc` samples a second apart, one JSON line appended to `/var/lib/codebox/logs/keepalive.jsonl`, then a bounded pass (`cb doctor`, `cb prune`, a loopback health probe) whose every step is optional. |
 | `systemd/codebox.service` | The daemon, `codebox` user, `instance.env` as its environment file. |
-| `systemd/codebox-opencode.service` | The OpenCode server on `127.0.0.1:4096`; no `[Install]`, because the daemon may own the child. |
+| `systemd/codebox-opencode.service` | The OpenCode server on `127.0.0.1:4096` as the `codebox-agent` user in `codebox-workspace`, with `/etc/codebox/agent.env`; no `[Install]`, because the daemon may own the child. |
 | `systemd/cloudflared.service` | The tunnel, outbound only. |
 | `systemd/codebox-backup.service` | The nightly backup job behind the timer. |
 | `systemd/codebox-backup.timer` | `OnCalendar=*-*-* 03:20:00`, `Persistent=true`. |
@@ -29,11 +29,11 @@ stderr as `codebox: <message>`.
 | `test/upgrade.test.mjs` | `--rollback` without a previous release, the swap, the second rollback, `--prune`. |
 | `test/backup.test.mjs` | Plaintext archive shape, redaction, manifest, `--verify` counts. |
 | `test/restore.test.mjs` | Overwrite refusal, restore into an empty root, corrupt archive. |
-| `test/cloud-init.test.mjs` | Two boots against one root: byte-identical files, two journal lines, eight Vault reads, plus the bundle-file source, `CB_INSTANCE_ID` and the IMDSv2 probe. |
-| `test/verify.test.mjs` | `90-verify.sh --only secrets` on a clean and on a leaky stub root. |
+| `test/cloud-init.test.mjs` | Two boots against one root: byte-identical files including `agent.env`, two journal lines, eight Vault reads, plus the bundle-file source, `CB_INSTANCE_ID`, the IMDSv2 probe and the provider-key validation. |
+| `test/verify.test.mjs` | `90-verify.sh --only secrets` and `--only isolation` on a clean and on a leaky stub root. |
 | `test/spot-notice.test.mjs` | No notice, one final backup for repeated notices, a failed backup with no marker, and the unit plus its image wiring. |
 | `test/keepalive.test.mjs` | The sample on a stub `/proc`, the three step outcomes, the loopback-only rule, the units and the image wiring. |
-| `test/systemd.test.mjs` | The sandbox block in the three long-running units, its position, the surviving directives and the absent `MemoryDenyWriteExecute`. |
+| `test/systemd.test.mjs` | The sandbox block and its umask in the three long-running units, its position, the surviving directives, the agent identity and the absent `MemoryDenyWriteExecute`. |
 | `README.md` | This map. |
 
 ## Commands
@@ -87,8 +87,16 @@ ambient capabilities, `LockPersonality`, `PrivateDevices`, `ProtectClock`,
 `ProtectKernelTunables`, `RemoveIPC`, `RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6`,
 `RestrictNamespaces`, `RestrictRealtime`, `RestrictSUIDSGID`,
 `SystemCallArchitectures=native`, `SystemCallFilter=@system-service` with
-`SystemCallErrorNumber=EPERM`, and `UMask=0027`. That block, not a container, is the agent's
-isolation boundary (`docs/security.md` §6).
+`SystemCallErrorNumber=EPERM`, and `UMask=0007` for the daemon and the agent so the worktrees
+they share stay group-writable. `cloudflared` keeps `UMask=0027`, because it writes nothing of
+ours.
+
+The agent unit is also the identity boundary (D45): it runs as `codebox-agent`, in group
+`codebox-workspace` and not in `codebox`, reads `/etc/codebox/agent.env` instead of
+`instance.env`, writes `/srv/codebox` and `/var/lib/codebox-agent` only, and therefore cannot
+read `/etc/codebox`, the state directory or the sealed credential store. That block, not a
+container, is the isolation boundary (`docs/security.md` §6), and the image's
+`90-verify.sh --only isolation` fails the bake when a mode or a unit directive drifts.
 
 `MemoryDenyWriteExecute=yes` must never be added to them: it removes the write-execute mapping
 V8's JIT needs and Node dies at boot. `test/systemd.test.mjs` fails if it appears. The two

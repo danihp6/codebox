@@ -12,16 +12,36 @@ staging=/tmp/codebox
 user=codebox
 home=/var/lib/codebox
 
+# The agent runs as its own user, in the group that owns the shared worktrees. It is never added
+# to `codebox`, so `/etc/codebox` and the state directory stay unreadable to it (D45).
+agent=codebox-agent
+agent_home=/var/lib/codebox-agent
+workspace_group=codebox-workspace
+
+if ! getent group "$workspace_group" >/dev/null 2>&1; then
+  log "creating $workspace_group"
+  groupadd --system "$workspace_group"
+fi
+
 if ! id -u "$user" >/dev/null 2>&1; then
   log "creating $user"
   useradd --system --home-dir "$home" --no-create-home --shell /usr/sbin/nologin "$user"
+fi
+usermod -aG "$workspace_group" "$user"
+
+if ! id -u "$agent" >/dev/null 2>&1; then
+  log "creating $agent"
+  useradd --system --gid "$workspace_group" --home-dir "$agent_home" --no-create-home \
+    --shell /usr/sbin/nologin "$agent"
 fi
 
 log "creating the directory skeleton"
 install -d -m 0750 -o root -g "$user" /etc/codebox /etc/cloudflared
 install -d -m 0750 -o "$user" -g "$user" "$home" \
   "$home/logs" "$home/events" "$home/artifacts" "$home/backups"
-install -d -m 0750 -o "$user" -g "$user" /srv/codebox /srv/codebox/repos /srv/codebox/worktrees
+install -d -m 0700 -o "$agent" -g "$workspace_group" "$agent_home"
+install -d -m 0750 -o "$user" -g "$workspace_group" /srv/codebox
+install -d -m 2770 -o "$user" -g "$workspace_group" /srv/codebox/repos /srv/codebox/worktrees
 install -d -m 0700 -o "$user" -g "$user" /var/tmp/codebox
 install -d -m 0755 /opt/codebox
 install -d -m 0750 /usr/local/lib/codebox

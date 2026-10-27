@@ -1,11 +1,11 @@
 # ops/image
 
 The Packer template that bakes the box: Ubuntu 24.04 arm64, Node 24, the CLI tools, `opencode`,
-`cloudflared`, the `codebox` user and the eight systemd units. One template, two builders —
-`oracle-oci` and `amazon-ebs` — and one set of provisioners, so the same commit bakes the same
-image on either host. No identity and no credential is baked: first boot reads OCI Vault through
-the instance principal (`ops/vm/cloud-init.sh`), and the AWS build authenticates with the
-ambient environment only.
+`cloudflared`, the `codebox` and `codebox-agent` users and the eight systemd units. One template,
+two builders — `oracle-oci` and `amazon-ebs` — and one set of provisioners, so the same commit
+bakes the same image on either host. No identity and no credential is baked: first boot reads OCI
+Vault through the instance principal (`ops/vm/cloud-init.sh`), and the AWS build authenticates
+with the ambient environment only.
 
 ## Files
 
@@ -20,9 +20,9 @@ ambient environment only.
 | `scripts/40-opencode.sh` | `opencode` at the pinned version, with a version check afterwards. |
 | `scripts/45-browser.sh` | Chromium and the system libraries Playwright needs, arm64, so the web gate runs inside the image. |
 | `scripts/50-cloudflared.sh` | `cloudflared` from Cloudflare's apt repository; no token anywhere. |
-| `scripts/60-service.sh` | The `codebox` user, the directory skeleton, the eight units, the host scripts, `/etc/codebox/image.json`. |
+| `scripts/60-service.sh` | The `codebox` and `codebox-agent` users, the `codebox-workspace` group, the directory skeleton with its modes, the eight units, the host scripts, `/etc/codebox/image.json`. |
 | `scripts/70-harden.sh` | Key-only SSH, fail2ban, security-only unattended upgrades, the sysctl baseline. |
-| `scripts/90-verify.sh` | The build gate: `runtime`, `tools`, `units`, `user`, `layout`, `secrets`, `image`. |
+| `scripts/90-verify.sh` | The build gate: `runtime`, `tools`, `units`, `user`, `layout`, `secrets`, `image`, `browser`, `isolation`. |
 | `test/template.test.mjs` | The template's variables, both sources, the shared build block, the discovered steps, `packer fmt` and `packer validate`. |
 | `test/cloud-init.test.mjs` | The user-data: cloud-config, one `runcmd`, no key, no password, no written file. |
 | `README.md` | This map. |

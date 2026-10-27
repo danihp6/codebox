@@ -2,8 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { ChatMessage, ChatSession } from '@codebox/contracts';
 import { parseSseEvent } from '@codebox/contracts';
-import type { SseEventName } from '@codebox/contracts';
-import { matchesGlob } from '@codebox/core';
+import { decidePermission, matchesGlob } from '@codebox/core';
 import {
   AgentError,
   CHAT_HANDOFF_TURNS,
@@ -18,7 +17,6 @@ import type {
   RawAgentEvent,
   SessionRef,
 } from '@codebox/opencode';
-import { redact } from '@codebox/security';
 import { withTransaction } from '@codebox/store';
 import type { ChatMessageOrigin, EventRecord, Store } from '@codebox/store';
 import {
@@ -30,13 +28,12 @@ import {
 import type { RepoRef, WorkspaceManager } from '@codebox/workspaces';
 import { eventNotifier } from '../events/notifier.js';
 import type { DaemonContext } from '../modules.js';
-import { mintApprovalId } from '../run/events.js';
+import { permissionPath } from '../run/engine.js';
 import { ChatError } from './errors.js';
 import { newChatId, newMessageId } from './ids.js';
 import { createRoutineToolServer } from './tools/index.js';
 import type { RoutineToolServer } from './tools/index.js';
 
-export const CHAT_POLL_MS = 500;
 export const MAX_TEXT_CHARS = 32_000;
 
 /** Free chats live under this dot-directory, which the workspace cleanup never lists. */
@@ -87,8 +84,6 @@ export interface ChatService {
   sendRoutine(input: SendRoutineInput): Promise<ChatMessage>;
   /** Joins the pump for one chat; resolves when the agent reports idle. Never throws. */
   pump(chatId: string): Promise<void>;
-  /** One pump step: reads pending approvals and delivers a reply. Public for tests. */
-  tick(): Promise<void>;
   /** Interrupts the agent, marks the session idle, appends `chat.idle`. */
   interrupt(chatId: string): Promise<ChatSession>;
   /** Creates the worktree and the OpenCode session for a stored chat row. */
@@ -97,7 +92,7 @@ export interface ChatService {
   bind(chatId: string, repoId: string): Promise<ChatSession>;
   /** Starts a new OpenCode session in the same directory and bumps the context epoch. */
   compact(chatId: string): Promise<ChatSession>;
-  /** Clears timers and stops every pump; idempotent. */
+  /** Aborts every turn and closes the tool server; idempotent. */
   stop(): void;
 }
 
@@ -122,8 +117,7 @@ export function chatRuntimeOf(service: ChatService): ChatRuntime {
   return runtime;
 }
 
-type ChatEventName =
-  'chat.message' | 'chat.delta' | 'chat.tool' | 'chat.permission' | 'chat.idle' | 'chat.compacted';
+type ChatEventName = 'chat.message' | 'chat.delta' | 'chat.tool' | 'chat.idle' | 'chat.compacted';
 
 type PermissionEvent = Extract<RawAgentEvent, { readonly type: 'permission.updated' }>;
 
@@ -138,11 +132,6 @@ type Step =
 interface Turn {
   readonly controller: AbortController;
   readonly promise: Promise<void>;
-}
-
-interface PermissionLink {
-  readonly chatId: string;
-  readonly permissionId: string;
 }
 
 function never(): Promise<never> {
@@ -160,13 +149,6 @@ function toRecord(value: object): Record<string, unknown> {
   const record: Record<string, unknown> = {};
   for (const [key, entry] of Object.entries(value)) record[key] = entry;
   return record;
-}
-
-/** The approval row keeps the tool input, so it is redacted before it is ever stored. */
-function redactedInput(input: Readonly<Record<string, unknown>>): Record<string, unknown> {
-  const value = redact(toRecord(input));
-  if (typeof value === 'object' && value !== null && !Array.isArray(value)) return toRecord(value);
-  return {};
 }
 
 function toolName(tool: string): string {
@@ -207,14 +189,12 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
 
   const turns = new Map<string, Turn>();
   const queues = new Map<string, string[]>();
-  const permissionLinks = new Map<string, PermissionLink>();
   // The merged `ChatRepository` exposes the contract `ChatSession` only, which carries neither
   // `opencode_session_id` nor `worktree`; both columns are still written on every prepare, and
   // this map is the live link to the OpenCode session of each chat. After a restart a chat is
   // prepared again in the same worktree, which is the durable half of the binding.
   const agentSessions = new Map<string, string>();
   const worktreeDirectories = new Map<string, string>();
-  let ticker: ReturnType<typeof setInterval> | null = null;
   let stopped = false;
 
   // Both clients are built on first use: registering the module opens no socket, and a test
@@ -310,22 +290,6 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     });
   }
 
-  function persistGlobalEvent(
-    event: SseEventName,
-    data: Record<string, unknown>,
-    ts: string,
-  ): EventRecord {
-    const parsed = parseSseEvent({ event, data });
-    return store.events.append({
-      runId: null,
-      chatId: null,
-      seq: null,
-      type: parsed.event,
-      data: toRecord(parsed.data),
-      ts,
-    });
-  }
-
   function appendMessage(chatId: string, text: string, origin: ChatMessageOrigin): ChatMessage {
     const ts = clock().toISOString();
     const message: ChatMessage = {
@@ -412,38 +376,47 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     notifier.notify();
   }
 
-  function recordPermission(chatId: string, raw: PermissionEvent): void {
-    const at = clock();
-    const ts = at.toISOString();
-    const approvalId = mintApprovalId();
+  /**
+   * A permission is answered inside the round that received it (D45): the policy decides, `allow`
+   * replies `once`, `ask` and `deny` reply `reject`, and nothing is written. The reply delays the
+   * round and never fails it, so a request the agent never hears about cannot stall the turn.
+   */
+  async function decideChatPermission(
+    chatId: string,
+    sessionId: string,
+    raw: PermissionEvent,
+  ): Promise<void> {
     const tool = toolName(raw.tool);
-    const title = raw.title.trim().length > 0 ? raw.title : tool;
-    const expiresAt = new Date(at.getTime() + config.CB_APPROVAL_TTL_SECONDS * 1_000).toISOString();
-    const input = redactedInput(raw.input);
-    withTransaction(store.db, () => {
-      store.approvals.create({
-        id: approvalId,
-        state: 'pending',
-        tool,
-        title,
-        runId: null,
-        chatId,
-        input,
-        createdAt: ts,
-        expiresAt,
-        resolvedAt: null,
-      });
-      const seq = store.events.nextSeq({ chatId });
-      persistChatEvent(chatId, 'chat.permission', seq, ts, { approvalId, tool, title });
-      persistGlobalEvent(
-        'approval.created',
-        { approvalId, runId: null, chatId, tool, title, expiresAt, ts },
-        ts,
+    const directory = worktreeDirectories.get(chatId);
+    const decision =
+      directory === undefined
+        ? 'deny'
+        : decidePermission({
+            tool: raw.tool,
+            mode: 'chat',
+            path: permissionPath(raw.input),
+            worktree: directory,
+          });
+    try {
+      await agent().replyPermission(
+        sessionId,
+        raw.permissionId,
+        decision === 'allow' ? 'once' : 'reject',
       );
-    });
-    permissionLinks.set(approvalId, { chatId, permissionId: raw.permissionId });
-    ensureTicker();
-    notifier.notify();
+    } catch (error) {
+      logger.warn({
+        msg: 'chat_permission_reply_failed',
+        chatId,
+        tool,
+        reason: error instanceof Error ? error.name : 'unknown',
+      });
+      return;
+    }
+    if (decision === 'ask') {
+      logger.warn({ msg: 'chat_permission_ask_rejected', chatId, tool });
+      return;
+    }
+    if (decision === 'deny') logger.info({ msg: 'chat_permission_denied', chatId, tool });
   }
 
   /** The last event of a round is always `chat.idle`; `docs/api.md` §5.6 has no failure event. */
@@ -553,7 +526,7 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
             break;
           }
           case 'permission.updated': {
-            recordPermission(chatId, raw);
+            await decideChatPermission(chatId, sessionId, raw);
             break;
           }
           case 'session.error': {
@@ -614,43 +587,6 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
       });
     turns.set(chatId, { controller, promise });
     return promise;
-  }
-
-  async function tick(): Promise<void> {
-    for (const [approvalId, link] of [...permissionLinks]) {
-      const approval = store.approvals.get(approvalId);
-      if (approval !== null && approval.state === 'pending') continue;
-      permissionLinks.delete(approvalId);
-      if (approval === null) continue;
-      const sessionId = agentSessions.get(link.chatId);
-      if (sessionId === undefined) continue;
-      const reply = approval.state === 'allowed' ? 'once' : 'reject';
-      try {
-        await agent().replyPermission(sessionId, link.permissionId, reply);
-        logger.info({ msg: 'chat_permission_replied', chatId: link.chatId, approvalId });
-      } catch (error) {
-        logger.warn({
-          msg: 'chat_permission_reply_failed',
-          chatId: link.chatId,
-          approvalId,
-          reason: error instanceof Error ? error.name : 'unknown',
-        });
-      }
-    }
-  }
-
-  function ensureTicker(): void {
-    if (ticker !== null || stopped) return;
-    const timer = setInterval(() => {
-      void tick().catch((error: unknown) => {
-        logger.error({
-          msg: 'chat_tick_failed',
-          reason: error instanceof Error ? error.name : 'unknown',
-        });
-      });
-    }, CHAT_POLL_MS);
-    timer.unref();
-    ticker = timer;
   }
 
   async function ensureWorktree(
@@ -896,14 +832,9 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
   function stop(): void {
     if (stopped) return;
     stopped = true;
-    if (ticker !== null) {
-      clearInterval(ticker);
-      ticker = null;
-    }
     for (const turn of [...turns.values()]) turn.controller.abort();
     turns.clear();
     queues.clear();
-    permissionLinks.clear();
     agentSessions.clear();
     worktreeDirectories.clear();
     try {
@@ -920,7 +851,6 @@ export function createChatService(options: CreateChatServiceOptions): ChatServic
     send,
     sendRoutine,
     pump: (chatId: string): Promise<void> => startTurn(chatId),
-    tick,
     interrupt,
     prepare,
     bind,

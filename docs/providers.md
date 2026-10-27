@@ -52,7 +52,9 @@ or baked into the VM image (D20).
 | `CB_TMP_DIR` | `/var/tmp/codebox` | Scratch space for the gate and archives. |
 
 The service user `codebox` owns `CB_STATE_DIR`, `CB_REPO_ROOT` and `CB_WORKSPACE_ROOT`; `/opt`
-is root-owned and read-only to `codebox`.
+is root-owned and read-only to `codebox`. The agent runs as its own user, `codebox-agent`, in
+group `codebox-workspace`, not in `codebox`: it shares the two `2770` worktree trees and reads
+nothing under `/etc/codebox` or the state directory.
 
 ## 4. Auth and devices
 
@@ -80,7 +82,7 @@ signed with this secret.
 | `CB_OPENCODE_HOSTNAME` | `127.0.0.1` | Passed to `opencode serve`. |
 | `CB_OPENCODE_PORT` | `4096` | Passed to `opencode serve`. |
 | `CB_OPENCODE_TOKEN` | — | Optional bearer if the server requires one. Never exposed to the app. |
-| `CB_OPENCODE_AUTO` | `true` | `--auto` for unattended runs; chat keeps interactive permissions. |
+| `CB_OPENCODE_AUTO` | `true` | `--auto` for unattended runs. No session sets it: every permission is answered from the policy, so nothing waits for an operator. |
 | `CB_DEFAULT_AGENT` | `build` | Agent name passed to new sessions. |
 | `CB_DEFAULT_MODEL` | — | Provider/model string from `GET /api/model`. |
 | `CB_MODEL_PROVIDER_KEYS` | — | Comma allowlist of provider key names passed from the daemon's env to OpenCode (e.g. `ANTHROPIC_API_KEY,OPENAI_API_KEY`). Everything else is dropped. |
@@ -266,7 +268,9 @@ CB_DAILY_COST_USD=0
 ```
 
 Production uses `/etc/codebox/instance.env` with mode `0600`, owned by `root:codebox`, and
-the values rendered from OCI Vault at boot:
+the values rendered from OCI Vault at boot. The agent has a second file,
+`/etc/codebox/agent.env` (`0640`, `root:codebox-workspace`), which carries only the model
+provider keys and no `CB_` line:
 
 ```ini
 [Service]
@@ -277,8 +281,12 @@ NoNewPrivileges=true
 ProtectSystem=strict
 ProtectHome=true
 PrivateTmp=true
+UMask=0007
 ReadWritePaths=/var/lib/codebox /srv/codebox
 ```
+
+The agent unit is the same block with `User=codebox-agent`, `Group=codebox-workspace`,
+`EnvironmentFile=/etc/codebox/agent.env` and `ReadWritePaths=/srv/codebox /var/lib/codebox-agent`.
 
 ## 15. Validation and failure
 

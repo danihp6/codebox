@@ -116,14 +116,14 @@ Rules:
 | session created / busy | `run.started`, `chat.idle` | State is derived, not forwarded. |
 | text delta | `run.output`, `chat.delta` | Chunked; the client appends in `seq` order. |
 | tool call start/end | `run.tool`, `chat.tool` | Name and status only; the tool input is never forwarded. |
-| permission asked | `run.permission`, `chat.permission` → `approval.created` | One approval row per request. |
+| permission asked | `run.permission` | Answered inline from the policy, in the round that received it; a chat request writes no event and no approval row. |
 | session idle | `run.finished` (after the gate) or `chat.idle` | Chat idle is not a run end. |
 | error / disconnect | `run.failed` with `agent_unavailable` | The worktree is kept for inspection. |
 | usage report | `telemetry` | Tokens and cost into the ledger. |
 
 The mapping is one-way. The daemon never re-sends a raw provider payload to the app, and a
-tool's input never leaves the approval row: the app links to the run for detail, and the same
-key list redacts it in the logs.
+tool's input never leaves the request that carried it: the app links to the run for detail, and
+the same key list redacts it in the logs.
 
 ## 5. The prompt envelope
 
@@ -163,9 +163,13 @@ Two policies (D27):
 | Chat | ask | ask | deny | deny |
 | Run | allow | allow | deny | deny |
 
-- A **chat** request becomes an approval card and waits for the operator (TTL 600 s).
-- A **run** request inside the policy is auto-allowed and logged as an event; anything
-  outside it is denied and logged, never pushed as a notification.
+- A **chat** request is decided inline from the same matrix, in the round that received it:
+  `allow` replies `once`, `ask` and `deny` reply `reject`, and nothing is written. Chat mode is
+  `ask` for edits and bash, so a chat reads, drafts and calls the routine tools; any change to a
+  repository is a run (D45).
+- A **run** request inside the policy is auto-allowed and logged as an event; anything outside
+  it is denied and logged, never pushed as a notification. An `ask` cannot be answered by a human
+  who is asleep, so it is rejected in place and the run keeps going.
 - The policy is data in `packages/core`, not scattered `if`s in the daemon.
 - A denial is `approval.resolved` with `decision: "deny"` and `reason: "policy"`; the agent
   receives a rejection and may adapt.
@@ -174,9 +178,12 @@ Two policies (D27):
   appears in a run's prompt; a schedule is created by a human conversation, not by an unattended
   agent, and the matrix denies `routine` in run mode even if a descriptor leaked.
 
-The job environment is an allowlist (`CB_MODEL_PROVIDER_KEYS` plus `PATH`, `HOME`, `LANG`
-and the git identity). GitHub credentials, the session secret, the Vault token and the
-tunnel token are never in a child's environment.
+The agent runs under systemd as `codebox-agent`, in group `codebox-workspace`, with
+`EnvironmentFile=/etc/codebox/agent.env`: the allowlist is the model provider keys that file
+carries, and no line of it starts with `CB_`. What the file does not hold, the agent does not
+get: GitHub credentials, the session secret, the Vault token and the tunnel token are never in a
+child's environment, its `HOME` is `/var/lib/codebox-agent`, and `/etc/codebox` is unreadable to
+that user.
 
 ## 7. Supervisor
 
@@ -218,7 +225,7 @@ it to the repository.
 | Stream drops, reconnect succeeds | none | Resume from `seq`; no duplicate output. |
 | Stream drops twice | `failed` / `stream_lost` | New run. |
 | Model refuses or errors early | `failed` / `model_error` | Read the message; adjust the prompt. |
-| Permission never answered | `failed` / `approval_expired` | Re-run or widen the policy. |
+| Policy ask | The request is rejected in place | Widen the matrix or the prompt. |
 | Token expired (GitHub) | run continues; push retries once | Refresh installation token. |
 
 ## 11. Fixtures

@@ -292,9 +292,28 @@ describe('the eight units', () => {
       expect(text, name).toContain('ProtectSystem=strict');
       expect(text, name).toContain('ProtectHome=true');
       expect(text, name).toContain('PrivateTmp=true');
-      expect(text, name).toContain('ReadWritePaths=/var/lib/codebox /srv/codebox');
-      expect(text, name).toContain('User=codebox');
       if (!text.includes('Type=oneshot')) expect(text, name).toContain('Restart=on-failure');
+    }
+  });
+
+  it('runs the agent as its own user with only its own environment', () => {
+    const text = fs.readFileSync(path.join(unitDir, 'codebox-opencode.service'), 'utf8');
+
+    expect(text).toContain('User=codebox-agent');
+    expect(text).toContain('Group=codebox-workspace');
+    expect(text).toContain('WorkingDirectory=/var/lib/codebox-agent');
+    expect(text).toContain('EnvironmentFile=/etc/codebox/agent.env');
+    expect(text).toContain('ReadWritePaths=/srv/codebox /var/lib/codebox-agent');
+    expect(text).not.toContain('instance.env');
+  });
+
+  it('keeps every other service on the daemon user and the daemon paths', () => {
+    for (const name of units.filter((unit) => unit.endsWith('.service'))) {
+      if (name === 'codebox-opencode.service') continue;
+      const text = fs.readFileSync(path.join(unitDir, name), 'utf8');
+      expect(text, name).toContain('User=codebox');
+      expect(text, name).not.toContain('User=codebox-agent');
+      expect(text, name).toContain('ReadWritePaths=/var/lib/codebox /srv/codebox');
     }
   });
 

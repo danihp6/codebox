@@ -27,7 +27,7 @@ import type { GitRunner, RunMarker, Worktree, WorkspaceStatus } from '@codebox/w
 import { runGate } from '../gate/run-gate.js';
 import { MAX_SECRET_SCAN_BYTES } from '../gate/secret-scan.js';
 import { createLogger } from '../logger.js';
-import { createRunEngine } from './engine.js';
+import { createRunEngine, permissionPath } from './engine.js';
 import type { RunOutcome, RunPorts, RunSettings, RunStartInput } from './ports.js';
 
 const NOW = Date.parse('2026-10-25T10:00:00.000Z');
@@ -962,6 +962,7 @@ describe('run engine — permissions', () => {
     expect(permission).toHaveLength(2);
     expect(permission[0]?.data).toMatchObject({ approvalId: 'apv_read0001', tool: 'read' });
     expect(test.store.approvals.listPending(10)).toEqual([]);
+    expect(eventTypes(test.emitted)).not.toContain('approval.created');
   });
 
   it('denies a path outside the worktree', async () => {
@@ -983,6 +984,13 @@ describe('run engine — permissions', () => {
     expect(test.agent.replies).toEqual([
       { sessionId: 'ses_fake1', requestId: 'apv_out00001', reply: 'reject' },
     ]);
+  });
+
+  it('pins the permission path extractor the chat path reuses', () => {
+    expect(permissionPath({ filePath: '/a' })).toBe('/a');
+    expect(permissionPath({ path: '/b' })).toBe('/b');
+    expect(permissionPath({ filePath: 42, path: '/c' })).toBe('/c');
+    expect(permissionPath({})).toBeNull();
   });
 });
 

@@ -34,7 +34,7 @@ RestrictSUIDSGID=true
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
 SystemCallErrorNumber=EPERM
-UMask=0027
+UMask=0007
 ReadWritePaths=/var/lib/codebox /srv/codebox
 
 [Install]
