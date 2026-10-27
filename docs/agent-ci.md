@@ -232,13 +232,16 @@ Workflow permissions are per job, minimal:
 | Workflow | `permissions` |
 | --- | --- |
 | `ci.yml` | `contents: read` |
-| `agent-cycle.yml` | `contents: write`, `issues: write` |
+| `agent-cycle.yml` | `contents: write`, `issues: write`, `actions: write` |
 | `agent-autopilot.yml` | `actions: write`, `issues: write`, `contents: read` |
 | `agent-autopilot-window.yml` | `actions: write`, `contents: read` |
 
-`GITHUB_TOKEN` is the cycle's git credential: `actions/checkout` persists it, so the agent
-pushes branches without a long-lived secret. The token cannot write repository variables,
-which is exactly why the window has its own secret.
+The cycle's git credential is the fine-grained **`CB_AGENT_TOKEN`** PAT, which
+`actions/checkout` persists: `GITHUB_TOKEN` cannot write a file under `.github/workflows/**`,
+and `permissions: workflows: write` is not a `GITHUB_TOKEN` key. The PAT carries `Contents`,
+`Workflows` and `Variables` write for this repository only; `GH_TOKEN` stays `GITHUB_TOKEN`
+for the issue and dispatch calls, so the PAT needs no Issues scope. The window uses the same
+secret for `gh variable set`.
 
 Pipeline keys use the `CB_AGENT_` prefix and never leak into the daemon (D19, and
 [`providers.md`](providers.md) §1). Provider keys are the exception: they keep the name
@@ -252,7 +255,7 @@ OpenCode documents, so only the one the chosen model needs is set as a repositor
 | `CB_AGENT_DAILY_CYCLES` | variable | `0` | Cycles per UTC day; `0` or unset means no cap. |
 | `CB_AGENT_MAX_DEVS` | variable | `2` | Dev slots per wave; ceiling 4. The runner has 2 cores. |
 | `CB_AGENT_MODEL` | variable | required | `provider/model` passed to `opencode run --model`. |
-| `CB_AGENT_TOKEN` | secret | required for the window | Fine-grained PAT with `Variables: read and write`. |
+| `CB_AGENT_TOKEN` | secret | required | Fine-grained PAT, this repository only: `Contents: read and write`, `Workflows: read and write`, `Variables: read and write`. |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | secret | one of them | Inference key, under the name OpenCode reads. |
 
 `CB_AGENT_*` belongs to the pipeline; `CB_*` belongs to `cbd`. A test greps both trees and
@@ -291,10 +294,12 @@ itself), which is cheap next to the cycle it exists to stop starting.
 - A human push to `main` while a cycle is in flight can reject the cycle's final push. The
   cycle is told to bring `origin/main` into its branch and re-gate before pushing; if it
   cannot, it leaves the branch at `qa: pass` and the next cycle ships it.
-- `CB_AGENT_TOKEN` is the one long-lived credential the Actions host needs and the only one
-  kept for the brake's sake. A fine-grained token with `Variables: read and write` keeps the
-  blast radius small; rotation is a human's job and the workflow fails loudly at its first
-  `gh variable set` when it expires.
+- `CB_AGENT_TOKEN` is the one long-lived credential the Actions host needs: it is the cycle's
+  git credential (`Contents` and `Workflows` write) and the brake's variable writer. The
+  `Workflows` scope is deliberate — it is what lets Task-26 and Task-29 ship their own
+  workflow files — and the control is the protected-paths list plus the review of every
+  merge, not the token's width. Rotation is a human's job; the cycle fails loudly at checkout
+  or at its first `gh variable set` when it expires.
 - The window's edges are hourly and GitHub's cron is a request, so a late edge can leave the
   recorded brake reading stale for up to an hour. The driver's own gate is what makes that
   harmless: it cannot start a cycle outside the range.

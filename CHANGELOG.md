@@ -6,6 +6,16 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-27 (issue #11, the cycle's git credential)
+
+- `agent-cycle.yml` checks out with the fine-grained `CB_AGENT_TOKEN` PAT instead of
+  `GITHUB_TOKEN`: the runner token cannot write a file under `.github/workflows/**` and
+  `permissions: workflows: write` is not a `GITHUB_TOKEN` key. The PAT gains `Contents` and
+  `Workflows` write for this repository only, so Task-26 and Task-29 can ship their workflow
+  files once the operator has updated the token. `GH_TOKEN` stays `GITHUB_TOKEN`.
+- `docs/agent-ci.md` §10 and §11 record the new scope, why the workflows permission is
+  deliberate, and the rotation failure mode.
+
 ### Added — 2026-10-26 (Task-46, the measured AWS spot bring-up runbook)
 
 - `infra/aws/terraform.tfvars.example` carries the twelve module variables with safe
