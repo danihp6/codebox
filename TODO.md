@@ -53,6 +53,9 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 13 | Host-neutral docs and ADRs | 45 | 1 |
 | 14 | Measured AWS spot bring-up | 46 | 1 |
 | 15 | Agent pipeline hygiene | 48–49 | 2 |
+| 16 | Contract and daemon for the reshape | 51–54, 58 | 4 |
+| 17 | One task per screen | 55–57, 59–67 | 4 |
+| 18 | Documentation and legal | 68–69 | 1 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -759,7 +762,171 @@ these files again).
       guard; `[live]` a PR's CI log shows the app suite and the job stays under the documented
       time budget.
 
+## Batch 16 - Contract and daemon
+
+Signed off with the operator against the Figma prototype (L2). This batch owns D43-D50 and the
+daemon that carries them; every screen in Batch 17 reads these types, so this one lands first.
+A task here that disagrees with a decision reopens it before any code moves.
+
+- [ ] **[Task-51]** Chat scope, context and review state. `chatSessionSchema` gains `kind`
+      (`free`/`repo`/`schedule`), a nullable `repoId`, `usage`, `contextTokens`, `contextEpoch`
+      and `reviewedAt`; `createSessionSchema.repoId` becomes optional; one numbered migration
+      backfills `kind = 'repo'` for existing rows. *Paths:* `packages/contracts/src/resources.ts`,
+      `packages/store/src/migrations/`, `packages/store/src/chats.ts`, `docs/api.md` (chat
+      section). *Dependencies:* none. *Acceptance:* `[unit]` a session parses with and without a
+      repo; `[unit]` the migration leaves every pre-existing session `kind = 'repo'`; `[unit]`
+      `reviewedAt` is null on create and set once by the daemon.
+- [ ] **[Task-52]** Chat lifecycle routes. `POST /v1/chat/sessions/{id}/repo` (clone, worktree,
+      new OpenCode session, deterministic ten-turn handoff), `POST .../compact` (same worktree,
+      new session, `chat.compacted`), `POST .../reviewed`, and `POST .../promote` restricted to
+      `kind = 'repo'`. *Paths:* `apps/daemon/src/chat/`, `packages/opencode/src/`,
+      `docs/api.md`. *Dependencies:* Task-51. *Acceptance:* `[unit]` binding twice is a
+      `409`; `[unit]` compact keeps the worktree path and bumps `contextEpoch`; `[unit]` promote
+      on a free chat is `409`; `[live]` a bound chat answers with the preamble in context.
+- [ ] **[Task-53]** One recurring object. Retire `jobs`, extend the schedule table with
+      `mode` (`once`/`every`/`window`), `windowStart`, `windowEnd`, `cooldownMinutes`,
+      `maxFires`, `maxCostPerFire`, `repoId`, `firePolicy` (`new_chat`/`continue`) and
+      `consecutiveFailures`; implement D46 (finish-anchored relaunch, no catch-up, DST skip,
+      three failures pause it, a running fire finishes). *Paths:*
+      `packages/scheduler/**`, `packages/store/src/migrations/`, `apps/daemon/src/schedules/`,
+      `docs/jobs.md`. *Dependencies:* Task-51, Task-44 retired. *Acceptance:* `[unit]` a
+      20-minute fire that takes 11 minutes lands at T+31, not T+20; `[unit]` a DST gap produces
+      zero fires and never two; `[unit]` the third failure pauses; `[unit]` `maxFires` and
+      `maxCostPerFire` both stop the loop; `[live]` a window drains a repo overnight and every
+      fire opens a PR.
+- [ ] **[Task-54]** Remove interactive approvals and isolate the agent. Delete the permission
+      bridge and the approval queue from the chat path; run the agent as an unprivileged user
+      that cannot read `/etc/codebox/`, the secret bundles or `~/.ssh`; prove it with a test
+      that tries. *Paths:* `apps/daemon/src/permissions/` (removal), `ops/vm/**`,
+      `docs/security.md`, `docs/jobs.md`, `packages/security/**`. *Dependencies:* none.
+      *Acceptance:* `[unit]` no route writes an approval row; `[live]` a shell tool reading
+      `/etc/codebox/instance.env` fails with `EACCES` and the failure is logged redacted;
+      `[live]` a run still opens a PR with the gate green.
+- [ ] **[Task-58]** Generic credentials and integrations (D49, D50). An encrypted write-only
+      store under `CB_STATE_DIR/secrets` (0600, master key from the host), a `credential` row
+      (`{name, kind, value, expose}`), an `integration` row (`baseUrl`, `auth`, `credentialId`,
+      `allowedHosts`) and an `integration.request` tool that injects the auth header server-side
+      and rejects any host outside the allowlist. GitHub App by **manifest flow**; no route
+      returns a value; `expose = env` is limited to the model key. *Paths:*
+      `apps/daemon/src/credentials/`, `apps/daemon/src/integrations/`,
+      `packages/contracts/src/config.ts`, `packages/security/**`, `docs/providers.md` (rewrite
+      §1 and the GitHub section), `docs/api.md`. *Dependencies:* none. *Acceptance:* `[unit]` no
+      route returns a credential or a prefix longer than four characters; `[unit]` a write
+      without `admin` is a `403`; `[unit]` `integration.request` to a host outside the allowlist
+      is refused before any DNS lookup; `[live]` a GitHub App is created by manifest and mints a
+      first installation token without a redeploy; `[live]` `CB_SESSION_SECRET` still comes from
+      the host.
 ---
+
+## Batch 17 - One task per screen
+
+Cut so no two tasks touch the same path. The shell owns `app.routes.ts` and `app.config.ts`;
+every other task owns one feature folder, and the two shared components are named per owner.
+All of them read the Batch 16 types and none of them invents a shape: a screen that needs a
+field the contract lacks is a Task-51 amendment, not a local type.
+
+- [ ] **[Task-55]** Shell, three tabs and the router (D47). `app.routes.ts` gains the three tab
+      roots plus the pushed screens; `tabs.page.ts` renders `Dashboard · Chat · Settings`;
+      `app.config.ts` wires the guard. *Paths:* `apps/app/src/app/shell/**`,
+      `apps/app/src/app/app.routes.ts`, `apps/app/src/app/app.config.ts`. *Dependencies:*
+      Task-51. *Acceptance:* `[unit]` every route resolves and every route but `/pair` is
+      guarded; `[unit]` the tab bar renders three items from one source of truth; `[live]` no
+      screen scrolls horizontally at 320 px.
+- [ ] **[Task-56]** Chat list. Search, five filters (`All`/`Repo`/`Schedule`/`Unread`/
+      `Archived`), one scope chip per row and the **two signals** — unread dot and unreviewed
+      edge — plus the cost/context micro-text as a flow, never at a fixed x. *Paths:*
+      `apps/app/src/app/features/chat/chat-list.*`, `shared/chat-row.ts`. *Dependencies:*
+      Task-51, Task-52. *Acceptance:* `[unit]` fixtures render the five filters and both
+      signals; `[unit]` the archived filter lists archived sessions and nothing else; `[live]`
+      the longest row fits at 320 px with no clip.
+- [ ] **[Task-57]** Chat. Thread rendering (deltas appended once per `(messageId, seq)`),
+      tool cards, gate and PR cards as system messages, composer with stop, and the promote
+      action. *Paths:* `apps/app/src/app/features/chat/chat.*`, `chat-store.ts`,
+      `chat-stream.ts`. *Dependencies:* Task-51, Task-52. *Acceptance:* `[unit]` a replayed
+      frame never duplicates a message; `[unit]` gate and PR render from run state, not from
+      prose; `[live]` a streamed run ends with the PR card without a reload.
+- [ ] **[Task-59]** Context sheet and compact. Usage bar with the 75/90/95 states, cost of the
+      chat and of the day, environment rows, `Compact context` and `New chat in this repo`.
+      *Paths:* `apps/app/src/app/features/chat/context-sheet.*`. *Dependencies:* Task-52.
+      *Acceptance:* `[unit]` each threshold renders its state from a fixture; `[unit]` compact
+      posts once and the divider appears at the handoff; `[live]` `context_full` blocks the
+      composer and offers the action.
+- [ ] **[Task-60]** New chat, connect a repository, converting. The empty state with two
+      proposals, the repository picker (`connected` / `cloning` / `unavailable`), and the clone
+      progress with the disabled composer. *Paths:*
+      `apps/app/src/app/features/chat/new-chat.*`, `features/repos/repo-picker.*`.
+      *Dependencies:* Task-52. *Acceptance:* `[unit]` the composer stays usable while the
+      proposals are shown; `[unit]` the picker never offers an archived repository; `[live]`
+      converting shows progress, then the handoff divider.
+- [ ] **[Task-61]** Schedule created by chat, and the Schedule filter. The propose card that
+      only a tap can create, the assumption block, and the filter that groups fires by schedule
+      with the running window on top. *Paths:* `apps/app/src/app/features/schedules/**`,
+      `features/chat/schedule-propose.*`. *Dependencies:* Task-53. *Acceptance:* `[unit]` the
+      card cannot create without a tap; `[unit]` the filter groups by schedule and marks the
+      unreviewed fire; `[live]` a sentence in a chat creates a schedule whose first fire lands
+      unreviewed.
+- [ ] **[Task-62]** Credentials screens. The catalog (services and open credentials), the
+      connect-a-service sheet and the add-credential sheet with the three visibility modes.
+      *Paths:* `apps/app/src/app/features/credentials/**`. *Dependencies:* Task-58.
+      *Acceptance:* `[unit]` saving requires the confirm step; `[unit]` an `env` credential
+      renders its warning and the others do not; `[live]` an agent-tool credential never
+      appears in the agent's environment.
+- [ ] **[Task-63]** Settings, Devices and Providers. The three rows that reach real actions,
+      scopes per device, revoke, and the model choice with the "running sessions keep theirs"
+      rule. *Paths:* `features/settings/settings.page.ts`, `devices.*`, `providers.*`.
+      *Dependencies:* Task-55. *Acceptance:* `[unit]` the current device cannot revoke itself;
+      `[unit]` changing the model never touches a running chat; `[live]` a revoked device's
+      next request is a 401.
+- [ ] **[Task-64]** Notifications. Five toggleable events plus the non-toggleable
+      `Credential changed`, quiet hours evaluated on the daemon, and a payload that carries no
+      prompt, diff or path. *Paths:* `features/settings/notifications.*`. *Dependencies:*
+      Task-55. *Acceptance:* `[unit]` the payload builder emits `{type, id, title}` and nothing
+      else; `[unit]` `Credential changed` has no toggle; `[live]` a question interrupts quiet
+      hours and a finished run does not.
+- [ ] **[Task-65]** Dashboard and first run. The five blocks, `Needs you` summing its four
+      sources, and the start card that replaces an empty dashboard. *Paths:*
+      `features/dashboard/**`. *Dependencies:* Task-52, Task-53. *Acceptance:* `[unit]` every
+      block renders from a zero fixture; `[unit]` `Needs you` sums questions, approvals retired
+      and unreviewed; `[live]` a fresh box shows the start card, not a dashboard of zeros.
+- [ ] **[Task-66]** Unpaired and offline. The 401 hand-off with its reason, and the offline banner
+      that keeps cached rows read-only instead of queueing writes. The pairing screen itself is
+      **Task-50** on `docs/task-48-issue-dedupe`: this task does not touch
+      `features/pairing/**`. *Paths:* `shared/offline-banner.ts`, `core/auth/auth.guard.ts`.
+      *Dependencies:* Task-51. *Acceptance:* `[unit]` a 401 clears the session and routes to
+      `/pair` with the reason; `[unit]` an offline tap fails loudly instead of queueing;
+      `[live]` the banner disappears on the first successful refetch.
+- [ ] **[Task-67]** About. Version, commit and build time injected at build, server health and
+      the licences row. *Paths:* `features/about/**`. *Dependencies:* none. *Acceptance:*
+      `[unit]` version and commit come from the build, never from a literal; `[live]` the health
+      rows match `GET /v1/health`.
+
+---
+
+## Batch 18 - Documentation and legal
+
+- [ ] **[Task-68]** Documentation catch-up for the reshape. Rewrite `docs/app.md` §4 (screens)
+      and §9 (design direction) against D43-D50, the three-tab shell and the flows; add the
+      light-theme rule that `#22c55e` on white is 2.1:1 and that text uses `#15803d` /
+      `#b45309`. Rewrite `docs/product.md` §47, §71 and §83, which still describe a chat bound to
+      a repository and a run-detail screen. Align `docs/api.md`, `docs/jobs.md`,
+      `docs/security.md` and `docs/agent-runtime.md`. **`AGENTS.md` and `README.md` are in
+      scope**: both still say "chat with an agent bound to a repository". *Paths:* `AGENTS.md`,
+      `README.md`, `docs/app.md`, `docs/product.md`, `docs/api.md`, `docs/jobs.md`,
+      `docs/security.md`, `docs/agent-runtime.md`. *Dependencies:* Task-51 to Task-67.
+      *Acceptance:* `[unit]` no document promises an approval prompt, a Repos tab or a `jobs`
+      table; `[unit]` every route in `app.routes.ts` appears in the screens table, and matches
+      `design/README.md`; `[unit]` the word "jobs" survives only as history, never as a live
+      screen.
+
+- [ ] **[Task-69]** Licence and third-party notices. The repository has **no `LICENSE`** while
+      `docs/product.md`, `design/README.md` and the About screen all claim MIT, and the About row
+      "Open source licences" points at nothing. Add `LICENSE` (MIT, with the owner's name and
+      year) and generate `NOTICE` from the production dependency tree — Angular, Ionic and
+      Capacitor in the app, Hono in the daemon. *Paths:* `LICENSE`, `NOTICE`, `docs/app.md`
+      (About section). *Dependencies:* none. *Acceptance:* `[unit]` `NOTICE` is generated from
+      the lockfile and lists each production dependency once; `[unit]` no copyleft package ships
+      without a written exception in the task; `[live]` the About row opens the same list the
+      `NOTICE` holds.---
 
 ## Local / human (never picked by the driver)
 
@@ -771,7 +938,20 @@ construction. They need a local key, an external tool or a store account.
       signs and distributes. *Dependencies:* Q1 (distribution) and Task-29.
 - [ ] **L2 — Visual prototype.** A Figma file with the seven screens (pair, dashboard, repos,
       chat, jobs, run detail, settings) and the tokens in `docs/app.md` §9; export PNGs and a
-      screen-to-route map into `design/`. Task-18 implements from it. *Dependencies:* none.
+      screen-to-route map in `design/`. **Done and superseded:** the file now holds 56 frames in
+      11 bands (dark and light, 320, 390 and 1280) drawn against D43-D50, and
+      `design/README.md` carries the map; only the PNG export remains. *Dependencies:* none.
+- [ ] **L5 — Design completeness.** Close what the prototype still lacks, in this order: desktop
+      for the eight routed screens that have none (only Chat and Dashboard exist), 320 for the
+      seven that were never squeezed, **interaction states** (hover, focus-visible, pressed,
+      disabled) in the Design System — `docs/app.md` §12 requires accessible targets and the
+      file has no focus ring — and the empty/error state of every screen, not just first-run
+      and offline. Then wire the prototype so the two flows are clickable:
+      `⋯ → Connect a repository → 09 → 11 → 03` and
+      `New chat → Schedule a task → 08b → 08c → 03b`. *Dependencies:* none.
+      *Acceptance:* `[unit]` every row of `design/README.md` §1 has a desktop and a 320 frame;
+      `[unit]` the Design System shows focus-visible, hover and disabled for a button and a row;
+      `[live]` both flows run end to end in Figma's present mode.
 - [ ] **L3 — AWS account guardrails.** A dedicated IAM user with MFA (never root), the region
       pinned, the access keys rotated and a budget alarm above the spot cost; `terraform` deploys
       with a named profile and no key in the repository. *Dependencies:* Task-42.
