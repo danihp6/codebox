@@ -892,7 +892,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       *Acceptance:* `[unit]` each threshold renders its state from a fixture; `[unit]` compact
       posts once and the divider appears at the handoff; `[live]` `context_full` blocks the
       composer and offers the action.
-- [ ] **[Task-60]** New chat, connect a repository, converting. The empty state with two
+- [x] **[Task-60]** New chat, connect a repository, converting. The empty state with two
       proposals, the repository picker (`connected` / `cloning` / `unavailable`), and the clone
       progress with the disabled composer. *Paths:*
       `apps/app/src/app/features/chat/new-chat.*`, `features/repos/repo-picker.*`.

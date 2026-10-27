@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-60, new chat and repository picker)
+
+- `NewChatPanel` is the empty state the design signs off: exactly two proposals (a repository or
+  a schedule) and a composer that stays usable while they are shown. Sending creates the free
+  session first and then posts the trimmed draft, so nothing is lost on a failed create.
+- `RepoPicker` renders one row per repository as `connected`, `cloning` or `unavailable` — a
+  disabled repository is never pickable — and the converting flow issues one
+  `POST /v1/chat/sessions { repoId }`, disables the composer while the worktree is cut and hands
+  the bound session back to the host for the ten-turn divider. A `409 chat_already_bound` comes
+  back to the picker with its code and no handoff.
+- `[live]` — picking a repository, seeing `cloning` and landing on the handoff divider at 320 px
+  — needs a browser, a paired device and a daemon; the frozen router has no `/chat/new` or
+  `/repos/pick`, so the panel is exported for the host screen and the measurement is recorded as
+  `[?]`, never as passing (issue #52).
+
 ### Added — 2026-10-27 (Task-59, context sheet)
 
 - `ChatContextSheet` and `ContextSheetStore` render a chat's own ledger: the usage bar with the
