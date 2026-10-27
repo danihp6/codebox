@@ -13,7 +13,9 @@ or baked into the VM image (D20).
 - **Precedence:** CLI flag > process environment > `EnvironmentFile` > compiled default.
   There are no secret defaults.
 - **Secrets are write-only.** The API exposes `configured: true|false` and a last-four
-  fingerprint, never the value. Logs pass through the redactor before they are written.
+  fingerprint, never the value. Logs pass through the redactor before they are written. This
+  holds for `CB_SESSION_SECRET`, for `CB_SECRETS_KEY` and for every credential the runtime
+  store seals (D49).
 - **Connections are provisioned at runtime, not typed into a file** (D49). The app's Providers
   page links each provider through the mechanism that provider actually offers: a GitHub App
   created by **manifest flow**, an **OAuth** authorisation, or a **single key entered once** for
@@ -108,6 +110,21 @@ adapter exists.
 Exactly one auth mode is required: App (`APP_ID` + key + installation) or PAT. If both are
 present, the App wins and the daemon logs a warning. The App is preferred because tokens are
 short-lived and scoped to the installation.
+
+### 6.1 Runtime credentials and integrations
+
+The GitHub App above is the bootstrap path; the same app can also be created at runtime through
+the manifest flow, which writes a `github_app` credential into the encrypted store instead of
+the environment. These two keys govern that store (D49, D50).
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `CB_SECRETS_KEY` | — | 32 random bytes, standard base64, exactly 44 characters (`43` payload chars + one `=`). Unlocks `CB_STATE_DIR/secrets/credentials`. Absent: boot succeeds, the store is unconfigured and every credential write is `503 secrets_not_configured`. |
+| `CB_INTEGRATION_TIMEOUT_SECONDS` | `15` | Deadline for one `POST /v1/integrations/{id}/request`. `0` means no timeout beyond the platform default. |
+
+Generate the key with `openssl rand -base64 32` and keep it in the host's `EnvironmentFile`; the
+value is write-only, a malformed one fails the boot naming `CB_SECRETS_KEY` and never the value,
+and losing it makes every sealed credential unreadable until it is rotated.
 
 ## 7. Repositories and workspaces
 

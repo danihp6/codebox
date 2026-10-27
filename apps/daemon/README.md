@@ -72,6 +72,41 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
   pairing rate limiter.
 - `src/auth/errors.ts` — `AuthError` and the failure-to-envelope mapping.
 - `src/auth/ids.ts` — the only `dev_` device id generator.
+- `src/schedules/index.ts` — the schedules subsystem module: the service, the routes and the
+  tick.
+- `src/schedules/service.ts` — list, create, patch and pause, and the one-pass tick.
+- `src/schedules/routes.ts` — the `/v1/schedules` handlers and their body schemas.
+- `src/schedules/fire.ts` — the default port: a run for a repo schedule, a chat turn otherwise.
+- `src/schedules/service.test.ts` — the service and its one-pass tick.
+- `src/schedules/routes.test.ts` — the `/v1/schedules` handlers.
+- `src/schedules/fire.test.ts` — the default fire port.
+- `src/credentials/index.ts` — the credentials subsystem module: builds the vault, mounts the
+  credential and integration routes, warns once when the store has no master key.
+- `src/credentials/ids.ts` — the only `cred_` and `int_` id generators.
+- `src/credentials/schemas.ts` — the zod boundary for credentials, integrations and the
+  GitHub manifest code exchange.
+- `src/credentials/storage.ts` — the write-only credential store: 0700/0600, `*.tmp` + rename,
+  metadata only.
+- `src/credentials/service.ts` — sealing, rotation, last-four reporting and the integration
+  service seam.
+- `src/credentials/manifest.ts` — the single-use, 600 s GitHub manifest state store.
+- `src/credentials/routes.ts` — the four `/v1/credentials` handlers and their scopes.
+- `src/credentials/ids.test.ts` — id shapes, uniqueness and injectable randomness.
+- `src/credentials/storage.test.ts` — file modes, atomic writes, traversal refusal and
+  malformed documents.
+- `src/credentials/service.test.ts` — sealing, rotation, env exposure, unconfigured mode and a
+  metadata-only list that opens no seal.
+- `src/credentials/manifest.test.ts` — single use and the 600 s expiry.
+- `src/credentials/routes.test.ts` — the ten-route contract: bodies, scopes, refusals and the
+  no-value walk.
+- `src/credentials/index.test.ts` — the module seam and the unconfigured warning.
+- `src/integrations/index.ts` — the integration barrel: routes, service types and storage.
+- `src/integrations/service.ts` — the allowlist-first outbound request and the GitHub manifest
+  exchange.
+- `src/integrations/routes.ts` — the six integration handlers.
+- `src/integrations/storage.ts` — the integration file store beside the sealed credentials.
+- `src/integrations/service.test.ts` — allowlist refusal before `fetch`, header injection,
+  truncation and the manifest flow.
 - `src/config.test.ts` — config loading, failure naming, bind parsing, paths, build info.
 - `src/logger.test.ts` — level thresholds, redaction, error serialisation, log shape.
 - `src/modules.test.ts` — subsystem list, shutdown order, module loading report.

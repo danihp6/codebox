@@ -46,6 +46,7 @@ const configKeys = [
   'CB_GIT_PROVIDER',
   'CB_INSTALL_DIR',
   'CB_INSTANCE_NAME',
+  'CB_INTEGRATION_TIMEOUT_SECONDS',
   'CB_LOG_LEVEL',
   'CB_MAX_CONCURRENCY',
   'CB_MAX_CONCURRENCY_PER_REPO',
@@ -77,6 +78,7 @@ const configKeys = [
   'CB_RUN_TIMEOUT_SECONDS',
   'CB_SCHEDULER_TICK_SECONDS',
   'CB_SESSION_SECRET',
+  'CB_SECRETS_KEY',
   'CB_STATE_DIR',
   'CB_TIMEZONE',
   'CB_TMP_DIR',
@@ -130,7 +132,7 @@ describe('config', () => {
     expect(config.CB_OPENCODE_AUTO).toBe(true);
     expect(config.CB_PROTECTED_PATHS[0]).toBe('.github/**');
     expect(Object.keys(config).sort()).toEqual([...configKeys].sort());
-    expect(Object.keys(config)).toHaveLength(76);
+    expect(Object.keys(config)).toHaveLength(78);
   });
 
   it('config never echoes a secret value', () => {
@@ -319,6 +321,33 @@ describe('config', () => {
     expect(firstPath(parseError(() => parseConfig(dev({ CB_GIT_PROVIDER: 'gitea' }))))).toBe(
       'config.CB_GIT_PROVIDER',
     );
+  });
+
+  it('adds the secrets key and the integration timeout without making either required', () => {
+    const masterKey = Buffer.alloc(32, 7).toString('base64');
+    expect(masterKey).toHaveLength(44);
+
+    const configured = parseConfig(dev({ CB_SECRETS_KEY: masterKey }));
+    expect(configured.CB_SECRETS_KEY).toBe(masterKey);
+    expect(configured.CB_INTEGRATION_TIMEOUT_SECONDS).toBe(15);
+
+    expect(parseConfig(dev()).CB_SECRETS_KEY).toBeNull();
+    expect(
+      parseConfig(dev({ CB_INTEGRATION_TIMEOUT_SECONDS: '0' })).CB_INTEGRATION_TIMEOUT_SECONDS,
+    ).toBe(0);
+
+    const invalid = parseError(() => parseConfig(dev({ CB_SECRETS_KEY: 'not-a-44-char-key-xyz' })));
+    expect(firstPath(invalid)).toBe('config.CB_SECRETS_KEY');
+    expect(String(invalid)).toContain('CB_SECRETS_KEY');
+    expect(String(invalid)).not.toContain('not-a-44-char-key-xyz');
+    expect(
+      JSON.stringify(invalid instanceof ContractParseError ? invalid.issues : []),
+    ).not.toContain('not-a-44-char-key-xyz');
+
+    expect(
+      firstPath(parseError(() => parseConfig(dev({ CB_INTEGRATION_TIMEOUT_SECONDS: '1.5' })))),
+    ).toBe('config.CB_INTEGRATION_TIMEOUT_SECONDS');
+    expect(SECRET_CONFIG_KEYS).toContain('CB_SECRETS_KEY');
   });
 
   it('exposes the schema without reading the environment', () => {

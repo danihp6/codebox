@@ -6,6 +6,25 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-58, generic credentials and integrations)
+
+- `CB_SECRETS_KEY` (32 random bytes, standard base64, a secret and never echoed) and
+  `CB_INTEGRATION_TIMEOUT_SECONDS` (default 15) join the configuration. Without the key the
+  daemon boots with an unconfigured store whose writes answer `503 secrets_not_configured`
+  instead of failing at boot.
+- `packages/security` gains the AES-256-GCM credential vault (fresh 12-byte IV per seal,
+  `lastFour` only, `VaultError` on a wrong key or a tampered tag) and the integration allowlist:
+  `https` only, exact host match, refused before any DNS lookup or `fetch`.
+- The daemon gains `apps/daemon/src/credentials` and `/v1/integrations`: a write-only file store
+  under `CB_STATE_DIR/secrets` (`0700`/`0600`, `*.tmp` + rename), ten routes with
+  `read`/`admin`/`runs` scopes, the server-side integration request with header injection and a
+  64 KiB truncation, and the GitHub App manifest flow with a single-use 600-second state. No
+  route returns a value, a prefix longer than four characters or the sealed form.
+- `docs/api.md` §5.9 and `docs/providers.md` §1/§6.1 document the surface and both keys; the
+  OpenAPI document is pinned at 54 paths.
+- `[live]` — a GitHub App created by manifest minting its first installation token — needs the
+  VM; it is recorded as `[?]`, never as passing.
+
 ### Changed — 2026-10-27 (Task-55, the three-tab shell and the router)
 
 - D47's shell has exactly three tabs — Dashboard, Chat and Settings — from one `SHELL_TABS`

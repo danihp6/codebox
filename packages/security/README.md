@@ -23,13 +23,17 @@ TTL and `now`.
 - `redact-corpus.ts` — thirty fixtures (nested, array, numeric key, `Error`, `Date`, binary, cycle, `BigInt`, `undefined`) with the literals that must not survive.
 - `secret-scan.ts` — the nine credential patterns and the added-line diff scanner the gate runs.
 - `access-jwt.ts` — the Cloudflare Access RS256 verifier; the daemon fetches the JWKS, this package never does.
+- `credential-vault.ts` — the AES-256-GCM sealed envelope, master-key decoding and `lastFour`.
+- `integration-allowlist.ts` — the https and full-host check an outbound integration URL must pass before any DNS lookup.
 - `constant-time.test.ts` — comparison, lengths and the SHA-256 hex vector.
 - `hash.test.ts` — scrypt format, fresh salt, verification and malformed stored hashes.
 - `pairing.test.ts` — the alphabet, the injected byte source, normalisation and single use.
 - `tokens.test.ts` — expiry boundaries, tampered signatures, refresh-token stability and scope authorisation.
 - `redact.test.ts` — the nested fixture, non-mutation, cycles, dates, errors and binary.
+- `credential-vault.test.ts` — round-trip, fresh IV, wrong key, tampered tag, malformed envelope and the sealed wire.
 - `redact-corpus.test.ts` — the thirty fixtures, the twelve key patterns and non-mutation over each.
 - `secret-scan.test.ts` — every pattern source, added-line line numbering, context and removed lines, the allow marker, placeholders, dedupe and ordering.
+- `integration-allowlist.test.ts` — the scheme, lookalike, trailing-dot and IP-literal refusals.
 - `access-jwt.test.ts` — a real RSA pair, the valid claims and every rejection reason.
 
 ## Checks

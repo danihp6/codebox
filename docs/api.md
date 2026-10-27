@@ -519,6 +519,70 @@ the chat and streams the answer (D36, [`docs/jobs.md`](jobs.md) §15).
 }
 ```
 
+### 5.9 Credentials and integrations
+
+A credential is a value the daemon holds for the operator: sealed with AES-256-GCM under
+`CB_SECRETS_KEY`, stored as one file under `CB_STATE_DIR/secrets/credentials`, and reported
+only as `configured`, `lastFour` and `lastUsedAt` (D49). An integration is the outbound call
+that uses one: a base URL, an auth kind and the exact hosts it may reach (D50). Neither surface
+ever returns a value, a prefix longer than four characters or the sealed envelope.
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/v1/credentials` | `read` | Credentials, metadata only, newest first. |
+| `POST` | `/v1/credentials` | `admin` | Seal `{ name, kind, expose, value }`; `201`. |
+| `DELETE` | `/v1/credentials/{id}` | `admin` | Forget the credential and its seal; `204`. |
+| `POST` | `/v1/credentials/{id}/rotate` | `admin` | Replace `{ value }` and keep the identity. |
+| `GET` | `/v1/integrations` | `read` | Saved integrations. |
+| `POST` | `/v1/integrations` | `admin` | Record base URL, auth kind, credential and hosts; `201`. |
+| `DELETE` | `/v1/integrations/{id}` | `admin` | Forget the integration; the credential stays; `204`. |
+| `POST` | `/v1/integrations/{id}/request` | `runs` | Execute the call server-side. |
+| `POST` | `/v1/integrations/github/manifest` | `admin` | Start the GitHub App manifest flow. |
+| `POST` | `/v1/integrations/github/complete` | `admin` | Exchange GitHub's code for the app PEM. |
+
+```json
+{ "id": "cred_01JABCDEFG", "name": "OpenAI", "kind": "model_key", "expose": "env",
+  "configured": true, "lastFour": "abcd", "createdAt": "2026-10-27T10:00:00Z",
+  "updatedAt": "2026-10-27T10:00:00Z", "lastUsedAt": null }
+```
+
+- `kind` is `api_key`, `bearer`, `basic`, `github_app` or `model_key`. `expose` is `daemon`,
+  `tool` or `env`; `env` is allowed only with `kind: "model_key"`, and anything else is a `422`
+  with `details.reason = "env_not_allowed"`.
+- `POST /v1/credentials` and `POST /v1/credentials/{id}/rotate` are a `503` with
+  `details.reason = "secrets_not_configured"` when `CB_SECRETS_KEY` is absent. An unknown body
+  key is a `422` whose `details.path` is `credential.<key>`. A missing credential is a `404`
+  with `details.path = "credential.id"`. A device without the `admin` scope is a `403` with
+  `details.reason = "insufficient_scope"`.
+
+```json
+{ "id": "int_01JABCDEFG", "name": "Linear", "baseUrl": "https://api.linear.app",
+  "auth": "bearer", "headerName": null, "credentialId": "cred_01JABCDEFG",
+  "allowedHosts": ["api.linear.app"], "createdAt": "2026-10-27T10:00:00Z",
+  "updatedAt": "2026-10-27T10:00:00Z" }
+```
+
+- `auth` is `none`, `bearer`, `header` or `basic`. `header` requires `headerName`; every kind
+  other than `none` requires a `credentialId` that exists, otherwise `404` with
+  `details.path = "integration.credentialId"`. Unknown body keys are a `422` with
+  `details.path = "integration.<key>"`.
+- `POST /v1/integrations/{id}/request` takes
+  `{ method, path, query?, headers?, body? }`: `method` is one of `GET`, `POST`, `PUT`, `PATCH`
+  or `DELETE`, `path` starts with `/`, `headers` keeps only `accept` and `content-type`, and
+  `body` is at most 65 536 bytes. It answers `{ status, contentType, body, truncated }`, where
+  `body` is truncated to 65 536 characters. The daemon checks `https` and the full host against
+  `allowedHosts` **before** any DNS lookup and before the outbound call: a refused URL is a
+  `422` with `details.reason = "host_not_allowed"`. A transport error or a timeout is a `503`
+  with `details.reason = "integration_unreachable"`.
+- `POST /v1/integrations/github/manifest` returns `{ action, manifest, state }` for a browser
+  form; GitHub posts to `action` and redirects to the app, never to the daemon.
+  `state` is single use and expires after 600 s. `POST /v1/integrations/github/complete` takes
+  `{ code, state }` and answers `{ configured: true, appId, credentialId }`; a replayed or
+  expired `state` is a `422` with `details.reason = "state_invalid"`, GitHub refusing the
+  exchange is a `503` with `details.reason = "provider_unavailable"`, and an absent
+  `CB_SECRETS_KEY` is a `503` with `details.reason = "secrets_not_configured"`. The PEM becomes
+  a `github_app` credential with `expose: "daemon"` and appears in no response byte.
+
 ## 6. SSE
 
 `GET /v1/events` is the only stream. Query filters (`types`, `runId`, `chatId`) are additive;

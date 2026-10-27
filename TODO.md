@@ -819,7 +819,7 @@ A task here that disagrees with a decision reopens it before any code moves.
       *Acceptance:* `[unit]` no route writes an approval row; `[live]` a shell tool reading
       `/etc/codebox/instance.env` fails with `EACCES` and the failure is logged redacted;
       `[live]` a run still opens a PR with the gate green.
-- [ ] **[Task-58]** Generic credentials and integrations (D49, D50). An encrypted write-only
+- [x] **[Task-58]** Generic credentials and integrations (D49, D50). An encrypted write-only
       store under `CB_STATE_DIR/secrets` (0600, master key from the host), a `credential` row
       (`{name, kind, value, expose}`), an `integration` row (`baseUrl`, `auth`, `credentialId`,
       `allowedHosts`) and an `integration.request` tool that injects the auth header server-side

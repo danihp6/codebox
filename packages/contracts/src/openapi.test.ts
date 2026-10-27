@@ -99,7 +99,30 @@ describe('openapi', () => {
   it('docs/api.md routes match the OpenAPI paths', () => {
     const document = buildOpenApiDocument();
     expect(Object.keys(document.paths).sort()).toEqual(docsPaths());
-    expect(Object.keys(document.paths)).toHaveLength(46);
+    expect(Object.keys(document.paths)).toHaveLength(54);
+  });
+
+  it('documents the eight credential and integration paths', () => {
+    const document = buildOpenApiDocument();
+    const paths = [
+      '/v1/credentials',
+      '/v1/credentials/{id}',
+      '/v1/credentials/{id}/rotate',
+      '/v1/integrations',
+      '/v1/integrations/{id}',
+      '/v1/integrations/{id}/request',
+      '/v1/integrations/github/complete',
+      '/v1/integrations/github/manifest',
+    ];
+    for (const path of paths) {
+      expect(Object.keys(document.paths)).toContain(path);
+      expect(docsPaths()).toContain(path);
+    }
+    const operations = Object.values(document.paths)
+      .flatMap((item) => [item.get, item.post, item.delete])
+      .filter((operation) => operation?.tags.includes('credentials') ?? false);
+    expect(operations).toHaveLength(10);
+    for (const operation of operations) expect(operation?.operationId).toBeTruthy();
   });
 
   it('the OpenAPI document lists the three routine events', () => {
