@@ -6,6 +6,23 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-57, chat thread)
+
+- `/chat/:id` is a real thread: assistant deltas append once per `(messageId, seq)`, tool cards
+  render from the normalised stream, and the composer gains a stop action that interrupts the
+  session through `POST /v1/chat/sessions/{id}/interrupt`.
+- Gate and PR are **system cards built from `Run`**, never read out of prose: `chat-stream.ts`
+  derives them from `run.gate` and `run.pr`, `ChatRunLink` remembers the promoted run per session
+  in session storage, and a live `run.gate` frame updates the card in place without a second
+  fetch.
+- Promote costs one tap: the confirmation card sends a single
+  `POST /v1/chat/sessions/{id}/promote` with an idempotency key, remembers the returned run and
+  navigates to `/runs/<id>`. `canPromote` stays false for a free chat, a chat with no repository
+  and a turn that is still running.
+- `[live]` — the cards surviving Back without a reload — needs a browser and a paired device; it
+  is recorded as `[?]`, never as passing (issue #48). The same issue records that `ChatSession`
+  carries no durable `runId`, so the cards do not survive a full reload.
+
 ### Added — 2026-10-27 (Task-56, chat list)
 
 - `/chat` is one flat list: a search box, the five filters `All` / `Repo` / `Schedule` /

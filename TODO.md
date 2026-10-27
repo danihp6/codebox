@@ -869,7 +869,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       Task-51, Task-52. *Acceptance:* `[unit]` fixtures render the five filters and both
       signals; `[unit]` the archived filter lists archived sessions and nothing else; `[live]`
       the longest row fits at 320 px with no clip.
-- [ ] **[Task-57]** Chat. Thread rendering (deltas appended once per `(messageId, seq)`),
+- [x] **[Task-57]** Chat. Thread rendering (deltas appended once per `(messageId, seq)`),
       tool cards, gate and PR cards as system messages, composer with stop, and the promote
       action. *Paths:* `apps/app/src/app/features/chat/chat.*`, `chat-store.ts`,
       `chat-stream.ts`. *Dependencies:* Task-51, Task-52. *Acceptance:* `[unit]` a replayed
