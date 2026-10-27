@@ -89,6 +89,9 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/chat/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/chat/markdown.spec.ts` — fences, lists and unclosed markup.
 - `src/app/features/chat/i18n.ts` — the chat dictionary in `en` and `es`.
+- `src/app/features/chat/schedule-propose.ts` — the proposed-schedule card and its create-body mapping.
+- `src/app/features/chat/schedule-propose.i18n.ts` — the proposed-schedule dictionary in `en` and `es`.
+- `src/app/features/chat/schedule-propose.spec.ts` — zero requests on render, one POST per tap, the mapped body, the 422 and the dictionary parity.
 - `src/app/features/credentials/add-credential.sheet.ts` — the two-step add-credential sheet: name, kind, expose, the env warning, the confirmation tail and the save.
 - `src/app/features/credentials/add-credential.sheet.spec.ts` — the review step, the four-character tail, the env warning/blocked states and the cleared value.
 - `src/app/features/credentials/connect-service.sheet.ts` — the GitHub App manifest form and the generic integration form.
@@ -158,6 +161,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/runs-list/runs.store.ts` — the paged runs list, the state filter and the run stream frames.
 - `src/app/features/runs-list/runs.store.spec.ts` — load, filter, more and the stream frames.
 - `src/app/features/runs-list/i18n.ts` — the runs list dictionary in `en` and `es`.
+- `src/app/features/schedules/schedules.api.ts` — `/v1/schedules` list, detail and create, plus the create body.
+- `src/app/features/schedules/schedule-filter.ts` — the window rule, the group order and the Schedule filter screen.
+- `src/app/features/schedules/schedule-filter.store.ts` — the schedule list, the capped detail reads and the session review reads.
+- `src/app/features/schedules/schedules.i18n.ts` — the Schedule filter dictionary in `en` and `es`.
+- `src/app/features/schedules/schedule-filter.spec.ts` — the window boundaries, the group order, the filter rendering, the unreviewed mark and the dictionary parity.
+- `src/app/features/schedules/schedule-filter.store.spec.ts` — the detail cap, the session reads, the detail failure and the list reload.
 - `src/app/features/settings/settings.page.ts` — profile, time zone, the notification panel row, providers, danger zone and about, with explicit `unavailable` blocks.
 - `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, every section, the preference toggle and dictionary completeness.
 - `src/app/features/settings/settings.api.ts` — `/v1/me`, version, settings, providers, brake, cache wipe, devices and notification preferences; a missing route is not an error.
