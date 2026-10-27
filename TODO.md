@@ -42,7 +42,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 2 | Contracts, store, core rules, security | 03 → 04–06 | 1, then 3 |
 | 3 | Integrations: OpenCode, workspaces, scheduler, GitHub | 07–10 | 4 |
 | 4 | Daemon: config, auth, chat, runs, CLI | 11–12, 13–17 | 2, then 4 |
-| 5 | Hybrid app shell, screens and instance liveness | 18 → 37, 19–23 | 1, then 4 |
+| 5 | Hybrid app shell, screens and instance liveness | 18 → 37, 19–23, 50 | 1, then 4 |
 | 6 | OCI extraction and VM image | 24–25, 33 | 3 |
 | 7 | Hardening, e2e, observability, release | 26–30 | 5 |
 | 8 | Beta, onboarding, migration of pkm | 31–32, 34 | 3 |
@@ -64,7 +64,8 @@ their internal order behind it. Nothing is dropped, only displaced.
 lack of planning: Task-26 and Task-29 are `[!]` on the `workflows` permission (issue #11), and
 Task-30 waits for Task-29, Task-31 for Task-26/28/30 and Task-32 for Task-31, so the whole
 remaining chain hangs on #11 plus the human `[live]` measurements. Task-48 and Task-49
-(Batch 15) are the only eligible tasks and are path-disjoint from every blocked branch.
+(Batch 15) are the only eligible tasks and are path-disjoint from every blocked branch;
+Task-50 (Batch 5) waits for the L2 screen sign-off.
 **Hot-file holders in this cut:** Task-49 holds `package.json`; Task-48 owns `scripts/agent/**`
 and `docs/agent-ci.md`. `package-lock.json`, `tsconfig.base.json`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts`,
@@ -389,6 +390,21 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       `[unit]` revoking the current device logs out locally and clears the secure store;
       `[unit]` notification preferences are validated against the contract; `[live]` a
       preference change is reflected in the next push.
+
+- [ ] **[Task-50]** Pairing screen. `/pair` still renders the Task-18 placeholder
+      (`Pairing — tasks 19-23`): measured on 2026-10-27 in Chromium at 320×640, the route has
+      **0 inputs and 0 buttons**, so the app cannot pair and no app-level `[live]` criterion is
+      reachable. Build the screen the design signs off: pairing code, device name, submit, an
+      inline error for a used or expired code, the 320 px floor, EN/ES copy, and the redirect
+      to `/dashboard` on success through the existing `AuthStore.pair`. Do not invent a visual
+      language: this task consumes L2's signed-off screens. *Paths:*
+      `apps/app/src/app/features/pairing/**`, `docs/app.md` (§4 and §9 only). *Dependencies:*
+      L2 (the signed-off screens), Task-18 (the `AuthStore.pair` seam and the route).
+      *Acceptance:* `[unit]` the form rejects an empty code or device name and calls
+      `AuthStore.pair` once with the trimmed values; `[unit]` a used or expired code renders
+      the message and re-enables submit; `[unit]` the new dictionary has EN/ES parity;
+      `[live]` a real code from `cb pair` pairs the browser at 320 px in under two minutes and
+      lands on the dashboard with no horizontal scroll.
 
 ---
 
