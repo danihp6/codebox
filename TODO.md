@@ -52,6 +52,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 12 | Durable backups and concurrency three | 43–44 | 2 |
 | 13 | Host-neutral docs and ADRs | 45 | 1 |
 | 14 | Measured AWS spot bring-up | 46 | 1 |
+| 15 | Agent pipeline hygiene | 48 | 1 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -59,18 +60,15 @@ goes first because it is what lets the operator create and destroy the OCI footp
 wait is still open; the spot host reuses the same tool with the same image. Batches 7–9 keep
 their internal order behind it. Nothing is dropped, only displaced.
 
-**Cut — cycle after Task-44 (one of four slots used, Task-38).** The queue was thin: the only
-dependency-free tasks were Task-38 (Batch 9) and Task-45 (Batch 13), and both claim
-`docs/decisions.md` — a hot file, one owner per batch — so they could not travel together.
-Task-38 went first because it is the lower batch and its own dependant (Task-36) is waiting;
-Task-45 is displaced to the next cut. The other three slots were empty for cause, not by
-choice: Task-26 and Task-29 are `[!]` on the `workflows` permission (issue #11); Task-30 waits
-for Task-29; Task-31 for Task-26/28/30; Task-32 for Task-31; Task-36 for Task-38 (merged) and
-is eligible next cycle; Task-46 for Task-42–45, with Task-45 still open.
-**Hot-file holders in this cut:** Task-38 held `docs/decisions.md` (D41); `package.json`,
+**Cut — cycle after Task-46 (one of four slots used).** The queue is empty for cause, not for
+lack of planning: Task-26 and Task-29 are `[!]` on the `workflows` permission (issue #11), and
+Task-30 waits for Task-29, Task-31 for Task-26/28/30 and Task-32 for Task-31, so the whole
+remaining chain hangs on #11 plus the human `[live]` measurements. Task-48 (Batch 15) is the
+only eligible task and is path-disjoint from every blocked branch. **Hot-file holders in this
+cut:** none; Task-48 owns `scripts/agent/**` and `docs/agent-ci.md`, and `package.json`,
 `package-lock.json`, `tsconfig.base.json`, `packages/contracts/src/index.ts`,
 `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
-`opencode.json`, `TODO.md` and `CHANGELOG.md` were held by no task.
+`opencode.json`, `TODO.md` and `CHANGELOG.md` are held by no task.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -707,6 +705,28 @@ is asked to hold three repositories at once.
       green and the box stays under the memory ceiling; `[live]` the rebuilt box restores the
       newest dump and serves the same jobs and chat; `[live]` the monthly cost at the spot
       price is recorded in `docs/aws.md`.
+
+---
+
+## Batch 15 — Agent pipeline hygiene
+
+One bug in the loop that writes the loop's own work orders. It is a one-task batch because it
+is the only task left outside the blocked chain; it shares no path with Batch 1 (Task-02 is
+blocked on its `[live]` criterion and does not touch these files again).
+
+- [ ] **[Task-48]** Issue dedupe. The cycle of 2026-10-26 opened #22 and #23 with the same
+      batch, the same body and one minute apart, doubling the measurement backlog; a retry of
+      an issue-opening step does the same. Open the issue through a deterministic helper that
+      first searches the open `agent-review` and `agent-blocked` issues for the same title (and
+      comments there when it finds one), so two attempts or two agents cannot race a check the
+      model performs by hand. *Paths:* `scripts/agent/**`, `scripts/agent/vm/prompt.md`,
+      `.agent_roles/orchestrator.md`, `docs/agent-ci.md` (issue handoff section),
+      `scripts/README.md`. *Dependencies:* none (the scripts and the prompt are on `main`).
+      *Acceptance:* `[unit]` the helper creates one issue and a second call with the same title
+      creates none and comments on the first; `[unit]` a different title still creates a new
+      issue; `[unit]` the prompt, the role file and `docs/agent-ci.md` point at the helper
+      instead of a bare `gh issue create`; `[live]` a cycle that finishes two batches leaves
+      two issues, and re-running the same batch leaves the count unchanged.
 
 ---
 
