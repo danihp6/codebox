@@ -14,6 +14,13 @@ or baked into the VM image (D20).
   There are no secret defaults.
 - **Secrets are write-only.** The API exposes `configured: true|false` and a last-four
   fingerprint, never the value. Logs pass through the redactor before they are written.
+- **Connections are provisioned at runtime, not typed into a file** (D49). The app's Providers
+  page links each provider through the mechanism that provider actually offers: a GitHub App
+  created by **manifest flow**, an **OAuth** authorisation, or a **single key entered once** for
+  the providers that only sell keys. The daemon writes the result into an encrypted store and
+  reports `configured`, `lastFour` and `lastUsedAt`. `CB_*` variables remain the bootstrap path
+  for the two credentials a browser cannot deliver: `CB_SESSION_SECRET` and the host's cloud
+  identity.
 - **The app never receives a provider credential.** It talks to `/v1`; the daemon holds the
   GitHub App key, the tunnel token and the model keys.
 - **CI credentials are not daemon credentials.** `OCI_CLI_*` and `CB_OCI_*` exist only in
