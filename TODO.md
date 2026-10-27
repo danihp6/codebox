@@ -772,7 +772,7 @@ Signed off with the operator against the Figma prototype (L2). This batch owns D
 daemon that carries them; every screen in Batch 17 reads these types, so this one lands first.
 A task here that disagrees with a decision reopens it before any code moves.
 
-- [ ] **[Task-51]** Chat scope, context and review state. `chatSessionSchema` gains `kind`
+- [x] **[Task-51]** Chat scope, context and review state. `chatSessionSchema` gains `kind`
       (`free`/`repo`/`schedule`), a nullable `repoId`, `usage`, `contextTokens`, `contextEpoch`
       and `reviewedAt`; `createSessionSchema.repoId` becomes optional; one numbered migration
       backfills `kind = 'repo'` for existing rows. *Paths:* `packages/contracts/src/resources.ts`,
@@ -780,13 +780,24 @@ A task here that disagrees with a decision reopens it before any code moves.
       section). *Dependencies:* none. *Acceptance:* `[unit]` a session parses with and without a
       repo; `[unit]` the migration leaves every pre-existing session `kind = 'repo'`; `[unit]`
       `reviewedAt` is null on create and set once by the daemon.
+      LANDED WITHOUT the nullable `repoId` and the optional `createSessionSchema.repoId`: both
+      need `apps/daemon/src/chat/{routes,service}.ts` and the twelve-step rebuild of
+      `chat_sessions` (its `repo_id` is still `NOT NULL`), so they move to Task-52, which owns
+      those paths. The scope columns, the `kind = 'repo'` backfill and the accounting shipped
+      here.
 - [ ] **[Task-52]** Chat lifecycle routes. `POST /v1/chat/sessions/{id}/repo` (clone, worktree,
       new OpenCode session, deterministic ten-turn handoff), `POST .../compact` (same worktree,
       new session, `chat.compacted`), `POST .../reviewed`, and `POST .../promote` restricted to
       `kind = 'repo'`. *Paths:* `apps/daemon/src/chat/`, `packages/opencode/src/`,
-      `docs/api.md`. *Dependencies:* Task-51. *Acceptance:* `[unit]` binding twice is a
+      `packages/contracts/src/resources.ts`, `packages/store/migrations/`, `docs/api.md`.
+      *Dependencies:* Task-51. *Acceptance:* `[unit]` binding twice is a
       `409`; `[unit]` compact keeps the worktree path and bumps `contextEpoch`; `[unit]` promote
-      on a free chat is `409`; `[live]` a bound chat answers with the preamble in context.
+      on a free chat is `409`; `[unit]` a free chat parses with `repoId: null` and the five chat
+      fields require no default; `[live]` a bound chat answers with the preamble in context.
+      CARRIED FROM Task-51: make `chatSessionSchema.repoId` nullable (and `kind`, `usage`,
+      `contextTokens`, `contextEpoch`, `reviewedAt` required once the daemon always sets them),
+      make `createSessionSchema.repoId` optional, and rebuild `chat_sessions` with a nullable
+      `repo_id` without dropping its children.
 - [ ] **[Task-53]** One recurring object. Retire `jobs`, extend the schedule table with
       `mode` (`once`/`every`/`window`), `windowStart`, `windowEnd`, `cooldownMinutes`,
       `maxFires`, `maxCostPerFire`, `repoId`, `firePolicy` (`new_chat`/`continue`) and

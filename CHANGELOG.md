@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-51, chat scope, context and review state)
+
+- `chatSessionSchema` carries `kind` (`free`/`repo`/`schedule`), `usage` (the `costSchema`
+  shape), `contextTokens`, `contextEpoch` and `reviewedAt`, additive and optional on the wire;
+  a payload without them reads as `repo`, `{0,0,0}`, `0`, `1` and `null`.
+- `0003_chat_scope.sql` adds the seven columns in one statement each, backfills
+  `kind = 'repo'` for every pre-existing session, indexes `(kind, updated_at)` and keeps
+  `repo_id` `NOT NULL`; `0001` and `0002` stay byte-identical, so the checksum pin holds.
+- The chat repository reads the new columns into the resource, writes `reviewed_at` once
+  (`COALESCE`), and the list projection keeps all five fields; `packages/store/README.md` maps
+  the migration and `docs/api.md` §5.6 documents every key and its default.
+- The nullable `repoId` flip and the optional `createSessionSchema.repoId` move to Task-52: both
+  need the daemon chat paths and the table rebuild, and the contract stays additive until then.
+
 ### Added — 2026-10-27 (Task-50, the pairing screen)
 
 - `/pair` is a real screen instead of the placeholder: pairing code and device name, a submit
