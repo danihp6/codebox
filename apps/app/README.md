@@ -79,6 +79,17 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/chat/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/chat/markdown.spec.ts` — fences, lists and unclosed markup.
 - `src/app/features/chat/i18n.ts` — the chat dictionary in `en` and `es`.
+- `src/app/features/credentials/add-credential.sheet.ts` — the two-step add-credential sheet: name, kind, expose, the env warning, the confirmation tail and the save.
+- `src/app/features/credentials/add-credential.sheet.spec.ts` — the review step, the four-character tail, the env warning/blocked states and the cleared value.
+- `src/app/features/credentials/connect-service.sheet.ts` — the GitHub App manifest form and the generic integration form.
+- `src/app/features/credentials/connect-service.sheet.spec.ts` — the manifest form fields, the header field visibility and the two save refusals.
+- `src/app/features/credentials/credentials.api.ts` — `/v1/credentials` and `/v1/integrations` calls plus the six hand-written payload parsers.
+- `src/app/features/credentials/credentials.api.spec.ts` — every URL and method, the parsers and the error mapping.
+- `src/app/features/credentials/credentials.page.ts` — connected services, open credentials, the two sheets and the manifest-complete path.
+- `src/app/features/credentials/credentials.page.spec.ts` — loading, error, empty, both sections, the two sheet triggers, the confirmed delete and the manifest completion.
+- `src/app/features/credentials/credentials.store.ts` — the two independent catalog reads, create/remove and the manifest reload.
+- `src/app/features/credentials/credentials.store.spec.ts` — load, a failed half, create, remove, the manifest start and completion.
+- `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`.
 - `src/app/features/dashboard/dashboard.page.ts` — health cards, today's spend, recent runs and the loading/error/stale states.
 - `src/app/features/dashboard/dashboard.page.spec.ts` — the health cards, the spend value and the empty/error blocks.
 - `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry` read behind the spend card.

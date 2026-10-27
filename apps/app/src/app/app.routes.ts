@@ -96,6 +96,12 @@ export const routes: Routes = [
       import('./features/settings/devices.page').then((module) => module.DevicesPage),
   },
   {
+    path: 'settings/credentials',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/credentials/credentials.page').then((module) => module.CredentialsPage),
+  },
+  {
     path: 'about',
     canActivate: [authGuard],
     loadComponent: () => import('./features/about/about.page').then((module) => module.AboutPage),
