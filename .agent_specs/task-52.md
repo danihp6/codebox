@@ -33,6 +33,9 @@ Every path this task creates or modifies. **Nothing outside this list.**
 - `apps/daemon/README.md`
 - `packages/contracts/src/resources.ts`
 - `packages/contracts/src/resources.test.ts`
+- `packages/contracts/src/index.test.ts` (Orchestrator amendment: this is the pinned
+  `SSE_EVENT_NAMES` length/order assertion, which `chat.compacted` necessarily moves; the
+  Architect's first list missed it)
 - `packages/contracts/src/primitives.ts`
 - `packages/contracts/src/primitives.test.ts`
 - `packages/contracts/src/events.ts`
@@ -50,6 +53,8 @@ Every path this task creates or modifies. **Nothing outside this list.**
 - `packages/store/src/migrate.test.ts`
 - `packages/store/src/store.test.ts`
 - `packages/store/src/repositories.test.ts`
+- `packages/store/src/schedules.test.ts` (Orchestrator amendment: it pins `schemaVersion`, which
+  the new numbered migration necessarily moves; the Architect's first list missed it)
 - `packages/store/migrations/0005_chat_free.sql` (new file; the directory is
   `packages/store/migrations/`, **not** `packages/store/src/migrations/`)
 - `packages/store/README.md`
