@@ -17,7 +17,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "vitest run",
+    "test": "npm run test:guard && npm run test:app && vitest run",
+    "test:app": "npm test -w @codebox/app",
+    "test:guard": "node --input-type=module -e 'import { readFileSync, readdirSync, existsSync } from \"node:fs\";\nconst root = JSON.parse(readFileSync(\"package.json\", \"utf8\"));\nconst gate = [root.scripts?.test, root.scripts?.[\"test:app\"]].filter(Boolean).join(\" \");\nconst vitest = readFileSync(\"vitest.config.ts\", \"utf8\");\nconst dirs = (root.workspaces ?? []).flatMap((pattern) => {\n  const at = pattern.indexOf(\"/*\");\n  if (at === -1) return [pattern];\n  const prefix = pattern.slice(0, at);\n  return readdirSync(prefix, { withFileTypes: true })\n    .filter((entry) => entry.isDirectory())\n    .map((entry) => `${prefix}/${entry.name}`)\n    .filter((dir) => existsSync(`${dir}/package.json`));\n});\nconst covered = [];\nconst problems = [];\nfor (const dir of dirs) {\n  const pkg = JSON.parse(readFileSync(`${dir}/package.json`, \"utf8\"));\n  if (typeof pkg.scripts?.test !== \"string\") continue;\n  const byNpm = new RegExp(`(?:-w|--workspace)[= ]${pkg.name}(?![\\\\w@/.-])`).test(gate);\n  const byVitest = vitest.indexOf(`./${dir}`) !== -1 || vitest.indexOf(dir) !== -1;\n  if (byNpm && byVitest) problems.push(`${dir}: the gate runs its test script twice (vitest project and npm --workspace)`);\n  else if (!byNpm && !byVitest) problems.push(`${dir}: has a test script but the gate does not run it`);\n  else covered.push(`${dir} (${byNpm ? \"npm --workspace\" : \"vitest project\"})`);\n}\nif (problems.length > 0) {\n  for (const problem of problems) process.stderr.write(`test:guard: ${problem}\\n`);\n  process.exit(1);\n}\nprocess.stdout.write(`test:guard: ${covered.length} workspace(s) covered — ${covered.join(\", \")}\\n`);'",
     "test:watch": "vitest"
   },
   "devDependencies": {

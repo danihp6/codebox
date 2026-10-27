@@ -12,9 +12,10 @@
   `vitest.config.ts` **and** the Angular app suite (`ng test --watch=false`, 364 specs today).
   The root `test` script becomes `test:guard && test:app && vitest run`; `test:guard` is a
   self-contained `node` check that fails the gate when any npm workspace that declares a `test`
-  script is not covered by it (and also when one is covered twice). `ci.yml` gives the job the
-  extra wall-clock the app suite needs, and the gate table and the Workflow rule say so in one
-  line each.
+  script is not covered by it (and also when one is covered twice). The gate table and the
+  Workflow rule say so in one line each. The one-line `timeout-minutes` bump in `ci.yml` is
+  **not** in scope this cycle: the runner's GitHub App token has no `workflows` permission, so a
+  push that touches `.github/workflows/**` is rejected (see the block note below).
 - **Environment:** worktree `../wt-cb-49`, branch `task-49`, base `main`.
 - **Dependencies:** none. The root `package.json` (script `test` = `vitest run`),
   `vitest.config.ts`, `apps/app/angular.json` (`test` architect target,
@@ -29,9 +30,16 @@ batch claims the same path (this task is the batch's holder of `package.json`). 
 anything outside this list is a failure of the task.
 
 - `package.json` (the `test` script and the scripts it must add; nothing else in the file)
-- `.github/workflows/ci.yml`
 - `docs/agent-pipeline.md` (section: `## 7. Gates`, the table and the paragraph under it)
 - `AGENTS.md` (section: `## Workflow` only)
+
+**Not in scope: `.github/workflows/ci.yml`.** The branch cannot carry it: the GitHub App
+installation token of this runner has no `workflows` permission, and the push is rejected with
+`refusing to allow a GitHub App to create or update workflow '.github/workflows/ci.yml' without
+'workflows' permission` (the same external block as issue #11). The CI job already runs
+`npm test`, so the app suite enters CI through the root script with no workflow edit; the
+`timeout-minutes: 15 → 25` bump is deferred and is recorded as an `agent-review` issue. Touching
+any workflow file is a failure of this task.
 
 ### Inputs (read-only)
 
@@ -113,13 +121,12 @@ process.stdout.write(`test:guard: ${covered.length} workspace(s) covered — ${c
   and `apps/app` (npm `--workspace`) — and exit `0`.
 - The message strings above are frozen: QA greps for them.
 
-### `.github/workflows/ci.yml`, frozen
+### `.github/workflows/ci.yml` — not edited
 
-- One job named `gate` on `ubuntu-24.04`, one `Test` step running `npm test` (unchanged
-  command), steps in the order Install → Lint → Test → Build.
-- `timeout-minutes` rises from `15` to `25`, with a one-line comment saying the app unit suite
-  now runs on every pull request.
-- No new job, no matrix, no cache beyond the existing `cache: npm`, no `continue-on-error`.
+- The job already runs `npm test`, so it inherits the app suite and the guard with no workflow
+  change. Do not open the file for a write, do not bump `timeout-minutes`, and do not touch any
+  other workflow: the App token cannot push `.github/workflows/**`.
+- The 15-minute budget stays; the QA plan watches it through the deferred `[live]` measurement.
 
 ### `docs/agent-pipeline.md` §7 and `AGENTS.md` §Workflow, frozen
 
@@ -183,8 +190,9 @@ is not a criterion.
   - [ ] `[unit]` The guard passes the real tree: `npm run test:guard; echo $?` prints `0` and
         one line naming `apps/app (npm --workspace)` and `apps/daemon (vitest project)`.
   - [ ] `[unit]` `git diff --name-only main...task-49` lists exactly `package.json`,
-        `.github/workflows/ci.yml`, `docs/agent-pipeline.md`, `AGENTS.md`, and
-        `git diff --stat main...task-49 -- package-lock.json` is empty.
+        `docs/agent-pipeline.md`, `AGENTS.md`, and
+        `git diff --stat main...task-49 -- package-lock.json` is empty. No
+        `.github/workflows/**` file appears in the diff.
   - [ ] `[unit]` `git diff main...task-49 -- package.json` touches only the `scripts` block; no
         `dependencies`, `devDependencies`, `engines` or `workspaces` line moves.
   - [ ] `[live]` **Not measurable here.** The backlog asks that "a PR's CI log shows the app
@@ -203,7 +211,8 @@ is not a criterion.
   in the batch may touch it, and none does.
 - **For the Orchestrator:** every later gate invocation (`agent-cycle.yml`'s post-merge gate,
   the VM driver) inherits the app suite and the guard by running `npm test`. Nothing else has to
-  change, and no workflow outside `ci.yml` is touched.
+  change, and no workflow file is touched — the `ci.yml` timeout bump is blocked by the App's
+  missing `workflows` permission and is deferred to a human or a token fix (issue #11 family).
 - **For QA and the next batches:** the guard is the mechanism that keeps a future workspace from
   falling out of the gate silently. A new workspace with a `test` script must either be added as
   a project in `vitest.config.ts` or be listed as an `npm --workspace` target in the root
