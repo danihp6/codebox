@@ -11,12 +11,21 @@ import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { translate } from './i18n';
 import { NotificationsPanel } from './notifications.page';
+import { ProvidersPanel } from './providers.page';
 import { SettingsStore } from './settings.store';
 
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [RouterLink, IonContent, IonHeader, IonTitle, IonToolbar, NotificationsPanel],
+  imports: [
+    RouterLink,
+    IonContent,
+    IonHeader,
+    IonTitle,
+    IonToolbar,
+    NotificationsPanel,
+    ProvidersPanel,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [SettingsStore],
   styles: [
@@ -54,33 +63,6 @@ import { SettingsStore } from './settings.store';
         border-radius: calc(var(--cb-radius) / 2);
         padding: calc(var(--cb-space) * 2);
         min-inline-size: 14rem;
-      }
-      .cb-toggles,
-      .cb-providers {
-        display: flex;
-        flex-direction: column;
-        gap: var(--cb-space);
-        margin: 0;
-        padding: 0;
-        list-style: none;
-      }
-      .cb-toggles label {
-        display: flex;
-        gap: calc(var(--cb-space) * 2);
-        align-items: center;
-        min-block-size: 44px;
-      }
-      .cb-toggles input {
-        inline-size: 1.25rem;
-        block-size: 1.25rem;
-      }
-      .cb-providers li {
-        display: flex;
-        flex-wrap: wrap;
-        gap: calc(var(--cb-space) * 2);
-        align-items: baseline;
-        border-block-end: 1px solid var(--cb-surface);
-        padding-block: calc(var(--cb-space) * 2);
       }
       .cb-unavailable {
         border: 1px dashed var(--cb-muted);
@@ -172,6 +154,15 @@ import { SettingsStore } from './settings.store';
         </section>
 
         <section class="cb-section">
+          <h2>{{ t('settings.section.credentials') }}</h2>
+          <p>
+            <a data-testid="settings-credentials-link" routerLink="/settings/credentials">
+              {{ t('settings.credentials.manage') }}
+            </a>
+          </p>
+        </section>
+
+        <section class="cb-section">
           <h2>{{ t('settings.section.devices') }}</h2>
           <p>
             <a data-testid="settings-devices-link" routerLink="/settings/devices">
@@ -185,7 +176,7 @@ import { SettingsStore } from './settings.store';
           <button
             type="button"
             data-testid="settings-notifications-open"
-            (click)="notificationsOpen.set(true)"
+            (click)="toggleNotifications()"
           >
             {{ t('settings.notifications.open') }}
           </button>
@@ -196,29 +187,11 @@ import { SettingsStore } from './settings.store';
 
         <section class="cb-section">
           <h2>{{ t('settings.section.providers') }}</h2>
-          @if (store.providersUnavailable()) {
-            <p class="cb-unavailable" data-testid="settings-unavailable-providers">
-              {{ t('settings.unavailable') }}
-            </p>
-          } @else {
-            <ul class="cb-providers">
-              @for (provider of providers(); track provider.provider) {
-                <li
-                  [attr.data-testid]="'settings-provider-' + provider.provider"
-                  [attr.data-configured]="provider.configured"
-                  [attr.data-mode]="provider.mode"
-                >
-                  <span class="cb-mono">{{ provider.provider }}</span>
-                  <span>
-                    {{ provider.configured ? t('settings.provider.configured') : t('settings.provider.missing') }}
-                  </span>
-                  <span class="cb-muted">
-                    {{ t('settings.provider.mode') }}:
-                    <span class="cb-mono">{{ provider.mode }}</span>
-                  </span>
-                </li>
-              }
-            </ul>
+          <button type="button" data-testid="settings-providers-open" (click)="toggleProviders()">
+            {{ t('settings.providers.open') }}
+          </button>
+          @if (providersOpen()) {
+            <app-providers-panel (closed)="providersOpen.set(false)" />
           }
         </section>
 
@@ -277,12 +250,12 @@ import { SettingsStore } from './settings.store';
 export class SettingsPage {
   readonly store = inject(SettingsStore);
   readonly notificationsOpen = signal(false);
+  readonly providersOpen = signal(false);
 
   private readonly i18n = inject(I18nService);
 
   readonly t: (key: string) => string = (key) => translate(this.i18n.locale(), key);
 
-  readonly providers = computed(() => this.store.providers()?.providers ?? []);
   readonly deviceId = computed(() => this.store.me()?.device.id ?? null);
   readonly scopes = computed(() => this.store.me()?.scopes.join(' ') ?? '');
   readonly brakeOn = computed(() => this.store.settings()?.automerge === false);
@@ -299,6 +272,14 @@ export class SettingsPage {
 
   toggleBrake(): void {
     this.store.setBrake(!this.brakeOn());
+  }
+
+  toggleNotifications(): void {
+    this.notificationsOpen.update((open) => !open);
+  }
+
+  toggleProviders(): void {
+    this.providersOpen.update((open) => !open);
   }
 
   setTimezone(event: Event): void {

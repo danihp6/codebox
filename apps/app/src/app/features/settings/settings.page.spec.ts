@@ -69,6 +69,7 @@ const USED_KEYS: readonly string[] = [
   'common.retry',
   'settings.title',
   'settings.section.profile',
+  'settings.section.credentials',
   'settings.section.devices',
   'settings.section.notifications',
   'settings.section.providers',
@@ -78,13 +79,12 @@ const USED_KEYS: readonly string[] = [
   'settings.device.platform',
   'settings.device.scopes',
   'settings.device.none',
+  'settings.credentials.manage',
   'settings.devices.manage',
   'settings.timezone',
   'settings.timezone.save',
   'settings.notifications.open',
-  'settings.provider.configured',
-  'settings.provider.missing',
-  'settings.provider.mode',
+  'settings.providers.open',
   'settings.brake.on',
   'settings.brake.off',
   'settings.brake.confirm',
@@ -170,6 +170,11 @@ function flushPanelReads(http: HttpTestingController): void {
   for (const request of http.match(PREFERENCES_URL)) request.flush(PREFERENCES_BODY);
 }
 
+/** The providers panel owns its own read, like the notifications panel. */
+function flushProviderReads(http: HttpTestingController): void {
+  for (const request of http.match(PROVIDERS_URL)) request.flush(PROVIDERS);
+}
+
 describe('SettingsPage', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
@@ -188,17 +193,17 @@ describe('SettingsPage', () => {
     await fixture.whenStable();
 
     expect(hook(element, 'settings-unavailable-settings')).not.toBeNull();
-    expect(hook(element, 'settings-unavailable-providers')).not.toBeNull();
     expect(hook(element, 'settings-unavailable-brake')).not.toBeNull();
     expect(hook(element, 'settings-error')).toBeNull();
     expect(hook(element, 'settings-loading')).toBeNull();
     expect(hook(element, 'settings-provider-github')).toBeNull();
+    expect(hook(element, 'providers-panel')).toBeNull();
     expect(hook(element, 'settings-brake')).toBeNull();
     expect((hook(element, 'settings-save-timezone') as HTMLButtonElement).disabled).toBe(true);
     expect(hook(element, 'settings-wipe-cache')).not.toBeNull();
   });
 
-  it('renders the profile, providers, notifications row, brake and about sections', async () => {
+  it('renders the profile, the four action rows, brake and about sections', async () => {
     const { fixture, element, http } = await mount();
     flushHappy(http);
     await fixture.whenStable();
@@ -208,16 +213,15 @@ describe('SettingsPage', () => {
     expect((hook(element, 'settings-timezone') as HTMLInputElement).value).toBe('Europe/Madrid');
     expect((hook(element, 'settings-save-timezone') as HTMLButtonElement).disabled).toBe(false);
 
-    const github = hook(element, 'settings-provider-github');
-    expect(github?.getAttribute('data-configured')).toBe('true');
-    expect(github?.getAttribute('data-mode')).toBe('app');
-    const opencode = hook(element, 'settings-provider-opencode');
-    expect(opencode?.getAttribute('data-configured')).toBe('false');
-    expect(opencode?.getAttribute('data-mode')).toBe('none');
-    expect(hook(element, 'settings-unavailable-providers')).toBeNull();
-
+    expect(hook(element, 'settings-devices-link')?.getAttribute('href')).toBe('/settings/devices');
+    expect(hook(element, 'settings-credentials-link')?.getAttribute('href')).toBe(
+      '/settings/credentials',
+    );
     expect(hook(element, 'settings-notifications-open')).not.toBeNull();
+    expect(hook(element, 'settings-providers-open')).not.toBeNull();
+
     expect(hook(element, 'notifications-panel')).toBeNull();
+    expect(hook(element, 'providers-panel')).toBeNull();
 
     expect(hook(element, 'settings-brake')?.getAttribute('data-enabled')).toBe('false');
     expect(hook(element, 'settings-unavailable-brake')).toBeNull();
@@ -256,6 +260,67 @@ describe('SettingsPage', () => {
 
     expect(hook(element, 'notifications-panel')).toBeNull();
     expect(hook(element, 'settings-notifications-open')).not.toBeNull();
+
+    hook(element, 'settings-notifications-open')?.click();
+    await fixture.whenStable();
+    flushPanelReads(http);
+    await fixture.whenStable();
+    expect(hook(element, 'notifications-panel')).not.toBeNull();
+
+    hook(element, 'settings-notifications-open')?.click();
+    await fixture.whenStable();
+    expect(hook(element, 'notifications-panel')).toBeNull();
+  });
+
+  it('opens the providers panel from one row and closes it with a second click', async () => {
+    const { fixture, element, http } = await mount();
+    flushHappy(http);
+    await fixture.whenStable();
+
+    expect(hook(element, 'providers-panel')).toBeNull();
+
+    hook(element, 'settings-providers-open')?.click();
+    await fixture.whenStable();
+    flushProviderReads(http);
+    await fixture.whenStable();
+
+    expect(hook(element, 'providers-panel')).not.toBeNull();
+    expect(hook(element, 'providers-panel')?.getAttribute('data-count')).toBe('2');
+    expect(element.querySelectorAll('[data-testid="provider-row"]')).toHaveLength(2);
+
+    hook(element, 'settings-providers-open')?.click();
+    await fixture.whenStable();
+    expect(hook(element, 'providers-panel')).toBeNull();
+
+    hook(element, 'settings-providers-open')?.click();
+    await fixture.whenStable();
+    flushProviderReads(http);
+    await fixture.whenStable();
+    expect(hook(element, 'providers-panel')).not.toBeNull();
+
+    hook(element, 'providers-close')?.click();
+    await fixture.whenStable();
+    expect(hook(element, 'providers-panel')).toBeNull();
+  });
+
+  it('leaves the providers panel as the only place that reports provider state', async () => {
+    const { fixture, element, http } = await mount();
+    http.expectOne(ME_URL).flush(ME);
+    http.expectOne(VERSION_URL).flush(VERSION);
+    http.expectOne(SETTINGS_URL).flush(SETTINGS);
+    http.expectOne(PROVIDERS_URL).flush('missing', { status: 404, statusText: 'Not Found' });
+    http.expectOne(PREFERENCES_URL).flush(PREFERENCES_BODY);
+    await fixture.whenStable();
+
+    expect(hook(element, 'settings-unavailable-providers')).toBeNull();
+
+    hook(element, 'settings-providers-open')?.click();
+    await fixture.whenStable();
+    flushProviderReads(http);
+    await fixture.whenStable();
+
+    expect(hook(element, 'providers-panel')).not.toBeNull();
+    expect(element.querySelectorAll('[data-testid="provider-row"]')).toHaveLength(2);
   });
 
   it('turns a preference on from the panel before the response arrives and patches it', async () => {

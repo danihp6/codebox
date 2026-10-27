@@ -176,3 +176,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/settings/devices.store.ts` — paired devices, the calling device and revoke (with logout of the calling device).
 - `src/app/features/settings/devices.store.spec.ts` — load, revoke another device and revoke the calling one down to an empty secure store.
 - `src/app/features/settings/i18n.ts` — the settings and devices dictionary in `en` and `es`.
+- `src/app/features/settings/providers.page.ts` — the inline providers panel: one row per provider with its configured/mode state, last-OK time and a four-character fingerprint hint, plus the unavailable copy.
+- `src/app/features/settings/providers.page.spec.ts` — the rows from the response, the fingerprint prefix, the formatted last-OK, the 404/503 unavailable copy and the close output.
+- `src/app/features/settings/providers.store.ts` — the single `/v1/providers` read, its rows, and 404/503 as unavailable rather than an empty list.
+- `src/app/features/settings/providers.store.spec.ts` — load, absent route, 503, a 500 and the retry that clears the mark.
