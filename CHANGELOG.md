@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-27 (Task-49, the app unit suite joins the gate)
+
+- Root `npm test` is now `test:guard && test:app && vitest run`: the 364 app specs and the
+  Vitest projects run exactly once each, on a laptop and on every pull request, instead of the
+  app suite sitting silently outside the gate.
+- `test:guard` fails when an npm workspace declares a `test` script and the gate neither runs it
+  as an `npm --workspace` target nor as a Vitest project — and when one is covered twice — so a
+  new workspace cannot fall out of the gate again.
+- `docs/agent-pipeline.md` §7 and `AGENTS.md` §Workflow say what `npm test` now includes.
+- `.github/workflows/ci.yml` is untouched: the runner's GitHub App token cannot push
+  `.github/workflows/**` (issue #11). CI already runs `npm test`, so the app suite arrives with
+  the root script; the `timeout-minutes` bump is deferred to the token fix, and the `[live]`
+  CI-log and wall-time check is carried by an `agent-review` issue.
+
 ### Added — 2026-10-27 (Task-48, one issue per work order)
 
 - `scripts/agent/issue.mjs` — the handoff helper: it reads the open `agent-review` and

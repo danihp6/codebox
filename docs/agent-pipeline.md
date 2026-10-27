@@ -141,6 +141,10 @@ each merge.
 | Batch gate | `npm ci && npm run lint && npm test && npm run build` | On the combined tree. |
 | Merge gate | the same, after each merge | Before the push. |
 | E2E | `npx playwright test` when the spec says so | Task or batch. |
+| App unit suite | included in `npm test` (guard → `ng test --watch=false` → `vitest run`) | Every gate run. |
+
+`npm test` means the same suite on a laptop and in CI, and a workspace that declares a `test`
+script but is not covered fails the gate.
 
 A criterion is tagged `[unit]` (a command, a decoded value, a pinned number) or `[live]` (only
 measurable in the running system). An untagged criterion is a spec bug. A `[live]` criterion

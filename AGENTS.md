@@ -149,8 +149,9 @@ integrates.
 
 - Pick the lowest pending batch from `TODO.md`. The Architect writes the specs; the
   Orchestrator launches the devs.
-- Run `npm ci && npm run lint && npm test && npm run build` before declaring a task done.
-  For app tasks, add `npx playwright test` when the spec says so.
+- Run `npm ci && npm run lint && npm test && npm run build` before declaring a task done; the
+  `npm test` gate runs the app unit suite and the workspace coverage guard, on a laptop and in
+  CI alike. For app tasks, add `npx playwright test` when the spec says so.
 - A change to an API schema, an event type or a config key is a contract change: update
   `packages/contracts`, `docs/api.md` or `docs/providers.md`, and the app in the same batch.
 - A change to the auto-merge guardrails is a security change: update `docs/jobs.md`,

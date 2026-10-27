@@ -749,7 +749,7 @@ these files again).
       instead of a bare `gh issue create`; `[live]` a cycle that finishes two batches leaves
       two issues, and re-running the same batch leaves the count unchanged.
 
-- [ ] **[Task-49]** The app unit suite is outside the gate. Root `npm test` runs the Vitest
+- [x] **[Task-49]** The app unit suite is outside the gate. Root `npm test` runs the Vitest
       projects in `vitest.config.ts`; `apps/app` is not one of them, and neither the CI job nor
       `npm run build` invokes `ng test`, so 364 app specs never run on a PR. Make the documented
       gate run the app suite exactly once — the root `test` script is the natural place, so
@@ -761,6 +761,10 @@ these files again).
       deliberately broken; `[unit]` a workspace whose `test` script is not covered fails the
       guard; `[live]` a PR's CI log shows the app suite and the job stays under the documented
       time budget.
+      SHIPPED WITHOUT the `ci.yml` half: the App token cannot push `.github/workflows/**`
+      (issue #11), so the `timeout-minutes` bump stays deferred to the token fix. CI already
+      runs `npm test`, so the app suite reaches CI through the root script. The `[live]` check
+      is an `agent-review` issue.
 
 ## Batch 16 - Contract and daemon
 
