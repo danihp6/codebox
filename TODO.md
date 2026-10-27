@@ -886,7 +886,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       `chat-stream.ts`. *Dependencies:* Task-51, Task-52. *Acceptance:* `[unit]` a replayed
       frame never duplicates a message; `[unit]` gate and PR render from run state, not from
       prose; `[live]` a streamed run ends with the PR card without a reload.
-- [ ] **[Task-59]** Context sheet and compact. Usage bar with the 75/90/95 states, cost of the
+- [x] **[Task-59]** Context sheet and compact. Usage bar with the 75/90/95 states, cost of the
       chat and of the day, environment rows, `Compact context` and `New chat in this repo`.
       *Paths:* `apps/app/src/app/features/chat/context-sheet.*`. *Dependencies:* Task-52.
       *Acceptance:* `[unit]` each threshold renders its state from a fixture; `[unit]` compact

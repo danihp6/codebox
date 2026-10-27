@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-59, context sheet)
+
+- `ChatContextSheet` and `ContextSheetStore` render a chat's own ledger: the usage bar with the
+  four pinned states (`ok` under 75 %, `warn` from 150 000 of 200 000 tokens, `high` from 90 %,
+  `full` from 95 %), the chat cost from `usage.usd`, the day cost from
+  `GET /v1/telemetry?range=24h`, and the environment rows (repository, scope, context epoch).
+- `Compact context` sends one `POST /v1/chat/sessions/{id}/compact` per tap, adopts the daemon's
+  new epoch and draws the handoff divider above the reset numbers; a failed compact keeps the old
+  epoch and shows the error code. `New chat in this repo` is offered only for a bound chat.
+- `[live]` — a repo chat at 95 % blocking the composer and the divider landing at the new epoch
+  in a browser — needs the box and a paired device, and the sheet still has no mounting screen in
+  the frozen router; it is recorded as `[?]`, never as passing (issue #52).
+
 ### Added — 2026-10-27 (Task-67, About)
 
 - `/about` is a real screen: version, commit, build time and Node from `GET /v1/version`, the
