@@ -36,6 +36,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/app.routes.ts` — every route of `docs/app.md` §4, lazy and guarded.
 - `src/app/app.routes.spec.ts` — path table and lazy-loader resolution.
 - `src/app/readme.spec.ts` — every `src/app` file appears in this map and every map entry exists.
+- `src/app/shared/chat-row.ts` — one chat row: title, preview and the wrapping scope/cost/context flow with both signals.
+- `src/app/shared/chat-row.spec.ts` — both signals, the omitted micro-text, the emitted id and the wrapping styles.
 - `src/app/shared/offline-banner.ts` — the connectivity signals and the read-only offline banner.
 - `src/app/shared/offline-banner.i18n.ts` — the offline banner dictionary in `en` and `es`.
 - `src/app/shared/offline-banner.spec.ts` — the stale/fresh banner, the browser events, the single listener attach and the dictionary parity.
@@ -64,10 +66,10 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/core/settings/settings.store.ts` — locale and theme persisted in the secure store.
 - `src/app/features/about/about.page.ts` — about/404 placeholder.
 - `src/app/features/approvals/approvals.page.ts` — approvals placeholder.
-- `src/app/features/chat/chat-list.page.ts` — the chat list: sessions, repo filter and a start-chat action.
-- `src/app/features/chat/chat-list.page.spec.ts` — the list hooks, the empty state and the filter.
-- `src/app/features/chat/chat-list.store.ts` — the session list, the repo filter, start-chat and the list stream frames.
-- `src/app/features/chat/chat-list.store.spec.ts` — load, filter, create and the refetch frames.
+- `src/app/features/chat/chat-list.page.ts` — the chat list: search, the five client-side filters and one row per session.
+- `src/app/features/chat/chat-list.page.spec.ts` — the chips, the filter order, both signals, the search, the error and the empty states.
+- `src/app/features/chat/chat-list.store.ts` — the session page, the per-device read markers, the client-side filters, start-chat and the list stream frames.
+- `src/app/features/chat/chat-list.store.spec.ts` — the two reads, the row helpers, the read markers, the filters, create and the stream frames.
 - `src/app/features/chat/chat.page.ts` — chat detail: streaming messages, tool and permission cards, promote, the routine confirmation card and the `routine` badge.
 - `src/app/features/chat/chat.page.spec.ts` — streaming hooks, the permission reply, promote and dictionary completeness.
 - `src/app/features/chat/chat.api.ts` — sessions, send, interrupt, promote, approval reply and the repo list.

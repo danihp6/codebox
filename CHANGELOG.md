@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-56, chat list)
+
+- `/chat` is one flat list: a search box, the five filters `All` / `Repo` / `Schedule` /
+  `Unread` / `Archived`, one scope chip per row, and the two signals — an unread dot and an
+  amber unreviewed edge — with cost and context as a wrapping flow, never at a fixed x.
+- `shared/chat-row.ts` renders one row from `ChatRowView`; `ChatListStore` filters client-side
+  and `ChatReadStore` is the only writer of the per-device read marker, kept in the secure store
+  under `cb.chatRead` and capped at 200 sessions, so unread survives a reload.
+- The list stays live while a stream arrives: a `chat.message` moves its row to the top and
+  updates the preview, and every other event is ignored, so the list does not depend on the
+  approval machinery Task-54 retired.
+- `[live]` — the 320 px fit — needs a browser session; it is recorded as `[?]`, never as
+  passing (issue #47).
+
 ### Changed — 2026-10-27 (Task-54, interactive approvals retired)
 
 - The chat path no longer files an approval and waits for a human: a `permission.updated` is

@@ -862,7 +862,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       Task-51. *Acceptance:* `[unit]` every route resolves and every route but `/pair` is
       guarded; `[unit]` the tab bar renders three items from one source of truth; `[live]` no
       screen scrolls horizontally at 320 px.
-- [ ] **[Task-56]** Chat list. Search, five filters (`All`/`Repo`/`Schedule`/`Unread`/
+- [x] **[Task-56]** Chat list. Search, five filters (`All`/`Repo`/`Schedule`/`Unread`/
       `Archived`), one scope chip per row and the **two signals** — unread dot and unreviewed
       edge — plus the cost/context micro-text as a flow, never at a fixed x. *Paths:*
       `apps/app/src/app/features/chat/chat-list.*`, `shared/chat-row.ts`. *Dependencies:*
