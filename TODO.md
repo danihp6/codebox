@@ -42,7 +42,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 2 | Contracts, store, core rules, security | 03 → 04–06 | 1, then 3 |
 | 3 | Integrations: OpenCode, workspaces, scheduler, GitHub | 07–10 | 4 |
 | 4 | Daemon: config, auth, chat, runs, CLI | 11–12, 13–17 | 2, then 4 |
-| 5 | Hybrid app shell, screens and instance liveness | 18 → 37, 19–23 | 1, then 4 |
+| 5 | Hybrid app shell, screens and instance liveness | 18 → 37, 19–23, 50 | 1, then 4 |
 | 6 | OCI extraction and VM image | 24–25, 33 | 3 |
 | 7 | Hardening, e2e, observability, release | 26–30 | 5 |
 | 8 | Beta, onboarding, migration of pkm | 31–32, 34 | 3 |
@@ -52,6 +52,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 12 | Durable backups and concurrency three | 43–44 | 2 |
 | 13 | Host-neutral docs and ADRs | 45 | 1 |
 | 14 | Measured AWS spot bring-up | 46 | 1 |
+| 15 | Agent pipeline hygiene | 48–49 | 2 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -59,18 +60,17 @@ goes first because it is what lets the operator create and destroy the OCI footp
 wait is still open; the spot host reuses the same tool with the same image. Batches 7–9 keep
 their internal order behind it. Nothing is dropped, only displaced.
 
-**Cut — cycle after Task-44 (one of four slots used, Task-38).** The queue was thin: the only
-dependency-free tasks were Task-38 (Batch 9) and Task-45 (Batch 13), and both claim
-`docs/decisions.md` — a hot file, one owner per batch — so they could not travel together.
-Task-38 went first because it is the lower batch and its own dependant (Task-36) is waiting;
-Task-45 is displaced to the next cut. The other three slots were empty for cause, not by
-choice: Task-26 and Task-29 are `[!]` on the `workflows` permission (issue #11); Task-30 waits
-for Task-29; Task-31 for Task-26/28/30; Task-32 for Task-31; Task-36 for Task-38 (merged) and
-is eligible next cycle; Task-46 for Task-42–45, with Task-45 still open.
-**Hot-file holders in this cut:** Task-38 held `docs/decisions.md` (D41); `package.json`,
-`package-lock.json`, `tsconfig.base.json`, `packages/contracts/src/index.ts`,
-`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
-`opencode.json`, `TODO.md` and `CHANGELOG.md` were held by no task.
+**Cut — cycle after Task-46 (one of four slots used).** The queue is empty for cause, not for
+lack of planning: Task-26 and Task-29 are `[!]` on the `workflows` permission (issue #11), and
+Task-30 waits for Task-29, Task-31 for Task-26/28/30 and Task-32 for Task-31, so the whole
+remaining chain hangs on #11 plus the human `[live]` measurements. Task-48 and Task-49
+(Batch 15) are the only eligible tasks and are path-disjoint from every blocked branch;
+Task-50 (Batch 5) waits for the L2 screen sign-off.
+**Hot-file holders in this cut:** Task-49 holds `package.json`; Task-48 owns `scripts/agent/**`
+and `docs/agent-ci.md`. `package-lock.json`, `tsconfig.base.json`,
+`packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md` and
+`CHANGELOG.md` are held by no task.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -391,6 +391,21 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       `[unit]` notification preferences are validated against the contract; `[live]` a
       preference change is reflected in the next push.
 
+- [ ] **[Task-50]** Pairing screen. `/pair` still renders the Task-18 placeholder
+      (`Pairing — tasks 19-23`): measured on 2026-10-27 in Chromium at 320×640, the route has
+      **0 inputs and 0 buttons**, so the app cannot pair and no app-level `[live]` criterion is
+      reachable. Build the screen the design signs off: pairing code, device name, submit, an
+      inline error for a used or expired code, the 320 px floor, EN/ES copy, and the redirect
+      to `/dashboard` on success through the existing `AuthStore.pair`. Do not invent a visual
+      language: this task consumes L2's signed-off screens. *Paths:*
+      `apps/app/src/app/features/pairing/**`, `docs/app.md` (§4 and §9 only). *Dependencies:*
+      L2 (the signed-off screens), Task-18 (the `AuthStore.pair` seam and the route).
+      *Acceptance:* `[unit]` the form rejects an empty code or device name and calls
+      `AuthStore.pair` once with the trimmed values; `[unit]` a used or expired code renders
+      the message and re-enables submit; `[unit]` the new dictionary has EN/ES parity;
+      `[live]` a real code from `cb pair` pairs the browser at 320 px in under two minutes and
+      lands on the dashboard with no horizontal scroll.
+
 ---
 
 ## Batch 6 — OCI extraction and VM image
@@ -707,6 +722,42 @@ is asked to hold three repositories at once.
       green and the box stays under the memory ceiling; `[live]` the rebuilt box restores the
       newest dump and serves the same jobs and chat; `[live]` the monthly cost at the spot
       price is recorded in `docs/aws.md`.
+
+---
+
+## Batch 15 — Agent pipeline hygiene
+
+Two gaps in the harness that the 2026-10-26 cycles exposed: the loop can duplicate its own work
+orders, and the app unit suite is not in the gate. Both are path-disjoint, so they run together;
+they share no path with Batch 1 (Task-02 is blocked on its `[live]` criterion and does not touch
+these files again).
+
+- [ ] **[Task-48]** Issue dedupe. The cycle of 2026-10-26 opened #22 and #23 with the same
+      batch, the same body and one minute apart, doubling the measurement backlog; a retry of
+      an issue-opening step does the same. Open the issue through a deterministic helper that
+      first searches the open `agent-review` and `agent-blocked` issues for the same title (and
+      comments there when it finds one), so two attempts or two agents cannot race a check the
+      model performs by hand. *Paths:* `scripts/agent/**`, `scripts/agent/vm/prompt.md`,
+      `.agent_roles/orchestrator.md`, `docs/agent-ci.md` (issue handoff section),
+      `scripts/README.md`. *Dependencies:* none (the scripts and the prompt are on `main`).
+      *Acceptance:* `[unit]` the helper creates one issue and a second call with the same title
+      creates none and comments on the first; `[unit]` a different title still creates a new
+      issue; `[unit]` the prompt, the role file and `docs/agent-ci.md` point at the helper
+      instead of a bare `gh issue create`; `[live]` a cycle that finishes two batches leaves
+      two issues, and re-running the same batch leaves the count unchanged.
+
+- [ ] **[Task-49]** The app unit suite is outside the gate. Root `npm test` runs the Vitest
+      projects in `vitest.config.ts`; `apps/app` is not one of them, and neither the CI job nor
+      `npm run build` invokes `ng test`, so 364 app specs never run on a PR. Make the documented
+      gate run the app suite exactly once — the root `test` script is the natural place, so
+      `npm test` means the same thing in CI and on a laptop — and add the guard that keeps a
+      workspace with a `test` script from silently falling out of the gate again. *Paths:*
+      `package.json` (the `test` script), `.github/workflows/ci.yml`, `docs/agent-pipeline.md`
+      (gate table), `AGENTS.md` (Workflow section). *Dependencies:* none. *Acceptance:*
+      `[unit]` a fresh `npm ci && npm test` runs the app suite and fails when one app spec is
+      deliberately broken; `[unit]` a workspace whose `test` script is not covered fails the
+      guard; `[live]` a PR's CI log shows the app suite and the job stays under the documented
+      time budget.
 
 ---
 
