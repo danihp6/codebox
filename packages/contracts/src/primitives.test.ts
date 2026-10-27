@@ -17,6 +17,7 @@ import {
   RUN_STATES,
   RUN_TRIGGERS,
   RunId,
+  ScheduleId,
   SCOPES,
   SSE_CONTROL_EVENT_NAMES,
   SSE_EVENT_NAMES,
@@ -48,6 +49,7 @@ describe('ids', () => {
       ['dev_01JABCDEFG', 'device'],
       ['sub_01JABCDEFG', 'pushSubscription'],
       ['rtn_01JABCDEFG', 'routine'],
+      ['sch_01JABCDEFG', 'schedule'],
       ['c_01JABCDEFG', 'cursor'],
       ['req_01JABCDEFG', 'request'],
     ];
@@ -55,6 +57,7 @@ describe('ids', () => {
       expect(idSchema(prefix as keyof typeof ID_PREFIXES).safeParse(id).success).toBe(true);
     }
     expect(ID_PREFIXES.routine).toBe('rtn_');
+    expect(ID_PREFIXES.schedule).toBe('sch_');
     expect(RepoId.safeParse('run_01JABCDEFG').success).toBe(false);
     expect(JobId.safeParse('job_short').success).toBe(false);
     expect(RunId.safeParse('run_01JABCDEFG').success).toBe(true);
@@ -66,6 +69,8 @@ describe('ids', () => {
     expect(RoutineId.safeParse('rtn_01JABCDEFG').success).toBe(true);
     expect(RoutineId.safeParse('sub_01JABCDEFG').success).toBe(false);
     expect(RoutineId.safeParse('rtn_short').success).toBe(false);
+    expect(ScheduleId.safeParse('sch_01JABCDEFG').success).toBe(true);
+    expect(ScheduleId.safeParse('rtn_01JABCDEFG').success).toBe(false);
     expect(Cursor.safeParse('c_01JABCDEFG').success).toBe(true);
     expect(RequestId.safeParse('req_01JABCDEFG').success).toBe(true);
   });

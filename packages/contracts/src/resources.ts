@@ -8,6 +8,7 @@ import {
   MessageId,
   RepoId,
   RunId,
+  ScheduleId,
   SubscriptionId,
   branchSchema,
   cronSchema,
@@ -337,6 +338,105 @@ export const meSchema = z.strictObject({
 });
 export type Me = z.infer<typeof meSchema>;
 
+// §5.9 Schedules: one recurring object, a cron, a window or a single fire (D44, D46).
+export const SCHEDULE_MODES = ['once', 'every', 'window'] as const;
+export const scheduleModeSchema = z.enum(SCHEDULE_MODES);
+export type ScheduleMode = z.infer<typeof scheduleModeSchema>;
+
+export const SCHEDULE_FIRE_POLICIES = ['new_chat', 'continue'] as const;
+export const scheduleFirePolicySchema = z.enum(SCHEDULE_FIRE_POLICIES);
+export type ScheduleFirePolicy = z.infer<typeof scheduleFirePolicySchema>;
+
+export const scheduleWindowTimeSchema: z.ZodString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+export type Schedule = {
+  id: string;
+  repoId: string | null;
+  chatSessionId: string | null;
+  title: string;
+  prompt: string;
+  mode: ScheduleMode;
+  cron: string | null;
+  timezone: string;
+  windowStart: string | null;
+  windowEnd: string | null;
+  cooldownMinutes: number;
+  maxFires: number | null;
+  maxCostPerFireUsd: number | null;
+  firePolicy: ScheduleFirePolicy;
+  consecutiveFailures: number;
+  firesCount: number;
+  spendUsd: number;
+  enabled: boolean;
+  policy: 'auto' | 'manual';
+  nextFireAt: string | null;
+  lastFiredAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const scheduleObjectSchema = z.strictObject({
+  id: ScheduleId,
+  repoId: RepoId.nullable(),
+  chatSessionId: ChatId.nullable(),
+  title: z.string().min(1).max(120),
+  prompt: z.string().min(1).max(8_000),
+  mode: scheduleModeSchema,
+  cron: cronSchema.nullable(),
+  timezone: timezoneSchema,
+  windowStart: scheduleWindowTimeSchema.nullable(),
+  windowEnd: scheduleWindowTimeSchema.nullable(),
+  cooldownMinutes: z.number().int().nonnegative(),
+  maxFires: z.number().int().min(1).nullable(),
+  maxCostPerFireUsd: z.number().nonnegative().nullable(),
+  firePolicy: scheduleFirePolicySchema,
+  consecutiveFailures: z.number().int().nonnegative(),
+  firesCount: z.number().int().nonnegative(),
+  spendUsd: z.number().nonnegative(),
+  enabled: z.boolean(),
+  policy: repoPolicySchema,
+  nextFireAt: timestampSchema.nullable(),
+  lastFiredAt: timestampSchema.nullable(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+});
+
+// D46: a window schedule carries its opening hours and no cron; every other mode carries a
+// cron and no window. A report on `mode` keeps the two field families from disagreeing.
+export const scheduleSchema: z.ZodType<Schedule> = scheduleObjectSchema.superRefine(
+  (value, ctx) => {
+    if (value.mode === 'window') {
+      const shaped =
+        value.cron === null &&
+        value.windowStart !== null &&
+        value.windowEnd !== null &&
+        value.windowStart !== value.windowEnd;
+      if (!shaped) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['mode'],
+          message: 'a window schedule needs windowStart and windowEnd and no cron',
+        });
+      }
+      return;
+    }
+    const shaped = value.cron !== null && value.windowStart === null && value.windowEnd === null;
+    if (!shaped) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['mode'],
+        message: 'a schedule without a window needs a cron and no window bounds',
+      });
+    }
+  },
+);
+
+export const scheduleDetailSchema = z.strictObject({
+  schedule: scheduleSchema,
+  nextFires: z.array(timestampSchema),
+});
+export type ScheduleDetail = z.infer<typeof scheduleDetailSchema>;
+
 export type RepoVerify = z.infer<typeof repoVerifySchema>;
 
 export type Job = z.infer<typeof jobSchema>;
@@ -422,4 +522,12 @@ export function parseMe(input: unknown): Me {
 
 export function parseBrake(input: unknown): Brake {
   return parseOrThrow(brakeSchema, input, 'brake');
+}
+
+export function parseSchedule(input: unknown): Schedule {
+  return parseOrThrow(scheduleSchema, input, 'schedule');
+}
+
+export function parseScheduleDetail(input: unknown): ScheduleDetail {
+  return parseOrThrow(scheduleDetailSchema, input, 'scheduleDetail');
 }

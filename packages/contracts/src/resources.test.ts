@@ -22,10 +22,13 @@ import {
   parseRepoVerify,
   parseRun,
   parseRunDiff,
+  parseSchedule,
+  parseScheduleDetail,
   parseSettings,
   parseTelemetry,
   parseVersion,
   repoSchema,
+  scheduleSchema,
 } from './resources.js';
 
 const ts = '2026-10-24T18:03:11Z';
@@ -95,6 +98,42 @@ const chatMessage = {
   createdAt: ts,
 };
 
+const schedule = {
+  id: 'sch_01JABCDEFG',
+  repoId,
+  chatSessionId: null,
+  title: 'Nightly drain',
+  prompt: 'Pick the next issue and open a PR.',
+  mode: 'window',
+  cron: null,
+  timezone: 'Europe/Madrid',
+  windowStart: '22:00',
+  windowEnd: '06:00',
+  cooldownMinutes: 20,
+  maxFires: 12,
+  maxCostPerFireUsd: 1.5,
+  firePolicy: 'new_chat',
+  consecutiveFailures: 0,
+  firesCount: 3,
+  spendUsd: 0.84,
+  enabled: true,
+  policy: 'auto',
+  nextFireAt: '2026-10-25T21:20:00Z',
+  lastFiredAt: '2026-10-25T21:00:00Z',
+  createdAt: ts,
+  updatedAt: ts,
+};
+
+const scheduleEvery = {
+  ...schedule,
+  mode: 'every',
+  cron: '0 3 * * *',
+  windowStart: null,
+  windowEnd: null,
+  maxFires: null,
+  maxCostPerFireUsd: null,
+};
+
 const fixtures: ReadonlyArray<{
   name: string;
   fixture: Record<string, unknown>;
@@ -113,6 +152,12 @@ const fixtures: ReadonlyArray<{
     parse: parseRepoVerify,
   },
   { name: 'Job', fixture: job, parse: parseJob },
+  { name: 'Schedule', fixture: schedule, parse: parseSchedule },
+  {
+    name: 'ScheduleDetail',
+    fixture: { schedule: scheduleEvery, nextFires: ['2026-10-25T02:00:00Z'] },
+    parse: parseScheduleDetail,
+  },
   { name: 'Run', fixture: run, parse: parseRun },
   {
     name: 'RunDiff',
@@ -283,6 +328,8 @@ const documentedResources = [
   'PushSubscription',
   'Me',
   'Brake',
+  'Schedule',
+  'ScheduleDetail',
 ].sort();
 
 function parseError(fn: () => unknown): unknown {
@@ -394,6 +441,40 @@ describe('resources', () => {
     );
   });
 
+  it('accepts a window schedule and an every schedule, and rejects a mixed shape', () => {
+    expect(parseSchedule(schedule)).toEqual(schedule);
+    expect(parseSchedule(scheduleEvery)).toEqual(scheduleEvery);
+
+    const windowWithCron = parseError(() => parseSchedule({ ...schedule, cron: '0 3 * * *' }));
+    expect(windowWithCron instanceof ContractParseError ? windowWithCron.first.path : null).toBe(
+      'schedule.mode',
+    );
+    const everyWithWindow = parseError(() =>
+      parseSchedule({ ...scheduleEvery, windowStart: '22:00', windowEnd: '06:00' }),
+    );
+    expect(everyWithWindow instanceof ContractParseError ? everyWithWindow.first.path : null).toBe(
+      'schedule.mode',
+    );
+    const emptyWindow = parseError(() => parseSchedule({ ...schedule, windowEnd: '22:00' }));
+    expect(emptyWindow instanceof ContractParseError ? emptyWindow.first.path : null).toBe(
+      'schedule.mode',
+    );
+    const missingCron = parseError(() => parseSchedule({ ...scheduleEvery, cron: null }));
+    expect(missingCron instanceof ContractParseError ? missingCron.first.path : null).toBe(
+      'schedule.mode',
+    );
+  });
+
+  it('bounds a schedule window time, its id and its counters', () => {
+    expect(scheduleSchema.safeParse({ ...schedule, windowStart: '24:00' }).success).toBe(false);
+    expect(scheduleSchema.safeParse({ ...schedule, id: 'rtn_01JABCDEFG' }).success).toBe(false);
+    expect(scheduleSchema.safeParse({ ...schedule, cooldownMinutes: -1 }).success).toBe(false);
+    expect(scheduleSchema.safeParse({ ...schedule, maxFires: 0 }).success).toBe(false);
+    expect(scheduleSchema.safeParse({ ...schedule, firePolicy: 'reuse' }).success).toBe(false);
+    expect(scheduleSchema.safeParse({ ...schedule, policy: 'sometimes' }).success).toBe(false);
+    expect(scheduleSchema.safeParse({ ...schedule, mode: 'daily' }).success).toBe(false);
+  });
+
   it('keeps the repo schema strict for nested objects', () => {
     expect(repoSchema.safeParse(repo).success).toBe(true);
     expect(chatMessageSchema.safeParse({ ...chatMessage, role: 'tool' }).success).toBe(false);
@@ -411,6 +492,10 @@ function boundaryOf(name: string): string {
       return 'repoVerify';
     case 'Job':
       return 'job';
+    case 'Schedule':
+      return 'schedule';
+    case 'ScheduleDetail':
+      return 'scheduleDetail';
     case 'Run':
       return 'run';
     case 'RunDiff':

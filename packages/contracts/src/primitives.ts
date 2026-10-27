@@ -10,6 +10,7 @@ export const ID_PREFIXES = {
   device: 'dev_',
   pushSubscription: 'sub_',
   routine: 'rtn_',
+  schedule: 'sch_',
   cursor: 'c_',
   request: 'req_',
 } as const;
@@ -46,6 +47,9 @@ export type SubscriptionId = z.infer<typeof SubscriptionId>;
 
 export const RoutineId = idSchema('routine');
 export type RoutineId = z.infer<typeof RoutineId>;
+
+export const ScheduleId = idSchema('schedule');
+export type ScheduleId = z.infer<typeof ScheduleId>;
 
 export const Cursor = idSchema('cursor');
 export type Cursor = z.infer<typeof Cursor>;
