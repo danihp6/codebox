@@ -905,7 +905,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       `features/dashboard/**`. *Dependencies:* Task-52, Task-53. *Acceptance:* `[unit]` every
       block renders from a zero fixture; `[unit]` `Needs you` sums questions, approvals retired
       and unreviewed; `[live]` a fresh box shows the start card, not a dashboard of zeros.
-- [ ] **[Task-66]** Unpaired and offline. The 401 hand-off with its reason, and the offline banner
+- [x] **[Task-66]** Unpaired and offline. The 401 hand-off with its reason, and the offline banner
       that keeps cached rows read-only instead of queueing writes. The pairing screen itself is
       **Task-50** on `docs/task-48-issue-dedupe`: this task does not touch
       `features/pairing/**`. *Paths:* `shared/offline-banner.ts`, `core/auth/auth.guard.ts`.

@@ -30,12 +30,16 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/assets/i18n/es.json` — the shared Spanish dictionary (default locale), same key set.
 - `src/theme/variables.css` — the `--cb-*` tokens and the light override.
 - `src/theme/tokens.ts` — the same tokens for TypeScript consumers.
-- `src/app/app.component.ts` — `ion-app`, router outlet, tab bar and stream-state hook.
+- `src/app/app.component.ts` — `ion-app`, router outlet, tab bar, offline banner and stream-state hook.
+- `src/app/app.component.spec.ts` — the banner reaches the shell and drops out when fresh.
 - `src/app/app.config.ts` — zoneless, Ionic, router, HTTP, service-worker providers.
 - `src/app/app.routes.ts` — every route of `docs/app.md` §4, lazy and guarded.
 - `src/app/app.routes.spec.ts` — path table and lazy-loader resolution.
 - `src/app/readme.spec.ts` — every `src/app` file appears in this map and every map entry exists.
-- `src/app/shell/tabs.page.ts` — the five bottom tabs.
+- `src/app/shared/offline-banner.ts` — the connectivity signals and the read-only offline banner.
+- `src/app/shared/offline-banner.i18n.ts` — the offline banner dictionary in `en` and `es`.
+- `src/app/shared/offline-banner.spec.ts` — the stale/fresh banner, the browser events, the single listener attach and the dictionary parity.
+- `src/app/shell/tabs.page.ts` — the three top-level tabs: Dashboard, Chat and Settings.
 - `src/app/shell/tabs.page.spec.ts` — tab order and rendered hooks.
 - `src/app/core/api/api-client.ts` — typed `/v1` client, `ApiError`, pair parsing, the run detail reads, cancel and revert.
 - `src/app/core/api/api-client.spec.ts` — payload parsing, error-envelope mapping, the event page and the run detail calls.
@@ -45,8 +49,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/core/auth/pairing.ts` — per-install ECDSA key pair and public JWK.
 - `src/app/core/auth/secure-store.ts` — IndexedDB AES-GCM store with a memory fallback.
 - `src/app/core/auth/secure-store.spec.ts` — memory fallback, clearing and the token key.
-- `src/app/core/auth/auth.interceptor.ts` — bearer header, one refresh replay, logout on 401.
-- `src/app/core/auth/auth.guard.ts` — restore-or-pair guard.
+- `src/app/core/auth/auth.interceptor.ts` — bearer header, one refresh replay, the 401 hand-off with its reason, and the connectivity mark.
+- `src/app/core/auth/auth.interceptor.spec.ts` — `session_expired`, `revoked`, a non-401 error and the stale/fresh marks.
+- `src/app/core/auth/auth.guard.ts` — restore-or-pair guard, with the unpaired reason on the redirect.
+- `src/app/core/auth/auth.guard.spec.ts` — the three outcomes and the recorded reason.
+- `src/app/core/auth/signed-out.ts` — the sign-out reasons, the module-level signal and the `/pair?reason=` URL helpers.
+- `src/app/core/auth/signed-out.spec.ts` — the URL round-trip, the unknown value and the signal.
 - `src/app/core/events/sse-client.ts` — fetch SSE reader, backoff, `Last-Event-ID`, gap.
 - `src/app/core/events/sse-client.spec.ts` — frame parsing, backoff and gap resume.
 - `src/app/core/events/sse.service.ts` — one stream per session, exposed as signals.

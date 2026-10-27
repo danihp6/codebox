@@ -2,9 +2,12 @@ import { HttpErrorResponse } from '@angular/common/http';
 import type { HttpEvent, HttpHandlerFn, HttpRequest } from '@angular/common/http';
 import { inject } from '@angular/core';
 import { Router } from '@angular/router';
-import { Observable, catchError, from, switchMap, throwError } from 'rxjs';
+import { Observable, catchError, from, switchMap, tap, throwError } from 'rxjs';
+import { ConnectivityStore } from '../../shared/offline-banner';
 import { API_PREFIX } from '../api/http';
 import { AuthStore } from './auth.store';
+import { pairUrlFor, setSignedOutReason } from './signed-out';
+import type { SignedOutReason } from './signed-out';
 
 const RETRIED_HEADER = 'x-cb-retried';
 
@@ -16,12 +19,17 @@ export function authInterceptor(
 
   const auth = inject(AuthStore);
   const router = inject(Router);
+  const connectivity = inject(ConnectivityStore);
   const token = auth.accessToken();
   const authorized =
     token === null ? req : req.clone({ setHeaders: { Authorization: `Bearer ${token}` } });
 
   return next(authorized).pipe(
+    tap(() => connectivity.markFresh()),
     catchError((error: unknown) => {
+      if (error instanceof HttpErrorResponse && error.status === 0) {
+        connectivity.markStale();
+      }
       if (!(error instanceof HttpErrorResponse) || error.status !== 401) {
         return throwError(() => error);
       }
@@ -31,7 +39,7 @@ export function authInterceptor(
       return from(auth.refresh()).pipe(
         switchMap((refreshed) => {
           if (!refreshed) {
-            void leaveSession(auth, router);
+            void leaveSession(auth, router, 'session_expired');
             return throwError(() => error);
           }
           const fresh = auth.accessToken();
@@ -42,9 +50,13 @@ export function authInterceptor(
             },
           });
           return next(replay).pipe(
+            tap(() => connectivity.markFresh()),
             catchError((second: unknown) => {
+              if (second instanceof HttpErrorResponse && second.status === 0) {
+                connectivity.markStale();
+              }
               if (second instanceof HttpErrorResponse && second.status === 401) {
-                void leaveSession(auth, router);
+                void leaveSession(auth, router, 'revoked');
               }
               return throwError(() => second);
             }),
@@ -55,9 +67,14 @@ export function authInterceptor(
   );
 }
 
-async function leaveSession(auth: AuthStore, router: Router): Promise<void> {
+async function leaveSession(
+  auth: AuthStore,
+  router: Router,
+  reason: SignedOutReason,
+): Promise<void> {
   await auth.logout();
-  await router.navigateByUrl('/pair');
+  setSignedOutReason(reason);
+  await router.navigateByUrl(pairUrlFor(reason));
 }
 
 function isApiRequest(url: string): boolean {
@@ -65,7 +82,5 @@ function isApiRequest(url: string): boolean {
 }
 
 function isAuthFree(url: string): boolean {
-  return (
-    url.endsWith('/pair') || url.endsWith('/auth/refresh') || url.endsWith('/auth/logout')
-  );
+  return url.endsWith('/pair') || url.endsWith('/auth/refresh') || url.endsWith('/auth/logout');
 }

@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-66, unpaired and offline)
+
+- A 401 has one hand-off: `AuthStore.logout()`, the reason kept in one module signal
+  (`unpaired` / `session_expired` / `revoked`) and a redirect to `/pair?reason=<code>`. The guard
+  sends an unpaired session the same way, and the interceptor tells a failed refresh from a
+  device revoked while its token was still fresh.
+- `ConnectivityStore` and `<app-offline-banner>`: a status-0 failure marks the cached data stale,
+  any successful response clears it, and the browser's `online`/`offline` events flip the
+  signal. The banner renders inside `<ion-app>` with its own EN/ES copy and no retry button;
+  nothing is queued or replayed, so a tap cannot pretend it worked.
+- `apps/app/README.md` maps the eight new files and describes the three-tab shell; the app suite
+  grows from 386 to 402 tests.
+- `[live]` — the banner disappearing on the first successful refetch without a reload — needs a
+  browser; it is recorded as `[?]`, never as passing.
+
 ### Added — 2026-10-27 (Task-58, generic credentials and integrations)
 
 - `CB_SECRETS_KEY` (32 random bytes, standard base64, a secret and never echoed) and
