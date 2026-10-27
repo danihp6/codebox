@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-50, the pairing screen)
+
+- `/pair` is a real screen instead of the placeholder: pairing code and device name, a submit
+  that trims both, a double-tap guard, and inline copy for a used or expired code (401), a rate
+  limit, an offline failure and a generic failure. Success routes to `/dashboard` through
+  `AuthStore.pair` and writes nothing to `localStorage`.
+- The form uses the `--cb-*` tokens and native inputs with no fixed pixel width, so it holds the
+  320 px floor; EN/ES copy lives in the feature dictionary and the spec enforces parity.
+- `apps/app/README.md` maps the two new pairing files and the rewritten page.
+- `[live]` — a real `cb pair` code pairing a browser at 320 px in under two minutes with no
+  horizontal scroll — needs the box and a browser; an `agent-review` issue carries it and it is
+  never reported as passing.
+
 ### Changed — 2026-10-27 (Task-49, the app unit suite joins the gate)
 
 - Root `npm test` is now `test:guard && test:app && vitest run`: the 364 app specs and the

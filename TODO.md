@@ -394,7 +394,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       `[unit]` notification preferences are validated against the contract; `[live]` a
       preference change is reflected in the next push.
 
-- [ ] **[Task-50]** Pairing screen. `/pair` still renders the Task-18 placeholder
+- [x] **[Task-50]** Pairing screen. `/pair` still renders the Task-18 placeholder
       (`Pairing — tasks 19-23`): measured on 2026-10-27 in Chromium at 320×640, the route has
       **0 inputs and 0 buttons**, so the app cannot pair and no app-level `[live]` criterion is
       reachable. Build the screen the design signs off: pairing code, device name, submit, an
