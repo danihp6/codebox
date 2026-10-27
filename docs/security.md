@@ -139,6 +139,12 @@ The agent is capable by design; the boundary is what it can reach (D27). It runs
 unprivileged identity, `codebox-agent`, in group `codebox-workspace`, so a policy mistake is not
 a filesystem-wide permission.
 
+D45 fixes the boundary in one sentence: the agent never waits for an operator and never reads a
+daemon secret. It cannot read `/etc/codebox/` — the secret bundles and `instance.env` live
+there — and it cannot read the SSH keys or `~/.ssh`. The only file it gets from that directory
+is `/etc/codebox/agent.env` (`0640 root:codebox-workspace`), whose allowlist carries the model
+provider keys and no line of it starts with `CB_`.
+
 | Control | Implementation |
 | --- | --- |
 | Working directory | One worktree per session; the process cwd is that directory. |
@@ -180,6 +186,24 @@ own rule keep `main` for merges.
   value.
 - Rotation is documented in `docs/providers.md` §16. The session secret rotation logs devices
   out of their access tokens but not of their refresh tokens.
+
+### 7.1 Credential and integration allowlist (D49, D50)
+
+- A credential is **write-only**: the daemon seals it with AES-256-GCM under `CB_SECRETS_KEY`
+  into one JSON envelope per credential under `CB_STATE_DIR/secrets/credentials` — directory
+  `0700`, file `0600`, both owned by the daemon's user and a tree the agent cannot read. The
+  API reports `configured`, `lastFour` and `lastUsedAt`, and never returns the value, a prefix
+  longer than four characters or the sealed envelope.
+- `expose = env` is limited to `kind: "model_key"`. Anything else is a `422` with
+  `details.reason = "env_not_allowed"`: the model provider key is the only secret whose child
+  may see it in the environment, and even there only the names listed in
+  `CB_MODEL_PROVIDER_KEYS` cross over, never the daemon's whole environment.
+- An integration declares its `allowedHosts`. `POST /v1/integrations/{id}/request` checks
+  `https` and the full host against that list **before any DNS lookup** and before the outbound
+  call, so a name that would resolve elsewhere never gets a socket; a refusal is a `422` with
+  `details.reason = "host_not_allowed"`.
+- The key names and their formats are in [`docs/providers.md`](providers.md) — `CB_SECRETS_KEY`
+  among them — and are not repeated here.
 
 ## 8. Data protection
 
