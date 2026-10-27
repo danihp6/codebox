@@ -44,53 +44,68 @@ host their code.
 
 ## 4. The product in five surfaces
 
-1. **Chat.** A persistent session bound to a repository. Streaming text, tool calls, diffs
-   and permission cards. Chat is exploratory: it never opens a PR and never merges (D36).
-2. **Jobs.** Reusable definitions: repository, prompt, agent, model, mode, cron, timezone,
-   enabled. One-off "run now" is a job with a manual trigger.
-3. **Runs.** The live and historical execution: timeline, gate output, PR link, guardrail
-   checklist, merge result, cost, cancel.
-4. **Repos.** Registered repositories with a gate command, merge policy, protected paths and
-   default branch. This is where auto-merge is opted into per repo.
-5. **Approvals.** Everything waiting on a human: OpenCode permission requests, guardrail
-   exceptions, device pairing. One inbox, push-driven.
+1. **Chat.** One surface with three scopes (D43). A chat starts **free** — no repository, so
+   no code — and gains a `repo` scope when you connect one: the cache is cloned, a worktree is
+   cut, and the last ten turns are handed to a new agent session. Promote it and it becomes a
+   `schedule` scope. Streaming text, tool cards, and gate and PR cards once a run exists.
+2. **Schedules.** The only recurring object (D44). Prompt, time rule and an **optional**
+   repository: with one it produces runs, without one it produces chats. `once`, `every`, or a
+   `window` that relaunches itself after each fire finishes (D46).
+3. **Runs.** The transaction behind a repo chat or a schedule fire: timeline, gate output, PR
+   link, guardrail checklist, merge result, cost. A run appears as cards inside the chat that
+   spawned it, not as a separate screen.
+4. **Repositories.** Registered repositories with a gate command, merge policy, protected
+   paths and default branch — reached through a filter in Chat, not a tab (D47). This is where
+   auto-merge is opted into per repo.
+5. **Credentials.** Every secret the box holds (D49, D50): adapters that need OAuth or a
+   manifest (GitHub App, model accounts) and open credentials for anything else. Write-only,
+   and an allowlist decides which hosts the agent may reach with them.
 
-Plus a **dashboard** (health, queue, today's spend, last runs) and **settings** (devices,
-notifications, provider status, danger zone).
+Plus a **dashboard** (what needs you, what is working, what finished unreviewed, today's spend,
+health) and **settings** (devices, notifications, providers, schedules, danger zone). There are
+no interactive approvals (D45): the gate and the disposable worktree are the only doors.
 
 ## 5. Core flows
 
 ### 5.1 "Do this now"
 
-1. Open the app, pick a repo, type a prompt, choose `work`.
-2. The daemon prepares a worktree, starts an OpenCode session, streams the run.
-3. The agent edits, runs tests, reports.
-4. The daemon runs the repo gate, pushes `cb/<run>-<slug>`, opens a PR.
-5. If every guardrail is green, it merges and notifies. If not, the PR stays open with a
-   checklist of what failed.
-6. The run detail shows the diff stat, the gate tail, the merge commit and the cost.
+1. Open a chat. It starts free: ask a question, draft a prompt, think out loud.
+2. Connect a repository from the `⋯` menu, or straight from the empty state. The daemon clones
+   the cache once, cuts a worktree, and hands the last ten turns to a new agent session.
+3. Ask for the work. The agent edits, runs the gate, and reports with a gate card.
+4. Promote the chat when the work is real: the run adopts the same worktree, pushes
+   `cb/<run>-<slug>` and opens a PR. A free chat cannot be promoted — it has no worktree.
+5. If every guardrail is green, it merges and the chat shows the PR card. If not, the card
+   lists what failed and the branch stays.
 
 ### 5.2 "Every night"
 
-1. Create a job: repo, prompt ("update the lockfile, run the gate, fix what breaks"),
-   `0 3 * * *`, `Europe/Madrid`, `work`, auto-merge on.
-2. The scheduler claims it at 03:00, runs it like 5.1, and pushes the outcome.
-3. A red run notifies once; it does not retry in a tight loop (misfire policy, D13).
-4. The job detail shows the next fire, last outcome and a pause switch.
+1. Say it in a chat: "every night at 3, update the lockfile, run the gate, fix what breaks".
+   The agent proposes a schedule card — prompt, `every day 03:00`, `Europe/Madrid`, an optional
+   repository, a cap per fire — and only the tap creates it (D38, D44).
+2. The scheduler fires at 03:00. With a repository it runs like 5.1 and opens a PR; without
+   one it opens a chat and answers.
+3. A window relaunches after each fire finishes, inside its range, until the cap or the end.
+   A red fire notifies once; three consecutive failures pause the schedule.
+4. The schedule is reached through the `Schedule` filter in Chat and the Settings row; there
+   is no Schedule page.
 
 ### 5.3 "What is it doing?"
 
-1. The run detail opens on the timeline: `preparing`, `running`, tool calls, gate, PR.
+1. The chat is the record: `preparing`, `running`, tool calls, gate and PR arrive as cards in
+   the thread, and the header carries the context percentage.
 2. Tapping a tool call shows its input/output (redacted).
 3. The diff tab shows files and stat; GitHub opens for the full review.
 4. Cancel is always available and kills the session, not just the UI.
 
-### 5.4 "It wants permission"
+### 5.4 "It needs a provider"
 
-1. OpenCode raises a permission request; the daemon maps it to an approval.
-2. A push arrives: "Run bash: `rm -rf dist && npm run build`" with Approve/Deny.
-3. Approve → the tool runs; the event is in the timeline.
-4. Deny or timeout → the agent receives a rejection and can adapt.
+1. The agent calls `integration.request` with a credential name and a path.
+2. The daemon checks the host against the integration's allowlist **before any DNS lookup**,
+   adds the auth header server-side, and returns the response.
+3. The model never sees the credential, and neither does the shell.
+4. A host outside the allowlist is refused, and the refusal is logged with the credential name,
+   never the value.
 
 ## 6. MVP scope (v0.1)
 
@@ -98,8 +113,8 @@ In:
 
 - pairing and device management;
 - one owner, multiple repos;
-- chat with streaming and permission bridge;
-- manual run and cron job, one repo per job;
+- chat with streaming, scope conversion and gate cards;
+- schedules (`once` / `every` / `window`) with or without a repository;
 - worktree isolation, gate, PR, auto-merge guardrails;
 - run timeline, diff stat, cancel, revert;
 - push notifications (Web Push first, native push in the same milestone if the build is
@@ -137,8 +152,9 @@ A v0.1 is successful when the owner can, from a phone, without SSH:
 
 1. pair a device in under two minutes;
 2. register a repo and see its gate pass on a manual run;
-3. create a nightly job and see it fire, open a PR and merge green;
-4. receive a permission push, approve it, and see the tool run;
+3. describe a nightly schedule in a chat, see it fire, open a PR and merge green;
+4. connect a repository from a chat and watch the clone, the worktree and the gate land in
+   the thread;
 5. cancel a runaway run and see the worktree cleaned;
 6. revert a bad merge with one action;
 7. lose the VM and restore from the nightly backup with the documented drill.

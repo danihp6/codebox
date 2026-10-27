@@ -74,26 +74,34 @@ One feature folder owns its routes, components and store. A shared component mov
 
 ## 4. Screens
 
+The target set after D43-D50. `design/README.md` maps each of these to a Figma frame; a route
+here without a frame, or a frame without a route, is a bug in one of the two.
+
 | Route | Screen | What it must do |
 | --- | --- | --- |
-| `/pair` | Pairing | Scan or paste a code, name the device, store tokens. |
-| `/dashboard` | Dashboard | Health, queue, today's spend, last five runs, approvals badge. |
-| `/repos` | Repos | List, add wizard, verify, policy badges. |
-| `/repos/:id` | Repo | Gate editor, protected paths, policy, recent runs. |
-| `/chat` | Chat list | Sessions by repo, last message, unread marker. |
-| `/chat/:id` | Chat | Streaming text, tool cards, permission cards, interrupt, promote. |
-| `/jobs` | Jobs | List, next fire, pause/resume, create; a **Routines** tab lists the chat schedules with their kind, the cron's local time and the next fire, and opens the editor as a sheet. |
-| `/jobs/:id` | Job | Cron and timezone editor, next fires, history. |
-| `/runs` | Runs | Filterable list with state chips and cost. |
-| `/runs/:id` | Run detail | Timeline, gate tail, guardrail checklist, PR link, cancel, revert. |
-| `/approvals` | Inbox | Pending permissions and guardrail exceptions. |
-| `/settings` | Settings | Devices, notifications, providers, language, theme, danger zone. |
-| `/settings/devices` | Devices | Revoke, rename, last seen. |
+| `/pair` | Pairing | Paste a ten-character code, name the device, store tokens; the same screen after a 401. |
+| `/dashboard` | Dashboard | What needs you, what is working, what finished unreviewed, today's spend, health; the start card on a fresh box. |
+| `/chat` | Chat list | Flat, ordered by last message; filters `All`/`Repo`/`Schedule`/`Unread`/`Archived`; one scope chip per row; unread dot **and** unreviewed edge; cost and context as micro-text. |
+| `/chat/new` | New chat | Empty state offering a repository or a schedule; the composer is never blocked. |
+| `/chat/:id` | Chat | Streaming text, tool cards, gate and PR cards, the `⋯` menu, the context sheet, promote. |
+| `/repos/pick` | Connect repository | The picker over the GitHub App installation, with `connected` / `cloning` / `unavailable` per row. |
+| `/chat?filter=repo` | Repo filter | Registered repositories, clone state, policy badges, add. |
+| `/chat?filter=schedule` | Schedule filter | The running window and the fires grouped by schedule. |
+| `/settings` | Settings | Credentials, schedules, devices, notifications, appearance, danger zone. |
+| `/settings/credentials` | Credentials | Adapters (manifest or OAuth) and open credentials, write-only. |
+| `/settings/devices` | Devices | Scopes per device, revoke, last seen; this device cannot revoke itself. |
+| `/settings/notifications` | Notifications | Five toggleable events plus the non-toggleable credential alert, and quiet hours. |
 | `/about` | About | Version, commit, server health, licences. |
 
-Bottom tabs: **Dashboard · Chat · Jobs · Runs · Settings**. Detail screens push onto the
-stack; deep links (`codebox://run/<id>`, `https://cb.example.com/runs/<id>`) open the same
-route.
+Bottom tabs: **Dashboard · Chat · Settings**. Repositories and schedules are **filters inside
+Chat**, not destinations; Settings owns the row that reaches each filter. Detail screens push
+onto the stack; deep links (`codebox://chat/<id>`, `https://cb.example.com/chat/<id>`) open the
+same route.
+
+**The chat's scope is the spine.** A chat is `free`, `repo` or `schedule`, and it changes
+scope in one direction only: connecting a repository costs a new agent session with a
+ten-turn handoff, and promoting to a run is offered only once a worktree exists. There is no
+approval prompt anywhere in this flow (D45).
 
 ## 5. State and data
 
@@ -164,10 +172,16 @@ sticks to the bottom only when the user is already at the bottom.
 
 - **Dark by default**, light theme available and following the system by default on iOS.
 - **One accent**: signal green for healthy and merged; amber for waiting on a human; red
-  only for failed. No gradients, no glass, no decorative illustration.
+  only for failed. No gradients, no glass, no decorative illustration. On light, `#22c55e` on
+  white is 2.1:1, so **text and strokes use the ink variants** (`#15803d`, `#b45309`) while the
+  signal colour stays for fills and dots.
 - **Monospace** (system mono stack) for logs, diffs, branch names and ids; the UI face is the
   platform default.
-- **Density**: a run row is three lines; a timeline item is one line plus an expandable body.
+- **Density**: a chat row is three lines — title, last message, and a flow of `scope · cost ·
+  status` — and never three fixed positions, so the same row survives at 320 px.
+- **Two signals, never one**: a green dot means an unread message; an amber edge means work was
+  delivered and not reviewed. Collapsing them into a single dot is how a list stops being
+  honest.
 - **320 px** is the reference width: no horizontal scroll anywhere; tables become cards.
 - **Motion** is functional (route transitions, a pulsing dot while a run is live) and
   respects `prefers-reduced-motion`.
@@ -181,7 +195,7 @@ sticks to the bottom only when the user is already at the bottom.
 
 | Situation | Behaviour |
 | --- | --- |
-| No network | Cached dashboard and runs list; a banner says the data is stale. |
+| No network | Cached dashboard and chat list; a banner says the data is stale. |
 | Tunnel down | Same; the SSE service retries with backoff. |
 | Daemon restarting | Health card shows `down`; actions queue nothing and explain why. |
 | 401 after refresh fails | Log out, clear the secure store, route to pairing with the reason. |

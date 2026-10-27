@@ -1,8 +1,9 @@
 # Project: Codebox
 
 Private control plane for **OpenCode** running on your own OCI VM. A hybrid **Angular +
-Ionic + Capacitor** app is the only client: chat with an agent bound to a repository, launch
-and schedule jobs, watch runs, answer permission prompts, and let a green run merge itself.
+Ionic + Capacitor** app is the only client: a chat starts free, takes a repository when you
+connect one, and becomes a run when the work is real; schedules open their own chats; and a
+green run merges itself with no approval prompt in the loop (D43-D48).
 
 This file is the operating manual for humans and agents. The frozen decisions live in
 [`docs/decisions.md`](docs/decisions.md); the backlog lives in [`TODO.md`](TODO.md). When a
@@ -68,7 +69,7 @@ apps/
   app/               # Angular + Ionic + Capacitor hybrid client
 packages/
   contracts/         # zod schemas, API types, event types (shared by app and daemon)
-  core/              # domain: jobs, runs, approvals, state machines, policies
+  core/              # domain: schedules, runs, state machines, policies
   store/             # SQLite schema, migrations, repositories
   opencode/          # OpenCode client, event normaliser, session supervisor
   workspaces/        # bare clone cache, worktree lifecycle, cleanup
@@ -83,6 +84,7 @@ ops/
   image/             # Packer template and image build
   vm/                # systemd units, cloud-init, install/upgrade scripts
 docs/
+design/              # Figma exports and the frame-to-route map (L2)
 scripts/agent/       # deterministic recon, gate, verdict, brake, cycle (Batch 9)
 .agent_roles/        # orchestrator, architect, dev, qa
 ```
