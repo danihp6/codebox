@@ -735,7 +735,7 @@ orders, and the app unit suite is not in the gate. Both are path-disjoint, so th
 they share no path with Batch 1 (Task-02 is blocked on its `[live]` criterion and does not touch
 these files again).
 
-- [ ] **[Task-48]** Issue dedupe. The cycle of 2026-10-26 opened #22 and #23 with the same
+- [x] **[Task-48]** Issue dedupe. The cycle of 2026-10-26 opened #22 and #23 with the same
       batch, the same body and one minute apart, doubling the measurement backlog; a retry of
       an issue-opening step does the same. Open the issue through a deterministic helper that
       first searches the open `agent-review` and `agent-blocked` issues for the same title (and

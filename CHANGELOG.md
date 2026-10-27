@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-48, one issue per work order)
+
+- `scripts/agent/issue.mjs` — the handoff helper: it reads the open `agent-review` and
+  `agent-blocked` issues, matches the title after trimming, collapsing whitespace and folding
+  case, and either creates one issue or comments on the lowest matching number, so a retry or a
+  second agent cannot open the pair #22/#23 again. One `gh` read, then create **or** comment,
+  never both, and every result reports the duplicate numbers it saw.
+- `scripts/agent/issue.test.mjs` covers create-once, comment-on-repeat with the frozen line, a
+  distinct title creating a second issue, the title key, the ignored label and the numbered-pair
+  report against an in-memory port; the CLI smoke block in the spec runs against a fake `gh`.
+- `scripts/agent/vm/prompt.md`, `.agent_roles/orchestrator.md`, `docs/agent-ci.md` §7 and
+  `scripts/README.md` point at the helper instead of a bare `gh issue create`.
+- `[live]` — two cycles leaving two issues and a re-run leaving the count unchanged — needs a
+  dispatched cycle and is carried by an `agent-review` issue, never reported as passing.
+
 ### Changed — 2026-10-27 (issue #19, the app file map and the feature-local dictionaries)
 
 - `apps/app/README.md` maps every file under `src/app` again: the five shipped feature folders

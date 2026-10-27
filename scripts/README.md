@@ -1,7 +1,8 @@
 # scripts/agent
 
 The deterministic half of the agent pipeline: it reads git refs and writes decisions, and it
-runs before any dependency is installed (Node built-ins only).
+runs before any dependency is installed (Node built-ins only). `scripts/agent/issue.mjs` is the
+only sanctioned way to open a work order.
 
 | File | What it is |
 | --- | --- |
@@ -11,6 +12,8 @@ runs before any dependency is installed (Node built-ins only).
 | `gate.test.mjs` | Unit tests for every parking reason and the order that decides which one wins. |
 | `verdict.mjs` | The cycle's outcome: a red gate fails; a moved `main` or an opened issue is green even when the stream died. Pure. |
 | `verdict.test.mjs` | Unit tests for shipped, resumed, stopped and failed. |
+| `issue.mjs` | Opens a work order at most once: lists the open `agent-review` and `agent-blocked` issues, creates one or comments on the lowest match. |
+| `issue.test.mjs` | Unit tests for the title key, the duplicate finder, the decision, and create-once/comment-on-repeat against a fake port. |
 | `vm/` | The VM host: driver, cycle, brake, install, unit, env template and the canonical prompt (`scripts/agent/vm/README.md`). |
 | `README.md` | This map. |
 

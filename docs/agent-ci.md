@@ -160,6 +160,35 @@ look at something already in `main`, so a defect it finds becomes a new task or 
 No criterion in this repository may require a real GitHub token, a real model provider spend
 beyond the smoke test, or a real tunnel. A pipeline that needs any of those is a spec bug.
 
+### The issue handoff
+
+Opening a work order is a command, not a paragraph. Every role — an Orchestrator that must
+park, a QA that must report an unmeasured `[live]` criterion, a dev that hits a contradiction —
+runs `scripts/agent/issue.mjs`. It lists the open `agent-review` and `agent-blocked` issues,
+matches the title after trimming, collapsing runs of whitespace and lowercasing, and then
+either creates one issue or comments
+`Reported again by a second attempt; the original report stands.` on the **lowest** matching
+number. It never closes, relabels or edits an issue, so the #22/#23 pair stays as it is until a
+human folds it.
+
+```bash
+node scripts/agent/issue.mjs --label agent-review --title "Task-<ID>: <what must be measured>" \
+  --body-file -        # or --body "<text>"; `-` reads stdin
+```
+
+Success writes one JSON line to stdout and exits 0:
+`{"action":"created"|"commented","number":<n>,"url":"<url>","duplicates":[<n>,...]}`. A `gh`
+failure or a label outside the pair writes `{"error":"<message>"}` to stderr and exits 1; a
+usage error — no `--title`, neither `--body` nor `--body-file`, an unknown argument — exits 2.
+There is no retry: a failed call is reported, not repeated. `GH_TOKEN` is read by `gh`, never by
+the helper.
+
+Two bounds are stated on purpose. The list reads at most 200 open issues, so a work order outside
+the first 200 open ones reads as absent. And GitHub has no unique constraint on a title: two
+processes that both list before either creates can still both create. The helper shrinks the
+window to one list and one create and reports `duplicates` so the pair is visible in the same
+run; it is not atomic and does not claim to be.
+
 ## 8. The loop's guards
 
 `agent-autopilot.yml` starts a cycle only when all of them hold:

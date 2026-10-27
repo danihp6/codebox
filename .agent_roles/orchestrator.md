@@ -77,6 +77,10 @@ workflow and the git rules; if it conflicts with this file, `AGENTS.md` wins.
   start or restart `codebox.service`, do not write `/var/lib/codebox`, do not talk to port
   4096 and do not use a real GitHub or tunnel credential. A test that needs the daemon starts
   one on an ephemeral port with a temporary `CB_STATE_DIR` and `FakeOpenCode`.
+- **Open every work order with `scripts/agent/issue.mjs`**, never by hand and never twice: it
+  lists the open `agent-review` and `agent-blocked` issues, creates at most one and comments on
+  the existing one. A retried step or a second agent must not double the measurement backlog
+  (`docs/agent-ci.md` §7).
 - Never report success for a step you did not run.
 - Keep the human informed in **Spanish**, briefly: batch, task, what changed, what was
   verified, what is blocked.
@@ -86,8 +90,8 @@ workflow and the git rules; if it conflicts with this file, `AGENTS.md` wins.
 When you run from a cycle (`opencode run --agent orchestrator --auto`), there is no human:
 
 - **Never use the `question` tool.** It hangs the job until the timeout. A real block becomes
-  one `agent-blocked` issue containing the task id, the exact command and error, the decision
-  needed and the options — then you park.
+  one `agent-blocked` issue, opened with `scripts/agent/issue.mjs`, containing the task id, the
+  exact command and error, the decision needed and the options — then you park.
 - **Wait for every subagent in the foreground.** A background subagent dies with the runner
   and the cycle looks green while nothing shipped.
 - **Move something.** A merge, a `[!]` mark or an issue. A cycle that ends with nothing moved
