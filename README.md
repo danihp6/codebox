@@ -4,8 +4,9 @@
 
 Codebox is a private control plane for [OpenCode](https://opencode.ai) running on your
 own cloud VM. A hybrid Angular app — iOS, Android and web — is the ground station: you chat
-with an agent bound to a repository, launch and schedule jobs, watch a run stream, answer
-permission prompts, and let a green run merge itself.
+in a chat that starts free and takes a repository when you connect one, promote it into a run
+when the work is real, and let a green run merge itself. Schedules open their own chats, and
+nothing asks for permission mid-flight.
 
 > **Status: bootstrapped (2026-10-26).** The npm workspace skeleton, the root gate and CI are in
 > place, and the tree holds the daemon, the app, the agent pipeline, one provider-neutral
@@ -22,8 +23,9 @@ from a desk. Codebox closes that gap:
 
 - **The app is the terminal.** A native-feeling hybrid app, not a web console in a browser
   tab, with push notifications when a run finishes or needs a decision.
-- **Jobs, not just chats.** A prompt can be a one-off, a recurring cron job, or a repo
-  pipeline; each run gets its own git worktree and branch.
+- **A chat that grows up.** It starts free, takes a repository when you connect one, and is
+  promoted into a run when the work is real; a schedule opens its own chat on time. Every run
+  gets its own git worktree and branch.
 - **Autonomy with a leash.** Runs open a PR, run the repo's gate, and merge only when every
   guardrail passes. One switch parks the whole thing.
 - **One box, no inbound ports.** The daemon and OpenCode live on the VM; a tunnel exposes
@@ -34,7 +36,7 @@ from a desk. Codebox closes that gap:
 ```mermaid
 flowchart LR
   subgraph Phone["Hybrid app (Angular + Ionic + Capacitor)"]
-    UI[Chat · Jobs · Runs · Approvals]
+    UI[Dashboard · Chat · Settings]
   end
   subgraph Edge["Cloudflare edge"]
     T[Tunnel + Access]
