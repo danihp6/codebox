@@ -81,9 +81,7 @@ const USED_KEYS: readonly string[] = [
   'settings.devices.manage',
   'settings.timezone',
   'settings.timezone.save',
-  'settings.quiet.hours',
-  'settings.quiet.none',
-  'settings.quiet.save',
+  'settings.notifications.open',
   'settings.provider.configured',
   'settings.provider.missing',
   'settings.provider.mode',
@@ -98,13 +96,17 @@ const USED_KEYS: readonly string[] = [
   'settings.about.node',
 ];
 
-const PREFERENCE_KEYS: readonly string[] = [
+/** The panel owns these rows now; the dictionary keeps the keys, so they must still resolve. */
+const RETAINED_KEYS: readonly string[] = [
   'settings.preference.run.finished',
   'settings.preference.run.failed',
   'settings.preference.run.merged',
   'settings.preference.run.cancelled',
   'settings.preference.approval.created',
   'settings.preference.routine.fired',
+  'settings.quiet.hours',
+  'settings.quiet.none',
+  'settings.quiet.save',
 ];
 
 function memoryStore(): SecureStore {
@@ -163,6 +165,11 @@ function flushHappy(http: HttpTestingController): void {
   http.expectOne(PREFERENCES_URL).flush(PREFERENCES_BODY);
 }
 
+/** Both the page's store and the panel read the same URL, so flush every match, never one. */
+function flushPanelReads(http: HttpTestingController): void {
+  for (const request of http.match(PREFERENCES_URL)) request.flush(PREFERENCES_BODY);
+}
+
 describe('SettingsPage', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
@@ -191,7 +198,7 @@ describe('SettingsPage', () => {
     expect(hook(element, 'settings-wipe-cache')).not.toBeNull();
   });
 
-  it('renders the profile, providers, preferences, brake and about sections', async () => {
+  it('renders the profile, providers, notifications row, brake and about sections', async () => {
     const { fixture, element, http } = await mount();
     flushHappy(http);
     await fixture.whenStable();
@@ -209,16 +216,8 @@ describe('SettingsPage', () => {
     expect(opencode?.getAttribute('data-mode')).toBe('none');
     expect(hook(element, 'settings-unavailable-providers')).toBeNull();
 
-    expect(hook(element, 'settings-preference-run.finished')?.getAttribute('data-enabled')).toBe(
-      'true',
-    );
-    expect(hook(element, 'settings-preference-run.merged')?.getAttribute('data-enabled')).toBe(
-      'false',
-    );
-    expect(hook(element, 'settings-preference-approval.created')?.getAttribute('data-enabled')).toBe(
-      'true',
-    );
-    expect(hook(element, 'settings-quiet-hours')).not.toBeNull();
+    expect(hook(element, 'settings-notifications-open')).not.toBeNull();
+    expect(hook(element, 'notifications-panel')).toBeNull();
 
     expect(hook(element, 'settings-brake')?.getAttribute('data-enabled')).toBe('false');
     expect(hook(element, 'settings-unavailable-brake')).toBeNull();
@@ -230,26 +229,64 @@ describe('SettingsPage', () => {
     expect(hook(element, 'settings-error')).toBeNull();
   });
 
-  it('turns a preference on before the response arrives and patches it', async () => {
+  it('opens the notification panel from one row and hides it again', async () => {
     const { fixture, element, http } = await mount();
     flushHappy(http);
     await fixture.whenStable();
 
-    hook(element, 'settings-preference-run.merged')?.click();
+    expect(hook(element, 'notifications-panel')).toBeNull();
+
+    hook(element, 'settings-notifications-open')?.click();
+    await fixture.whenStable();
+    flushPanelReads(http);
+    await fixture.whenStable();
+
+    expect(hook(element, 'notifications-panel')?.getAttribute('data-events')).toBe('5');
+    expect(hook(element, 'notifications-panel')?.getAttribute('data-locked')).toBe(
+      'credential.changed',
+    );
+    expect(hook(element, 'notifications-toggle-run.finished')?.getAttribute('data-enabled')).toBe(
+      'true',
+    );
+    expect(hook(element, 'notifications-locked-credential')?.getAttribute('data-locked')).toBe('true');
+    expect(hook(element, 'settings-error')).toBeNull();
+
+    hook(element, 'notifications-close')?.click();
+    await fixture.whenStable();
+
+    expect(hook(element, 'notifications-panel')).toBeNull();
+    expect(hook(element, 'settings-notifications-open')).not.toBeNull();
+  });
+
+  it('turns a preference on from the panel before the response arrives and patches it', async () => {
+    const { fixture, element, http } = await mount();
+    flushHappy(http);
+    await fixture.whenStable();
+
+    hook(element, 'settings-notifications-open')?.click();
+    await fixture.whenStable();
+    flushPanelReads(http);
+    await fixture.whenStable();
+
+    hook(element, 'notifications-toggle-run.merged')?.click();
     await fixture.whenStable();
 
     const request = http.expectOne({ method: 'PATCH', url: PREFERENCES_URL });
-    expect(request.request.body).toMatchObject({
-      events: expect.arrayContaining(['run.merged']),
+    expect(request.request.body).toEqual({
+      events: ['run.finished', 'run.merged', 'approval.created'],
+      quietHours: null,
     });
-    expect(hook(element, 'settings-preference-run.merged')?.getAttribute('data-enabled')).toBe(
+    expect(hook(element, 'notifications-toggle-run.merged')?.getAttribute('data-enabled')).toBe(
       'true',
     );
 
-    request.flush({ ...PREFERENCES_BODY, events: ['run.finished', 'approval.created', 'run.merged'] });
+    request.flush({
+      ...PREFERENCES_BODY,
+      events: ['run.finished', 'run.merged', 'approval.created'],
+    });
     await fixture.whenStable();
 
-    expect(hook(element, 'settings-preference-run.merged')?.getAttribute('data-enabled')).toBe(
+    expect(hook(element, 'notifications-toggle-run.merged')?.getAttribute('data-enabled')).toBe(
       'true',
     );
   });
@@ -290,7 +327,7 @@ describe('SettingsPage', () => {
         expect(value, `${locale} ${key}`).not.toBe('');
         expect(translate(locale, key), `${locale} ${key}`).toBe(value);
       }
-      for (const key of [...USED_KEYS, ...PREFERENCE_KEYS]) {
+      for (const key of [...USED_KEYS, ...RETAINED_KEYS]) {
         expect(translate(locale, key), `${locale} ${key}`).not.toBe(key);
       }
     }

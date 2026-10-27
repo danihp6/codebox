@@ -1,15 +1,22 @@
-import { ChangeDetectionStrategy, Component, computed, inject, linkedSignal } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  inject,
+  linkedSignal,
+  signal,
+} from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { translate } from './i18n';
-import { PREFERENCE_EVENTS, SettingsStore } from './settings.store';
-import type { PreferenceEvent } from './settings.store';
+import { NotificationsPanel } from './notifications.page';
+import { SettingsStore } from './settings.store';
 
 @Component({
   selector: 'app-settings-page',
   standalone: true,
-  imports: [RouterLink, IonContent, IonHeader, IonTitle, IonToolbar],
+  imports: [RouterLink, IonContent, IonHeader, IonTitle, IonToolbar, NotificationsPanel],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [SettingsStore],
   styles: [
@@ -175,48 +182,15 @@ import type { PreferenceEvent } from './settings.store';
 
         <section class="cb-section">
           <h2>{{ t('settings.section.notifications') }}</h2>
-          @if (store.preferences(); as preferences) {
-            <ul class="cb-toggles">
-              @for (event of preferenceEvents; track event) {
-                <li>
-                  <label>
-                    <input
-                      type="checkbox"
-                      [attr.data-testid]="'settings-preference-' + event"
-                      [attr.data-enabled]="isEnabled(event)"
-                      [checked]="isEnabled(event)"
-                      (change)="togglePreference(event, $event)"
-                    />
-                    <span>{{ t('settings.preference.' + event) }}</span>
-                  </label>
-                </li>
-              }
-            </ul>
-
-            <div class="cb-field">
-              <label for="cb-settings-quiet-hours">{{ t('settings.quiet.hours') }}</label>
-              <input
-                id="cb-settings-quiet-hours"
-                data-testid="settings-quiet-hours"
-                type="text"
-                autocomplete="off"
-                spellcheck="false"
-                placeholder="22:00-07:00"
-                [value]="quietHours()"
-                (input)="setQuietHours($event)"
-              />
-              <button
-                type="button"
-                data-testid="settings-save-quiet-hours"
-                [disabled]="store.saving() === 'quiet'"
-                (click)="saveQuietHours()"
-              >
-                {{ t('settings.quiet.save') }}
-              </button>
-            </div>
-            <p class="cb-muted">
-              {{ preferences.quietHours === null ? t('settings.quiet.none') : preferences.quietHours }}
-            </p>
+          <button
+            type="button"
+            data-testid="settings-notifications-open"
+            (click)="notificationsOpen.set(true)"
+          >
+            {{ t('settings.notifications.open') }}
+          </button>
+          @if (notificationsOpen()) {
+            <app-notifications-panel (closed)="notificationsOpen.set(false)" />
           }
         </section>
 
@@ -302,7 +276,7 @@ import type { PreferenceEvent } from './settings.store';
 })
 export class SettingsPage {
   readonly store = inject(SettingsStore);
-  readonly preferenceEvents = PREFERENCE_EVENTS;
+  readonly notificationsOpen = signal(false);
 
   private readonly i18n = inject(I18nService);
 
@@ -314,41 +288,21 @@ export class SettingsPage {
   readonly brakeOn = computed(() => this.store.settings()?.automerge === false);
 
   readonly timezone = linkedSignal(() => this.store.settings()?.timezone ?? '');
-  readonly quietHours = linkedSignal(() => this.store.preferences()?.quietHours ?? '');
 
   constructor() {
     this.store.load();
-  }
-
-  isEnabled(event: PreferenceEvent): boolean {
-    return this.store.preferences()?.events.includes(event) ?? false;
   }
 
   saveTimezone(): void {
     this.store.saveTimezone(this.timezone());
   }
 
-  saveQuietHours(): void {
-    const value = this.quietHours().trim();
-    this.store.setQuietHours(value === '' ? null : value);
-  }
-
   toggleBrake(): void {
     this.store.setBrake(!this.brakeOn());
   }
 
-  togglePreference(event: PreferenceEvent, change: Event): void {
-    const target = change.target;
-    if (!(target instanceof HTMLInputElement)) return;
-    this.store.togglePreference(event, target.checked);
-  }
-
   setTimezone(event: Event): void {
     this.timezone.set(fieldValue(event));
-  }
-
-  setQuietHours(event: Event): void {
-    this.quietHours.set(fieldValue(event));
   }
 }
 
