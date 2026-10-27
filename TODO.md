@@ -100,6 +100,13 @@ holds `apps/app/src/app/app.routes.ts`. `package.json`, `package-lock.json`,
 `tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/main.ts`,
 `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` and `docs/decisions.md`
 are held by no task.
+**Cut — cycle after Task-63 (one of four slots used).** No task branch was alive and the queue
+held four open items, three of which cannot start: Task-30 waits on Task-29 and Task-31 on
+Task-26, both `[!]` on issue #11 (the App token has no `workflows` permission), while Task-31
+also waits on Task-30 and Task-32 on Task-31. Task-68 is the only eligible item — its
+dependencies, Task-51 to Task-67, are all merged — so the batch is one task and the three empty
+slots have no legal candidate. Task-68 claims no hot file: `TODO.md` and `CHANGELOG.md` stayed
+with the Orchestrator at merge time.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -945,7 +952,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
 
 ## Batch 18 - Documentation and legal
 
-- [ ] **[Task-68]** Documentation catch-up for the runtime. **Narrowed:** the product language
+- [x] **[Task-68]** Documentation catch-up for the runtime. **Narrowed:** the product language
       already landed (AGENTS.md, README.md, `docs/app.md` §4 and §9, `docs/product.md`), so this
       task covers only what needs code to be true. `docs/api.md` gains the four chat routes
       (repo, compact, reviewed, promote), the credential write route and the schedule object;
@@ -956,6 +963,14 @@ field the contract lacks is a Task-51 amendment, not a local type.
       Task-67. *Acceptance:* `[unit]` every route in `app.routes.ts` has a request and a response
       shape in `docs/api.md`; `[unit]` no document promises an approval prompt or a `jobs`
       table; `[unit]` `design/README.md` and the screens table still agree.
+      LANDED AS: the `jobs` table and `/v1/jobs` still exist on `main`, so both documents mark
+      them **legacy** in one named section (`docs/jobs.md` §1.1, `docs/api.md` §5.3 and §5.5)
+      instead of claiming they are gone; the generated OpenAPI document does not carry
+      `/v1/schedules`, so `docs/api.md` §5.10 documents the seven schedule routes as bullets
+      and the contracts guard still counts 57 paths — adding those operations to
+      `packages/contracts/src/openapi.ts` and bumping the count is a later contracts task.
+      `docs/app.md` §8 and §12 still describe permission cards and an approval step that D45
+      removed: that file is outside this task's paths and is a deviation for a later docs pass.
 
 - [x] **[Task-69]** Licence and third-party notices. The repository has **no `LICENSE`** while
       `docs/product.md`, `design/README.md` and the About screen all claim MIT, and the About row

@@ -6,6 +6,34 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-68, documentation catch-up for the runtime)
+
+- `docs/api.md` gains §5.10, the only definition of the schedule object: its 23 fields, the
+  three modes, the defaults, the refusals and the seven `/v1/schedules` routes — written as
+  bullets, because the generated OpenAPI document does not carry them yet and the contracts
+  guard pins the scanned path count at 57. §11 adds the screen → route table for all fifteen
+  router paths, each backed by a shape §2–§5 already documents.
+- `docs/api.md` §5.6 indexes the four chat lifecycle routes (`repo`, `compact`, `reviewed`,
+  `promote`) in one table and stops claiming promote runs in the chat's worktree: it starts
+  from the repository's default branch, as `runs/service.ts` does. §5.3 and §5.5 are marked
+  legacy — retained and served, not the product path — and §5.5 records that nothing in the
+  daemon creates an approval row (D45), while the reply route still resolves an existing one.
+- `docs/jobs.md` is retitled `Schedules, runs and auto-merge`: §1 is the schedule as the one
+  recurring object, §1.1 is the only place the legacy `jobs` table and `/v1/jobs` are
+  described, and every other mention speaks of the schedule while the guardrail, gate, PR and
+  merge sections keep their numbering.
+- `docs/security.md` §6 names D45 and what the agent cannot read — `/etc/codebox/`, the secret
+  bundles, `~/.ssh` — and §7 gains the D49/D50 credential and integration allowlist: the
+  write-only sealed store under `CB_STATE_DIR`, no value and no prefix longer than four
+  characters in any answer, `expose = env` only for the model key, and `integration.request`
+  refusing a host outside `allowedHosts` before any DNS lookup.
+- `docs/agent-runtime.md` §2.1 documents the ten-turn handoff by its real names —
+  `buildChatHandoff`, `CHAT_HANDOFF_TURNS`, `CHAT_HANDOFF_VERSION`, both dividers, and the
+  promise that no model call summarises anything — and the two stale approval-wait statements
+  in §2 and §6 are removed.
+- Nothing under `apps/`, `packages/` or `ops/` changed. No `[live]` criterion exists for this
+  task: it is documentation only, and none was invented.
+
 ### Added — 2026-10-27 (Task-63, settings, devices and providers)
 
 - `/settings` owns four rows that reach a real action: Devices and Credentials link to their

@@ -1,11 +1,30 @@
-# Jobs, runs and auto-merge
+# Schedules, runs and auto-merge
 
-A job is a saved intention. A run is one execution of it. This document owns the state
-machine, the gate, the PR and the guardrails that decide whether a green run may merge itself
-(D11, D12). The guardrail functions live in `packages/core` and are tested as pure functions;
-this file is their specification.
+A schedule is a saved intention: a prompt, a time rule and an optional repository (D44). A run
+is one execution of it. This document owns the state machine, the gate, the PR and the
+guardrails that decide whether a green run may merge itself (D11, D12). The guardrail functions
+live in `packages/core` and are tested as pure functions; this file is their specification.
 
-## 1. The job
+## 1. The one recurring object: Schedule
+
+A **schedule** carries a prompt, a time rule and an optional repository (D44), and it is the one
+recurring object the daemon owns end to end.
+
+- **With a repository** it produces a **run**: a worktree, the gate, a PR and the merge decision
+  of D11/D12 — everything §3–§14 specify.
+- **Without one**, or bound to a chat, it produces a **chat turn** on the fire path of §15.
+
+`mode` is `once`, `every` or `window`, and the schedule id prefix is `sch_`. §16 owns the field
+table, the three modes, the claim and the routes — §16.1 is the window loop — and the API object
+is [`docs/api.md`](api.md) §5.10.
+
+## 1.1 Legacy jobs
+
+The `jobs` table, `POST /v1/jobs` and the job screens still exist on `main`: they are retained
+for compatibility and they are not the product's path. A row is still served, still fires and
+still owns its runs through `runs.jobId`; what D44 changed is which object the product creates,
+and `runs.jobId` is null for every run a schedule creates. Retiring the table needs the app
+screens, the routes and `runs.job_id` in one change, so it is a later batch.
 
 | Field | Type | Rules |
 | --- | --- | --- |
@@ -17,19 +36,12 @@ this file is their specification.
 | `model` | string? | `provider/model`; defaults to `CB_DEFAULT_MODEL`. |
 | `cron` | string? | 5-field expression; absent = manual only. |
 | `timezone` | IANA | Defaults to `CB_TIMEZONE`. |
-| `enabled` | boolean | Paused jobs are not selected by the scheduler. |
-| `policy` | `auto` \| `manual` | Auto-merge opt-in per job; the repo can forbid it. |
+| `enabled` | boolean | A paused row is not selected by the scheduler. |
+| `policy` | `auto` \| `manual` | Auto-merge opt-in per row; the repo can forbid it. |
 | `maxCostUsd` | number? | Optional per-run cap below the global one. |
 
-A job belongs to exactly one repository. "Run now" is a manual trigger of the same job, not a
-second definition.
-
-**`jobs` is superseded, not removed (D44).** The recurring object the daemon owns is now
-`Schedule` (`/v1/schedules`, §16): it belongs to a repository **or** to a chat, and it carries
-a cron, a window or a single fire plus its own caps. Everything in this document keeps working
-unchanged — the `jobs` table, `POST /v1/jobs`, the job screens and `runs.jobId` — because a
-schedule is a new row beside a job, never a rewrite of one. Retiring `jobs` needs the app
-screens, the routes and `runs.job_id` in one change, so it is a later batch.
+A job belongs to exactly one repository. "Run now" is a manual trigger of the same definition,
+not a second one.
 
 ## 2. Scheduling
 
@@ -41,19 +53,18 @@ screens, the routes and `runs.job_id` in one change, so it is a later batch.
 - **Misfire:** on boot or after a pause, a fire missed by less than
   `CB_MISFIRE_GRACE_SECONDS` (900) runs once; older misses are logged once and skipped. No
   catch-up storm.
-- **One fire per tick:** only an enabled job whose `next_fire_at` is at or before the tick is
-  a candidate. Each candidate ends in exactly one decision — due inside the grace window,
+- **One fire per tick:** only an enabled schedule whose `next_fire_at` is at or before the tick
+  is a candidate. Each candidate ends in exactly one decision — due inside the grace window,
   skipped outside it — plus one `next_fire_at` written in the same transaction as the claim
-  and recomputed from the tick instant, never from the missed fire. A job is never both due
-  and skipped, and never claimed twice for the same `next_fire_at`.
-- **Claiming:** the scheduler ticks every `CB_SCHEDULER_TICK_SECONDS` (15) and claims due
-  jobs in one SQLite transaction with `UNIQUE(job_id, scheduled_for)`. Two ticks cannot both
-  win.
-- **Queue order:** `scheduled_for`, then `created_at`, then the job id, so two ticks of the
-  same rows are identical. A cap on claims truncates that order after sorting; the job left
+  and recomputed from the tick instant, never from the missed fire. A schedule is never both
+  due and skipped, and never claimed twice for the same `next_fire_at`.
+- **Claiming:** the scheduler ticks every `CB_SCHEDULER_TICK_SECONDS` (15) and claims due rows in
+  one SQLite transaction with `UNIQUE(schedule_id, scheduled_for)`. Two ticks cannot both win.
+- **Queue order:** `scheduled_for`, then `created_at`, then the schedule id, so two ticks of the
+  same rows are identical. A cap on claims truncates that order after sorting; the schedule left
   out keeps its `next_fire_at` for the next tick. Manual runs sort with the current time.
-- **Preview:** `GET /v1/jobs/{id}/next` returns the next five fires after now in the job's
-  zone; an invalid cron or an unknown zone previews as an empty list.
+- **Preview:** `GET /v1/jobs/{id}/next` returns the next five fires after now in the schedule's
+  own zone; an invalid cron or an unknown zone previews as an empty list.
 - **Concurrency:** at most `CB_MAX_CONCURRENCY_PER_REPO` (1) run per repository and
   `CB_MAX_CONCURRENCY` (3) runs globally; both must be at least 1. A run that cannot start
   stays `queued`; it does not fail. The rule is `canAdmitRun` in `@codebox/core` and the
@@ -64,10 +75,10 @@ screens, the routes and `runs.job_id` in one change, so it is a later batch.
   now, never from the missed schedule.
 - **Owner:** `packages/scheduler` holds these rules as pure functions over a row plus the tick
   instant; `@codebox/core` owns the cron arithmetic and the grace decision.
-- **Schedules:** a `Schedule` (§16) is the D44 replacement for this list and repeats its
-  rules: five cron fields, one IANA zone, the same DST rule, the same grace, one claim per
+- **Schedules:** this list is the schedule's rule set (D44). §16 repeats it with the object:
+  five cron fields, one IANA zone, the same DST rule, the same grace, one claim per
   `(schedule_id, scheduled_for)` and a pause that recomputes from now. Its `window` mode swaps
-  the cron for the D46 loop of §16; nothing here changes for a job.
+  the cron for the D46 loop of §16.1, which the same tick drives.
 
 ## 3. Run lifecycle
 
@@ -141,7 +152,7 @@ The gate is the repository's own check, run in the worktree before any PR exists
   runs detached, so `SIGTERM` and then `SIGKILL` reach every child it spawned; the result is
   exit `124` and `timedOut: true`. A cancel aborts the same group and reports `130`; a shell
   that cannot start is `127` and never rejects the caller.
-- Environment: the job allowlist, not the daemon's. `CI=1`, `NO_COLOR=1`, and `CB_RUN_ID`
+- Environment: the run's allowlist, not the daemon's. `CI=1`, `NO_COLOR=1`, and `CB_RUN_ID`
   (the run's id, for a gate that wants to name its artifact). `CB_RUN_ID` is set for the
   child; it is not a configuration key. Nothing else crosses over: a `CB_GITHUB_TOKEN` in the
   daemon's environment is not visible to the gate.
@@ -164,7 +175,7 @@ The gate is the repository's own check, run in the worktree before any PR exists
 
 ## 6. Commit, push and PR
 
-- One commit is created by the daemon if the agent did not commit: subject from the job
+- One commit is created by the daemon if the agent did not commit: subject from the schedule
   title (trimmed to 72 characters), body with the run trailer `Codebox-Run: <runId>` (D25),
   written with the configured author through the injected git runner. Nothing is committed
   twice: a clean index returns the current `HEAD` and leaves the history alone.
@@ -172,9 +183,9 @@ The gate is the repository's own check, run in the worktree before any PR exists
 - The PR body is generated, not written by the model:
 
 ```markdown
-## <job title>
+## <schedule title>
 
-Run: run_01J… · Job: job_01J… · Agent: build · Model: …
+Run: run_01J… · Schedule: sch_01J… · Agent: build · Model: …
 
 ### What changed
 <the agent's final message, trimmed>
@@ -236,7 +247,7 @@ notifies once.
 | G5 | `diff` | ≤ 40 files and ≤ 2 000 changed lines | `diff_budget` |
 | G6 | `protected_paths` | no file matches `CB_PROTECTED_PATHS` | `protected_path` |
 | G7 | `labels` | no `do-not-merge` label | `label_do_not_merge` |
-| G8a | `policy` | repo and job are `auto`, probation met | `policy_manual` |
+| G8a | `policy` | repo and the unit that fired the run are `auto` — contract field `policy.job` — probation met | `policy_manual` |
 | G8b | `automerger` | `CB_AUTOMERGE=on` | `automerger_off` |
 
 The failure codes are the `@codebox/contracts` `BlockerCode` vocabulary, and the guardrail
@@ -265,8 +276,8 @@ app renders both arrays verbatim; it never re-derives a guardrail from a string.
 
 ## 8. Merge
 
-- Method `CB_MERGE_METHOD` (`squash` default, or `merge`). Squash subject: the job title plus
-  `(#<pr>)`; the body keeps the trailer.
+- Method `CB_MERGE_METHOD` (`squash` default, or `merge`). Squash subject: the schedule title
+  plus `(#<pr>)`; the body keeps the trailer.
 - The merge is attempted once. A 405/409 (head moved, check re-ran) is re-evaluated once
   against fresh facts; a second failure parks the run in `pr_open`.
 - After the merge: delete the branch, remove the worktree (retention still applies to the
@@ -281,7 +292,7 @@ app renders both arrays verbatim; it never re-derives a guardrail from a string.
 | Operator cancel | Interrupt the session, close it, abort the gate's process group, stop the gate, remove the worktree (a run that never reached `pr_open` has nothing to inspect), keep the branch. The row becomes `cancelled` with `finishedAt`, and `run.cancelled` carries the reason. |
 | `CB_RUN_TIMEOUT_SECONDS` | The same cancel, checked before every step and on every agent event, with `failureCode: 'timeout'` and `reason: 'timeout'`. |
 | Daily cost cap | Cancel the current run after persisting the cumulative cost, pause the queue until the next UTC day, code `cost_cap_reached`. |
-| Per-job `maxCostUsd` | Cancel that run only. |
+| `maxCostPerFireUsd` | Cancel that fire only; the per-repository policy still applies. |
 | Disk low | Refuse new runs, clean past-retention worktrees, emit `telemetry`. |
 
 A cancel is refused — `cancel()` answers `false` without touching the session or the worktree —
@@ -293,8 +304,8 @@ state is worse than a late one.
 
 ## 10. Retries
 
-- A failed run is never resumed. "Retry" creates a new run with the same job and prompt, a new
-  id and a new branch, so history stays honest.
+- A failed run is never resumed. "Retry" creates a new run with the same schedule and prompt, a
+  new id and a new branch, so history stays honest.
 - Automatic retry exists only for **transport** failures before the first tool call: one
   retry, same run id, `attempt: 2` recorded.
 - A misfire is not a retry; it is a missed schedule handled by D13.
@@ -318,13 +329,13 @@ One push per **outcome**, not per event:
 
 | Event | Push |
 | --- | --- |
-| `run.finished` (succeeded) | "Merged: <job title>" with the PR link. |
+| `run.finished` (succeeded) | "Merged: <schedule title>" with the PR link. |
 | `run.failed` | "Run failed: <code>" with the run link. |
 | `run.pr` with blockers | "Waiting on you: <first blocker>". |
 | `approval.created` | The permission card, for a row written before the inline decision landed; a fresh install's inbox is empty by construction. |
 | `telemetry` with `disk_low` / `cost_cap` | A blocking banner plus one push. |
 
-Quiet hours hold everything except a legacy `approval.created` and failures of a job marked
+Quiet hours hold everything except a legacy `approval.created` and failures of a schedule marked
 critical.
 
 ## 14. What a run never does
@@ -349,9 +360,9 @@ A routine is **not** a run. It is a cron entry with a `kind` (D38):
 The **chat agent creates them** through the `routine.create` tool; unattended run agents never
 get the tool. The app can list, pause, run now and delete, but creation is conversational. The
 scheduler claims `(routine_id, scheduled_for)` transactionally and uses the same D13 misfire
-rule as a job. A `prompt` with no `chatSessionId` — or whose session was archived — gets a new
-chat session on that fire; it never appends to an unrelated one. A `reminder` costs nothing; a
-`prompt` is a chat turn, and the chat path does not yet write a usage row, so a routine prompt
+rule as a schedule. A `prompt` with no `chatSessionId` — or whose session was archived — gets a
+new chat session on that fire; it never appends to an unrelated one. A `reminder` costs nothing;
+a `prompt` is a chat turn, and the chat path does not yet write a usage row, so a routine prompt
 is not capped in this release — the cap and the ledger are a follow-up on the chat path.
 
 ### 15.1 Storage and the claim (Task-34)
@@ -377,7 +388,7 @@ winner: a tick that loses the race — a second process, a double tick, a stale 
 `max(15, CB_SCHEDULER_TICK_SECONDS)` seconds (unref'd, one pass at a time: a second tick that
 starts while one is running returns an empty report). A pass reads the due rows oldest first
 (`enabled = 1 AND next_fire_at <= now`, twenty at a time), computes the next fire with the same
-cron arithmetic as a job, and applies D13: inside `CB_MISFIRE_GRACE_SECONDS` the routine fires;
+cron arithmetic as a schedule, and applies D13: inside `CB_MISFIRE_GRACE_SECONDS` the routine fires;
 outside it the fire is recorded as `skipped` and `next_fire_at` moves on; a schedule the engine
 cannot advance is skipped once as `no_next_fire`, so the routine stops instead of retrying.
 
@@ -415,13 +426,15 @@ PR.
 | `DELETE` | `/v1/routines/{id}` | `write` | Delete the routine and stop its schedule; `204`. |
 
 `POST /v1/routines` is not mounted in this release: creation is the `routine.create` chat
-tool's job (Task-38), so `docs/api.md` §5.8's create row stays aspirational until that task.
+tool's responsibility (Task-38), so `docs/api.md` §5.8's create row stays aspirational until
+that task.
 
 ## 16. Schedules (D44, D46)
 
 A **schedule** is the one recurring object the daemon owns end to end. It is not a job and not
 a routine: it carries the trigger *and* the intention, it may belong to a repository or to a
-chat, and it decides its own next fire. `jobs` stays as §1 says; this section is the new path.
+chat, and it decides its own next fire. The legacy table stays as §1.1 says; this section is the
+new path.
 
 | Field | Rules |
 | --- | --- |
