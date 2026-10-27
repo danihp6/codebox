@@ -88,6 +88,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/chat/chat-stream.spec.ts` — ordered deltas, replay identity, the cards from run state and the routine window.
 - `src/app/features/chat/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/chat/markdown.spec.ts` — fences, lists and unclosed markup.
+- `src/app/features/chat/new-chat.api.ts` — the new-chat reads and writes: create, bind, send and the repo list.
+- `src/app/features/chat/new-chat.i18n.ts` — the new-chat and repo-picker dictionary in `en` and `es`.
+- `src/app/features/chat/new-chat.spec.ts` — the two proposals, the enabled composer, the three picker states, the convert/bind flows and the error codes.
+- `src/app/features/chat/new-chat.store.spec.ts` — the proposals, the repo read, create-free, the trimmed draft, convert, bind and the busy guard.
+- `src/app/features/chat/new-chat.store.ts` — the new-chat state: proposals, repo read, draft, create-free, convert and bind.
+- `src/app/features/chat/new-chat.ts` — the new-chat panel: the empty state, the picker, the never-blocked composer and the handoff outputs.
 - `src/app/features/chat/i18n.ts` — the chat dictionary in `en` and `es`.
 - `src/app/features/credentials/add-credential.sheet.ts` — the two-step add-credential sheet: name, kind, expose, the env warning, the confirmation tail and the save.
 - `src/app/features/credentials/add-credential.sheet.spec.ts` — the review step, the four-character tail, the env warning/blocked states and the cleared value.
@@ -146,6 +152,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/repos/repo.store.spec.ts` — load, the optimistic policy patch and verify.
 - `src/app/features/repos/repo-form.ts` — the `owner/name` slug rules and the form parse.
 - `src/app/features/repos/repo-form.spec.ts` — a missing owner, a bad slug and the trimmed value.
+- `src/app/features/repos/repo-picker.spec.ts` — the three states, the unavailable refusal, the picked id and the picker copy.
+- `src/app/features/repos/repo-picker.ts` — the repository picker: one row per repo with `connected`/`cloning`/`unavailable`.
 - `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`.
 - `src/app/features/run-detail/run.page.ts` — run detail: timeline, gate, guardrails, blockers, diff, PR, cost, cancel and revert.
 - `src/app/features/run-detail/run.page.spec.ts` — run hooks, guardrail states, actions and dictionary completeness.
