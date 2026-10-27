@@ -57,6 +57,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # GITHUB_TOKEN cannot write a file under .github/workflows/**, and
+          # `permissions: workflows: write` is not a GITHUB_TOKEN key. The PAT below carries
+          # Contents and Workflows write for this repository only; GH_TOKEN stays GITHUB_TOKEN.
+          token: ${{ secrets.CB_AGENT_TOKEN }}
 
       - uses: actions/setup-node@v4
         with:
@@ -299,4 +303,5 @@ jobs:
             line ""
             line "</details>"
           fi
+
 # Re-registered after the repository was recreated (2026-10-20).
