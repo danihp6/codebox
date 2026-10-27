@@ -18,6 +18,7 @@ export interface CodeboxConfig {
   CB_INSTALL_DIR: string;
   CB_TMP_DIR: string;
   CB_SESSION_SECRET: string;
+  CB_SECRETS_KEY: string | null;
   CB_PAIRING_TTL_SECONDS: number;
   CB_ACCESS_TOKEN_TTL_SECONDS: number;
   CB_REFRESH_TOKEN_TTL_DAYS: number;
@@ -64,6 +65,7 @@ export interface CodeboxConfig {
   CB_SCHEDULER_TICK_SECONDS: number;
   CB_APPROVAL_TTL_SECONDS: number;
   CB_PROBATION_RUNS: number;
+  CB_INTEGRATION_TIMEOUT_SECONDS: number;
   CB_RETENTION_RUNS_DAYS: number;
   CB_RETENTION_EVENTS_DAYS: number;
   CB_RETENTION_LOGS_DAYS: number;
@@ -118,6 +120,7 @@ export const CONFIG_DEFAULTS: Readonly<Record<string, string | number | boolean 
     CB_GATE_DEFAULT: 'npm test && npm run build',
     CB_GATE_TIMEOUT_SECONDS: 1800,
     CB_GATE_SHELL: '/bin/bash',
+    CB_INTEGRATION_TIMEOUT_SECONDS: 15,
     CB_WORKSPACE_TTL_HOURS: 168,
     CB_CLONE_DEPTH: 0,
     CB_GIT_HTTP_TIMEOUT_SECONDS: 120,
@@ -144,6 +147,7 @@ export const CONFIG_DEFAULTS: Readonly<Record<string, string | number | boolean 
 
 export const SECRET_CONFIG_KEYS: readonly string[] = Object.freeze([
   'CB_SESSION_SECRET',
+  'CB_SECRETS_KEY',
   'CB_GITHUB_APP_PRIVATE_KEY_BASE64',
   'CB_GITHUB_WEBHOOK_SECRET',
   'CB_GITHUB_TOKEN',
@@ -230,6 +234,11 @@ const configFieldSchemas = {
   CB_TMP_DIR: textField('/var/tmp/codebox'),
   // §4 Auth and devices
   CB_SESSION_SECRET: z.string().min(32),
+  CB_SECRETS_KEY: z
+    .string()
+    .regex(/^[A-Za-z0-9+/]{43}=$/)
+    .optional()
+    .transform((value) => value ?? null),
   CB_PAIRING_TTL_SECONDS: intField(300),
   CB_ACCESS_TOKEN_TTL_SECONDS: intField(900),
   CB_REFRESH_TOKEN_TTL_DAYS: intField(30),
@@ -283,6 +292,7 @@ const configFieldSchemas = {
   CB_SCHEDULER_TICK_SECONDS: intField(15),
   CB_APPROVAL_TTL_SECONDS: intField(600),
   CB_PROBATION_RUNS: intField(0),
+  CB_INTEGRATION_TIMEOUT_SECONDS: intField(15),
   // §9 Retention
   CB_RETENTION_RUNS_DAYS: intField(90),
   CB_RETENTION_EVENTS_DAYS: intField(14),
