@@ -6,6 +6,16 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-27 (issue #19, the app file map and the feature-local dictionaries)
+
+- `apps/app/README.md` maps every file under `src/app` again: the five shipped feature folders
+  (dashboard, repos, chat, jobs, runs-list) replace their placeholder lines, and the
+  `readme.spec.ts` guard fails when a file is missing from the map or the map names a file that
+  no longer exists.
+- `docs/app.md` §3 and §9 record the localisation convention: `src/assets/i18n/{en,es}.json`
+  holds the shell keys, and each feature folder ships its own `i18n.ts` with both locales and a
+  parity spec. The shared dictionaries stop being treated as debt.
+
 ### Added — 2026-10-26 (Task-46, the measured AWS spot bring-up runbook)
 
 - `infra/aws/terraform.tfvars.example` carries the twelve module variables with safe
