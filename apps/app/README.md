@@ -101,7 +101,9 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/jobs/routines.store.ts` — the routines list, the optimistic toggles, run-now, delete and the routine event refetch.
 - `src/app/features/jobs/routines.store.spec.ts` — load, the pause rollback, resume, run-now, delete and the three refetch frames.
 - `src/app/features/jobs/i18n.ts` — the jobs, job detail and routines dictionary in `en` and `es`.
-- `src/app/features/pairing/pairing.page.ts` — pairing placeholder.
+- `src/app/features/pairing/pairing.page.ts` — the pairing screen: code and device name, the inline failure and the dashboard redirect.
+- `src/app/features/pairing/pairing.page.spec.ts` — the hooks, the field rules, the four failures and the redirect.
+- `src/app/features/pairing/i18n.ts` — the pairing dictionary in `en` and `es`.
 - `src/app/features/repos/repos.page.ts` — the repo list, the add wizard entry and the gate/policy badges.
 - `src/app/features/repos/repos.page.spec.ts` — the list hooks, the wizard and the empty/error blocks.
 - `src/app/features/repos/repo.page.ts` — repo detail: verification, the policy editor and the protected-paths preview.

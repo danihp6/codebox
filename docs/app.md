@@ -79,7 +79,7 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 
 | Route | Screen | What it must do |
 | --- | --- | --- |
-| `/pair` | Pairing | Paste a ten-character code, name the device, store tokens; the same screen after a 401. |
+| `/pair` | Pairing | Enter the ten-character code and a device name, submit, see one inline reason when the code is used, expired or unknown, and land on the dashboard; the same screen after a 401. |
 | `/dashboard` | Dashboard | What needs you, what is working, what finished unreviewed, today's spend, health; the start card on a fresh box. |
 | `/chat` | Chat list | Flat, ordered by last message; filters `All`/`Repo`/`Schedule`/`Unread`/`Archived`; one scope chip per row; unread dot **and** unreviewed edge; cost and context as micro-text. |
 | `/chat/new` | New chat | Empty state offering a repository or a schedule; the composer is never blocked. |
@@ -187,9 +187,11 @@ sticks to the bottom only when the user is already at the bottom.
   respects `prefers-reduced-motion`.
 - **Copy and localisation**: `src/assets/i18n/{en,es}.json` holds the shell keys (`app`,
   `tabs`, `pair`, `common`, `run`) and nothing feature-specific; each feature folder ships its
-  own `i18n.ts` with both locales and a spec that proves EN/ES parity. Features are written in
-  parallel and the shared dictionaries are a hot file, so a feature never edits them: it adds a
-  key to its own module in both languages in the same change.
+  own `i18n.ts` with both locales and a spec that proves EN/ES parity. A screen that must
+  render its copy without the shared dictionary, like `/pair`, duplicates its `pair.*` keys in
+  the feature module — the shared file stays untouched. Features are written in parallel and
+  the shared dictionaries are a hot file, so a feature never edits them: it adds a key to its
+  own module in both languages in the same change.
 
 ## 10. Offline and failure
 
