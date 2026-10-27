@@ -86,6 +86,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/chat/chat-store.spec.ts` — remember, read, forget and clear of the chat-to-run link.
 - `src/app/features/chat/chat-stream.ts` — the pure stream state: message merge, tool/permission/routine/system cards and event application.
 - `src/app/features/chat/chat-stream.spec.ts` — ordered deltas, replay identity, the cards from run state and the routine window.
+- `src/app/features/chat/context-sheet.ts` — the context sheet: the usage bar in its four states, the composer block at 95 %, the chat and day cost, the environment rows and the two actions.
+- `src/app/features/chat/context-sheet.spec.ts` — the thresholds, the composer block, one compact POST per tap, the divider, both error codes, the new-chat POST and the EN/ES parity.
+- `src/app/features/chat/context-sheet.api.ts` — compact, a new chat in a repository, the repo list and the day spend.
+- `src/app/features/chat/context-sheet.store.ts` — the sheet's session, day spend, errors, the single-flight compact and the created chat.
+- `src/app/features/chat/context-sheet.store.spec.ts` — no read before load, the failed day spend, one compact per tap, the archived conflict and the created chat.
+- `src/app/features/chat/context-sheet.i18n.ts` — the context sheet dictionary in `en` and `es`.
 - `src/app/features/chat/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/chat/markdown.spec.ts` — fences, lists and unclosed markup.
 - `src/app/features/chat/i18n.ts` — the chat dictionary in `en` and `es`.
