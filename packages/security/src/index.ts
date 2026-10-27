@@ -43,6 +43,21 @@ export {
 } from './secret-scan.js';
 export type { SecretFinding, SecretPatternName } from './secret-scan.js';
 
+export {
+  SEALED_SECRET_VERSION,
+  MASTER_KEY_BYTES,
+  MASTER_KEY_BASE64_LENGTH,
+  VaultError,
+  decodeMasterKey,
+  sealSecret,
+  openSecret,
+  lastFour,
+} from './credential-vault.js';
+export type { SealedSecret, VaultCode } from './credential-vault.js';
+
+export { checkIntegrationUrl, hostAllowed } from './integration-allowlist.js';
+export type { AllowlistRejection, AllowlistResult } from './integration-allowlist.js';
+
 export { verifyAccessJwt } from './access-jwt.js';
 export type {
   AccessJwk,
