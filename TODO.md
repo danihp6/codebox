@@ -904,19 +904,17 @@ field the contract lacks is a Task-51 amendment, not a local type.
 
 ## Batch 18 - Documentation and legal
 
-- [ ] **[Task-68]** Documentation catch-up for the reshape. Rewrite `docs/app.md` §4 (screens)
-      and §9 (design direction) against D43-D50, the three-tab shell and the flows; add the
-      light-theme rule that `#22c55e` on white is 2.1:1 and that text uses `#15803d` /
-      `#b45309`. Rewrite `docs/product.md` §47, §71 and §83, which still describe a chat bound to
-      a repository and a run-detail screen. Align `docs/api.md`, `docs/jobs.md`,
-      `docs/security.md` and `docs/agent-runtime.md`. **`AGENTS.md` and `README.md` are in
-      scope**: both still say "chat with an agent bound to a repository". *Paths:* `AGENTS.md`,
-      `README.md`, `docs/app.md`, `docs/product.md`, `docs/api.md`, `docs/jobs.md`,
-      `docs/security.md`, `docs/agent-runtime.md`. *Dependencies:* Task-51 to Task-67.
-      *Acceptance:* `[unit]` no document promises an approval prompt, a Repos tab or a `jobs`
-      table; `[unit]` every route in `app.routes.ts` appears in the screens table, and matches
-      `design/README.md`; `[unit]` the word "jobs" survives only as history, never as a live
-      screen.
+- [ ] **[Task-68]** Documentation catch-up for the runtime. **Narrowed:** the product language
+      already landed (AGENTS.md, README.md, `docs/app.md` §4 and §9, `docs/product.md`), so this
+      task covers only what needs code to be true. `docs/api.md` gains the four chat routes
+      (repo, compact, reviewed, promote), the credential write route and the schedule object;
+      `docs/jobs.md` stops describing jobs and documents schedules, the window loop and the
+      guardrails it already owns; `docs/security.md` records D45's boundary and the allowlist;
+      `docs/agent-runtime.md` documents the ten-turn handoff preamble. *Paths:* `docs/api.md`,
+      `docs/jobs.md`, `docs/security.md`, `docs/agent-runtime.md`. *Dependencies:* Task-51 to
+      Task-67. *Acceptance:* `[unit]` every route in `app.routes.ts` has a request and a response
+      shape in `docs/api.md`; `[unit]` no document promises an approval prompt or a `jobs`
+      table; `[unit]` `design/README.md` and the screens table still agree.
 
 - [ ] **[Task-69]** Licence and third-party notices. The repository has **no `LICENSE`** while
       `docs/product.md`, `design/README.md` and the About screen all claim MIT, and the About row
