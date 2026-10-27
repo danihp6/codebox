@@ -64,7 +64,13 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/core/i18n/i18n.service.ts` — signal locale, dictionary loader and `t`.
 - `src/app/core/i18n/i18n.spec.ts` — key parity and missing-key behaviour.
 - `src/app/core/settings/settings.store.ts` — locale and theme persisted in the secure store.
-- `src/app/features/about/about.page.ts` — about/404 placeholder.
+- `src/app/features/about/about.i18n.ts` — the about dictionary in `en` and `es`.
+- `src/app/features/about/about.page.ts` — the server's build identity, its health rows and the shipped third-party licences.
+- `src/app/features/about/about.page.spec.ts` — the response values, the health rows, a null commit, the licence list and the error/retry path.
+- `src/app/features/about/about.store.ts` — the two independent reads behind the screen: version and health.
+- `src/app/features/about/about.store.spec.ts` — both reads landing independently, a failed half and the reload.
+- `src/app/features/about/notice.ts` — the shipped `NOTICE` copy and its pure bullet parser.
+- `src/app/features/about/notice.spec.ts` — the verbatim `NOTICE` copy, the parser rules and every licence it lists.
 - `src/app/features/approvals/approvals.page.ts` — approvals placeholder.
 - `src/app/features/chat/chat-list.page.ts` — the chat list: search, the five client-side filters and one row per session.
 - `src/app/features/chat/chat-list.page.spec.ts` — the chips, the filter order, both signals, the search, the error and the empty states.
