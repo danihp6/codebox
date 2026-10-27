@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-64, notifications)
+
+- Settings gains a notifications panel: the five toggleable events — run finished, run merged,
+  run failed, schedule fired, approval created — plus the locked `Credential changed` row, which
+  has no toggle in either locale.
+- Quiet hours are written twice on purpose: the authoritative
+  `PATCH /v1/notifications/preferences` first, then a `PATCH /v1/settings` mirror that reports
+  `synced`, `failed` or `absent` and never fails the write (a daemon without the route answers
+  `404`, and the value still saves). An out-of-range window is refused before any request.
+- The panel's payload builder emits exactly `{ type, id, title }` — no prompt, diff or path — and
+  a toggle flips back with the error code when the daemon answers `500`.
+- There is no `/settings/notifications` route: the frozen router is untouched (Task-18/55 own it),
+  so the panel renders inside `/settings` behind one row. A future router task can promote it to
+  its own route without touching this code.
+- `[live]` — quiet hours honoured by a real push on a paired device, and a run finish silenced
+  inside the window — needs the box and a subscription; it is recorded as `[?]`, never as
+  passing (issue #49).
+
 ### Added — 2026-10-27 (Task-57, chat thread)
 
 - `/chat/:id` is a real thread: assistant deltas append once per `(messageId, seq)`, tool cards

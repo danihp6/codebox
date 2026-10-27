@@ -907,7 +907,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       *Dependencies:* Task-55. *Acceptance:* `[unit]` the current device cannot revoke itself;
       `[unit]` changing the model never touches a running chat; `[live]` a revoked device's
       next request is a 401.
-- [ ] **[Task-64]** Notifications. Five toggleable events plus the non-toggleable
+- [x] **[Task-64]** Notifications. Five toggleable events plus the non-toggleable
       `Credential changed`, quiet hours evaluated on the daemon, and a payload that carries no
       prompt, diff or path. *Paths:* `features/settings/notifications.*`. *Dependencies:*
       Task-55. *Acceptance:* `[unit]` the payload builder emits `{type, id, title}` and nothing
