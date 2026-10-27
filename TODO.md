@@ -899,7 +899,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       *Dependencies:* Task-52. *Acceptance:* `[unit]` the composer stays usable while the
       proposals are shown; `[unit]` the picker never offers an archived repository; `[live]`
       converting shows progress, then the handoff divider.
-- [ ] **[Task-61]** Schedule created by chat, and the Schedule filter. The propose card that
+- [x] **[Task-61]** Schedule created by chat, and the Schedule filter. The propose card that
       only a tap can create, the assumption block, and the filter that groups fires by schedule
       with the running window on top. *Paths:* `apps/app/src/app/features/schedules/**`,
       `features/chat/schedule-propose.*`. *Dependencies:* Task-53. *Acceptance:* `[unit]` the

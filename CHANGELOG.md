@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-61, proposed schedules and the schedule filter)
+
+- `ScheduleProposeCard` renders the assumption block for a proposed schedule — the cron summary
+  or the window, the next fire in the schedule's own zone, the cost cap, the repository — and
+  creates nothing until the single button is tapped. One tap is one `POST /v1/schedules` with
+  exactly the mapped body; a double tap while in flight still sends one, and a `422` shows its
+  code and re-enables the button.
+- `ScheduleFilterPage` groups fires by schedule, puts a schedule whose window is running on top
+  (`isWindowOpen`, half-open, wrap-around midnight, in the schedule's IANA zone) and marks a fire
+  nobody reviewed, derived from `lastFiredAt` plus the chat session's `reviewedAt`, never from a
+  local guess. Detail reads are capped at 20 schedules.
+- `[live]` — a sentence in a chat producing the card, one tap creating the schedule and its first
+  fire landing unreviewed — needs the box and a browser, and the pinned OpenCode client exposes
+  no `schedule.propose` tool, so the card is fed by its host and the measurement is recorded as
+  `[?]`, never as passing (issue #52).
+
 ### Added — 2026-10-27 (Task-60, new chat and repository picker)
 
 - `NewChatPanel` is the empty state the design signs off: exactly two proposals (a repository or
