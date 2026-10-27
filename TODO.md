@@ -63,17 +63,19 @@ goes first because it is what lets the operator create and destroy the OCI footp
 wait is still open; the spot host reuses the same tool with the same image. Batches 7–9 keep
 their internal order behind it. Nothing is dropped, only displaced.
 
-**Cut — cycle after Task-46 (one of four slots used).** The queue is empty for cause, not for
-lack of planning: Task-26 and Task-29 are `[!]` on the `workflows` permission (issue #11), and
-Task-30 waits for Task-29, Task-31 for Task-26/28/30 and Task-32 for Task-31, so the whole
-remaining chain hangs on #11 plus the human `[live]` measurements. Task-48 and Task-49
-(Batch 15) are the only eligible tasks and are path-disjoint from every blocked branch;
-Task-50 (Batch 5) waits for the L2 screen sign-off.
-**Hot-file holders in this cut:** Task-49 holds `package.json`; Task-48 owns `scripts/agent/**`
-and `docs/agent-ci.md`. `package-lock.json`, `tsconfig.base.json`,
-`packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts`,
-`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md` and
-`CHANGELOG.md` are held by no task.
+**Cut — cycle after Task-51 (four of four slots used).** Batch 16 cannot run whole: Task-52 and
+Task-53 both need the next numbered migration under `packages/store/migrations/`, Task-52 and
+Task-54 both need `apps/daemon/src/chat/**` (54 removes the permission bridge from the chat
+path), Task-53 and Task-54 both claim `docs/jobs.md`, Task-52 and Task-58 both claim
+`docs/api.md`, and Task-54 and Task-58 both claim `packages/security/**`. The only legal pair
+inside the batch is Task-53 + Task-58, filled to four slots with Task-55 and Task-66 from Batch
+17 (both depend only on the merged Task-51 and their paths are disjoint from the pair). Task-52
+and Task-54 are deferred to the next cut; Task-67 waits.
+**Hot-file holders in this cut:** Task-53 holds `packages/contracts/src/index.ts`; Task-55
+holds `apps/app/src/app/app.routes.ts`. `package.json`, `package-lock.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/main.ts`,
+`apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` and `docs/decisions.md`
+are held by no task.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -798,7 +800,7 @@ A task here that disagrees with a decision reopens it before any code moves.
       `contextTokens`, `contextEpoch`, `reviewedAt` required once the daemon always sets them),
       make `createSessionSchema.repoId` optional, and rebuild `chat_sessions` with a nullable
       `repo_id` without dropping its children.
-- [ ] **[Task-53]** One recurring object. Retire `jobs`, extend the schedule table with
+- [x] **[Task-53]** One recurring object. Retire `jobs`, extend the schedule table with
       `mode` (`once`/`every`/`window`), `windowStart`, `windowEnd`, `cooldownMinutes`,
       `maxFires`, `maxCostPerFire`, `repoId`, `firePolicy` (`new_chat`/`continue`) and
       `consecutiveFailures`; implement D46 (finish-anchored relaunch, no catch-up, DST skip,

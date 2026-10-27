@@ -9,6 +9,8 @@ import { loadMigrationsFromDisk, MIGRATIONS_DIRECTORY, runMigrations } from './m
 import { createRepoRepository, type RepoRepository } from './repos.js';
 import { createRoutineFireRepository, type RoutineFireRepository } from './routine-fires.js';
 import { createRoutineRepository, type RoutineRepository } from './routines.js';
+import { createScheduleFireRepository, type ScheduleFireRepository } from './schedule-fires.js';
+import { createScheduleRepository, type ScheduleRepository } from './schedules.js';
 import { createRunRepository, type RunRepository } from './runs.js';
 import { createSettingsRepository, type SettingsRepository } from './settings.js';
 import { createUsageRepository, type UsageRepository } from './usage.js';
@@ -28,6 +30,8 @@ export interface Store {
   readonly usage: UsageRepository;
   readonly routines: RoutineRepository;
   readonly routineFires: RoutineFireRepository;
+  readonly schedules: ScheduleRepository;
+  readonly scheduleFires: ScheduleFireRepository;
   close(): void;
 }
 
@@ -74,6 +78,8 @@ export function openStore(options: OpenStoreOptions): Store {
     usage: createUsageRepository(db),
     routines: createRoutineRepository(db),
     routineFires: createRoutineFireRepository(db),
+    schedules: createScheduleRepository(db),
+    scheduleFires: createScheduleFireRepository(db),
     close(): void {
       if (closed) return;
       closed = true;

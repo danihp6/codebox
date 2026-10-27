@@ -47,3 +47,7 @@ export type {
   RoutineTickInput,
   RoutineTickPlan,
 } from './routines.js';
+
+// Windows: the D46 loop, its opening hours and the DST gaps of a zone.
+export { isInsideWindow, nextWindowOpen, planNextFire } from './window.js';
+export type { ScheduleFireContext, ScheduleFirePlan, ScheduleStopReason } from './window.js';

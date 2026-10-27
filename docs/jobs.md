@@ -24,6 +24,13 @@ this file is their specification.
 A job belongs to exactly one repository. "Run now" is a manual trigger of the same job, not a
 second definition.
 
+**`jobs` is superseded, not removed (D44).** The recurring object the daemon owns is now
+`Schedule` (`/v1/schedules`, §16): it belongs to a repository **or** to a chat, and it carries
+a cron, a window or a single fire plus its own caps. Everything in this document keeps working
+unchanged — the `jobs` table, `POST /v1/jobs`, the job screens and `runs.jobId` — because a
+schedule is a new row beside a job, never a rewrite of one. Retiring `jobs` needs the app
+screens, the routes and `runs.job_id` in one change, so it is a later batch.
+
 ## 2. Scheduling
 
 - **5-field cron** (minute hour day-of-month month day-of-week) in an **IANA timezone**
@@ -57,6 +64,10 @@ second definition.
   now, never from the missed schedule.
 - **Owner:** `packages/scheduler` holds these rules as pure functions over a row plus the tick
   instant; `@codebox/core` owns the cron arithmetic and the grace decision.
+- **Schedules:** a `Schedule` (§16) is the D44 replacement for this list and repeats its
+  rules: five cron fields, one IANA zone, the same DST rule, the same grace, one claim per
+  `(schedule_id, scheduled_for)` and a pause that recomputes from now. Its `window` mode swaps
+  the cron for the D46 loop of §16; nothing here changes for a job.
 
 ## 3. Run lifecycle
 
@@ -402,3 +413,109 @@ PR.
 
 `POST /v1/routines` is not mounted in this release: creation is the `routine.create` chat
 tool's job (Task-38), so `docs/api.md` §5.8's create row stays aspirational until that task.
+
+## 16. Schedules (D44, D46)
+
+A **schedule** is the one recurring object the daemon owns end to end. It is not a job and not
+a routine: it carries the trigger *and* the intention, it may belong to a repository or to a
+chat, and it decides its own next fire. `jobs` stays as §1 says; this section is the new path.
+
+| Field | Rules |
+| --- | --- |
+| `repoId` | A registered repository, or `null` for a chat schedule. |
+| `chatSessionId` | The chat a `continue` fire appends to; `null` for a fresh chat. |
+| `title`, `prompt` | 1–120 and 1–8 000 characters. |
+| `mode` | `once`, `every` or `window` (below). |
+| `cron` | Five fields; non-null for `once` and `every`, `null` for `window`. |
+| `timezone` | IANA zone, used for both the cron and the window. |
+| `windowStart`, `windowEnd` | `HH:MM`, non-null only for `window`, never equal. |
+| `cooldownMinutes` | Minutes between a fire's **finish** and the next fire inside a window. |
+| `maxFires` | Optional cap on the fires of the whole schedule. |
+| `maxCostPerFireUsd` | Optional cap on the cost of one fire; a fire that reaches it stops the loop. |
+| `firePolicy` | `new_chat` opens a chat per fire; `continue` appends to `chatSessionId`. |
+| `consecutiveFailures`, `firesCount`, `spendUsd` | Written by the fire rows, never by a client. |
+| `enabled`, `policy` | Paused schedules are not selected; `policy` is the run's auto-merge opt-in. |
+| `nextFireAt`, `lastFiredAt` | The fire **not yet claimed**, and when the last claim fired. |
+
+`repoId` and `chatSessionId` cannot both be null: the row belongs to something.
+
+### 16.1 The three modes
+
+- **`once`** fires once at the cron's next instant and then has no next fire. It is a deferred
+  manual run, not a recurring one.
+- **`every`** is the §2 rule in `packages/scheduler/window.ts`: the next fire is the next cron
+  instant strictly after the previous fire **finished**, computed by `@codebox/core`.
+- **`window`** is the D46 loop. The window is half-open `[start, end)` in the schedule's zone;
+  `start > end` wraps midnight (`22:00`–`06:00`). After a fire finishes, the candidate is
+  `finish + cooldownMinutes`; inside the window it is the next fire, outside it the next
+  opening is. The loop is anchored on the finish, never on the claim: a fire that takes eleven
+  minutes pushes the next one out by eleven minutes, which is the whole point of D46.
+
+**DST** applies to the window exactly as §2 applies it to a cron. The opening wall clock that
+does not exist (spring forward) marks the day as skipped: the schedule leaves on the first
+valid instant after the gap and reports `skippedDstGap: true` once, and a second call from that
+instant moves to the **next day**, so a shortened night never fires twice. A wall clock that
+happens twice (fall back) resolves to its **first** occurrence, one fire, not two.
+
+**Stops**, decided in this order by `planNextFire`: `disabled` → `failures` (three consecutive
+failed fires pause the schedule) → `max_fires` → `max_cost` (the fire that just ended reached
+`maxCostPerFireUsd`) → `no_next_fire` (a `once` schedule, an unparsable cron, or none) →
+`window_closed` (a window that never opens again). A stopped schedule stores `nextFireAt = null`
+and leaves the selection; `failures` also stores `enabled = false`.
+
+### 16.2 Storage and the claim
+
+`0004_schedules.sql` adds two tables, forward only and additively:
+
+| Table | Holds |
+| --- | --- |
+| `schedules` | The object above, with `CHECK`s that pin the mode to its cron or window family. |
+| `schedule_fires` | One row per fire: `scheduled_for`, `fired_at`, the `outcome` (`claimed`, `fired`, `skipped`, `failed`), the run or chat it opened, its cost and a code. |
+
+A claim is one transaction: the schedule must be enabled and its `next_fire_at` must still
+equal the `scheduled_for` being claimed, the fire row is inserted, then `next_fire_at` moves on
+with `last_fired_at` and `fires_count = fires_count + 1`. `UNIQUE (schedule_id, scheduled_for)`
+makes that exactly one winner: a tick that loses the race — a second process, a double tick, a
+stale read — gets `null`, logs `schedule_fire_lost` once and never throws. A `skipped` fire
+writes its row and moves `next_fire_at` but leaves `last_fired_at` and `fires_count` alone,
+because the fire never happened. `finish` writes the outcome plus the run or chat id, adds the
+cost to `spend_usd`, and increments `consecutive_failures` on `failed` or resets it to zero on
+`fired`.
+
+### 16.3 The tick
+
+`apps/daemon/src/schedules` owns the loop, with the same shape as §15.2: one unref'd
+`setInterval` every `max(15, CB_SCHEDULER_TICK_SECONDS)` seconds, twenty due rows per pass,
+one pass at a time (a second tick that starts while one is running returns zeros). A pass
+applies the D13 grace with `CB_MISFIRE_GRACE_SECONDS`: inside the grace the schedule claims and
+fires, outside it the fire is recorded as `skipped` and `next_fire_at` moves on. A missed fire
+is never caught up.
+
+A claimed fire is started, not awaited: `tick` returns while the work runs. A schedule with a
+repository starts a run through `queueRun` with `trigger: 'schedule'`, `jobId: null` and the
+claimed instant as `scheduled_for`, so it obeys the same `CB_MAX_CONCURRENCY` admission as a
+manual run. A schedule without one appends an `origin: routine` message to its chat and starts
+the chat turn; when it has no chat, or the old one was archived, it opens a session named after
+the schedule — which needs a repository, because `chat_sessions.repo_id` is still `NOT NULL`, so
+a repo-less schedule with no chat fails `chat_missing` instead of guessing one. When the fire
+settles, its row ends `fired` with the run or chat id, or `failed` with a code (`repo_missing`,
+`chat_unavailable`, `chat_missing`, `internal`), and the next fire is recomputed from that
+instant. A fire still working at the window's end is allowed to finish; nothing cancels it.
+
+### 16.4 The routes
+
+| Method | Path | Scope | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/v1/schedules` | `read` | Page of schedules, newest first; `repoId` and `enabled` filters. |
+| `POST` | `/v1/schedules` | `write` | Create; `201` with the stored object. |
+| `GET` | `/v1/schedules/{id}` | `read` | `{ schedule, nextFires }`, up to five preview instants. |
+| `PATCH` | `/v1/schedules/{id}` | `write` | The editable fields; a change of mode, cron, zone, window, cooldown or `enabled` recomputes `nextFireAt`. |
+| `DELETE` | `/v1/schedules/{id}` | `write` | Delete the schedule and its fires; `204`. |
+| `POST` | `/v1/schedules/{id}/pause` | `write` | `enabled = false`, `nextFireAt = null`. |
+| `POST` | `/v1/schedules/{id}/resume` | `write` | `enabled = true`, `nextFireAt` recomputed from now. |
+
+`nextFireAt` is never accepted from a client: an unknown body key is a `422` that names
+`schedule.<key>`, and a cron, a zone or a window that cannot produce a fire is a `422` with
+`details.path` and a machine `details.reason` (`field_count`, `range`, `step`, `syntax`,
+`no_fire`, `timezone`, `window`, `repo_missing`, `repo_required`). A schedule fire emits no
+event of its own: the run or the chat it opens emits the events of §3 and §15.

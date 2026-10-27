@@ -6,6 +6,27 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-53, one recurring object: the schedule)
+
+- `@codebox/contracts` gains `Schedule` and `ScheduleDetail` — `mode` (`once`/`every`/`window`),
+  the D46 `cooldownMinutes`, `maxFires`, `maxCostPerFireUsd`, `firePolicy`,
+  `consecutiveFailures`, `firesCount` and `spendUsd` — plus the `/v1/schedules` shapes. The
+  change is additive: every existing resource, route and app screen is unchanged.
+- `0004_schedules.sql` adds `schedules` and `schedule_fires` with the forward-only checks;
+  `packages/store` gains the two repositories and the transactional claim on
+  `(schedule_id, scheduled_for)`, where 20 concurrent claims produce one winner and 19 refusals.
+- `@codebox/scheduler` gains the pure D46 loop (`planNextFire`, `isInsideWindow`,
+  `nextWindowOpen`): a finish-anchored relaunch (T+31 for a 20-minute fire that took 11), a
+  spring-forward gap that fires zero times, a fall-back wall clock resolved to its first
+  instant, three consecutive failures pausing the schedule, and the fire and cost caps stopping
+  the loop.
+- The daemon gains the `schedules` subsystem — seven routes under `/v1/schedules`, one
+  non-overlapping tick, the D13 grace rule, and a claim that survives a restart — and lists
+  `credentials` for Task-58. `jobs` keeps working untouched; `docs/jobs.md` §1 marks it
+  deprecated.
+- `[live]` — a window draining a repository overnight with one PR per fire — needs the VM; it is
+  recorded as `[?]`, never as passing.
+
 ### Added — 2026-10-27 (Task-51, chat scope, context and review state)
 
 - `chatSessionSchema` carries `kind` (`free`/`repo`/`schedule`), `usage` (the `costSchema`

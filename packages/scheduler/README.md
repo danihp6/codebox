@@ -22,6 +22,7 @@ type-only so `npm test` runs before `npm run build`.
 - `resume.ts` — `planResume` from `now` and `planPause` to a null next fire.
 - `admission.ts` — `planAdmission`, the D15 waiting list in repository-first order.
 - `routines.ts` — the `Schedule` mapping, `planRoutineTick` and `nextRoutineFire` for D38.
+- `window.ts` — the D46 loop: `planNextFire`, the half-open window and its DST gap.
 - `index.test.ts` — the frozen surface, the claim key and a deterministic plan.
 - `tick.test.ts` — grace, double tick, paused jobs, no next fire and the preview.
 - `tick-dst.test.ts` — the pinned Madrid DST rows observed through `planTick`.
@@ -31,6 +32,7 @@ type-only so `npm test` runs before `npm run build`.
 - `resume.test.ts` — pause, resume from `now`, and the invalid cron or zone.
 - `clock.test.ts` — the pinned tick delay and the configured range.
 - `routines.test.ts` — the routine mapping, the Madrid DST rows, the grace and the first fire.
+- `window.test.ts` — the cooldown inside a window, the three stops, the DST gap and the wrap.
 
 ## Checks
 

@@ -54,3 +54,10 @@ export type {
   ClaimRoutineFireInput,
   RoutineFireRepository,
 } from './routine-fires.js';
+export type { ScheduleFilter, SchedulePatch, ScheduleRepository } from './schedules.js';
+export type {
+  ScheduleFireRecord,
+  ClaimScheduleFireInput,
+  FinishScheduleFireInput,
+  ScheduleFireRepository,
+} from './schedule-fires.js';

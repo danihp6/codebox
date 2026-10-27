@@ -62,6 +62,8 @@ function only(name: SubsystemName): SubsystemFlags {
     runs: false,
     push: false,
     routines: false,
+    schedules: false,
+    credentials: false,
     telemetry: false,
     cli: false,
   };
@@ -82,7 +84,7 @@ function moduleNotFound(name: SubsystemName): Error {
 }
 
 describe('subsystems', () => {
-  it('lists the eleven subsystems in order', () => {
+  it('lists the thirteen subsystems in order', () => {
     expect([...SUBSYSTEMS]).toEqual([
       'auth',
       'chat',
@@ -93,6 +95,8 @@ describe('subsystems', () => {
       'runs',
       'push',
       'routines',
+      'schedules',
+      'credentials',
       'telemetry',
       'cli',
     ]);
@@ -188,6 +192,8 @@ describe('loadModules', () => {
       runs: false,
       push: false,
       routines: false,
+      schedules: false,
+      credentials: false,
       telemetry: false,
       cli: false,
     });

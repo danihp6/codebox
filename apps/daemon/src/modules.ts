@@ -20,6 +20,8 @@ export type SubsystemName =
   | 'runs'
   | 'push'
   | 'routines'
+  | 'schedules'
+  | 'credentials'
   | 'telemetry'
   | 'cli';
 
@@ -33,6 +35,8 @@ export const SUBSYSTEMS: readonly SubsystemName[] = Object.freeze([
   'runs',
   'push',
   'routines',
+  'schedules',
+  'credentials',
   'telemetry',
   'cli',
 ]);
@@ -49,6 +53,8 @@ export const DEFAULT_SUBSYSTEM_FLAGS: SubsystemFlags = Object.freeze({
   runs: true,
   push: true,
   routines: true,
+  schedules: true,
+  credentials: true,
   telemetry: true,
   cli: true,
 });
