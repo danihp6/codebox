@@ -5,13 +5,17 @@ do anything.
 ENVIRONMENT FACTS — do not discover them by failing:
 
 - There is no human. **Never** use the `question` tool: it hangs the cycle until the timeout.
-  If you are truly blocked, the issue is mandatory and must carry real content:
-  `gh issue create --label agent-blocked --title "Task-<ID>: <the block in one sentence>"`
-  with a body that says what you tried, the literal error or contradiction, and the decision a
-  human must take. You have `GH_TOKEN`/`CB_AGENT_GIT_TOKEN` and issues: write.
+  If you are truly blocked, the issue is mandatory and must carry real content. Open it with
+  the helper and with nothing else, so a retried step cannot double the backlog:
+  `node scripts/agent/issue.mjs --label agent-blocked --title "Task-<ID>: <the block in one sentence>" --body-file -`
+  The body on stdin says what you tried, the literal error or contradiction, and the decision a
+  human must take. The helper prints one JSON line — `created` or `commented`, the `number` and
+  the `duplicates` it saw — quote them in the report. You have `GH_TOKEN`/`CB_AGENT_GIT_TOKEN`
+  and issues: write.
 - A `[live]` criterion only exists in the running system. On GitHub Actions there is no
   browser: never report a `[live]` criterion as passing; open an `agent-review` issue with what
-  must be measured. On the VM you can measure it with `npx playwright test` and must say how.
+  must be measured, through `scripts/agent/issue.mjs`. On the VM you can measure it with
+  `npx playwright test` and must say how.
   **Nothing is ever reported as pass without being measured.**
 - `origin` is reachable and writable; pushes work. The machine may persist, but the durable
   state is the refs, not the disk.
@@ -38,7 +42,8 @@ HOW TO ADOPT EACH STATE:
 - `partial`: `git push origin --delete task-<ID>`, remove the worktree, redo the task from
   scratch (spec + dev).
 - `blocked` / `merged`: `git push origin --delete task-<ID>` and continue.
-- `orphan`: open an `agent-blocked` issue saying which branch is left and why.
+- `orphan`: open an `agent-blocked` issue saying which branch is left and why, through
+  `scripts/agent/issue.mjs`.
 
 CHOOSE THE BATCH:
 
@@ -57,10 +62,10 @@ CHOOSE THE BATCH:
 4. **Blocking a task means marking it.** Change its box in `TODO.md` from `- [ ]` to `- [!]`
    and append `BLOCKED: <one-line reason>` to its `*Decision:*` line, then push that change to
    `main`. The driver only counts `- [ ]`, so a marked task leaves the queue by itself.
-5. If no task is eligible, **open an `agent-blocked` issue saying so** (with the reason:
-   dependencies open, everything blocked, whatever it is), write the final report and stop. Do
-   not touch `main`. A cycle that moves nothing and opens no issue is broken and **fails**: the
-   verdict watches exactly that.
+5. If no task is eligible, **open an `agent-blocked` issue saying so** with
+   `scripts/agent/issue.mjs` (with the reason: dependencies open, everything blocked, whatever
+   it is), write the final report and stop. Do not touch `main`. A cycle that moves nothing and
+   opens no issue is broken and **fails**: the verdict watches exactly that.
 
 WITH THE BATCH CHOSEN, run the ritual and nothing else. Tasks adopted from a live branch do not
 repeat steps 1–3; adopt them by state.
@@ -92,7 +97,7 @@ repeat steps 1–3; adopt them by state.
      `git push origin HEAD:refs/heads/task-<ID>`
      remove the worktree.
    If it fails, return it to the author (at most 2 rounds) and, if there is no fix, mark the
-   task `[!]`, open an issue and delete the branch.
+   task `[!]`, open an issue through `scripts/agent/issue.mjs` and delete the branch.
 5. **Atomic shipment per task, in ID order.** Before pushing, `git fetch origin` and catch up
    with `origin/main`. Then, for each branch with `qa: pass`:
    `git merge --no-ff --no-commit origin/task-<ID>`
@@ -107,8 +112,9 @@ repeat steps 1–3; adopt them by state.
    NOT push `main`: leave that branch at `qa: pass`, remove the worktree and finish the report;
    the next cycle picks it up.
 6. If QA is red and there is no fix: do NOT merge. Mark the task `[!]` in `TODO.md` with
-   `BLOCKED: QA red, issue #<n>`, open an `agent-blocked` issue with the diagnosis, push the
-   `TODO.md` change to `main`, delete the branch and finish the report.
+   `BLOCKED: QA red, issue #<n>`, open an `agent-blocked` issue with the diagnosis through
+   `scripts/agent/issue.mjs`, push the `TODO.md` change to `main`, delete the branch and finish
+   the report.
 
 Merge authorised for this run: {{MERGE}}.
 If it is false, stop after QA: the branches stay at `qa: pass` and the next cycle ships them.
