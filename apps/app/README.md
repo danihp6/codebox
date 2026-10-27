@@ -39,7 +39,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/shared/offline-banner.ts` — the connectivity signals and the read-only offline banner.
 - `src/app/shared/offline-banner.i18n.ts` — the offline banner dictionary in `en` and `es`.
 - `src/app/shared/offline-banner.spec.ts` — the stale/fresh banner, the browser events, the single listener attach and the dictionary parity.
-- `src/app/shell/tabs.page.ts` — the five bottom tabs.
+- `src/app/shell/tabs.page.ts` — the three top-level tabs: Dashboard, Chat and Settings.
 - `src/app/shell/tabs.page.spec.ts` — tab order and rendered hooks.
 - `src/app/core/api/api-client.ts` — typed `/v1` client, `ApiError`, pair parsing, the run detail reads, cancel and revert.
 - `src/app/core/api/api-client.spec.ts` — payload parsing, error-envelope mapping, the event page and the run detail calls.
