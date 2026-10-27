@@ -72,6 +72,14 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
   pairing rate limiter.
 - `src/auth/errors.ts` — `AuthError` and the failure-to-envelope mapping.
 - `src/auth/ids.ts` — the only `dev_` device id generator.
+- `src/schedules/index.ts` — the schedules subsystem module: the service, the routes and the
+  tick.
+- `src/schedules/service.ts` — list, create, patch and pause, and the one-pass tick.
+- `src/schedules/routes.ts` — the `/v1/schedules` handlers and their body schemas.
+- `src/schedules/fire.ts` — the default port: a run for a repo schedule, a chat turn otherwise.
+- `src/schedules/service.test.ts` — the service and its one-pass tick.
+- `src/schedules/routes.test.ts` — the `/v1/schedules` handlers.
+- `src/schedules/fire.test.ts` — the default fire port.
 - `src/credentials/index.ts` — the credentials subsystem module: builds the vault, mounts the
   credential and integration routes, warns once when the store has no master key.
 - `src/credentials/ids.ts` — the only `cred_` and `int_` id generators.
