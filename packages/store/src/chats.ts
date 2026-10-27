@@ -28,6 +28,7 @@ export interface ChatSessionExtra {
 export interface ChatSessionPatch {
   readonly title?: string;
   readonly status?: 'idle' | 'working' | 'archived';
+  readonly repoId?: string | null;
   readonly opencodeSessionId?: string | null;
   readonly worktree?: string | null;
   readonly kind?: ChatKind;
@@ -54,6 +55,8 @@ export interface ChatRepository {
   appendMessage(message: ChatMessage, extra: { origin: ChatMessageOrigin }): ChatMessage;
   listMessages(chatId: string, query: PageQuery): PageResult<ChatMessage>;
   lastMessage(chatId: string): ChatMessage | null;
+  /** The newest `limit` messages, returned oldest first. */
+  recentMessages(chatId: string, limit: number): readonly ChatMessage[];
   /** Deletes archived sessions untouched since `cutoff`; messages cascade. */
   pruneArchivedBefore(cutoff: string): number;
 }
@@ -207,6 +210,10 @@ export function createChatRepository(db: DatabaseSync): ChatRepository {
         assignments.push('status = ?');
         parameters.push(patch.status);
       }
+      if (patch.repoId !== undefined) {
+        assignments.push('repo_id = ?');
+        parameters.push(patch.repoId);
+      }
       if (patch.opencodeSessionId !== undefined) {
         assignments.push('opencode_session_id = ?');
         parameters.push(patch.opencodeSessionId);
@@ -297,6 +304,18 @@ export function createChatRepository(db: DatabaseSync): ChatRepository {
 
     lastMessage(chatId: string): ChatMessage | null {
       return lastMessageOf(chatId);
+    },
+
+    recentMessages(chatId: string, limit: number): readonly ChatMessage[] {
+      const size = Math.max(1, Math.trunc(limit));
+      const values = db
+        .prepare(
+          `SELECT ${MESSAGE_COLUMNS} FROM chat_messages WHERE chat_id = ?
+           ORDER BY created_at DESC, id DESC LIMIT ?`,
+        )
+        .all(chatId, size)
+        .map((value) => chatMessageFromRow(row(value)));
+      return values.reverse();
     },
 
     pruneArchivedBefore(cutoff: string): number {

@@ -133,6 +133,18 @@ describe('ChatListPage', () => {
     expect(hook(element, 'chat-empty')).not.toBeNull();
   });
 
+  it('renders a free chat with a null repoId without throwing', async () => {
+    const free: ChatSession = { ...SESSION, repoId: null, kind: 'free', title: 'Free chat' };
+    const { element } = await mount(page([REPO]), page([free, SESSION]));
+
+    const rows = element.querySelectorAll('[data-testid="chat-row"]');
+    expect(rows).toHaveLength(2);
+    expect(rows[0]?.getAttribute('data-chat-id')).toBe(CHAT);
+    expect(element.querySelectorAll('.cb-chat-group')).toHaveLength(2);
+    expect(element.textContent).toContain('Free chat');
+    expect(element.textContent).toContain('owner/repo');
+  }, 20_000);
+
   it('reloads the sessions of the chosen repository', async () => {
     const { fixture, element, http } = await mount();
 

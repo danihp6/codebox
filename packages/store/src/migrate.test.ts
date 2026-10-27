@@ -36,6 +36,7 @@ const INDEXES = [
   'approvals_state',
   'chat_messages_chat',
   'chat_sessions_repo',
+  'chat_sessions_kind',
   'devices_revoked',
   'usage_day_repo',
   'usage_run',
@@ -71,6 +72,66 @@ function migrationDirectory(files: Record<string, string>): string {
   return directory;
 }
 
+function countOf(db: DatabaseSync, table: string): number {
+  return Number(db.prepare(`SELECT COUNT(*) AS total FROM ${table}`).get()?.['total']);
+}
+
+/** Two bound chats plus one row in every child table that names `chat_sessions`. */
+function seedChildren(target: DatabaseSync): void {
+  target.exec(`
+    INSERT INTO repos (id, slug, default_branch, gate, policy, protected_paths, enabled, created_at)
+    VALUES ('repo_000001', 'acme/widgets', 'main', 'npm test', 'auto', '[]', 1, '${FIXED_NOW}');
+
+    INSERT INTO chat_sessions (
+      id, repo_id, title, status, opencode_session_id, worktree, created_at, updated_at,
+      kind, usage_usd, usage_tokens_in, usage_tokens_out, context_tokens, context_epoch, reviewed_at
+    ) VALUES (
+      'chat_000001', 'repo_000001', 'First', 'idle', 'ses_1', '/tmp/wt-1', '${FIXED_NOW}', '${FIXED_NOW}',
+      'repo', 0.5, 100, 20, 120, 1, NULL
+    );
+    INSERT INTO chat_sessions (
+      id, repo_id, title, status, opencode_session_id, worktree, created_at, updated_at,
+      kind, usage_usd, usage_tokens_in, usage_tokens_out, context_tokens, context_epoch, reviewed_at
+    ) VALUES (
+      'chat_000002', 'repo_000001', 'Second', 'archived', 'ses_2', NULL, '${FIXED_NOW}', '${FIXED_NOW}',
+      'repo', 0, 0, 0, 0, 2, '${FIXED_NOW}'
+    );
+
+    INSERT INTO chat_messages (id, chat_id, role, text, origin, created_at)
+    VALUES ('msg_000001', 'chat_000001', 'user', 'hello', 'user', '${FIXED_NOW}');
+    INSERT INTO chat_messages (id, chat_id, role, text, origin, created_at)
+    VALUES ('msg_000002', 'chat_000002', 'assistant', 'bye', 'assistant', '${FIXED_NOW}');
+
+    INSERT INTO run_events (run_id, chat_id, seq, type, payload, ts)
+    VALUES (NULL, 'chat_000001', 1, 'chat.idle', '{}', '${FIXED_NOW}');
+
+    INSERT INTO approvals (id, state, tool, title, run_id, chat_id, input, created_at, expires_at)
+    VALUES ('apv_000001', 'pending', 'bash', 'Run the tests', NULL, 'chat_000002', '{}', '${FIXED_NOW}', '${FIXED_NOW}');
+
+    INSERT INTO routines (
+      id, kind, title, cron, timezone, enabled, notify, repo_id, prompt, chat_session_id,
+      next_fire_at, last_fired_at, created_at
+    ) VALUES (
+      'rtn_000001', 'prompt', 'Nightly', '0 3 * * *', 'UTC', 1, 1, 'repo_000001', 'Summarise.',
+      'chat_000001', NULL, NULL, '${FIXED_NOW}'
+    );
+
+    INSERT INTO schedules (
+      id, repo_id, chat_session_id, title, prompt, mode, cron, timezone, window_start,
+      window_end, cooldown_minutes, max_fires, max_cost_per_fire_usd, fire_policy,
+      consecutive_failures, fires_count, spend_usd, enabled, policy, next_fire_at, last_fired_at,
+      created_at, updated_at
+    ) VALUES (
+      'sch_000001', NULL, 'chat_000002', 'Drain', 'Pick the next issue.', 'every', '0 3 * * *',
+      'UTC', NULL, NULL, 0, NULL, NULL, 'new_chat', 0, 0, 0, 1, 'auto', NULL, NULL,
+      '${FIXED_NOW}', '${FIXED_NOW}'
+    );
+
+    INSERT INTO schedule_fires (schedule_id, scheduled_for, fired_at, outcome, run_id, chat_id, cost_usd, detail)
+    VALUES ('sch_000001', '${FIXED_NOW}', '${FIXED_NOW}', 'fired', NULL, 'chat_000002', 0, NULL);
+  `);
+}
+
 let directory: string;
 let db: DatabaseSync;
 
@@ -88,30 +149,33 @@ describe('migrations', () => {
   it('migrations apply to an empty database and are idempotent', () => {
     const files = loadMigrationsFromDisk(MIGRATIONS_DIRECTORY);
     expect(files.length).toBeGreaterThanOrEqual(1);
-    expect(files.map((file) => file.version)).toEqual([1, 2, 3, 4]);
+    expect(files.map((file) => file.version)).toEqual([1, 2, 3, 4, 5]);
 
     const first = runMigrations(db, files, () => FIXED_NOW);
-    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4]);
-    expect(first.currentVersion).toBe(4);
+    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5]);
+    expect(first.currentVersion).toBe(5);
     expect(first.applied.map((migration) => migration.name)).toEqual([
       '0001_init.sql',
       '0002_routines.sql',
       '0003_chat_scope.sql',
       '0004_schedules.sql',
+      '0005_chat_free.sql',
     ]);
 
     const userVersion = db.prepare('PRAGMA user_version').get()?.['user_version'];
-    expect(Number(userVersion)).toBe(4);
+    expect(Number(userVersion)).toBe(5);
 
     const tables = names(db, 'table');
     for (const table of TABLES) expect(tables).toContain(table);
     expect(tables).toContain('schema_migrations');
+    expect(tables).not.toContain('chat_sessions_new');
     const indexes = names(db, 'index');
     for (const index of INDEXES) expect(indexes).toContain(index);
+    expect(Number(db.prepare('PRAGMA foreign_keys').get()?.['foreign_keys'])).toBe(1);
 
     const second = runMigrations(db, files, () => FIXED_NOW);
     expect(second.applied).toEqual([]);
-    expect(second.currentVersion).toBe(4);
+    expect(second.currentVersion).toBe(5);
 
     const tampered = files.map((file) =>
       file.version === 2 ? { ...file, checksum: 'deadbeef' } : file,
@@ -123,6 +187,92 @@ describe('migrations', () => {
       code = error instanceof StoreError ? error.code : 'unexpected-error';
     }
     expect(code).toBe('migration_checksum');
+  });
+
+  it('rebuilds chat_sessions for a free chat without losing a child row', () => {
+    const files = loadMigrationsFromDisk(MIGRATIONS_DIRECTORY);
+    const before = runMigrations(
+      db,
+      files.filter((file) => file.version < 5),
+      () => FIXED_NOW,
+    );
+    expect(before.currentVersion).toBe(4);
+    seedChildren(db);
+
+    const applied = runMigrations(db, files, () => FIXED_NOW);
+    expect(applied.applied.map((migration) => migration.version)).toEqual([5]);
+    expect(applied.currentVersion).toBe(5);
+
+    const sessions = db
+      .prepare(
+        'SELECT id, repo_id, kind, context_epoch, reviewed_at, worktree FROM chat_sessions ORDER BY id',
+      )
+      .all();
+    expect(sessions).toHaveLength(2);
+    expect(sessions[0]).toEqual({
+      id: 'chat_000001',
+      repo_id: 'repo_000001',
+      kind: 'repo',
+      context_epoch: 1,
+      reviewed_at: null,
+      worktree: '/tmp/wt-1',
+    });
+    expect(sessions[1]).toEqual({
+      id: 'chat_000002',
+      repo_id: 'repo_000001',
+      kind: 'repo',
+      context_epoch: 2,
+      reviewed_at: FIXED_NOW,
+      worktree: null,
+    });
+
+    expect(countOf(db, 'chat_messages')).toBe(2);
+    expect(countOf(db, 'run_events')).toBe(1);
+    expect(countOf(db, 'approvals')).toBe(1);
+    expect(countOf(db, 'routines')).toBe(1);
+    expect(countOf(db, 'schedules')).toBe(1);
+    expect(countOf(db, 'schedule_fires')).toBe(1);
+    expect(db.prepare('SELECT chat_id FROM run_events').get()).toEqual({
+      chat_id: 'chat_000001',
+    });
+    expect(db.prepare('SELECT chat_id FROM approvals').get()).toEqual({
+      chat_id: 'chat_000002',
+    });
+    expect(db.prepare('SELECT chat_session_id FROM routines').get()).toEqual({
+      chat_session_id: 'chat_000001',
+    });
+    expect(db.prepare('SELECT chat_session_id FROM schedules').get()).toEqual({
+      chat_session_id: 'chat_000002',
+    });
+    expect(db.prepare('SELECT chat_id FROM schedule_fires').get()).toEqual({
+      chat_id: 'chat_000002',
+    });
+
+    db.exec(`INSERT INTO chat_sessions (id, repo_id, title, status, created_at, updated_at)
+             VALUES ('chat_000003', NULL, 'Free chat', 'idle', '${FIXED_NOW}', '${FIXED_NOW}')`);
+    expect(
+      db.prepare("SELECT repo_id, kind FROM chat_sessions WHERE id = 'chat_000003'").get(),
+    ).toEqual({ repo_id: null, kind: 'repo' });
+    expect(
+      db.prepare('SELECT COUNT(*) AS total FROM chat_sessions WHERE repo_id IS NULL').get()?.[
+        'total'
+      ],
+    ).toBe(1);
+
+    let refused = false;
+    try {
+      db.exec(`INSERT INTO chat_sessions (id, repo_id, title, status, created_at, updated_at)
+               VALUES ('chat_000004', 'repo_missing', 'Ghost', 'idle', '${FIXED_NOW}', '${FIXED_NOW}')`);
+    } catch (error) {
+      refused = error instanceof Error && error.message.includes('FOREIGN KEY constraint failed');
+    }
+    expect(refused).toBe(true);
+
+    const indexes = names(db, 'index');
+    expect(indexes).toContain('chat_sessions_repo');
+    expect(indexes).toContain('chat_sessions_kind');
+    expect(Number(db.prepare('PRAGMA foreign_keys').get()?.['foreign_keys'])).toBe(1);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });
 
   it('hashes the file bytes and sorts by version', () => {

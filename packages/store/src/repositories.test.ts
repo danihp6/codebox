@@ -473,6 +473,51 @@ describe('chats', () => {
     ).toBe('foreign_key_violation');
   });
 
+  it('keeps a free chat with a null repoId and patches one back in', () => {
+    const free = store.chats.createSession(
+      chatSession('chat_000010', '2026-01-06T00:00:00.000Z', { repoId: null, kind: 'free' }),
+      { opencodeSessionId: null, worktree: null },
+    );
+    expect(free.repoId).toBeNull();
+    expect(free.kind).toBe('free');
+    expect(store.chats.getSession('chat_000010')?.repoId).toBeNull();
+
+    const bound = store.chats.updateSession('chat_000010', {
+      repoId: REPO.id,
+      kind: 'repo',
+      updatedAt: '2026-01-07T00:00:00.000Z',
+    });
+    expect(bound.repoId).toBe(REPO.id);
+    expect(bound.kind).toBe('repo');
+
+    const unbound = store.chats.updateSession('chat_000010', {
+      repoId: null,
+      kind: 'free',
+      updatedAt: '2026-01-08T00:00:00.000Z',
+    });
+    expect(unbound.repoId).toBeNull();
+  });
+
+  it('reads the newest messages oldest first with recentMessages', () => {
+    for (const [index, id] of ['msg_000010', 'msg_000011', 'msg_000012', 'msg_000013'].entries()) {
+      store.chats.appendMessage(message(id, 'chat_000001', `2026-01-01T00:00:0${index + 1}.000Z`), {
+        origin: 'user',
+      });
+    }
+    const recent = store.chats.recentMessages('chat_000001', 3);
+    expect(recent.map((entry) => entry.id)).toEqual(['msg_000011', 'msg_000012', 'msg_000013']);
+    expect(recent.map((entry) => entry.text)).toEqual([
+      'message msg_000011',
+      'message msg_000012',
+      'message msg_000013',
+    ]);
+    expect(store.chats.recentMessages('chat_000001', 0).map((entry) => entry.id)).toEqual([
+      'msg_000013',
+    ]);
+    expect(store.chats.recentMessages('chat_000001', 10)).toHaveLength(4);
+    expect(store.chats.recentMessages('chat_000404', 5)).toEqual([]);
+  });
+
   it('prunes an archived session with its messages and keeps an idle one', () => {
     store.chats.createSession(
       chatSession('chat_0000002', '2025-12-01T00:00:00.000Z', { status: 'archived' }),

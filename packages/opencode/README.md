@@ -25,7 +25,8 @@ daemon owns spawning, sleeping and probing, and passes them in.
 - `wire.ts` — the `unknown`-in decoders for health, session, models, agents and events, plus `encodeEvent`.
 - `client.ts` — `createAgentRuntime`: the loopback guard, the request mapping, the one-reconnect stream.
 - `normalise.ts` — `createNormaliser`: raw events into `run.*` / `chat.*` contract events, permissions and usage.
-- `prompt.ts` — `RUN_ENVELOPE_VERSION`, `RUN_ENVELOPE_TEMPLATE` and `buildRunEnvelope`.
+- `prompt.ts` — `RUN_ENVELOPE_VERSION`, `RUN_ENVELOPE_TEMPLATE`, `buildRunEnvelope`,
+  `CHAT_HANDOFF_VERSION`, `CHAT_HANDOFF_TURNS` and `buildChatHandoff`.
 - `supervisor.ts` — `createSupervisor`: adopt, spawn, probe, back off, stop, with injected effects.
 - `fake.ts` — `startFakeOpenCode`: a loopback HTTP server with scripted events and failure switches.
 
@@ -36,7 +37,8 @@ daemon owns spawning, sleeping and probing, and passes them in.
 - `client.test.ts` — base URL guard, every method against `FakeOpenCode`, and the error mapping.
 - `stream.test.ts` — subscribe, reconnect once, `agent_unavailable`, `stream_lost` and unknown frames.
 - `normalise.test.ts` — both scopes, the seq and ts sources, permissions and the absent tool input.
-- `prompt.test.ts` — the envelope compared against a literal, the version and the verbatim prompt.
+- `prompt.test.ts` — the envelope compared against a literal, the version and the verbatim
+  prompt; the ten-turn chat handoff, its empty turns and its two continuations.
 - `supervisor.test.ts` — spawn, adopt, restart budget, unhealthy kill, stop and status events.
 - `fixtures.test.ts` — the five replays, the documented timelines and the contract-schema check.
 

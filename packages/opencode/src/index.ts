@@ -46,9 +46,11 @@ export type {
   NormaliserScope,
 } from './normalise.js';
 
-// Prompt: the versioned unattended envelope, as data.
+// Prompt: the versioned unattended envelope and the chat handoff, as data.
 export { RUN_ENVELOPE_TEMPLATE, RUN_ENVELOPE_VERSION, buildRunEnvelope } from './prompt.js';
 export type { RunEnvelopeInput } from './prompt.js';
+export { CHAT_HANDOFF_TURNS, CHAT_HANDOFF_VERSION, buildChatHandoff } from './prompt.js';
+export type { ChatHandoffInput, ChatHandoffReason, ChatHandoffTurn } from './prompt.js';
 
 // Supervisor: start, probe and restart the server with injected process and clock.
 export { createSupervisor } from './supervisor.js';

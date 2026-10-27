@@ -80,6 +80,7 @@ const fixtures: Readonly<Record<SseEventName, { event: SseEventName; data: unkno
     data: { chatId, seq: 4, ts, approvalId, tool: 'bash', title: 'Run npm test' },
   },
   'chat.idle': { event: 'chat.idle', data: { chatId, seq: 5, ts } },
+  'chat.compacted': { event: 'chat.compacted', data: { chatId, seq: 6, ts, contextEpoch: 2 } },
   'job.changed': { event: 'job.changed', data: { jobId, change: 'updated', ts } },
   'approval.created': {
     event: 'approval.created',
@@ -190,6 +191,26 @@ describe('events', () => {
       parseSseEvent({ event: 'run.output', data: { runId, seq: 1, ts, delta: 'x', tool: 'bash' } }),
     );
     expect(error instanceof ContractParseError ? error.first.path : null).toBe('event.data.tool');
+  });
+
+  it('carries the context epoch of a compacted chat', () => {
+    const compacted = { event: 'chat.compacted', data: { chatId, seq: 6, ts, contextEpoch: 2 } };
+    expect(parseSseEvent(compacted)).toEqual(compacted);
+    expect(sseStreamEventSchema.safeParse(compacted).success).toBe(true);
+    const missing = parseError(() =>
+      parseSseEvent({ event: 'chat.compacted', data: { chatId, seq: 6, ts } }),
+    );
+    expect(missing instanceof ContractParseError ? missing.first.path : null).toBe(
+      'event.data.contextEpoch',
+    );
+    const zero = parseError(() =>
+      parseSseEvent({ event: 'chat.compacted', data: { chatId, seq: 6, ts, contextEpoch: 0 } }),
+    );
+    expect(zero instanceof ContractParseError ? zero.first.path : null).toBe(
+      'event.data.contextEpoch',
+    );
+    const data: SseEventData['chat.compacted'] = { chatId, seq: 6, ts, contextEpoch: 3 };
+    expect(data.contextEpoch).toBe(3);
   });
 
   it('routine events are global and carry no per-run seq', () => {

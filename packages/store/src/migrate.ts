@@ -129,14 +129,26 @@ export function runMigrations(
       name: file.name,
       checksum: file.checksum,
     };
+    // A table rebuild needs the foreign keys off, and the pragma is a no-op inside a
+    // transaction, so it is set before the BEGIN and restored in `finally` either way.
+    db.exec('PRAGMA foreign_keys = OFF');
     try {
       withTransaction(db, () => {
         db.exec(file.sql);
+        const violations = db.prepare('PRAGMA foreign_key_check').all();
+        if (violations.length > 0) {
+          throw new StoreError(
+            'migration_failed',
+            `migration ${file.version} left ${violations.length} foreign key violations`,
+          );
+        }
         insert.run(file.version, file.name, file.checksum, now());
       });
     } catch (error) {
       if (error instanceof StoreError) throw error;
       throw new StoreError('migration_failed', `migration ${file.version} (${file.name}) failed`);
+    } finally {
+      db.exec('PRAGMA foreign_keys = ON');
     }
     newlyApplied.push(record);
   }

@@ -18,6 +18,7 @@ before `npm run build`.
 - `migrations/0002_routines.sql` — the two routine tables, their kind CHECKs and the three indexes.
 - `migrations/0003_chat_scope.sql` — the chat scope, its usage ledger, the context epoch and `reviewed_at`.
 - `migrations/0004_schedules.sql` — the schedule object, its fires and the three indexes, additively.
+- `migrations/0005_chat_free.sql` — the twelve-step rebuild that makes `chat_sessions.repo_id` nullable.
 
 ## `src/`
 
@@ -33,7 +34,7 @@ before `npm run build`.
 - `runs.ts` — run records, patches and the scheduled-run claim.
 - `events.ts` — the append-only timeline, `seq` allocation, replay and pruning.
 - `approvals.ts` — permission requests and their single resolution.
-- `chats.ts` — chat sessions, their messages and the last message projection.
+- `chats.ts` — chat sessions, their messages, the last message projection and the newest turns.
 - `devices.ts` — paired devices, refresh-token rotation and revocation.
 - `settings.ts` — non-secret key/value settings stored as JSON.
 - `usage.ts` — the token/cost ledger and its per-day aggregate.
@@ -41,7 +42,8 @@ before `npm run build`.
 - `routine-fires.ts` — the transactional claim on `(routine_id, scheduled_for)`, skip and outcome.
 - `schedules.ts` — the schedule object: the newest-first page, the patch and the due queue; a patch stamps `updated_at` from SQLite because the frozen patch carries no timestamp.
 - `schedule-fires.ts` — the transactional claim on `(schedule_id, scheduled_for)`, skip, outcome and the cost ledger.
-- `migrate.test.ts` — migration application, idempotency, checksum and failure rollback.
+- `migrate.test.ts` — migration application, idempotency, checksum, failure rollback and the
+  `chat_sessions` rebuild with every child row.
 - `store.test.ts` — open/close, WAL, file format, the in-memory fake and the cursor.
 - `runs.test.ts` — the claim race, run round-trip, paging and live-state counting.
 - `events.test.ts` — replay by `seq` and by `Last-Event-ID`, stream sequences and pruning.

@@ -438,11 +438,14 @@ whose `decision` is `"expired"`.
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/v1/chat/sessions?repoId=` | `read` | Sessions, newest activity first. |
-| `POST` | `/v1/chat/sessions` | `chat` | `{ repoId, title? }` — creates the worktree and the OpenCode session. |
+| `POST` | `/v1/chat/sessions` | `chat` | `{ repoId?, title? }` — a free chat, or the worktree and the OpenCode session. |
 | `GET` | `/v1/chat/sessions/{id}` | `read` | Session, repo, status (`idle`/`working`), last message. |
 | `DELETE` | `/v1/chat/sessions/{id}` | `chat` | Archives it; the worktree is kept per retention. |
 | `GET` | `/v1/chat/sessions/{id}/messages?cursor=` | `read` | Oldest first, paginated. |
 | `POST` | `/v1/chat/sessions/{id}/messages` | `chat` | `{ text }` → 202; the reply arrives as events. |
+| `POST` | `/v1/chat/sessions/{id}/repo` | `chat` | `{ repoId }` → binds a free chat to a repository. |
+| `POST` | `/v1/chat/sessions/{id}/compact` | `chat` | New session in the same directory; bumps the context epoch. |
+| `POST` | `/v1/chat/sessions/{id}/reviewed` | `chat` | Marks the chat reviewed, once. |
 | `POST` | `/v1/chat/sessions/{id}/interrupt` | `chat` | Stops the agent; the session returns to `idle`. |
 | `POST` | `/v1/chat/sessions/{id}/promote` | `runs` | `{ title? }` → a run in the same worktree. |
 
@@ -450,8 +453,8 @@ A session carries its scope and its context accounting (D43, D48):
 
 - `kind` — `free`, `repo` or `schedule`. A payload without it is read as `repo`, which is what
   every session created before this field existed is.
-- `repoId` — the repository the chat is bound to. Still required in this version; it becomes
-  nullable when the daemon can create a free chat.
+- `repoId` — the repository the chat is bound to, or `null` for a free chat that has none yet.
+  The key is always present; only its value is nullable.
 - `usage` — `{ usd, tokensIn, tokensOut }`, the chat's own ledger; `{ 0, 0, 0 }` when it has
   not spent anything.
 - `contextTokens` — the last measured window size in tokens; `0` before the first turn.
@@ -460,9 +463,34 @@ A session carries its scope and its context accounting (D43, D48):
 - `reviewedAt` — when the operator last reviewed the chat, or `null`. It is written once: the
   first timestamp wins and a later write is ignored.
 
+`POST /v1/chat/sessions` takes `{ repoId?, title? }`. Without `repoId` it creates a `free`
+session with `repoId: null`, an idle row and no OpenCode session; no worktree is created and
+the first message only makes a private directory under the workspace root. With `repoId` the
+repository must exist (`404`, `details.path = "chat.repoId"`), and the daemon creates the
+worktree and the OpenCode session before answering `201`.
+
+The three lifecycle routes carry the `chat` scope:
+
+- `POST /v1/chat/sessions/{id}/repo` takes `{ repoId }` and binds a free chat to a repository.
+  An unknown chat is `404` (`details.path = "chat.id"`), an archived one is `409` with
+  `details.reason = "chat_archived"`, a chat that already has a repository is `409` with
+  `details.reason = "chat_already_bound"`, and an unknown repository is `404` with
+  `details.path = "chat.repoId"`. On success the free session is closed, the worktree is cut,
+  a new OpenCode session starts and the last ten turns are re-injected; the answer is `200`
+  with the `ChatSession`.
+- `POST /v1/chat/sessions/{id}/compact` takes no body. It closes the current OpenCode session,
+  starts a new one in the same directory (`worktree` does not change), sets
+  `contextEpoch = current + 1`, appends one `chat.compacted` event carrying the new epoch and
+  answers `200` with the `ChatSession`. An archived chat is `409` `chat_archived`.
+- `POST /v1/chat/sessions/{id}/reviewed` takes no body and sets `reviewedAt` once. A second
+  call answers `200` with the first timestamp; an archived chat may be reviewed. An unknown
+  chat is `404` with `details.path = "chat.id"`.
+
 Promote starts a new run with `trigger: "promote"` from the repository's default branch. The
 prompt is the text of the last `assistant` message of the session; a session with no assistant
 message is `422` with `details.path: "chat.messages"`. The response is `202` with the new `Run`.
+A session whose `kind` is not `repo`, or whose `repoId` is `null`, is `409` with
+`details.reason = "chat_not_repo"` before the message is read.
 
 ### 5.7 Settings and push
 
@@ -612,8 +640,8 @@ data: {"runId":"run_01J...","seq":17,"delta":"…","ts":"2026-10-24T18:04:02Z"}
 Event types are the D14/D16 list: `run.queued`, `run.started`, `run.output`, `run.tool`,
 `run.permission`, `run.gate`, `run.pr`, `run.merged`, `run.finished`, `run.failed`,
 `run.cancelled`, `chat.delta`, `chat.message`, `chat.tool`, `chat.permission`, `chat.idle`,
-`job.changed`, `approval.created`, `approval.resolved`, `telemetry`, `routine.fired`,
-`routine.replied`, `routine.failed`.
+`chat.compacted`, `job.changed`, `approval.created`, `approval.resolved`, `telemetry`,
+`routine.fired`, `routine.replied`, `routine.failed`.
 
 ## 7. Rate limits
 

@@ -19,13 +19,15 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `src/chat/index.ts` — the chat subsystem module: builds the service, mounts the routes and
   stops the pumps on shutdown.
 - `src/chat/service.ts` — chat sessions, the turn pump, the transcript, the approvals and their
-  replies, and the OpenCode session of each chat.
-- `src/chat/routes.ts` — the `docs/api.md` §5.6 handlers with their body and query schemas.
+  replies, the ten-turn handoff and the OpenCode session of each chat.
+- `src/chat/routes.ts` — the `docs/api.md` §5.6 handlers with their body and query schemas,
+  including the free chat and the bind, compact and reviewed lifecycle routes.
 - `src/chat/ids.ts` — the only `chat_` and `msg_` id generators.
 - `src/chat/errors.ts` — `ChatError` and its reason-to-envelope mapping.
 - `src/chat/ids.test.ts` — id shapes, uniqueness and injectable randomness.
 - `src/chat/service.test.ts` — fixture replay, prepare, interrupt, permissions and replies.
-- `src/chat/routes.test.ts` — the §5.6 HTTP contract: bodies, errors, scopes, redacted logs.
+- `src/chat/routes.test.ts` — the §5.6 HTTP contract: bodies, errors, scopes, redacted logs and
+  the lifecycle routes.
 - `src/push/index.ts` — the push subsystem module: one service, the four §5.7 routes and the
   pump.
 - `src/push/service.ts` — the event-log pump, delivery, the preference and subscription APIs

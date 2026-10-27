@@ -99,6 +99,10 @@ export const chatPermissionDataSchema = chatEventBase.extend({
 
 export const chatIdleDataSchema = chatEventBase;
 
+export const chatCompactedDataSchema = chatEventBase.extend({
+  contextEpoch: z.number().int().min(1),
+});
+
 export const jobChangedDataSchema = z.strictObject({
   jobId: JobId,
   change: z.enum(['created', 'updated', 'deleted', 'paused', 'resumed']),
@@ -165,6 +169,7 @@ export const sseEventSchema = z.discriminatedUnion('event', [
   z.strictObject({ event: z.literal('chat.tool'), data: chatToolDataSchema }),
   z.strictObject({ event: z.literal('chat.permission'), data: chatPermissionDataSchema }),
   z.strictObject({ event: z.literal('chat.idle'), data: chatIdleDataSchema }),
+  z.strictObject({ event: z.literal('chat.compacted'), data: chatCompactedDataSchema }),
   z.strictObject({ event: z.literal('job.changed'), data: jobChangedDataSchema }),
   z.strictObject({ event: z.literal('approval.created'), data: approvalCreatedDataSchema }),
   z.strictObject({ event: z.literal('approval.resolved'), data: approvalResolvedDataSchema }),

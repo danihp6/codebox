@@ -15,7 +15,7 @@ import { ChatListStore } from './chat-list.store';
 import { translate } from './i18n';
 
 interface SessionGroup {
-  readonly repoId: string;
+  readonly repoId: string | null;
   readonly label: string;
   readonly sessions: readonly ChatSession[];
 }
@@ -168,7 +168,7 @@ export class ChatListPage {
 
   readonly groups = computed<readonly SessionGroup[]>(() => {
     const repos = new Map(this.store.repos().map((repo) => [repo.id, repo.slug]));
-    const groups = new Map<string, ChatSession[]>();
+    const groups = new Map<string | null, ChatSession[]>();
     for (const session of this.store.sessions()) {
       const bucket = groups.get(session.repoId);
       if (bucket === undefined) groups.set(session.repoId, [session]);
@@ -176,7 +176,9 @@ export class ChatListPage {
     }
     return [...groups.entries()].map(([repoId, sessions]) => ({
       repoId,
-      label: repos.get(repoId) ?? translate(this.i18n.locale(), 'chat.group.unknown'),
+      label:
+        (repoId === null ? undefined : repos.get(repoId)) ??
+        translate(this.i18n.locale(), 'chat.group.unknown'),
       sessions,
     }));
   });

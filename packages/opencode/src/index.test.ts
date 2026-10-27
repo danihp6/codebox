@@ -10,6 +10,9 @@ describe('package entry point', () => {
     expect(api.buildRunEnvelope).toBeTypeOf('function');
     expect(api.RUN_ENVELOPE_VERSION).toBe(1);
     expect(api.RUN_ENVELOPE_TEMPLATE).toBeTypeOf('string');
+    expect(api.buildChatHandoff).toBeTypeOf('function');
+    expect(api.CHAT_HANDOFF_VERSION).toBe(1);
+    expect(api.CHAT_HANDOFF_TURNS).toBe(10);
   });
 
   it('re-exports the wire helpers', () => {
