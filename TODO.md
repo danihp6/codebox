@@ -946,7 +946,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       shape in `docs/api.md`; `[unit]` no document promises an approval prompt or a `jobs`
       table; `[unit]` `design/README.md` and the screens table still agree.
 
-- [ ] **[Task-69]** Licence and third-party notices. The repository has **no `LICENSE`** while
+- [x] **[Task-69]** Licence and third-party notices. The repository has **no `LICENSE`** while
       `docs/product.md`, `design/README.md` and the About screen all claim MIT, and the About row
       "Open source licences" points at nothing. Add `LICENSE` (MIT, with the owner's name and
       year) and generate `NOTICE` from the production dependency tree — Angular, Ionic and

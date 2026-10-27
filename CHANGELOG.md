@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-27 (Task-69, licence and third-party notices)
+
+- `LICENSE` is the MIT text with `Copyright (c) 2026 Codebox contributors`. The repository shipped
+  no licence file while `docs/open-questions.md` Q14 said the licence is MIT and `docs/app.md`
+  §4 already promised an About row that lists them.
+- `NOTICE` is generated from `package-lock.json` by `node scripts/legal/notice.mjs`: the 29
+  production packages, one `name@version — license` line each, a frozen header and a copyleft
+  block that prints `(none)` today. `--check` exits non-zero when the committed file drifts, and
+  `scripts/legal/notice.test.mjs` runs that check inside `npm test`, so a lockfile change that
+  forgets to regenerate turns the gate red.
+- The generator reads nothing but the lockfile: no `node_modules`, no network, no new dependency
+  and no `package.json` script (that file is a hot file and not this task's). It is byte-for-byte
+  reproducible — the test regenerates and `cmp`s, and QA re-ran it in a directory holding only
+  the lockfile, `NOTICE` and the script.
+- `[live]` — the About row opening the same list the `NOTICE` holds — needs a browser and the
+  About screen, which is still Task-67's placeholder; it is recorded as `[?]`, never as passing
+  (issue #45).
+
 ### Added — 2026-10-27 (Task-62, credentials screens)
 
 - `/settings/credentials` ships the catalog (connected services and open credentials), the
