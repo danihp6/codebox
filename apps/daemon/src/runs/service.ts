@@ -96,6 +96,8 @@ export interface QueueRunInput {
   readonly agent: string;
   readonly model: string | null;
   readonly baseRef?: string;
+  readonly workId?: string | null;
+  readonly backlogRef?: string | null;
 }
 
 const INTERNALS = new WeakMap<RunsService, RunsServiceInternals>();
@@ -135,6 +137,7 @@ export function queueRun(input: QueueRunInput): Run {
     id: runId,
     repoId: input.repo.id,
     jobId: input.jobId,
+    workId: input.workId ?? null,
     state: 'queued',
     trigger: input.trigger,
     branch: branchName(runId, input.title),
@@ -188,6 +191,8 @@ export function queueRun(input: QueueRunInput): Run {
     agent: input.agent,
     model: input.model,
     baseRef,
+    workId: input.workId ?? null,
+    backlogRef: input.backlogRef ?? null,
   };
   try {
     void Promise.resolve(input.engine.start(start)).catch((error: unknown) => {

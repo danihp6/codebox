@@ -1,5 +1,5 @@
 import type { Run, RunState } from '@codebox/contracts';
-import type { DatabaseSync } from 'node:sqlite';
+import type { DatabaseSync, SQLOutputValue } from 'node:sqlite';
 import { decodeCursor, encodeCursor, type PageResult } from './cursor.js';
 import { isForeignKeyViolation, isUniqueViolation, withTransaction } from './db.js';
 import { StoreError } from './errors.js';
@@ -15,6 +15,8 @@ import {
 } from './mappers.js';
 
 export interface RunRecord extends Run {
+  /** D44: the work this run belongs to, when the run came from the backlog or a schedule. */
+  readonly workId?: string | null;
   readonly baseSha: string | null;
   readonly worktree: string | null;
   readonly sessionId: string | null;
@@ -33,6 +35,7 @@ export interface RunRecord extends Run {
 export interface RunFilter {
   readonly repoId?: string;
   readonly jobId?: string;
+  readonly workId?: string;
   readonly state?: RunState;
   readonly limit: number;
   readonly cursor: string | null;
@@ -107,6 +110,7 @@ const COLUMNS = [
   'id',
   'repo_id',
   'job_id',
+  'work_id',
   'state',
   '"trigger"',
   'branch',
@@ -175,19 +179,31 @@ export function toRun(record: RunRecord): Run {
   };
 }
 
+/**
+ * `runRecordFromRow` lives in `mappers.ts` and does not read `work_id`; the link is filled here so
+ * a work can list its own runs without a second query.
+ */
+function withWorkId(
+  record: RunRecord,
+  value: Record<string, SQLOutputValue> | undefined,
+): RunRecord {
+  const id = row(value)['work_id'];
+  return typeof id === 'string' ? { ...record, workId: id } : record;
+}
+
 export function createRunRepository(db: DatabaseSync): RunRepository {
   const selectById = db.prepare(`SELECT ${COLUMNS} FROM runs WHERE id = ?`);
   const selectJob = db.prepare('SELECT repo_id, enabled FROM jobs WHERE id = ?');
   const insert = db.prepare(`
     INSERT INTO runs (
-      id, repo_id, job_id, state, "trigger", branch, base_ref, base_sha, worktree, session_id,
-      prompt, prompt_hash, agent, model, gate_command, scheduled_for, attempt, pr_number, pr_url,
-      pr_mergeable, gate_status, gate_exit_code, gate_duration_ms, guardrails, blockers,
-      diff_files, diff_added, diff_removed, cost_usd, tokens_in, tokens_out, failure_code,
-      failure_message, created_at, started_at, finished_at
+      id, repo_id, job_id, work_id, state, "trigger", branch, base_ref, base_sha, worktree,
+      session_id, prompt, prompt_hash, agent, model, gate_command, scheduled_for, attempt,
+      pr_number, pr_url, pr_mergeable, gate_status, gate_exit_code, gate_duration_ms, guardrails,
+      blockers, diff_files, diff_added, diff_removed, cost_usd, tokens_in, tokens_out,
+      failure_code, failure_message, created_at, started_at, finished_at
     ) VALUES (
       ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-      ?, ?, ?, ?, ?
+      ?, ?, ?, ?, ?, ?
     )
   `);
   const countAllLive = db.prepare(
@@ -224,7 +240,7 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
 
   function findById(id: string): RunRecord | null {
     const value = selectById.get(id);
-    return value === undefined ? null : runRecordFromRow(row(value));
+    return value === undefined ? null : withWorkId(runRecordFromRow(row(value)), value);
   }
 
   function insertRecord(record: RunRecord): void {
@@ -232,6 +248,7 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
       record.id,
       record.repoId,
       record.jobId,
+      record.workId ?? null,
       record.state,
       record.trigger,
       record.branch,
@@ -290,6 +307,10 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
         conditions.push('job_id = ?');
         parameters.push(filter.jobId);
       }
+      if (filter.workId !== undefined) {
+        conditions.push('work_id = ?');
+        parameters.push(filter.workId);
+      }
       if (filter.state !== undefined) {
         conditions.push('state = ?');
         parameters.push(filter.state);
@@ -303,7 +324,7 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
       const values = db
         .prepare(`SELECT ${COLUMNS} FROM runs ${where} ORDER BY created_at DESC, id DESC LIMIT ?`)
         .all(...parameters, limit + 1)
-        .map((value) => runRecordFromRow(row(value)));
+        .map((value) => withWorkId(runRecordFromRow(row(value)), value));
       const data = values.slice(0, limit).map((record) => toRun(record));
       const last = values.at(limit - 1);
       return {
@@ -411,6 +432,7 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
             input.runId,
             repoId,
             input.jobId,
+            null,
             'queued',
             'schedule',
             input.branch,

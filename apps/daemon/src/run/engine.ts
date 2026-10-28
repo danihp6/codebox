@@ -128,6 +128,7 @@ const MERGE_LABELS: readonly string[] = Object.freeze(['cb:auto-merge']);
 const MAX_AGENT_ATTEMPTS = 2;
 const AGENT_MESSAGE_MAX_CHARS = 8_000;
 const RUN_TRAILER_PREFIX = 'Codebox-Run: ';
+const BACKLOG_TICK_PATH = 'TODO.md';
 const PERMISSION_PATH_KEYS: readonly string[] = Object.freeze(['filePath', 'path']);
 const SHA_PATTERN = /^[0-9a-f]{7,40}$/;
 
@@ -929,7 +930,11 @@ export function createRunEngine(ports: RunPorts): RunEngine {
     }
     const repoInfo = await ports.git.getRepo(ctx.input.repo.slug);
     ctx.repoInfo = repoInfo;
-    if (status.commitsAhead === 0) {
+    // D51: a work run's own commit flips exactly one checkbox, and it lands even when the agent
+    // already committed its work. `missing` and `ambiguous` change nothing and never fail the run.
+    const tick =
+      ctx.input.backlogRef == null ? null : { path: BACKLOG_TICK_PATH, ref: ctx.input.backlogRef };
+    if (status.commitsAhead === 0 || tick !== null) {
       const commit = await commitWorktree({
         worktree: worktree.path,
         subject: ctx.input.title,
@@ -937,7 +942,20 @@ export function createRunEngine(ports: RunPorts): RunEngine {
         author: settings.author,
         git: ports.gitRunner,
         timeoutMs: settings.gitTimeoutMs,
+        tick,
       });
+      if (
+        commit.tick !== null &&
+        commit.tick.kind !== 'ticked' &&
+        commit.tick.kind !== 'already_done'
+      ) {
+        logger.warn({
+          msg: 'backlog_tick_skipped',
+          runId: ctx.input.runId,
+          ref: ctx.input.backlogRef,
+          reason: commit.tick.kind,
+        });
+      }
       logger.info({ msg: 'run_committed', runId: ctx.input.runId, created: commit.created });
     }
     await ports.git.pushBranch({

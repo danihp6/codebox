@@ -449,14 +449,14 @@ Every `/v1/approvals` request sweeps first: a row past its `expiresAt` becomes `
 | --- | --- | --- | --- |
 | `GET` | `/v1/repos/{id}/backlog` | `read` | The parsed `TODO.md` at the default branch, joined with works. |
 | `GET` | `/v1/works?repoId=&state=` | `read` | Works, newest activity first. |
-| `POST` | `/v1/works` | `works` | `{ repoId, backlogRef }` → `201`; the ref is required. |
+| `POST` | `/v1/works` | `write` | `{ repoId, backlogRef }` → `201`; the ref is required. |
 | `GET` | `/v1/works/{id}` | `read` | Work, repository, state, usage, context epoch, its runs. |
-| `PATCH` | `/v1/works/{id}` | `works` | `{ title?, prompt? }`; refused when the backlog owns the field. |
-| `DELETE` | `/v1/works/{id}` | `works` | Archives it; the worktree is kept per retention. |
+| `PATCH` | `/v1/works/{id}` | `write` | `{ title?, prompt? }`; refused when the backlog owns the field. |
+| `DELETE` | `/v1/works/{id}` | `write` | Archives it; the worktree is kept per retention. |
 | `POST` | `/v1/works/{id}/runs` | `runs` | `{ prompt? }` → `202` · `Run`; a new attempt in a new worktree. |
-| `POST` | `/v1/works/{id}/decision` | `works` | Opens the decision session bound to this work (D55). |
-| `POST` | `/v1/works/{id}/reviewed` | `works` | Marks the work reviewed, once. |
-| `POST` | `/v1/works/{id}/interrupt` | `works` | Stops the run; it ends `cancelled` and the work is `failed`. |
+| `POST` | `/v1/works/{id}/decision` | `write` | Opens the decision session bound to this work (D55). |
+| `POST` | `/v1/works/{id}/reviewed` | `write` | Marks the work reviewed, once. |
+| `POST` | `/v1/works/{id}/interrupt` | `write` | Stops the run; it ends `cancelled` and the work is `failed`. |
 
 A work carries no `kind`, no nullable repository and **no conversation** (D44, D55):
 
@@ -527,6 +527,25 @@ The backlog object:
 The daemon never writes the file here: the tick happens in the run's branch (§6 of
 [`docs/jobs.md`](jobs.md)) and reaches `main` through the merge.
 
+Four things about this surface are worth stating once:
+
+- The `Auth` column names the scope `packages/contracts` carries (`read`, `chat`, `runs`,
+  `write`, `admin`). There is no `works` scope: every works mutation is a `write`, and only a
+  route that opens a run asks for `runs`.
+- A second `POST /v1/works` for a ref that already has a `queued`, `running` or
+  `needs_decision` work is `409` with `details.reason = "live_work"`, the row-level
+  `works_live_item` index refusing it.
+- `POST /v1/repos/{id}/run-next` runs the same §16 selection as a schedule fire with
+  `selection = "nextPending"` and the repository schedule's `maxAttempts` (default `2`). It
+  works for a repository with no schedule at all, opens one `manual` work and one run, and
+  answers `409` with `details.reason = "nothing_pending"` or `"nothing_runnable"` when the file
+  has nothing to give. It is not in the table above because the OpenAPI document is built from
+  `packages/contracts` and does not carry that path yet.
+- A schedule fire that selects nothing is **not** a failure, but `schedule_fires.outcome` has no
+  `nothing_pending` value: the fire row ends `fired` with `run_id` null and a `schedule.skipped`
+  event carries the reason. A row that names the refusal needs the `skipped` outcome the
+  schedules service writes, which is a follow-up to this surface.
+
 #### 5.6.1 Sessions (D55)
 
 A session is a chat with **one target**, and the target is its write boundary.
@@ -534,14 +553,14 @@ A session is a chat with **one target**, and the target is its write boundary.
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/v1/sessions?repoId=&target=` | `read` | Sessions, newest activity first. |
-| `POST` | `/v1/sessions` | `works` | `{ repoId, target: "backlog" \| "design" \| "schedule" \| "work" \| "repo", workId? }` → `201`. |
+| `POST` | `/v1/sessions` | `write` | `{ repoId, target: "backlog" \| "design" \| "schedule" \| "work" \| "repo", workId? }` → `201`. |
 | `GET` | `/v1/sessions/{id}` | `read` | Session, target, state, pending proposal. |
 | `GET` | `/v1/sessions/{id}/messages?cursor=` | `read` | Oldest first, paginated. |
-| `POST` | `/v1/sessions/{id}/messages` | `works` | `{ text }` → `202`; the reply arrives as events. |
-| `POST` | `/v1/sessions/{id}/compact` | `works` | New agent session in the same directory; bumps the epoch. |
-| `POST` | `/v1/sessions/{id}/merge` | `works` | Merges the pending proposal once; `409 proposal_none` when there is none. |
-| `POST` | `/v1/sessions/{id}/interrupt` | `works` | Stops the agent; the session returns to `idle`. |
-| `DELETE` | `/v1/sessions/{id}` | `works` | Archives it; the branch is kept per retention. |
+| `POST` | `/v1/sessions/{id}/messages` | `write` | `{ text }` → `202`; the reply arrives as events. |
+| `POST` | `/v1/sessions/{id}/compact` | `write` | New agent session in the same directory; bumps the epoch. |
+| `POST` | `/v1/sessions/{id}/merge` | `write` | Proposes the worktree diff and merges it once; the refusals are below. |
+| `POST` | `/v1/sessions/{id}/interrupt` | `write` | Stops the agent; the session returns to `idle`. |
+| `DELETE` | `/v1/sessions/{id}` | `write` | Archives it; the branch is kept per retention. |
 
 - `target = backlog` may only write `TODO.md`; `design` only `design/**`; `schedule` only
   `.codebox/schedule.yml`; `work` writes no code and produces notes plus an optional backlog
@@ -586,6 +605,26 @@ The pending proposal is one object and nothing else:
 `workId` is non-null exactly when `target = "work"`; every other target carries a null
 `workId`. A `target = "repo"` session carries a null `branch` and a null `pendingProposal`: it
 has the repository's context and writes nothing.
+
+`POST /v1/sessions/{id}/merge` is the proposal gate and the merge in one call:
+
+1. a `repo` session is `409 read_only_session` — it has no branch to propose;
+2. a session that already carries a `pendingProposal` is `409 proposal_pending`, because one
+   change lands at a time;
+3. the worktree diff against the default branch is checked against the target, and the first
+   path outside it is `409 target_violation` with `details.path` — nothing is pushed;
+4. an empty diff is `409 proposal_none`;
+5. otherwise the proposal is recorded (and `session.proposal` emitted), the branch is pushed as
+   a docs-only PR and merged; the pending proposal is cleared whatever the outcome, so a
+   refused merge can simply be retried.
+
+A session's thread is **not** an SSE channel: `packages/contracts` defines `session.created`,
+`session.delta`, `session.tool`, `session.proposal` and `session.closed`, and no message event,
+so `GET /v1/sessions/{id}/messages` is how a client reads the transcript and `session.delta` is
+how it streams the turn that is running. A turn is awaited by the request that asked for it: the
+`202` is answered once the agent has finished, and an unavailable runtime is `502
+agent_unavailable` after the user message is stored. An archived session refuses a new turn with
+`409` and `details.reason = "session_archived"`.
 
 ### 5.7 Settings and push
 

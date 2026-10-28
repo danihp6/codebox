@@ -1,5 +1,5 @@
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -127,7 +127,112 @@ describe('commitWorktree', () => {
       },
       timeoutMs: 1_000,
     });
-    expect(result).toEqual({ sha: 'a'.repeat(40), created: false });
+    expect(result).toEqual({ sha: 'a'.repeat(40), created: false, tick: null });
     expect(calls.some((args) => args.includes('commit'))).toBe(false);
+  });
+});
+
+function backlogRepository(markdown: string): string {
+  const directory = repository();
+  writeFileSync(join(directory, 'TODO.md'), markdown, 'utf8');
+  git(directory, ['add', '--all']);
+  git(directory, [
+    '-c',
+    `user.name=${AUTHOR.name}`,
+    '-c',
+    `user.email=${AUTHOR.email}`,
+    'commit',
+    '--no-verify',
+    '-m',
+    'Add the backlog',
+  ]);
+  return directory;
+}
+
+const BACKLOG = `# Backlog
+
+## Batch 1 — Alpha
+
+- [ ] **[Task-01]** First item.
+- [ ] **[Task-02]** Second item.
+`;
+
+describe('commitWorktree with a backlog tick', () => {
+  it('flips exactly one line of TODO.md in the run commit (D51)', async () => {
+    const worktree = backlogRepository(BACKLOG);
+    writeFileSync(join(worktree, 'feature.txt'), 'the agent change\n');
+    const result = await commitWorktree({
+      worktree,
+      subject: 'First item',
+      body: 'Codebox-Run: run_commit0005',
+      author: AUTHOR,
+      git: createGitRunner(),
+      timeoutMs: 30_000,
+      tick: { path: 'TODO.md', ref: 'Task-01' },
+    });
+
+    expect(result.created).toBe(true);
+    expect(result.tick).toMatchObject({ kind: 'ticked' });
+    const diff = git(worktree, ['diff', 'HEAD~1', 'HEAD', '--', 'TODO.md']);
+    const changed = diff
+      .split('\n')
+      .filter(
+        (line) =>
+          (line.startsWith('-') || line.startsWith('+')) &&
+          !line.startsWith('---') &&
+          !line.startsWith('+++'),
+      );
+    // A removed backlog line is `-- [ ] …` in the patch: the marker is the first character.
+    expect(changed.map((line) => line.slice(1))).toEqual([
+      '- [ ] **[Task-01]** First item.',
+      '- [x] **[Task-01]** First item.',
+    ]);
+  });
+
+  it('leaves the file byte-identical and commits nothing for an ambiguous ref', async () => {
+    const markdown = `${BACKLOG}- [ ] **[Task-01]** Duplicated.\n`;
+    const worktree = backlogRepository(markdown);
+    const result = await commitWorktree({
+      worktree,
+      subject: 'Ambiguous item',
+      body: 'Codebox-Run: run_commit0006',
+      author: AUTHOR,
+      git: createGitRunner(),
+      timeoutMs: 30_000,
+      tick: { path: 'TODO.md', ref: 'Task-01' },
+    });
+
+    expect(result.tick).toEqual({ kind: 'ambiguous', lines: [5, 7] });
+    expect(result.created).toBe(false);
+    expect(readFileSync(join(worktree, 'TODO.md'), 'utf8')).toBe(markdown);
+    expect(git(worktree, ['rev-list', '--count', 'HEAD']).trim()).toBe('1');
+  });
+
+  it('reports a worktree without TODO.md as missing and commits nothing', async () => {
+    const worktree = backlogRepository(BACKLOG);
+    rmSync(join(worktree, 'TODO.md'));
+    git(worktree, ['add', '--all']);
+    git(worktree, [
+      '-c',
+      `user.name=${AUTHOR.name}`,
+      '-c',
+      `user.email=${AUTHOR.email}`,
+      'commit',
+      '--no-verify',
+      '-m',
+      'Drop the backlog',
+    ]);
+    const result = await commitWorktree({
+      worktree,
+      subject: 'No backlog',
+      body: 'Codebox-Run: run_commit0007',
+      author: AUTHOR,
+      git: createGitRunner(),
+      timeoutMs: 30_000,
+      tick: { path: 'TODO.md', ref: 'Task-01' },
+    });
+    expect(result.tick).toEqual({ kind: 'missing' });
+    expect(result.created).toBe(false);
+    expect(existsSync(join(worktree, 'TODO.md'))).toBe(false);
   });
 });
