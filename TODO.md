@@ -1051,6 +1051,16 @@ same path; the contracts task lands first because every other task reads its typ
   `docs/providers.md` §5.1. *Dependencies:* Task-70. *Acceptance:* `[unit]` a 429 marks the
   account exhausted and the next turn uses the next one; `[unit]` a second tool call is never
   replayed; `[live]` two `opencode-go` accounts, the first dry, the run finishes on the second.
+      LANDED AS: the `providers` subsystem is the fourteenth entry in `SUBSYSTEMS`, so
+      `apps/daemon/src/main.ts` did not move. `provider_exhausted` is a fire/run code, not a
+      contract `ErrorCode`: `ScheduleFireErrorCode` in `apps/daemon/src/schedules/fire.ts` is a
+      closed union and **Task-72 must extend it**. Two deviations are owed a follow-up and are
+      recorded in issue #71: `cb doctor`'s `github` check still parses the retired `docs/api.md`
+      §5.1 body and will fail now that `GET /v1/providers` answers, and
+      `DELETE /v1/provider-accounts/{id}` keeps one prepared statement in
+      `apps/daemon/src/providers/service.ts` because `ProviderAccountRepository` has no
+      `delete`. The `[live]` clause (two accounts, the first dry) is **not** delivered: there is
+      no per-account key handoff yet and `TurnHandle.model` is always `null`.
 - [ ] **[Task-74]** Design package and the gate step. `design/` parsing (DTCG tokens,
   `routes.json`, screen specs with states) and the deterministic checks: no colour outside
   tokens, every route with a component, every screen declaring its three states, snapshot hash
