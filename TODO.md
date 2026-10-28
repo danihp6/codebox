@@ -1036,7 +1036,7 @@ same path; the contracts task lands first because every other task reads its typ
   *Dependencies:* Task-70. *Acceptance:* `[unit]` the real `TODO.md` parses to the expected
   section and item counts; `[unit]` a tick changes exactly one line; `[unit]` selection skips an
   item blocked by `needs_decision` and respects `maxAttempts`.
-- [ ] **[Task-72]** Daemon: works, backlog projection, sessions and the tick. `GET
+- [x] **[Task-72]** Daemon: works, backlog projection, sessions and the tick. `GET
   /v1/repos/{id}/backlog` joins the parsed file with works; `POST /v1/works` verifies the ref and
   seeds the prompt; sessions enforce the target boundary; the run's final commit rewrites the
   item; `POST /v1/repos/{id}/run-next` and the schedule fire share one selection. *Paths:*
@@ -1045,6 +1045,12 @@ same path; the contracts task lands first because every other task reads its typ
   Task-71. *Acceptance:* `[unit]` a work created from an unchecked item carries its ref and
   prompt; `[unit]` a merged run ticks exactly one line; `[unit]` a session write outside its
   target is `target_violation`; `[live]` a nightly window opens two runs from two items.
+  LANDED AS: `works`, `backlog` and `sessions` are the last three entries in `SUBSYSTEMS`; the
+  legacy `chat` subsystem and `ScheduleFirePort.startChat` (a `repo_required` stub that
+  `schedules/service.ts` still calls) stay until Task-76. The contract has no `session.message`
+  event, so a turn streams `session.delta` and `GET /v1/sessions/{id}/messages` is the
+  transcript, as `docs/api.md` §5.6.1 now says. The `[live]` nightly-window criterion is not
+  measured: issue #74 carries the measurement.
 - [x] **[Task-73]** Provider accounts and failover. Classify the provider error, set the
   account state and `resetAt`, retry only when no tool call was emitted, fail with
   `provider_exhausted` when none is active, and expose `GET /v1/providers` plus the account

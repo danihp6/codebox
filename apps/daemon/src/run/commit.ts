@@ -1,3 +1,8 @@
+import { readFile, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import type { BacklogRef } from '@codebox/contracts';
+import { applyTick } from '@codebox/backlog';
+import type { TickOutcome } from '@codebox/backlog';
 import { GIT_ENV } from '@codebox/workspaces';
 import type { GitRunner } from '@codebox/workspaces';
 
@@ -8,11 +13,19 @@ export interface CommitInput {
   readonly author: { readonly name: string; readonly email: string };
   readonly git: GitRunner;
   readonly timeoutMs: number;
+  /**
+   * D51: the run's own commit flips exactly one checkbox of the item it came from. `null` (or
+   * absent) leaves `TODO.md` alone; a `missing` or `ambiguous` tick writes nothing and never
+   * fails the run.
+   */
+  readonly tick?: { readonly path: string; readonly ref: BacklogRef } | null;
 }
 
 export interface CommitResult {
   readonly sha: string;
   readonly created: boolean;
+  /** The outcome of the tick this commit attempted, or `null` when no tick was asked for. */
+  readonly tick: TickOutcome | null;
 }
 
 export const COMMIT_SUBJECT_MAX_CHARS = 72;
@@ -32,6 +45,28 @@ function oneLine(value: string): string {
 
 function failed(step: string, code: number): Error {
   return new Error(`git ${step} failed (exit ${code})`);
+}
+
+/**
+ * `applyTick` plus the one write it implies: the file is rewritten only when the outcome is
+ * `ticked`, so every other byte stays as the agent left it. A worktree without the file is
+ * `missing`, not an error.
+ */
+export async function tickWorktreeItem(input: {
+  readonly worktree: string;
+  readonly path: string;
+  readonly ref: BacklogRef;
+}): Promise<TickOutcome> {
+  const file = join(input.worktree, input.path);
+  let markdown: string;
+  try {
+    markdown = await readFile(file, 'utf8');
+  } catch {
+    return { kind: 'missing' };
+  }
+  const outcome = applyTick(markdown, input.ref);
+  if (outcome.kind === 'ticked') await writeFile(file, outcome.markdown, 'utf8');
+  return outcome;
 }
 
 /**
@@ -57,11 +92,20 @@ export function commitWorktree(input: CommitInput): Promise<CommitResult> {
   };
 
   return (async (): Promise<CommitResult> => {
+    const outcome =
+      input.tick == null
+        ? null
+        : await tickWorktreeItem({
+            worktree: input.worktree,
+            path: input.tick.path,
+            ref: input.tick.ref,
+          });
+
     const added = await call(['add', '-A']);
     if (added.code !== 0) throw failed('add', added.code);
 
     const staged = await call(['diff', '--cached', '--quiet']);
-    if (staged.code === 0) return { sha: await head(), created: false };
+    if (staged.code === 0) return { sha: await head(), created: false, tick: outcome };
     if (staged.code !== NO_STAGED_CHANGES) throw failed('diff', staged.code);
 
     const commit = await call([
@@ -78,6 +122,6 @@ export function commitWorktree(input: CommitInput): Promise<CommitResult> {
     ]);
     if (commit.code !== 0) throw failed('commit', commit.code);
 
-    return { sha: await head(), created: true };
+    return { sha: await head(), created: true, tick: outcome };
   })();
 }

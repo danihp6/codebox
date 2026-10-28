@@ -67,6 +67,9 @@ function only(name: SubsystemName): SubsystemFlags {
     providers: false,
     telemetry: false,
     cli: false,
+    works: false,
+    backlog: false,
+    sessions: false,
   };
   flags[name] = true;
   return flags;
@@ -85,7 +88,7 @@ function moduleNotFound(name: SubsystemName): Error {
 }
 
 describe('subsystems', () => {
-  it('lists the fourteen subsystems in order', () => {
+  it('lists the seventeen subsystems in order, append-only', () => {
     expect([...SUBSYSTEMS]).toEqual([
       'auth',
       'chat',
@@ -101,7 +104,16 @@ describe('subsystems', () => {
       'providers',
       'telemetry',
       'cli',
+      'works',
+      'backlog',
+      'sessions',
     ]);
+  });
+
+  it('keeps the fourteen bootstrapped names at their indices', () => {
+    expect(SUBSYSTEMS.slice(0, 2)).toEqual(['auth', 'chat']);
+    expect(SUBSYSTEMS.indexOf('cli')).toBe(13);
+    expect(SUBSYSTEMS.slice(14)).toEqual(['works', 'backlog', 'sessions']);
   });
 
   it('enables every subsystem by default', () => {

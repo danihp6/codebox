@@ -6,6 +6,36 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-28 (Task-72, works, backlog projection, sessions and the tick)
+
+- **The work is the unit (D44, D51, D53).** `apps/daemon/src/works/` serves `GET/POST
+  /v1/works`, `GET/PATCH/DELETE /v1/works/{id}`, `/runs`, `/decision`, `/reviewed` and
+  `/interrupt`, plus `POST /v1/repos/{id}/run-next`. A work is created from a `Task-NN` ref by
+  `resolveItem`, which refuses `backlog_ref_missing`, `backlog_ref_ambiguous` and
+  `backlog_ref_checked`; its title and prompt come from the file, `specSha` pins the revision,
+  and one work in flight per ref is the store's index (`live_work`).
+- **The backlog is projected, never invented.** `apps/daemon/src/backlog/` reads `TODO.md` from
+  the repository's bare clone and joins the parsed sections with the works that came from them,
+  so `GET /v1/repos/{id}/backlog` shows `checked` and `work` per item; a repository without the
+  file answers an empty projection at the default-branch sha. `select` feeds `selectNextItem`
+  from `@codebox/backlog`, and `tick` flips exactly one checkbox in the worktree.
+- **A session's target is its write boundary (D55).** `apps/daemon/src/sessions/` enforces
+  `TARGET_WRITE_SETS`: `backlog` and `work` write `TODO.md`, `design` writes `design/`,
+  `schedule` writes `.codebox/schedule.yml`, `repo` writes nothing. A proposal whose diff leaves
+  the target is `409 target_violation` with the offending path, before anything is pushed;
+  `proposal_pending`, `proposal_none` and `read_only_session` cover the rest.
+- **One selection, two entrances (D56).** The schedule fire and `run-next` call the same
+  `select`; the fire drops its chat port, creates `origin: 'schedule'` works, and
+  `ScheduleFireErrorCode` gains `provider_exhausted` for Task-73. An empty selection ends the
+  row `nothing_pending`/`nothing_runnable`, never an error.
+- **The run's commit ticks its own line.** `CommitInput.tick` applies `applyTick` to the
+  worktree's `TODO.md` before the PR is opened: one line changes, the subject stays the work
+  title, and an ambiguous or missing ref logs `backlog_tick_skipped` and leaves the file
+  untouched. `runs.work_id` carries the link, and `RunFilter.workId` reads it back.
+- Deviations recorded in `TODO.md`: the contract has no `session.message` event (a turn streams
+  `session.delta`), and the legacy `chat` subsystem plus `ScheduleFirePort.startChat` stay until
+  Task-76. The `[live]` nightly-window criterion is not measured; issue #74 owns it.
+
 ### Added — 2026-10-28 (Task-73, provider accounts and failover)
 
 - **A provider error is classified, not retried blindly (D54).** `@codebox/opencode` gains

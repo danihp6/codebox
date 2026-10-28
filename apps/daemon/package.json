@@ -17,13 +17,14 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "npm run build -w @codebox/contracts -w @codebox/core -w @codebox/security -w @codebox/store -w @codebox/opencode -w @codebox/workspaces -w @codebox/git-provider -w @codebox/scheduler",
+    "prebuild": "npm run build -w @codebox/contracts -w @codebox/core -w @codebox/security -w @codebox/store -w @codebox/opencode -w @codebox/workspaces -w @codebox/git-provider -w @codebox/scheduler -w @codebox/backlog",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/main.js",
     "test": "cd ../.. && vitest run --project apps/daemon"
   },
   "dependencies": {
+    "@codebox/backlog": "0.0.0",
     "@codebox/contracts": "0.0.0",
     "@codebox/core": "0.0.0",
     "@codebox/git-provider": "0.0.0",

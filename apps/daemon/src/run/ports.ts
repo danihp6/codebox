@@ -74,6 +74,10 @@ export interface RunStartInput {
   readonly agent: string;
   readonly model: string | null;
   readonly baseRef?: string;
+  /** D44: the work the run belongs to, written on `runs.work_id` by `queueRun`. */
+  readonly workId?: string | null;
+  /** D51: when set, the run's own commit flips this item's checkbox in the worktree. */
+  readonly backlogRef?: string | null;
 }
 
 export interface RunOutcome {

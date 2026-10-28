@@ -273,6 +273,40 @@ describe('runs', () => {
     );
   });
 
+  it('filters by workId and round-trips the work link (D44)', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    const work = store.works.create({
+      id: 'wrk_000001',
+      repoId: REPO.id,
+      backlogRef: 'Task-1',
+      title: 'Routine engine',
+      prompt: 'Build the routine engine.',
+      specSha: 'abc1234',
+      state: 'running',
+      origin: 'backlog',
+      attempts: 1,
+      maxAttempts: 2,
+      usage: { usd: 0, tokensIn: 0, tokensOut: 0 },
+      contextTokens: 0,
+      contextEpoch: 1,
+      reviewedAt: null,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+    store.runs.create(
+      runRecord('run_0000001', REPO.id, '2026-01-01T00:00:00.000Z', { workId: work.id }),
+    );
+    store.runs.create(runRecord('run_0000002', REPO.id, '2026-01-02T00:00:00.000Z'));
+
+    expect(store.runs.getRecord('run_0000001')?.workId).toBe(work.id);
+    expect(store.runs.getRecord('run_0000002')?.workId ?? null).toBeNull();
+    expect(
+      store.runs.list({ workId: work.id, limit: 10, cursor: null }).data.map((r) => r.id),
+    ).toEqual(['run_0000001']);
+    expect(store.runs.list({ workId: 'wrk_999999', limit: 10, cursor: null }).data).toEqual([]);
+  });
+
   it('orders listByJob and counts only live states', () => {
     const store = track(openInMemoryStore());
     store.repos.create(REPO);
