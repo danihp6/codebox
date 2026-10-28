@@ -37,7 +37,7 @@ or baked into the VM image (D20).
 | `CB_BIND` | `127.0.0.1:8787` | Listen address. Never `0.0.0.0` in production; the tunnel connects to loopback. |
 | `CB_PUBLIC_URL` | — | Canonical HTTPS origin, e.g. `https://cb.example.com`. Required in production. |
 | `CB_LOG_LEVEL` | `info` | `trace`, `debug`, `info`, `warn`, `error`. |
-| `CB_TIMEZONE` | `Europe/Madrid` | Default zone for new jobs and for human timestamps. |
+| `CB_TIMEZONE` | `Europe/Madrid` | Default zone for new schedules and for human timestamps. |
 | `CB_INSTANCE_NAME` | `cb-instance` | Shown in the app and in telemetry. |
 | `CB_COMMIT` | build-time | Git SHA of the running release. |
 
@@ -91,6 +91,35 @@ signed with this secret.
 Provider keys themselves keep the names OpenCode documents (`ANTHROPIC_API_KEY`,
 `OPENAI_API_KEY`, `OPENROUTER_API_KEY`, …). The daemon does not rename them; it only decides
 which ones a job may inherit through `CB_MODEL_PROVIDER_KEYS`.
+
+### 5.1 Provider accounts (D54)
+
+A **provider** is an adapter (`opencode-go`, `anthropic`, `openai`, …); an **account** is a
+credential plus a position in the failover order. The model key in the environment is a
+single-key bootstrap fallback: with accounts configured, the daemon selects the account and
+hands its key to the session, and `CB_MODEL_PROVIDER_KEYS` stops being the mechanism.
+
+| Field | Meaning |
+| --- | --- |
+| `providerId` | The adapter. Several accounts may share one. |
+| `label` | What the operator calls it ("go · dani", "go · spare"). |
+| `credentialId` | Row in the write-only store (D49), `kind: oauth` or `kind: token`. |
+| `priority` | Lower wins. The order is edited in `Settings → Provider accounts`. |
+| `state` | `active`, `exhausted`, `invalid`, `disabled`. |
+| `resetAt` | The provider's reported reset instant, or `now + CB_ACCOUNT_COOLDOWN_SECONDS` (`900`) when it reports none. |
+| `usedToday` | Projected from usage rows; informational unless `CB_ACCOUNT_DAILY_USD` is set. |
+
+Selection takes the lowest `priority` whose state is `active`. On a provider error the daemon
+**classifies** rather than retries blindly: `401/403` sets `invalid`; `429` or a quota error
+sets `exhausted` until `resetAt`; anything else is a transient upstream failure and is retried
+once on the same account. Moving to the next account re-sends the turn **only when no tool call
+was emitted**; otherwise the run stops and the next run resumes in a new session (D48), so a
+half-executed tool is never replayed. When no account is `active` the run fails with
+`provider_exhausted`, notifies, and leaves the branch intact.
+
+OAuth accounts store a refresh token and a short-lived access token. The daemon refreshes
+ahead of expiry; a failed refresh marks the account `invalid` and falls through to the next one.
+`opencode-go` is the first adapter to support both OAuth and a pasted token.
 
 ## 6. Git provider
 
@@ -168,7 +197,7 @@ explicit API call; a job cannot point at an arbitrary URL.
 | `CB_RETENTION_RUNS_DAYS` | `90` | Run rows and summaries. |
 | `CB_RETENTION_EVENTS_DAYS` | `14` | `run_events` rows. |
 | `CB_RETENTION_LOGS_DAYS` | `30` | Gate and agent log files. |
-| `CB_RETENTION_CHAT_DAYS` | `90` | Chat messages. |
+| `CB_RETENTION_WORK_MESSAGES_DAYS` | `90` | Work/session messages. |
 | `CB_RETENTION_APPROVALS_DAYS` | `7` | Resolved approvals. |
 
 ## 10. Notifications
@@ -295,11 +324,11 @@ The agent unit is the same block with `User=codebox-agent`, `Group=codebox-works
 | Missing `CB_SESSION_SECRET` | Exit 1: `CB_SESSION_SECRET is required`. |
 | Malformed URL | Exit 1 with the key and the expected shape. |
 | Unknown `CB_GIT_PROVIDER` | Exit 1 listing `github`. |
-| Cron in a job | Rejected with the field path; the job is not saved. |
+| Cron in a schedule | Rejected with the field path; the schedule is not saved. |
 | Unknown timezone | Rejected with the zone name. |
 | `CB_BIND` not loopback in production | Exit 1; the tunnel is the only way in. |
 | Both App and PAT configured | Warning, App wins. |
-| Neither App nor PAT configured | The daemon starts read-only: chat works, git writes are disabled. |
+| Neither App nor PAT configured | The daemon starts read-only: the backlog and works are readable, git writes are disabled. |
 
 `cb doctor` reports each provider as `ok`, `missing`, `expired` or `unreachable`, with the
 last successful call. It never prints a credential.
@@ -317,3 +346,5 @@ last successful call. It never prints a credential.
 | `CB_AGENT_TOKEN` | Regenerate the fine-grained PAT, update the Actions secret. | Only the timed window stops working; the manual brake and the cycles are unaffected. |
 | `CB_AGENT_GIT_TOKEN` | Regenerate, edit `/etc/codebox/cb-agent.env`, restart `cb-agent`. | The next cycle cannot push and parks red; nothing is lost, the branches stay on `origin`. |
 | Inference key (`ANTHROPIC_API_KEY`, …) | New key with the provider, update the secret or env file. | A cycle fails at its first model call without shipping; red streak guards the loop. |
+| Provider account OAuth | Re-run the connect flow for that account; the old refresh token is revoked on success. | The account is `invalid` until reconnected; the run fails over to the next account in the meantime (D54). |
+| Provider account token | Paste the new token in `Settings → Provider accounts`. | Same: `invalid` → `active` on save, no restart. |

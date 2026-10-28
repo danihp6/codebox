@@ -109,7 +109,7 @@ Auto-merge has three independent stops:
 | --- | --- | --- |
 | Global switch | Every repository | `cb brake on` → `CB_AUTOMERGE=off` |
 | Repo policy | One repository | `PATCH /v1/repos/{id} { "policy": "manual" }` |
-| Job policy | One job | `PATCH /v1/jobs/{id} { "policy": "manual" }` |
+| Repository policy | One repository | `PATCH /v1/repos/{id} { "policy": "manual" }` |
 
 The switch takes effect at the next guardrail evaluation, so a merge already in `merging`
 finishes. `cb brake status` shows the switch, the policies and the runs currently past
@@ -148,7 +148,7 @@ vacuum the WAL) and never rotates a credential.
 | --- | --- |
 | 70 % | `telemetry` warn; worktrees older than 24 h are pruned. |
 | 85 % | New runs refused with `disk_low`; the app shows a blocking banner. |
-| 95 % | The daemon stops claiming jobs; only cancel and cleanup work. |
+| 95 % | The daemon stops claiming schedule fires; only cancel and cleanup work. |
 
 `cb prune --worktrees --older-than 24h` is safe at any time; it never touches the bare clones
 or a live run.
@@ -224,8 +224,8 @@ elsewhere.
   `validation_failed` with `details.path` starting `telemetry.`. A failing read is a `500`
   `internal` whose `requestId` names the log line.
 
-Retention runs on the same timer table as `docs/security.md` §8 — runs 90 d, events 14 d, chat
-90 d, approvals 7 d, log directories 30 d, all from the `CB_RETENTION_*_DAYS` values — six
+Retention runs on the same timer table as `docs/security.md` §8 — runs 90 d, events 14 d, work
+messages 90 d, approvals 7 d, log directories 30 d, all from the `CB_RETENTION_*_DAYS` values — six
 hours apart, one minute after boot. It deletes whole rows and whole `logs/run-run_*/`
 directories, logs one `retention_done` line with the counts, and never touches a `usage` row:
 the ledger is the record of spend. Short windows go first, so a 14-day event is not kept until
@@ -248,8 +248,8 @@ means a row is outside the day list the query walks.
 | `cb pair` | Mint a pairing code (loopback HTTP). |
 | `cb status` | Health, queue, current runs, brake. |
 | `cb doctor` | Every dependency, one line each. |
-| `cb run <jobId>` | Manual trigger. |
-| `cb jobs` | List, pause, resume. |
+| `cb run <workId>` | Manual trigger. |
+| `cb works` | List, cancel. |
 | `cb logs <runId>` | Gate and agent output. |
 | `cb events <runId>` | Persisted timeline. |
 | `cb brake on\|off\|status` | Auto-merge switch. |
@@ -509,7 +509,7 @@ sudo env CB_BACKUP_S3_URI="s3://<bucket>" CB_BACKUP_AGE_IDENTITY=/root/age.key \
   /usr/local/lib/codebox/restore.sh --latest --identity /root/age.key
 sudo shred -u /root/age.key
 sudo systemctl start codebox.service
-sudo sqlite3 /var/lib/codebox/state.db "SELECT (SELECT COUNT(*) FROM jobs)||'/'||(SELECT COUNT(*) FROM chat_messages);"
+sudo sqlite3 /var/lib/codebox/state.db "SELECT (SELECT COUNT(*) FROM works)||'/'||(SELECT COUNT(*) FROM session_messages);"
 cb jobs
 ```
 
@@ -538,9 +538,9 @@ EOF
 sudo systemctl daemon-reload && sudo systemctl restart codebox.service
 curl -sS http://127.0.0.1:8787/v1/health | jq '.queue'
 PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright npx playwright test --workers=1
-cb run <jobId-A>
-cb run <jobId-B>
-cb run <jobId-C>
+cb run <workId-A>
+cb run <workId-B>
+cb run <workId-C>
 cb status
 ```
 
@@ -606,5 +606,5 @@ so none of these is measured by CI:
 | --- | --- | --- | --- | --- |
 | boot to `/v1/health` | `T0`/`T1` around `cloud-init.sh`, then `curl … /v1/health` | `T1-T0 ≤ 300` s | `first-boot.jsonl` last line | operator-run; not measured by CI |
 | three runs, Playwright green, no OOM | `cb status`, `free -m`, `journalctl -k` | 3 running, `MemAvailable ≥ 1024` MiB, 0 OOM | the runs' gates and `journalctl` | operator-run; not measured by CI |
-| rebuilt box restores the newest dump | `restore.sh --latest`, then the `jobs/chat_messages` counts | equal counts, same `cb jobs` | the restore output | operator-run; not measured by CI |
+| rebuilt box restores the newest dump | `restore.sh --latest`, then the `works/session_messages` counts | equal counts, same `cb works` | the restore output | operator-run; not measured by CI |
 | monthly spot cost | `describe-spot-price-history` × 730 | `≤ budget_limit_usd` | `docs/aws.md` §10.1 | operator-run; not measured by CI |
