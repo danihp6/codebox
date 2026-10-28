@@ -25,7 +25,7 @@ Figma, not the layer names.
 | Pairing | `/pair` | `features/pairing` | 01 | L1 | — | — |
 | Repo · backlog | `/repos/:id` | `features/backlog` | 02 | L2 | D1 · D3 | S1 |
 | Work | `/works/:id` | `features/works` | 03 | L3 | D1 · D3 | S2 |
-| Repo home | `/repos/:id` header | `features/repos` | 04 | L4 | — | — |
+| Repo list | `/repos` | `features/repos` | 04 | L4 | — | — |
 | Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | — |
 | Settings | `/settings` | `features/settings` | 06 | L6 | — | — |
 | Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
