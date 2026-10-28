@@ -984,33 +984,37 @@ field the contract lacks is a Task-51 amendment, not a local type.
 
 ## Batch 19 — One unit: Work, backlog and design
 
-The product model changed on 2026-10-28: chat is retired (D43), the work is the unit (D44,
-D53), the backlog file is the list (D51), design lives in the repo (D52) and provider accounts
-fail over in order (D54). This batch makes the code and the app match. Each task is cut so no
-two touch the same path; the contracts task lands first because every other task reads its
-types.
+The product model changed on 2026-10-28: chat became an editor with one target (D55), the work
+is the unit and one backlog item (D44, D53), the schedule belongs to the repository (D56), the
+backlog file is the list (D51), design lives in the repo (D52) and provider accounts fail over
+in order (D54). This batch makes the code and the app match. Each task is cut so no two touch the
+same path; the contracts task lands first because every other task reads its types.
 
-- [ ] **[Task-70]** Contracts and store for the work model. `workSchema`, `backlogSchema`,
-  `reminderSchema`, `providerSchema`, `providerAccountSchema` and the new event names; migration
-  `0003_works.sql` (`works`, `work_messages`, `schedules` with `work_id`, `schedule_fires`) and
-  `0004_providers.sql` (`providers`, `provider_accounts`); `chats` becomes a read-only legacy
-  table. *Paths:* `packages/contracts/src/**`, `packages/store/**`, `docs/api.md` (§5.6,
-  §5.8, §5.9.1), `docs/architecture.md` (tables). *Dependencies:* none. *Acceptance:* `[unit]`
-  a work row round-trips with `specRef`, `origin` and its runs; `[unit]` a second schedule on
-  one work is refused; `[unit]` the migration is forward-only and idempotent.
-- [ ] **[Task-71]** Backlog package. `parseBacklog(markdown) → sections/items` and
-  `applyTick(markdown, ref)` as pure functions with fixtures taken from this repository's real
-  `TODO.md`; tolerant of unknown lines, refuses an ambiguous or missing ref, never reformats.
-  *Paths:* `packages/backlog/**`, `docs/jobs.md` §6. *Dependencies:* Task-70. *Acceptance:*
-  `[unit]` the real `TODO.md` parses to the expected section and item counts; `[unit]` a tick
-  changes exactly one line; `[unit]` an ambiguous ref throws instead of guessing.
-- [ ] **[Task-72]** Daemon: works, backlog projection and the tick in the branch. `GET
+- [ ] **[Task-70]** Contracts and store for the work model. `workSchema`, `sessionSchema`,
+  `backlogSchema`, `repoScheduleSchema`, `providerSchema`, `providerAccountSchema` and the new
+  event names; migration `0003_works.sql` (`works`, `sessions`, `session_messages`, `schedules`
+  with `repo_id` and `selection`, `schedule_fires`) and `0004_providers.sql` (`providers`,
+  `provider_accounts`); `chats` becomes a read-only legacy table. *Paths:*
+  `packages/contracts/src/**`, `packages/store/**`, `docs/api.md` (§5.6, §5.6.1, §5.10),
+  `docs/architecture.md` (tables). *Dependencies:* none. *Acceptance:* `[unit]` a work row
+  round-trips with `backlogRef` and `attempts`; `[unit]` a second schedule on one repository is
+  refused; `[unit]` the migration is forward-only and idempotent.
+- [ ] **[Task-71]** Backlog package and selection. `parseBacklog(markdown)`,
+  `applyTick(markdown, ref)` and `selectNextItem(items, works, schedule)` as pure functions with
+  fixtures from this repository's real `TODO.md`; tolerant of unknown lines, refuses an ambiguous
+  or missing ref, never reformats. *Paths:* `packages/backlog/**`, `docs/jobs.md` §16.
+  *Dependencies:* Task-70. *Acceptance:* `[unit]` the real `TODO.md` parses to the expected
+  section and item counts; `[unit]` a tick changes exactly one line; `[unit]` selection skips an
+  item blocked by `needs_decision` and respects `maxAttempts`.
+- [ ] **[Task-72]** Daemon: works, backlog projection, sessions and the tick. `GET
   /v1/repos/{id}/backlog` joins the parsed file with works; `POST /v1/works` verifies the ref and
-  seeds the prompt; the run's final commit rewrites the item; `PATCH` refuses a spec field.
-  *Paths:* `apps/daemon/src/works/**`, `apps/daemon/src/backlog/**`, `apps/daemon/src/chat/**`
-  (removal), `docs/api.md` (§5.6). *Dependencies:* Task-70, Task-71. *Acceptance:* `[unit]` a
-  work created from an unchecked item carries its ref and prompt; `[unit]` a merged run ticks
-  exactly one line; `[live]` tapping an item on the box lands a PR that ticks it.
+  seeds the prompt; sessions enforce the target boundary; the run's final commit rewrites the
+  item; `POST /v1/repos/{id}/run-next` and the schedule fire share one selection. *Paths:*
+  `apps/daemon/src/works/**`, `apps/daemon/src/backlog/**`, `apps/daemon/src/sessions/**`,
+  `apps/daemon/src/chat/**` (removal), `docs/api.md` (§5.6, §5.6.1). *Dependencies:* Task-70,
+  Task-71. *Acceptance:* `[unit]` a work created from an unchecked item carries its ref and
+  prompt; `[unit]` a merged run ticks exactly one line; `[unit]` a session write outside its
+  target is `target_violation`; `[live]` a nightly window opens two runs from two items.
 - [ ] **[Task-73]** Provider accounts and failover. Classify the provider error, set the
   account state and `resetAt`, retry only when no tool call was emitted, fail with
   `provider_exhausted` when none is active, and expose `GET /v1/providers` plus the account
@@ -1024,19 +1028,21 @@ types.
   matching. *Paths:* `packages/design/**`, `apps/daemon/src/gate/**` (one step), `docs/jobs.md`
   §5. *Dependencies:* Task-70. *Acceptance:* `[unit]` a hardcoded hex fails the gate with the
   file and line; `[unit]` a missing state fails; `[unit]` no pixel comparison exists anywhere.
-- [ ] **[Task-75]** App: Repos, backlog and work. Three tabs (`Dashboard · Repos · Settings`),
-  `/repos/:id` with the backlog as the list, `/works/:id` with run dividers and the schedule
-  row, `/settings/providers` and `/settings/schedules`; delete the chat list, the filters, the
-  scope chip, the promote action and the handoff divider. *Paths:* `apps/app/src/app/**`,
+- [ ] **[Task-75]** App: Repos, four repository tabs, run log and sessions. Three tabs
+  (`Dashboard · Repos · Settings`), `/repos/:id` with the backlog as the list and `works`,
+  `schedule`, `design` as its other tabs, `/works/:id` as a **run log without composer**,
+  `/sessions/:id` with its proposal panel; delete the chat list, the filters, the scope chip, the
+  promote action, the handoff divider and the work composer. *Paths:* `apps/app/src/app/**`,
   `docs/app.md` (§4, §8). *Dependencies:* Task-70, Task-72. *Acceptance:* `[unit]` the backlog
-  row renders plan and state separately; `[unit]` no route reaches `/chat`; `[live]` 320 px with
-  a long `Task-NN` title.
-- [ ] **[Task-76]** Retire chat end to end. Remove the chat routes, the routine tool seam, the
-  `prompt` reminder and the legacy job screens; update the e2e, the fixtures and the guards.
-  *Paths:* `apps/daemon/src/routes/**`, `apps/daemon/src/routines/**`, `packages/core/**`
-  (permission matrix), `docs/security.md` §6, `docs/agent-runtime.md`. *Dependencies:* Task-72,
-  Task-75. *Acceptance:* `[unit]` no route answers under `/v1/chat`; `[unit]` the matrix has one
-  mode and no `routine.*`; `[live]` a fresh install has no chat screen and no orphan table write.
+  row renders plan and state separately; `[unit]` no route reaches `/chat`; `[unit]` the work
+  screen has no composer; `[live]` 320 px with a long `Task-NN` title.
+- [ ] **[Task-76]** Retire chat, routines and reminders end to end. Remove the chat routes, the
+  routine tool seam, `/v1/reminders`, the legacy job screens and the `mode: chat` branch; update
+  the e2e, the fixtures and the guards. *Paths:* `apps/daemon/src/routes/**`,
+  `apps/daemon/src/routines/**`, `packages/core/**` (permission matrix), `docs/security.md` §6,
+  `docs/agent-runtime.md`. *Dependencies:* Task-72, Task-75. *Acceptance:* `[unit]` no route
+  answers under `/v1/chat` or `/v1/reminders`; `[unit]` the matrix has one mode; `[live]` a fresh
+  install has no chat screen and no orphan table write.
 
 ---
 

@@ -449,33 +449,32 @@ Every `/v1/approvals` request sweeps first: a row past its `expiresAt` becomes `
 | --- | --- | --- | --- |
 | `GET` | `/v1/repos/{id}/backlog` | `read` | The parsed `TODO.md` at the default branch, joined with works. |
 | `GET` | `/v1/works?repoId=&state=` | `read` | Works, newest activity first. |
-| `POST` | `/v1/works` | `works` | `{ repoId, backlogRef? , title?, prompt? }` → `201`. |
-| `GET` | `/v1/works/{id}` | `read` | Work, repository, state, usage, context epoch, last message. |
+| `POST` | `/v1/works` | `works` | `{ repoId, backlogRef }` → `201`; the ref is required. |
+| `GET` | `/v1/works/{id}` | `read` | Work, repository, state, usage, context epoch, its runs. |
 | `PATCH` | `/v1/works/{id}` | `works` | `{ title?, prompt? }`; refused when the backlog owns the field. |
 | `DELETE` | `/v1/works/{id}` | `works` | Archives it; the worktree is kept per retention. |
-| `GET` | `/v1/works/{id}/messages?cursor=` | `read` | Oldest first, paginated, each with its run segment. |
-| `POST` | `/v1/works/{id}/messages` | `works` | `{ text }` → `202`; the reply arrives as events. |
 | `POST` | `/v1/works/{id}/runs` | `runs` | `{ prompt? }` → `202` · `Run`; a new attempt in a new worktree. |
-| `POST` | `/v1/works/{id}/compact` | `works` | New session in the same directory; bumps the context epoch. |
+| `POST` | `/v1/works/{id}/decision` | `works` | Opens the decision session bound to this work (D55). |
 | `POST` | `/v1/works/{id}/reviewed` | `works` | Marks the work reviewed, once. |
 | `POST` | `/v1/works/{id}/interrupt` | `works` | Stops the agent; the work returns to `idle`. |
 
-A work carries no `kind` and no nullable repository (D44, D51):
+A work carries no `kind`, no nullable repository and **no conversation** (D44, D55):
 
 - `repoId` — always a real repository. There is no free work.
-- `state` — `queued`, `running`, `reviewing`, `merged`, `failed`, `abandoned`; `reviewing` means
-  a run delivered a PR and no one has looked.
+- `state` — `queued`, `running`, `review`, `merged`, `failed`, `needs_decision`,
+  `abandoned`. `review` means a run delivered a PR and no one has looked; `needs_decision`
+  means the run **ended** asking for a person.
 - `origin` — `manual`, `backlog` or `schedule`.
-- `backlogRef` — the item's stable key (`Task-35`), or `null` for a work created by hand.
-- `usage`, `contextTokens`, `contextEpoch`, `reviewedAt` — as before, now per work (D48).
+- `backlogRef` — the item's stable key (`Task-35`); every work has one.
+- `attempts` / `maxAttempts` — the retry budget the schedule respects (default 2).
+- `usage`, `contextTokens`, `contextEpoch`, `reviewedAt` — as before (D48).
 
 `POST /v1/works` with `backlogRef` verifies the item against the cached default branch: an
 unknown or duplicated ref is `422` (`backlog_ref_missing` / `backlog_ref_ambiguous`), an
 already ticked item is `409` (`backlog_ref_checked`), and the item's title and body seed the
 prompt. `PATCH` on `title` or `prompt` answers `409` with `details.reason = "spec_in_git"`
-when `origin` is `backlog`: the file owns those fields and the change belongs in a branch
-(D51). `POST /v1/works/{id}/runs` is the only way to spend tokens on a work, and each run has
-its own worktree, branch and PR.
+because the file owns those fields (D51). `POST /v1/works/{id}/runs` is the only way to spend
+tokens on a work, and each run has its own worktree, branch and PR.
 
 The backlog object:
 
@@ -504,6 +503,31 @@ The backlog object:
 The daemon never writes the file here: the tick happens in the run's branch (§6 of
 [`docs/jobs.md`](jobs.md)) and reaches `main` through the merge.
 
+#### 5.6.1 Sessions (D55)
+
+A session is a chat with **one target**, and the target is its write boundary.
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/v1/sessions?repoId=&target=` | `read` | Sessions, newest activity first. |
+| `POST` | `/v1/sessions` | `works` | `{ repoId, target: "backlog" \| "design" \| "work", workId? }` → `201`. |
+| `GET` | `/v1/sessions/{id}` | `read` | Session, target, state, pending proposal. |
+| `GET` | `/v1/sessions/{id}/messages?cursor=` | `read` | Oldest first, paginated. |
+| `POST` | `/v1/sessions/{id}/messages` | `works` | `{ text }` → `202`; the reply arrives as events. |
+| `POST` | `/v1/sessions/{id}/compact` | `works` | New agent session in the same directory; bumps the epoch. |
+| `POST` | `/v1/sessions/{id}/merge` | `works` | Merges the pending proposal once; `409 proposal_none` when there is none. |
+| `POST` | `/v1/sessions/{id}/interrupt` | `works` | Stops the agent; the session returns to `idle`. |
+| `DELETE` | `/v1/sessions/{id}` | `works` | Archives it; the branch is kept per retention. |
+
+- `target = backlog` may only write `TODO.md`; `design` only `design/**`; `work` writes no code
+  and produces notes plus an optional backlog proposal. A write outside the target is refused by
+  the daemon **and** by the gate, whichever happens first.
+- At most one pending proposal per session: a second one while one is open is `409` with
+  `details.reason = "proposal_pending"`.
+- `POST /merge` pushes a docs-only PR and merges it through the normal guardrails; a proposal
+  that touches anything outside its target fails the gate as `target_violation`.
+- A session never starts a run and never ticks a backlog item.
+
 ### 5.7 Settings and push
 
 | Method | Path | Auth | Purpose |
@@ -515,43 +539,11 @@ The daemon never writes the file here: the tick happens in the run's branch (§6
 | `POST` | `/v1/push/subscriptions` | `write` | `{ kind: "web" \| "fcm" \| "apns", endpoint, keys }`. |
 | `DELETE` | `/v1/push/subscriptions/{id}` | `write` | Unsubscribe. |
 
-### 5.8 Reminders
+### 5.8 Reminders (retired)
 
-A reminder is a schedule with no work and no repository: a title, a time rule and a push
-(D44, [`docs/jobs.md`](jobs.md) §15). It costs no tokens, opens no worktree and emits no run.
-There is no `prompt` reminder and no model-facing creation route: the operator device writes it.
-
-| Method | Path | Auth | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/v1/reminders` | `read` | Reminders, newest first. |
-| `POST` | `/v1/reminders` | `write` | `{ title, mode, cron?, timezone, notify? }` → `201`. |
-| `GET` | `/v1/reminders/{id}` | `read` | One reminder with its next and last fire. |
-| `PATCH` | `/v1/reminders/{id}` | `write` | Title, cron, timezone, notify or enabled. |
-| `DELETE` | `/v1/reminders/{id}` | `write` | Delete it and stop its schedule. |
-| `POST` | `/v1/reminders/{id}/pause` | `write` | The scheduler stops selecting it. |
-| `POST` | `/v1/reminders/{id}/resume` | `write` | Recompute the next fire from now. |
-| `POST` | `/v1/reminders/{id}/run` | `runs` | Fire it once now, outside the schedule. |
-
-`repoId`, `prompt` and `workId` are refused on a reminder: a kind-mismatched field is a `422`
-like any unknown field. `title` (1–120) is the text it pushes, `notify` the per-reminder push
-switch and `enabled` the pause switch; `nextFireAt` and `lastFiredAt` are computed by the
-scheduler, never written by a client.
-
-```json
-{
-  "id": "rmd_01J...",
-  "kind": "reminder",
-  "title": "Take the pill",
-  "mode": "every",
-  "cron": "0 22 * * *",
-  "timezone": "Europe/Madrid",
-  "enabled": true,
-  "notify": true,
-  "createdAt": "2026-10-24T18:03:11Z",
-  "nextFireAt": "2026-10-25T20:00:00Z",
-  "lastFiredAt": null
-}
-```
+Retired by D56. A recurring object without a repository no longer exists: every schedule belongs
+to a repository and consumes its backlog, so there is no `/v1/reminders` surface and no
+`reminder` kind. A notification that has to fire on a timer is a calendar, not this product.
 
 ### 5.9 Credentials and integrations
 
@@ -653,15 +645,15 @@ or reorder it. Removing the last `active` account of the only provider that serv
 default model is a `409` with `details.reason = "no_active_account"`, so the box cannot be
 left unable to run.
 
-### 5.10 Schedules (D44, D46)
+### 5.10 Schedules (D56, D46)
 
-A schedule is the recurrence of a work: `{ workId, mode, cron|window, caps }`. It always
-resolves to a repository through its work; only a reminder (§5.8) has no work. This subsection
-is the API object; [`docs/jobs.md`](jobs.md) §16 owns the field table, the three modes, the
-claim and the tick.
+A schedule is the **repository's** recurrence: `{ repoId, mode, cron|window, selection, caps }`.
+It has no work and no prompt of its own — each fire takes the next eligible backlog item and
+opens a run of it. This subsection is the API object; [`docs/jobs.md`](jobs.md) §16 owns the
+field table, the selection rule, the three modes, the claim and the tick.
 
-- `GET /v1/schedules` (`read`) — the §4 page, newest first, narrowed by `workId`, `repoId` and
-  `enabled`; `{ data, nextCursor }` with a cursor stable under inserts.
+- `GET /v1/schedules` (`read`) — the §4 page, newest first, narrowed by `repoId` and `enabled`;
+  `{ data, nextCursor }` with a cursor stable under inserts.
 - `POST /v1/schedules` (`write`) — creates the schedule and answers `201` with the stored
   `Schedule`.
 - `GET /v1/schedules/{id}` (`read`) — answers `{ schedule, nextFires }` (`ScheduleDetail`, up
@@ -673,31 +665,28 @@ claim and the tick.
   `200` with the `Schedule`.
 - `POST /v1/schedules/{id}/resume` (`write`) — `enabled: true` and the next fire recomputed
   from now; answers `200` with the `Schedule`.
-
-**There is no fire-now route for a schedule.** A fire is started by the daemon's tick
-([`docs/jobs.md`](jobs.md) §16.3); to spend tokens on demand the operator starts a run of the
-work (`POST /v1/works/{id}/runs`), which does not consume the schedule.
+- `POST /v1/repos/{id}/run-next` (`runs`) — the same selection, once, outside any schedule:
+  answers `202` with the created `Run`, or `409 nothing_pending`.
 
 ```json
 {
   "id": "sch_01JABCDEFG",
-  "workId": "wrk_01J...",
   "repoId": "repo_01J...",
-  "title": "Overnight pass",
-  "prompt": "Take the next failing check, fix it, run the gate.",
   "mode": "window",
   "cron": null,
   "timezone": "Europe/Madrid",
   "windowStart": "22:00",
   "windowEnd": "06:00",
   "cooldownMinutes": 20,
-  "maxFires": 12,
+  "selection": "nextPending",
+  "refs": [],
+  "maxAttempts": 2,
+  "maxFires": 6,
   "maxCostPerFireUsd": 0.75,
   "consecutiveFailures": 0,
   "firesCount": 3,
   "spendUsd": 1.25,
   "enabled": true,
-  "policy": "auto",
   "nextFireAt": "2026-10-27T21:40:00Z",
   "lastFiredAt": "2026-10-27T21:20:00Z",
   "createdAt": "2026-10-26T18:03:11Z",
@@ -708,19 +697,20 @@ work (`POST /v1/works/{id}/runs`), which does not consume the schedule.
 - `mode` is `once`, `every` or `window`. A `window` schedule has `cron: null`, non-null
   `windowStart`/`windowEnd` of the form `HH:MM` and `windowStart !== windowEnd`; every other
   mode has a 5-field `cron` and null window bounds.
-- `workId` is required and must exist; `repoId` is derived from it and a client cannot set a
-  different one (`422`, `repo_mismatch`). A work has **at most one** schedule: a second create
-  is `409` with `details.reason = "schedule_exists"`.
-- Defaults on create: `cooldownMinutes` `0`; `enabled` `true`; `policy` the repository's
-  policy; `maxFires` and `maxCostPerFireUsd` `null`.
+- `repoId` is required and a repository has **at most one** schedule: a second create is `409`
+  with `details.reason = "schedule_exists"`. There is no schedule without a repository and no
+  schedule tied to a work (D56).
+- `selection` is `nextPending` (the default) or `refs`; with `refs`, `refs` is a non-empty list
+  of backlog refs and only those are considered.
+- Defaults on create: `cooldownMinutes` `0`; `selection` `nextPending`; `maxAttempts` `2`;
+  `maxFires` and `maxCostPerFireUsd` `null`; `enabled` `true`.
 - `consecutiveFailures`, `firesCount`, `spendUsd`, `nextFireAt` and `lastFiredAt` are written
   by the daemon, never by a client.
 - Refusals: `422 validation_failed` with `details.path = "schedule.<key>"` and `details.reason`
   one of `field_count`, `range`, `step`, `syntax`, `no_fire`, `timezone`, `window`,
-  `repo_missing` or `repo_required`. An unknown id is `404 not_found` with
+  `repo_missing`, `selection_empty`. An unknown id is `404 not_found` with
   `details.path = "schedule.id"`; a write without the `write` scope is `403 forbidden` with
-  `details.reason = "insufficient_scope"`; a repeated query key is a `422` naming
-  `schedule.<key>`.
+  `details.reason = "insufficient_scope"`.
 
 ## 6. SSE
 
@@ -845,12 +835,14 @@ still renders, and the routes it calls are retained.
 | `/pair` | `POST /v1/pair`, `POST /v1/auth/refresh` |
 | `/dashboard` | `GET /v1/health`, `GET /v1/telemetry`, `GET /v1/runs`, `GET /v1/schedules` |
 | `/repos` | `GET /v1/repos`, `POST /v1/repos` |
-| `/repos/:id` | `GET /v1/repos/{id}`, `GET /v1/repos/{id}/backlog`, `GET /v1/works?repoId=`, `GET /v1/schedules?repoId=` |
-| `/works/:id` | `GET /v1/works/{id}`, `GET /v1/works/{id}/messages`, `POST /v1/works/{id}/messages`, `POST /v1/works/{id}/runs`, `POST /v1/works/{id}/interrupt`, `POST /v1/works/{id}/compact` |
+| `/repos/:id` | `GET /v1/repos/{id}`, `GET /v1/repos/{id}/backlog`, `GET /v1/works?repoId=` |
+| `/repos/:id/schedule` | `GET /v1/schedules?repoId=`, `POST /v1/schedules`, `PATCH /v1/schedules/{id}`, `POST /v1/schedules/{id}/pause`, `POST /v1/schedules/{id}/resume`, `POST /v1/repos/{id}/run-next` |
+| `/works/:id` | `GET /v1/works/{id}`, `POST /v1/works/{id}/runs`, `POST /v1/works/{id}/decision`, `POST /v1/works/{id}/interrupt` |
+| `/sessions/:id` | `GET /v1/sessions/{id}`, `GET /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/merge`, `POST /v1/sessions/{id}/interrupt`, `POST /v1/sessions/{id}/compact` |
 | `/repos/pick` | `GET /v1/integrations/github/repos`, `POST /v1/repos` |
 | `/settings` | `GET /v1/settings`, `GET /v1/me` |
 | `/settings/providers` | `GET /v1/providers`, `POST /v1/providers/{id}/accounts`, `POST /v1/providers/{id}/oauth/start`, `POST /v1/providers/{id}/oauth/complete`, `PATCH /v1/provider-accounts/{id}`, `POST /v1/provider-accounts/{id}/test` |
-| `/settings/schedules` | `GET /v1/schedules`, `PATCH /v1/schedules/{id}`, `POST /v1/schedules/{id}/pause`, `POST /v1/schedules/{id}/resume`, `GET /v1/reminders` |
+| `/settings/schedules` | Retired: the schedule belongs to a repository (D56). |
 | `/runs` | `GET /v1/runs` |
 | `/runs/:id` | `GET /v1/runs/{id}`, `GET /v1/runs/{id}/events`, `GET /v1/runs/{id}/diff`, `POST /v1/runs/{id}/cancel`, `POST /v1/runs/{id}/revert` |
 | `/approvals` | `GET /v1/approvals`, `POST /v1/approvals/{id}/reply` |

@@ -10,8 +10,8 @@ the operator's input for the app tasks (L2 in `TODO.md`).
 
 The file the map describes is `codebox` in Figma, edited through the `figma-edit` plugin. It
 holds **55 frames in 11 bands**, two themes and three widths, re-cut on 2026-10-28 against
-D44/D47/D51-D54: the unit is a work, the repository is the root, and the backlog file is the
-list. Dark is the default (`docs/app.md` §9); light exists for every screen; 320 px is the
+D44/D47/D51-D56: the unit is a work and one backlog item, the repository is the root, the
+backlog file is the list and the schedule belongs to the repository. Dark is the default (`docs/app.md` §9); light exists for every screen; 320 px is the
 reference width; 1280 is the desktop layout. Do not commit the `.fig` itself — only the link
 below and the exports.
 
@@ -24,8 +24,9 @@ Figma, not the layer names.
 | --- | --- | --- | --- | --- | --- | --- |
 | Pairing | `/pair` | `features/pairing` | 01 | L1 | — | — |
 | Repo · backlog | `/repos/:id` | `features/backlog` | 02 | L2 | D1 · D3 | S1 |
-| Work | `/works/:id` | `features/works` | 03 | L3 | D1 · D3 | S2 |
+| Work · run log | `/works/:id` | `features/works` | 03 | L3 | D1 · D3 | S2 |
 | Repo list | `/repos` | `features/repos` | 04 | L4 | — | — |
+| Repo · schedule | `/repos/:id/schedule` | `features/schedules` | 04b | L12 | — | — |
 | Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | — |
 | Settings | `/settings` | `features/settings` | 06 | L6 | — | — |
 | Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
@@ -43,11 +44,11 @@ Not routes. A sheet is opened over the screen named in its row.
 
 | State | Opened from | Feature folder | dark | light |
 | --- | --- | --- | --- | --- |
-| New work, empty | `/repos/:id`, `+` | `features/works` | 03a | L9 |
-| Work · standing (schedule) | `/works/:id`, schedule on | `features/works` | 03b | L10 |
-| Work sheet (context, cost, cancel) | sheet over `/works/:id` | `features/works` | 03c | L11 |
-| Schedule asked | over `/works/:id` | `features/schedules` | 08b | L13 |
-| Proposed schedule card | over `/works/:id` | `features/schedules` | 08c | L14 |
+| New backlog item | `/repos/:id`, `+` | `features/sessions` | 03a | L9 |
+| Decision session | `/works/:id`, *Resolve doubt* | `features/sessions` | 03b | L10 |
+| Session sheet | sheet over `/sessions/:id` | `features/sessions` | 03c | L11 |
+| Schedule asked | over `/repos/:id/schedule` | `features/schedules` | 08b | L13 |
+| Proposed schedule card | over `/repos/:id/schedule` | `features/schedules` | 08c | L14 |
 | Connect repository | `/repos/pick` | `features/repos` | 09 | L15 |
 | Repo cloning | after `POST /v1/repos` | `features/repos` | 11 | L17 |
 | First run | `/dashboard`, no repositories | `features/dashboard` | 12 | L18 |
@@ -56,12 +57,8 @@ Not routes. A sheet is opened over the screen named in its row.
 | Connect a service | sheet over `/settings/credentials` | `features/credentials` | 18 | L23 |
 | Add credential | sheet over `/settings/credentials` | `features/credentials` | 19 | L24 |
 
-**Retired, kept for the record:** `04b · Retired · Schedule filter` and `10 · Retired · free
-chat menu` (dark, `L12`/`L16` light). They document the model D43/D47 replaced; delete them
-once the new backlog and work frames are exported.
-
-`04b` and `10` are not linked from any route. A frame that stops matching the code is fixed or
-deleted.
+**Retired, kept for the record:** `10 · Retired · free chat menu` (dark, `L16` light). It
+documents the model D43/D47 replaced; delete it once the new session frames are exported.
 
 ## 3. Widths and themes
 

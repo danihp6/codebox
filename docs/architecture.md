@@ -128,9 +128,10 @@ creates the ten v1 tables below, and `0002_routines.sql` adds the two routine ta
 | `repos` | Registered repositories and per-repo policy. | `0001_init.sql` |
 | `jobs` | Retired by D44; kept only for the migration history. | `0001_init.sql` |
 | `runs` | One execution: trigger, state, branch, worktree, session, PR, gate, cost. | `0001_init.sql` |
-| `works` | The unit: repository, title, prompt, state, backlog ref, origin, design ref. | `0003_works.sql` |
-| `work_messages` | One thread per work; user/assistant/tool messages with the run segment. | `0003_works.sql` |
-| `schedules` | A work's recurrence: rule, window, caps, paused, next fire. | `0003_works.sql` |
+| `works` | One backlog item: repository, title, prompt, state, backlog ref, origin, attempts. | `0003_works.sql` |
+| `sessions` | A chat with one target (`backlog`/`design`/`work`), its branch and pending proposal. | `0003_works.sql` |
+| `session_messages` | One thread per session; user/assistant/tool messages. | `0003_works.sql` |
+| `schedules` | The repository's recurrence: mode, window, selection, caps, paused. | `0003_works.sql` |
 | `schedule_fires` | One row per fire; `(schedule_id, scheduled_for)` is the idempotency key. | `0003_works.sql` |
 | `providers` | Adapters: `opencode-go`, `anthropic`, … and their auth kind. | `0004_providers.sql` |
 | `provider_accounts` | Credential ref, priority, state, `resetAt`, per-account budget (D54). | `0004_providers.sql` |
@@ -256,17 +257,19 @@ sequenceDiagram
   D->>D: create the work, cut the worktree
   D->>O: POST /api/session { location.directory, model account }
   D-->>A: work { id, repoId, status: queued }
-  A->>D: POST /v1/works/{id}/messages { text }
-  D->>O: POST /api/session/{id}/prompt { text }
+  A->>D: POST /v1/works/{id}/runs { prompt? }
+  D->>D: cut the worktree and the cb/ branch
+  D->>O: POST /api/session { location.directory, model account }
+  D->>O: POST /api/session/{id}/prompt { the item }
   O->>R: tools (read, edit, bash) as permitted
   O-->>D: GET /api/event (SSE)
-  D-->>A: GET /v1/events (SSE: message.delta, message.tool, run.*)
+  D-->>A: GET /v1/events (SSE: run.output, run.tool, run.gate, run.pr)
 ```
 
-A work has one thread and one repository (D44); every run starts a new OpenCode session, so
-the thread is a sequence of segments separated by run dividers. A run is the transaction: it
-cuts a `cb/` branch, runs the gate, opens a PR, and ticks the backlog item in that branch
-(D51). There is no promote step and no chat that never ships.
+A work is one backlog item in one repository (D44); every run starts a new OpenCode session, so
+the run log is a sequence of segments. A run is the transaction: it cuts a `cb/` branch, runs the
+gate, opens a PR, and ticks the backlog item in that branch (D51). There is no promote step, no
+composer and no chat that never ships — a conversation is a session with its own target (D55).
 
 ### 3.3 Scheduled work → PR → auto-merge
 

@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-28 (sessions are editors; the schedule belongs to the repository)
+
+- **A chat is an editor, not a unit (D55).** A session has one target — the backlog, the design
+  or one work — and the target is its write boundary; every session ends in a proposal and a
+  merge disposes. The work screen loses its composer and becomes a run log; a run that needs a
+  person ends in `needs_decision` instead of waiting. `docs/api.md` §5.6.1 owns the routes.
+- **The schedule belongs to the repository (D56).** `RepoSchedule { repoId, mode, window,
+  selection, caps }` fires the next eligible backlog item in file order; `once` is one fire and
+  `POST /v1/repos/{id}/run-next` is the same selection without a schedule. Per-work schedules,
+  routines and **repo-less reminders are retired** — there is no recurring object without a
+  repository. `docs/jobs.md` §1, §15 and §16 own the rules.
+- `docs/product.md` now counts six surfaces, `docs/app.md` adds `/sessions/:id` and the four
+  repository tabs, `docs/architecture.md` trades `work_messages` for `sessions` +
+  `session_messages`, and `docs/security.md` records the target-as-boundary control.
+
 ### Changed — 2026-10-28 (one unit: Work; D51-D54)
 
 - **The unit is the work.** D43 is retired and D44/D47/D48 rewritten: there is no free chat, no

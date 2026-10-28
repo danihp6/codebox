@@ -5,22 +5,25 @@ of it. This document owns the state machine, the gate, the PR and the guardrails
 whether a green run may merge itself (D11, D12). The guardrail functions live in
 `packages/core` and are tested as pure functions; this file is their specification.
 
-## 1. A schedule is an attribute of a work
+## 1. A schedule belongs to the repository
 
-A **work** carries a title, a prompt, its repository and, optionally, a **schedule**: a time
-rule (`once`, `every` or `window`) with caps (D44, D46). There is no other recurring object.
+A **work** is one backlog item: a title, a prompt, its repository and its runs. It carries no
+schedule. The **schedule** is the repository's: a time rule (`once`, `every` or `window`) plus a
+selection policy (D56), and each fire takes the next eligible item and opens a run of it.
 
-- A fire produces a **run of that work**: a worktree, the gate, a PR and the merge decision of
-  D11/D12 — everything §3–§14 specify.
-- Every run of the same work is a separate attempt: its own worktree, its own branch, its own
-  PR. Retrying is starting another run, never resuming a half task.
-- A work without a schedule is manual only.
-- A repo without a work is not a thing: there is no free chat and no schedule that produces a
-  conversation (§15 keeps only push-only reminders).
+- The backlog is the queue and **its order is the priority**: the schedule never chooses work by
+  content, only by position and state.
+- An item is eligible when it is unchecked, has no work in `queued`/`running`/`needs_decision`,
+  and has not exhausted `maxAttempts`.
+- Every run of the same work is a separate attempt: its own worktree, its own branch, its own PR.
+  Retrying is starting another run, never resuming a half task.
+- A repository has at most one schedule; without one, work is manual only (*Run next* uses the
+  same selection).
+- There is no schedule without a repository, and no `prompt`-only recurrence: §15 is retired.
 
 `mode` is `once`, `every` or `window`, and the schedule id prefix is `sch_`. §16 owns the field
-table, the three modes, the claim and the routes — §16.1 is the window loop — and the API object
-is [`docs/api.md`](api.md) §5.10.
+table, the three modes, the selection, the claim and the routes — §16.1 is the window loop — and
+the API object is [`docs/api.md`](api.md) §5.10.
 
 ## 1.1 Legacy jobs
 
@@ -353,46 +356,39 @@ critical.
 - Never retries itself in a loop, and never reuses a worktree.
 - Never rewrites history: no force-push, no amend of a pushed commit.
 
-## 15. Reminders (D44)
+## 15. Reminders (retired)
 
-A **reminder** is the only recurring object that is not a work: a title, a time rule and a
-push. It costs no tokens, opens no worktree and creates no run. "Remind me to take the pill."
+Retired by D56. A recurring object without a repository no longer exists, so `reminder` is not a
+kind and there is no `/v1/reminders`. A notification that has to fire on a timer is a calendar,
+not this product; if the agent must do something on a schedule, it is a repository schedule
+consuming the backlog.
 
-There is no `prompt` reminder: with chat retired, a schedule whose whole output is a message
-would be a work without a repository, which D44 forbids. An operator who wants the agent to
-answer on a schedule gives a work a schedule; an operator who wants a ping creates a reminder.
+## 16. Schedules (D56, D46)
 
-Storage is the same `schedules` row with `work_id = null` and `kind = reminder` (§16.2), and the
-claim is the same transactional one. A fire emits `schedule.fired` and one `sent` row, and that
-event is the push. There is no model-facing tool that creates a reminder: the operator device
-writes it through `/v1` (supersedes D38/D41), so prompt injection cannot make the box ping
-itself forever.
-
-## 16. Schedules (D44, D46)
-
-A **schedule** is the recurring field of a work: it carries the trigger, it always has a
-repository through its work, and it decides its own next fire. It is not a job and not a
-routine. The legacy table stays as §1.1 says; this section is the new path.
+A **schedule** is the repository's recurrence: it carries the trigger and the selection policy,
+and it decides its own next fire. It is not a job, not a routine, and not tied to a work. The
+legacy table stays as §1.1 says; this section is the new path.
 
 | Field | Rules |
 | --- | --- |
-| `workId` | The work this schedule fires, or `null` for a push-only reminder (§15). |
-| `repoId` | A registered repository, or `null` only for a reminder. |
-| `title`, `prompt` | 1–120 and 1–8 000 characters; for a work schedule they default to the work's. |
+| `repoId` | A registered repository; required. One schedule per repository. |
 | `mode` | `once`, `every` or `window` (below). |
 | `cron` | Five fields; non-null for `once` and `every`, `null` for `window`. |
 | `timezone` | IANA zone, used for both the cron and the window. |
 | `windowStart`, `windowEnd` | `HH:MM`, non-null only for `window`, never equal. |
 | `cooldownMinutes` | Minutes between a fire's **finish** and the next fire inside a window. |
+| `selection` | `nextPending` (default) or `refs`; `refs` is a non-empty list of backlog refs. |
+| `maxAttempts` | Retries per work before the selection skips it; default `2`. |
 | `maxFires` | Optional cap on the fires of the whole schedule. |
 | `maxCostPerFireUsd` | Optional cap on the cost of one fire; a fire that reaches it stops the loop. |
-| `firePolicy` | `run` starts a run; a reminder has none. |
 | `consecutiveFailures`, `firesCount`, `spendUsd` | Written by the fire rows, never by a client. |
-| `enabled`, `policy` | Paused schedules are not selected; `policy` is the run's auto-merge opt-in. |
+| `enabled` | Paused schedules are not selected. |
 | `nextFireAt`, `lastFiredAt` | The fire **not yet claimed**, and when the last claim fired. |
 
-`workId` is null only for a reminder, and a reminder has no `repoId` either: the row belongs to
-exactly one of the two.
+The selection is the whole point: a fire has no prompt of its own. It reads the backlog at
+`origin/main`, takes the first eligible item (unchecked, no work in `queued`/`running`/
+`needs_decision`, `attempts < maxAttempts`, and matching `refs` when set), and opens a run of
+that item with the item as the prompt.
 
 ### 16.1 The three modes
 
@@ -445,14 +441,18 @@ applies the D13 grace with `CB_MISFIRE_GRACE_SECONDS`: inside the grace the sche
 fires, outside it the fire is recorded as `skipped` and `next_fire_at` moves on. A missed fire
 is never caught up.
 
-A claimed fire is started, not awaited: `tick` returns while the work runs. A work schedule
-starts a run through `queueRun` with `trigger: 'schedule'`, `jobId: null` and the claimed
-instant as `scheduled_for`, so it obeys the same `CB_MAX_CONCURRENCY` admission as a manual
-run; the run's prompt is the work's, and its backlog item is ticked only if this run merges.
-A reminder writes no run: its fire row ends `fired` on the push. When the fire settles, its row
-ends `fired` with the run id, or `failed` with a code (`repo_missing`, `work_missing`,
-`provider_exhausted`, `internal`), and the next fire is recomputed from that instant. A fire
+A claimed fire is started, not awaited: `tick` returns while the work runs. The fire **selects**
+an item (§16) and starts a run through `queueRun` with `trigger: 'schedule'`, `jobId: null` and
+the claimed instant as `scheduled_for`, so it obeys the same `CB_MAX_CONCURRENCY` admission as a
+manual run. The run's prompt is the item's title and body, and the item is ticked only if this
+run merges. When the selection finds nothing eligible the fire row ends `nothing_pending` (or
+`nothing_runnable` when every candidate is blocked or out of attempts), emits no push, and the
+next fire is recomputed. When the fire settles, its row ends `fired` with the run id, or `failed`
+with a code (`repo_missing`, `backlog_unavailable`, `provider_exhausted`, `internal`). A fire
 still working at the window's end is allowed to finish; nothing cancels it.
+
+`POST /v1/repos/{id}/run-next` is the same selection without a schedule: one fire, one run, no
+change to `nextFireAt`. A repository with no schedule can still work on demand.
 
 ### 16.4 The routes
 
@@ -465,9 +465,10 @@ still working at the window's end is allowed to finish; nothing cancels it.
 | `DELETE` | `/v1/schedules/{id}` | `write` | Delete the schedule and its fires; `204`. |
 | `POST` | `/v1/schedules/{id}/pause` | `write` | `enabled = false`, `nextFireAt = null`. |
 | `POST` | `/v1/schedules/{id}/resume` | `write` | `enabled = true`, `nextFireAt` recomputed from now. |
+| `POST` | `/v1/repos/{id}/run-next` | `runs` | One selection, one run, outside any schedule. |
 
 `nextFireAt` is never accepted from a client: an unknown body key is a `422` that names
 `schedule.<key>`, and a cron, a zone or a window that cannot produce a fire is a `422` with
 `details.path` and a machine `details.reason` (`field_count`, `range`, `step`, `syntax`,
-`no_fire`, `timezone`, `window`, `repo_missing`, `repo_required`). A schedule fire emits no
+`no_fire`, `timezone`, `window`, `repo_missing`, `selection_empty`). A schedule fire emits no
 event of its own beyond `schedule.fired`: the run it opens emits the events of §3.

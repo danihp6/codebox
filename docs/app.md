@@ -83,13 +83,16 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | `/pair` | Pairing | Enter the ten-character code and a device name, submit, see one inline reason when the code is used, expired or unknown, and land on the dashboard; the same screen after a 401. |
 | `/dashboard` | Dashboard | *Needs you*, running, unreviewed, today's spend, health, and **one block per repository**; the start card on a fresh box. |
 | `/repos` | Repos list | The repository list with a **search field and no filters**: name, clone/gate state, `pending · running · merged` counts, and **one amber dot** when something needs the operator (an unreviewed PR or a red run); add. |
-| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip, cost; ad-hoc works above; `Run` on an idle item; a second tab with every work. |
-| `/works/:id` | Work | One thread with a divider per run, composer, tool cards, gate and PR cards, context header, schedule row and the design snapshot sheet. |
+| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; tabs **Backlog · Works · Schedule · Design**. |
+| `/repos/:id/works` | Repo · works | Every work of the repository, flat, newest activity first, including ad-hoc ones and orphans. |
+| `/repos/:id/schedule` | Repo · schedule | The one `RepoSchedule`: mode, window, selection, caps, next fire, pause and *Run next* (D56). |
+| `/repos/:id/design` | Repo · design | Screen specs, tokens and snapshots from `design/`, with the state checklist and the preview. |
+| `/works/:id` | Work · run log | Runs, gate and PR cards, context header, cost, and **one action when blocked**: *Resolve doubt*. No composer (D55). |
+| `/sessions/:id` | Session | A chat with one target: thread, the target document, and the **pending proposal** with its diff and *Merge*. |
 | `/repos/pick` | Connect repository | The picker over the GitHub App installation, with `connected` / `cloning` / `unavailable` per row. |
-| `/settings` | Settings | Repository viewers, credentials, provider accounts, schedules, devices, notifications, appearance, danger zone. |
+| `/settings` | Settings | Repository viewers, credentials, provider accounts, devices, notifications, appearance, danger zone. |
 | `/settings/providers` | Provider accounts | Accounts per provider in failover order, each with state (`active` / `exhausted` / `invalid`), reset instant, spend today, and add by OAuth or token; never a value beyond the last four characters (D54). |
 | `/settings/credentials` | Credentials | Connected services (GitHub App by manifest, integrations) and open credentials, write-only; the add sheet has the three `expose` modes, `env` is limited to the model key and shows its warning, saving passes a confirm step, and a value is only ever shown as its last four characters. |
-| `/settings/schedules` | Schedules | Every work's schedule: next fire, window, pause/resume, run now. |
 | `/settings/devices` | Devices | Scopes per device, revoke, last seen; this device cannot revoke itself. |
 | `/settings/notifications` | Notifications | Five toggleable events plus the non-toggleable credential alert, and quiet hours. |
 | `/about` | About | Version, commit, server health, licences. |
@@ -98,10 +101,11 @@ Bottom tabs: **Dashboard · Repos · Settings** (D47). A repository is a destina
 filter; Settings owns the cross-repository lists. Detail screens push onto the stack; deep links
 (`codebox://works/<id>`, `https://cb.example.com/works/<id>`) open the same route.
 
-**The repository is the spine.** A work exists only inside one repository, chosen at creation,
+**The repository is the spine.** A work exists only inside one repository, one per backlog item,
 and never changes (D44). There is no free chat, no scope chip and no promote: the backlog item
-*is* the prompt, and the work's runs are the attempts. There is no approval prompt anywhere in
-this flow (D45).
+*is* the prompt, and the work's runs are the attempts. A chat is an editor bound to one target —
+the backlog, the design or a single work — and it proposes; the merge disposes (D55). There is
+no approval prompt anywhere in this flow (D45).
 
 ## 5. State and data
 
@@ -150,26 +154,29 @@ Rendering rules: deltas append to the current message, tool events insert a card
 by tool call id), and a reconnect never duplicates a message because the store dedupes by
 `(messageId, seq)`.
 
-## 8. Work
+## 8. Work and session
 
-The work screen is the product's front door:
+**Work** is the run log, not a conversation (D55):
 
-- a header with the repository, the state, the context percentage and the cost of the day;
-- a message list with markdown and syntax-highlighted code (lazy-loaded highlighter), and a
-  **divider per run** carrying its branch and outcome, so a re-attempt never looks like the
-  same conversation;
-- tool cards that show the tool, a one-line summary and an expandable redacted payload;
-- permission cards with **Allow once / Allow for session / Deny**, disabled after reply;
-- a composer that stays usable while the agent works, with a stop button; `Compact` when the
-  context reaches its warning band (D48);
-- gate and PR cards rendered from run state, never from prose; a merged run also shows the
-  backlog item it ticked;
-- a schedule row (`once` / `every` / `window`, next fire, pause) that opens the same editor as
-  `Settings → Schedules`;
-- a design sheet with the screen snapshot and the states the spec declares, when the repository
-  has `design/` (D52);
-- a `provider.state` line when the agent moved to another account mid-work (D54), never a
-  silent model change.
+- a header with the repository, the state, the context percentage and the cost;
+- one segment per run — branch, outcome, gate and PR cards rendered from run state, never from
+  prose — and the ticked backlog item on a merged run;
+- tool cards with the tool, a one-line summary and an expandable redacted payload;
+- a **single action when blocked**: *Resolve doubt* opens the decision session. No composer,
+  no free-form chat: a work that needs to talk is a work that ended in `needs_decision`;
+- a design sheet with the snapshot and the states the spec declares, when the repository has
+  `design/` (D52);
+- a `provider.state` line when the agent moved to another account mid-run (D54).
+
+**Session** is the editor (D55):
+
+- a header naming its target — `TODO.md`, `design/`, or `Task-68 · work` — because the target is
+  also the write boundary;
+- the thread, the same streaming and tool-card rules, and a composer that stays usable with a
+  stop button;
+- a **proposal panel** with the diff, the files it may touch, and *Merge*; while a proposal is
+  pending the composer is disabled, so one change lands at a time;
+- `Compact` when the context reaches its warning band (D48).
 
 Streaming text is appended with a single `requestAnimationFrame` flush per frame; the list
 sticks to the bottom only when the user is already at the bottom.

@@ -26,19 +26,23 @@ cbd ──HTTP+SSE──> opencode serve 127.0.0.1:4096
 
 | Codebox concept | OpenCode concept | Lifetime |
 | --- | --- | --- |
-| Work thread | the persisted message list | Persistent (D28), archived by the operator. |
+| Session | one server session, one directory | A chat with one target (backlog, design or a work); closed on archive (D55). |
 | Run | one server session, one worktree | One run; the session is closed at the terminal state. |
 | Event | server-sent event | Persisted with a per-run `seq`. |
 
 A session is always created **inside a directory**: the run's worktree. The daemon never lets a
 session see `/`, the repository cache or the state directory.
 
-Sessions are named `cb-run-<runId>`, so a leaked session id in a log is traceable to a row
-without exposing a prompt.
+Sessions are named `cb-run-<runId>` and `cb-session-<sessionId>`, so a leaked session id in a
+log is traceable to a row without exposing a prompt.
 
-There is **no model-facing schedule tool** (D44 supersedes D38/D41): a schedule is a field of a
-work written through `/v1` by an operator device. A session that could create one would turn
-prompt injection into persistence.
+A session (chat) is not a run: it gets its own worktree and the **target is its write boundary**
+(D55). The daemon mounts it with the target path allowed and everything else read-only, and the
+gate re-checks the diff with `target_violation`. A session never starts a run.
+
+There is **no model-facing schedule tool** (D56 supersedes D38/D41): a schedule belongs to a
+repository and is written through `/v1` by an operator device. A session that could create one
+would turn prompt injection into persistence.
 
 ### 2.1 The compact preamble
 
