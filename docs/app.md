@@ -83,7 +83,7 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | `/pair` | Pairing | Enter the ten-character code and a device name, submit, see one inline reason when the code is used, expired or unknown, and land on the dashboard; the same screen after a 401. |
 | `/dashboard` | Dashboard | *Needs you*, running, unreviewed, today's spend, health, and **one block per repository**; the start card on a fresh box. |
 | `/repos` | Repos list | The repository list with a **search field and no filters**: name, clone/gate state, `pending · running · merged` counts, and **one amber dot** when something needs the operator (an unreviewed PR or a red run); **add** connects one from the GitHub App installation, showing `connected` / `cloning` / `unavailable` per row. |
-| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; **the chat button** opens a session with four targets (backlog, design, schedule, rework) or none for a free read-only chat; tabs **Backlog · Works · Schedule · Design**. |
+| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; **the chat button** opens a session with four targets (backlog, design, schedule, rework) or `repo` for a read-only chat; tabs **Backlog · Works · Schedule · Design**. |
 | `/repos/:id/works` | Repo · works | Every work of the repository, flat, newest activity first, including ad-hoc ones and orphans. |
 | `/repos/:id/schedule` | Repo · schedule | The one `RepoSchedule`: mode, window, selection, caps, next fire, pause and *Run next* (D56). |
 | `/repos/:id/design` | Repo · design | Screen specs, tokens and snapshots from `design/`, with the state checklist and the preview. |
@@ -113,11 +113,11 @@ no approval prompt anywhere in this flow (D45).
 - **Signals, not subjects.** A feature store exposes `signal<T>()` plus explicit actions;
   components read signals and call actions. No store reaches into another feature's store.
 - **Optimistic only for toggles** (pause/resume, notification preference) with a rollback on
-  error. A run, a message or a job creation is never optimistic: it needs a server id.
+  error. A run, a message or a work creation is never optimistic: it needs a server id.
 - **Schedules refetch on activation.** The schedules list loads on every activation and on
   every `schedule.fired` or `schedule.failed` frame; pause and resume are optimistic with
   rollback. Creation is not optimistic: the row corroborates the new schedule from
-  `GET /v1/schedules`. A schedule is a field of a work, so the work screen reads the same row.
+  `GET /v1/schedules`. A schedule belongs to the repository, so the Schedule tab reads the row.
 - **Caching:** the last successful payload per route in memory; a persisted snapshot of the
   dashboard and the last 50 runs for offline display. No work thread is persisted on the device
   beyond the current session (D28) — it is re-fetched.

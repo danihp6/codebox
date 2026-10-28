@@ -37,7 +37,7 @@ or baked into the VM image (D20).
 | `CB_BIND` | `127.0.0.1:8787` | Listen address. Never `0.0.0.0` in production; the tunnel connects to loopback. |
 | `CB_PUBLIC_URL` | — | Canonical HTTPS origin, e.g. `https://cb.example.com`. Required in production. |
 | `CB_LOG_LEVEL` | `info` | `trace`, `debug`, `info`, `warn`, `error`. |
-| `CB_TIMEZONE` | `Europe/Madrid` | Default zone for new jobs and for human timestamps. |
+| `CB_TIMEZONE` | `Europe/Madrid` | Default zone for new schedules and for human timestamps. |
 | `CB_INSTANCE_NAME` | `cb-instance` | Shown in the app and in telemetry. |
 | `CB_COMMIT` | build-time | Git SHA of the running release. |
 
@@ -197,7 +197,7 @@ explicit API call; a job cannot point at an arbitrary URL.
 | `CB_RETENTION_RUNS_DAYS` | `90` | Run rows and summaries. |
 | `CB_RETENTION_EVENTS_DAYS` | `14` | `run_events` rows. |
 | `CB_RETENTION_LOGS_DAYS` | `30` | Gate and agent log files. |
-| `CB_RETENTION_CHAT_DAYS` | `90` | Chat messages. |
+| `CB_RETENTION_WORK_MESSAGES_DAYS` | `90` | Work/session messages. |
 | `CB_RETENTION_APPROVALS_DAYS` | `7` | Resolved approvals. |
 
 ## 10. Notifications
@@ -324,7 +324,7 @@ The agent unit is the same block with `User=codebox-agent`, `Group=codebox-works
 | Missing `CB_SESSION_SECRET` | Exit 1: `CB_SESSION_SECRET is required`. |
 | Malformed URL | Exit 1 with the key and the expected shape. |
 | Unknown `CB_GIT_PROVIDER` | Exit 1 listing `github`. |
-| Cron in a job | Rejected with the field path; the job is not saved. |
+| Cron in a schedule | Rejected with the field path; the schedule is not saved. |
 | Unknown timezone | Rejected with the zone name. |
 | `CB_BIND` not loopback in production | Exit 1; the tunnel is the only way in. |
 | Both App and PAT configured | Warning, App wins. |

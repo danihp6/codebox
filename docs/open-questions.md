@@ -133,7 +133,7 @@ spend. A run that hits the cap is cancelled, not paused mid-tool.
 Runs contain repository content and possibly secrets in output.
 
 **Recommendation:** store the prompt and a truncated event log (14 days), never store raw
-tool output that matches the secret scanner, and redact by key. Chat history 90 days.
+tool output that matches the secret scanner, and redact by key. Work messages 90 days.
 
 ### Q13. Screenshot/screen-recording protection on Android
 

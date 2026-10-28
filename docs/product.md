@@ -36,7 +36,7 @@ host their code.
 | J1 | A thought strikes away from the desk | send a prompt to a repo-bound agent from my phone | the idea becomes a branch before I forget it |
 | J2 | A task repeats (nightly dependency bump, weekly report, release notes) | give the repository a schedule and let it consume the backlog | I stop being the scheduler |
 | J3 | A run is working | watch its tools, output and diff live | I can intervene early instead of reading a wall of log later |
-| J4 | The agent asks for something risky | approve or deny from a notification | autonomy never means "no gate" |
+| J4 | A run stops because it needs a decision | answer it in the decision session and run again | autonomy never means "no gate" |
 | J5 | A change is ready | see the gate, the checks and the diff stat in one card | I can trust the merge without opening a laptop |
 | J6 | A merge was wrong | revert it from the app or the CLI | recovery is a first-class action |
 | J7 | The box is unhealthy | see disk, queue, agent health and cost | I fix it before it silently stops working |
@@ -147,7 +147,7 @@ In:
 - one owner, multiple repos, each declaring `.codebox/repo.yml` and `design/`;
 - works with streaming, runs and gate cards;
 - the backlog file as the work list **and** the queue, with the tick riding in the work's PR;
-- sessions with three targets (backlog, design, one work) that propose and never write directly;
+- sessions with five targets (backlog, design, schedule, one work, repo) that propose and never write directly;
 - one repository schedule (`once` / `every` / `window`) that consumes the backlog in file order;
 - worktree isolation, gate, PR, auto-merge guardrails;
 - run timeline, diff stat, cancel, revert;

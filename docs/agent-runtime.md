@@ -26,7 +26,7 @@ cbd ──HTTP+SSE──> opencode serve 127.0.0.1:4096
 
 | Codebox concept | OpenCode concept | Lifetime |
 | --- | --- | --- |
-| Session | one server session, one directory | A chat with one target (backlog, design or a work); closed on archive (D55). |
+| Session | one server session, one directory | A chat with one target (backlog, design, schedule, `work:<id>` or `repo`); archived (D55). |
 | Run | one server session, one worktree | One run; the session is closed at the terminal state. |
 | Event | server-sent event | Persisted with a per-run `seq`. |
 
@@ -147,7 +147,7 @@ Rules:
 | OpenCode signal | Codebox event | Notes |
 | --- | --- | --- |
 | session created / busy | `run.started` | State is derived, not forwarded. |
-| text delta | `run.output`, `message.delta` | Chunked; the client appends in `seq` order. |
+| text delta | `run.output`, `session.delta` | Chunked; the client appends in `seq` order. |
 | tool call start/end | `run.tool`, `message.tool` | Name and status only; the tool input is never forwarded. |
 | permission asked | `run.permission` | Answered inline from the policy, in the round that received it; it writes no approval row. |
 | session idle | `run.finished` (after the gate) | An idle session is a finished attempt, never a paused thread. |

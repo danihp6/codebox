@@ -114,7 +114,7 @@ invents a format of its own.
 - **Rate limits** are enforced per device in the auth middleware, after authentication and the
   scope check and before the handler: **120 requests/minute** on any `/v1` route
   (`API_RATE_LIMIT`) and **10/minute** on the three run-creating routes — `POST /v1/runs`,
-  `POST /v1/jobs/{id}/run` and `POST /v1/routines/{id}/run` (`WORK_RATE_LIMIT`). A work route is
+  `POST /v1/works/{id}/runs` and `POST /v1/repos/{id}/run-next` (`WORK_RATE_LIMIT`). A work route is
   counted in the tighter budget only, never in both. A refusal is `429 rate_limited` with
   `Retry-After`, emitted by the same error path as every other auth failure. The pairing limiter
   (10/hour/source) is separate and unchanged.
@@ -148,7 +148,7 @@ provider keys and no line of it starts with `CB_`.
 | Control | Implementation |
 | --- | --- |
 | Working directory | One worktree per session; the process cwd is that directory. |
-| Permissions | Every request is answered inline from `decidePermission`: `allow` replies `once`, `ask` and `deny` reply `reject`. A run allows in-worktree edits and bash (`agent-runtime.md` §6). There is no chat mode and no second tool profile: every session is a run. Nothing waits for an operator. |
+| Permissions | Every request is answered inline from `decidePermission`: `allow` replies `once`, `ask` and `deny` reply `reject`. A run allows in-worktree edits and bash (`agent-runtime.md` §6). There is no chat mode: a session is an editor and uses the same permission policy as a run. Nothing waits for an operator. |
 | Schedule writes | There is no model-facing tool that creates or edits a schedule; a schedule belongs to a repository and is written through `/v1` by an operator device (D56). A run that could write one would turn prompt injection into a persistent primitive. |
 | Session targets | A chat is an editor with one target and gets one worktree plus one allowed path — `TODO.md`, `design/**`, `.codebox/schedule.yml`, or a notes file for a work. `repo` (no target) is read-only: no branch, no proposal. The daemon refuses any write outside the target and the gate repeats the check (`target_violation`), so a poisoned backlog cannot make its editor touch code. A session never starts a run (D55). |
 | Environment | Allowlist through `/etc/codebox/agent.env` (`0640 root:codebox-workspace`): the model provider keys only, and no line of it starts with `CB_`. `HOME` is `/var/lib/codebox-agent`; `PATH` and `LANG` are systemd's. No GitHub token, no session secret, no Vault token, no tunnel token. |

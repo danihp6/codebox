@@ -71,7 +71,7 @@ The only long-running process. Responsibilities:
 
 - **HTTP + SSE API** (`/v1`), static hosting of the built Angular app, pairing endpoints.
 - **Auth**: pairing codes, device registry, access/refresh tokens, revocation, scopes.
-- **Scheduler**: schedules declared by works, next-fire evaluation, due claiming, queue order,
+- **Scheduler**: schedules declared by repositories, next-fire evaluation, due claiming, queue order,
   misfire policy, window relaunch (D46).
 - **Run engine**: the state machine (`queued → … → succeeded`), gate execution, PR creation,
   auto-merge decision, cancellation, timeouts, cost guard, backlog tick in the run's branch.
@@ -121,7 +121,7 @@ Every function here is deterministic and unit-tested. It does no I/O and knows n
 
 SQLite schema, numbered migrations, repositories. One connection in the daemon; WAL; a
 single writer. Migrations are forward-only SQL files pinned by checksum: `0001_init.sql`
-creates the ten v1 tables below, and `0002_routines.sql` adds the two routine tables. Tables:
+creates the ten v1 tables below, and the works/schedules migration adds their tables. Tables:
 
 | Table | Purpose | Migration |
 | --- | --- | --- |
@@ -129,7 +129,7 @@ creates the ten v1 tables below, and `0002_routines.sql` adds the two routine ta
 | `jobs` | Retired by D44; kept only for the migration history. | `0001_init.sql` |
 | `runs` | One execution: trigger, state, branch, worktree, session, PR, gate, cost. | `0001_init.sql` |
 | `works` | One backlog item: repository, title, prompt, state, backlog ref, origin, attempts. | `0003_works.sql` |
-| `sessions` | A chat with one target (`backlog`/`design`/`work`), its branch and pending proposal. | `0003_works.sql` |
+| `sessions` | A chat with one target (`backlog`/`design`/`schedule`/`work:<id>`/`repo`), its branch and pending proposal. | `0003_works.sql` |
 | `session_messages` | One thread per session; user/assistant/tool messages. | `0003_works.sql` |
 | `schedules` | The repository's recurrence: mode, window, selection, caps, paused. | `0003_works.sql` |
 | `schedule_fires` | One row per fire; `(schedule_id, scheduled_for)` is the idempotency key. | `0003_works.sql` |
@@ -281,7 +281,7 @@ sequenceDiagram
   participant O as OpenCode
   participant G as GitHub
 
-  S->>R: claim a due work schedule (tx)
+  S->>R: claim the repository's due schedule (tx)
   R->>W: create worktree + branch cb/<run>-<slug>
   R->>O: create session in worktree, select provider account
   R->>O: prompt with unattended envelope
@@ -311,7 +311,7 @@ carries the evidence: prompt, agent/model, diff stat, gate output tail, run link
 
 OpenCode can ask before a tool runs. The daemon:
 
-1. normalises the request into an `approval` row (`pending`, TTL 10 minutes);
+1. answers the permission inline from the policy; no approval row is written (D45);
 2. emits `run.permission` with a short human summary and the exact tool;
 3. pushes to the app (unless the run's policy already allows the tool);
 4. on reply, calls OpenCode's permission reply endpoint and emits `approval.resolved`;
@@ -403,7 +403,7 @@ Rules enforced by review and, later, by a dependency-cruiser check:
 | Every provider account dry | The run fails with `provider_exhausted`, notifies, and keeps the branch; the next run resumes when an account resets (D54). |
 | Token expired/revoked | GitHub App tokens refresh; a revoked device gets `401` and must re-pair; the app clears its local token. |
 | Cost cap reached | The current run is cancelled, the queue pauses, the owner is notified; the next UTC day resets it. |
-| Duplicate scheduler tick | Claiming a run is a SQLite transaction with a unique `(job_id, scheduled_for)` constraint; a second tick updates nothing. |
+| Duplicate scheduler tick | Claiming a run is a SQLite transaction with a unique `(schedule_id, scheduled_for)` constraint; a second tick updates nothing. |
 
 ## 7. What we deliberately did not build
 

@@ -1,6 +1,6 @@
 # design
 
-Local visual references. The agent pipeline does not read this folder to build screens; it is
+The repository's design source and its prototype map. Tasks read the specs and tokens here; it is
 the operator's input for the app tasks (L2 in `TODO.md`).
 
 | File | What it is |
@@ -82,7 +82,7 @@ this task.
 
 ## 5. Tokens
 
-Tokens live in `apps/app/src/theme/` and are documented in `docs/app.md` §9: dark by default,
+The tokens are mirrored in `apps/app/src/theme/` (the DTCG source lands in `design/tokens.json`, Task-74) and documented in `docs/app.md` §9: dark by default,
 signal green, amber for waiting on a human, red only for failure, monospace for logs, ids and
 diffs. The Design System band repeats the values for reading, never as the source.
 

@@ -90,7 +90,7 @@ ops/
   image/             # Packer template and image build
   vm/                # systemd units, cloud-init, install/upgrade scripts
 docs/
-design/              # Figma exports and the frame-to-route map (L2)
+design/              # Design source: tokens, routes.json, screen specs, snapshots
 scripts/agent/       # deterministic recon, gate, verdict, brake, cycle (Batch 9)
 .agent_roles/        # orchestrator, architect, dev, qa
 ```

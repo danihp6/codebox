@@ -68,7 +68,7 @@ not a second one.
 - **Queue order:** `scheduled_for`, then `created_at`, then the schedule id, so two ticks of the
   same rows are identical. A cap on claims truncates that order after sorting; the schedule left
   out keeps its `next_fire_at` for the next tick. Manual runs sort with the current time.
-- **Preview:** `GET /v1/jobs/{id}/next` returns the next five fires after now in the schedule's
+- **Preview:** `GET /v1/schedules/{id}` returns `nextFires` after now in the schedule's
   own zone; an invalid cron or an unknown zone previews as an empty list.
 - **Concurrency:** at most `CB_MAX_CONCURRENCY_PER_REPO` (1) run per repository and
   `CB_MAX_CONCURRENCY` (3) runs globally; both must be at least 1. A run that cannot start
@@ -284,7 +284,7 @@ app renders both arrays verbatim; it never re-derives a guardrail from a string.
 
 ## 8. Merge
 
-- Method `CB_MERGE_METHOD` (`squash` default, or `merge`). Squash subject: the schedule title
+- Method `CB_MERGE_METHOD` (`squash` default, or `merge`). Squash subject: the work's title
   plus `(#<pr>)`; the body keeps the trailer.
 - The merge is attempted once. A 405/409 (head moved, check re-ran) is re-evaluated once
   against fresh facts; a second failure parks the run in `pr_open`.
@@ -312,7 +312,7 @@ state is worse than a late one.
 
 ## 10. Retries
 
-- A failed run is never resumed. "Retry" creates a new run with the same schedule and prompt, a
+- A failed run is never resumed. "Retry" creates a new run with the same work and prompt, a
   new id and a new branch, so history stays honest.
 - Automatic retry exists only for **transport** failures before the first tool call: one
   retry, same run id, `attempt: 2` recorded.
@@ -337,7 +337,7 @@ One push per **outcome**, not per event:
 
 | Event | Push |
 | --- | --- |
-| `run.finished` (succeeded) | "Merged: <schedule title>" with the PR link. |
+| `run.finished` (succeeded) | "Merged: <work title>" with the PR link. |
 | `run.failed` | "Run failed: <code>" with the run link. |
 | `run.pr` with blockers | "Waiting on you: <first blocker>". |
 | `approval.created` | The permission card, for a row written before the inline decision landed; a fresh install's inbox is empty by construction. |

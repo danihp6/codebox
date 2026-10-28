@@ -91,7 +91,7 @@ previous one is kept only to detect replay, and presenting it revokes the device
 `401`.
 
 Scopes: `read` (all GETs), `works` (messages, runs, interrupt, compact, reviewed), `runs`
-(cancel, revert, run now), `write` (repos, schedules, reminders, settings), `admin` (pairing
+(cancel, revert, run now), `write` (repos, schedules, settings), `admin` (pairing
 codes, revoke other devices, brake, cache wipe, provider accounts). The first device gets all of
 them; a narrower device is a deliberate choice, not a default.
 
@@ -202,9 +202,9 @@ disabled; or no active provider account: nothing runs).
 
 ### 5.3 Legacy jobs (retained, not the product path)
 
-A `jobs` row still exists and is still served by the routes below, but it is retained for
-compatibility only: the recurring object the product uses is the schedule (§5.10), and every
-run a schedule creates carries `jobId: null`.
+A `jobs` row is **retired** by D44 and kept only for the migration history; nothing creates or
+serves one as a product path. The recurring object is the repository schedule (§5.10), and every
+run it creates carries `jobId: null`.
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
@@ -297,15 +297,15 @@ with `{ jobId, change, ts }` — `change` is `created`, `updated`, `deleted`, `p
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/v1/runs?repoId=&jobId=&state=&cursor=` | `read` | Newest first. |
-| `POST` | `/v1/runs` | `runs` | `{ repoId, prompt, mode, agent?, model?, baseRef? }` → 202. |
+| `GET` | `/v1/runs?repoId=&workId=&state=&cursor=` | `read` | Newest first. |
+| `POST` | `/v1/works/{id}/runs` | `runs` | `{ prompt? }` → 202; a run always belongs to a work (§5.6). The bare `POST /v1/runs` is retired. |
 | `GET` | `/v1/runs/{id}` | `read` | Full run: state, gate, PR, guardrails, cost. |
 | `POST` | `/v1/runs/{id}/cancel` | `runs` | Kills the session, removes the worktree. |
 | `POST` | `/v1/runs/{id}/revert` | `runs` | Opens a revert PR for the merge; returns a new run. |
 | `GET` | `/v1/runs/{id}/events?after=&limit=` | `read` | Event replay (JSON, not SSE). |
 | `GET` | `/v1/runs/{id}/diff` | `read` | Stat and changed files; the patch lives on GitHub. |
 
-`repoId`, `jobId` and `state` narrow the list; `limit` is 1–200 and `cursor` is the §4 cursor.
+`repoId`, `workId` and `state` narrow the list; `limit` is 1–200 and `cursor` is the §4 cursor.
 Runs come newest first.
 
 `POST /v1/runs` starts a manual run and answers `202` with a `queued` run:
@@ -336,7 +336,7 @@ The run object is the contract every screen renders:
 {
   "id": "run_01J...",
   "repoId": "repo_01J...",
-  "jobId": "job_01J...",
+  "jobId": null,
   "state": "pr_open",
   "trigger": "schedule",
   "branch": "cb/run_01J-nightly-lockfile",
@@ -456,7 +456,7 @@ Every `/v1/approvals` request sweeps first: a row past its `expiresAt` becomes `
 | `POST` | `/v1/works/{id}/runs` | `runs` | `{ prompt? }` → `202` · `Run`; a new attempt in a new worktree. |
 | `POST` | `/v1/works/{id}/decision` | `works` | Opens the decision session bound to this work (D55). |
 | `POST` | `/v1/works/{id}/reviewed` | `works` | Marks the work reviewed, once. |
-| `POST` | `/v1/works/{id}/interrupt` | `works` | Stops the agent; the work returns to `idle`. |
+| `POST` | `/v1/works/{id}/interrupt` | `works` | Stops the run; it ends `cancelled` and the work is `failed`. |
 
 A work carries no `kind`, no nullable repository and **no conversation** (D44, D55):
 
@@ -723,7 +723,7 @@ field table, the selection rule, the three modes, the claim and the tick.
 the default is everything the device may read.
 
 ```
-GET /v1/events?types=run.output,run.gate,message.delta
+GET /v1/events?types=run.output,run.gate,session.delta
 Accept: text/event-stream
 Last-Event-ID: 1841
 ```
@@ -745,8 +745,9 @@ data: {"runId":"run_01J...","seq":17,"delta":"…","ts":"2026-10-24T18:04:02Z"}
 
 Event types are the D14/D16 list: `run.queued`, `run.started`, `run.output`, `run.tool`,
 `run.permission`, `run.gate`, `run.pr`, `run.merged`, `run.finished`, `run.failed`,
-`run.cancelled`, `work.created`, `work.updated`, `work.closed`, `message.delta`,
-`message.created`, `message.tool`, `schedule.fired`, `schedule.failed`, `provider.state`,
+`run.cancelled`, `work.created`, `work.updated`, `work.needs_decision`, `work.closed`,
+`session.created`, `session.delta`,
+`session.tool`, `session.proposal`, `session.closed`, `schedule.fired`, `schedule.skipped`, `provider.state`,
 `backlog.changed`, `design.changed`, `approval.created`, `approval.resolved`, `telemetry`.
 
 ## 7. Rate limits
@@ -763,7 +764,7 @@ Limits are enforced in memory per process; a restart resets them. `429` always c
 
 The two device budgets are taken in the auth middleware, after the token and the scope check and
 before the handler: the key is `device:<id>`, `POST /v1/runs`, `POST /v1/works/{id}/runs` and
-`POST /v1/reminders/{id}/run` count against the 10/minute budget **only**, and every other
+`POST /v1/repos/{id}/run-next` count against the 10/minute budget **only**, and every other
 authenticated `/v1` request counts against the 120/minute one. The pairing budget is per source
 address and separate. A refusal is the ordinary error envelope — `code: "rate_limited"`,
 `details.retryAfter`, `Retry-After` — so a client renders it like any other `ApiError`. Health,
@@ -808,7 +809,6 @@ characters.
 | Pagination and idempotency (§4) | `src/pagination.ts` | `paginationQuerySchema`, `pageSchema`, `IDEMPOTENT_ROUTES` | `parsePage` |
 | Resources (§5) | `src/resources.ts` | `repoSchema`, `workSchema`, `runSchema`, … | `parseRepo`, `parseWork`, `parseRun`, … |
 | Backlog (§5.6) | `src/backlog.ts` | `backlogSchema`, `backlogItemSchema` | `parseBacklog` |
-| Reminders (§5.8) | `src/reminders.ts` | `reminderSchema` | `parseReminder` |
 | Provider accounts (§5.9.1) | `src/providers.ts` | `providerSchema`, `providerAccountSchema`, `PROVIDER_STATES` | `parseProvider` |
 | Events (§6) | `src/events.ts` | `sseEventSchema`, `sseStreamEventSchema` | `parseSseEvent`, `parseSseStreamEvent` |
 | Configuration | `src/config.ts` | `configSchema`, `CONFIG_DEFAULTS` | `parseConfig` |
