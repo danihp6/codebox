@@ -22,6 +22,7 @@ daemon owns spawning, sleeping and probing, and passes them in.
 - `index.ts` — public entry point; re-exports every name once, grouped by module.
 - `types.ts` — `AgentRuntime` and the vocabulary it speaks: sessions, models, agents, raw events, options.
 - `errors.ts` — `AgentError`, its seven codes, `isRetryable` and the mapping to the contract error code.
+- `accounts.ts` — D54: `selectAccount`, `classifyProviderFailure`, `decideFailover` and the 900 s cooldown, with the clock injected.
 - `wire.ts` — the `unknown`-in decoders for health, session, models, agents and events, plus `encodeEvent`.
 - `client.ts` — `createAgentRuntime`: the loopback guard, the request mapping, the one-reconnect stream.
 - `normalise.ts` — `createNormaliser`: raw events into `run.*` / `chat.*` contract events, permissions and usage.
@@ -33,6 +34,7 @@ daemon owns spawning, sleeping and probing, and passes them in.
 ## `src/` tests
 
 - `index.test.ts` — the entry point exports, `AgentError`, `isRetryable` and `toContractErrorCode`.
+- `accounts.test.ts` — the classification, failover and selection tables, including the cooldown argument.
 - `wire.test.ts` — every decoder, every rejection and the encode/decode round trip.
 - `client.test.ts` — base URL guard, every method against `FakeOpenCode`, and the error mapping.
 - `stream.test.ts` — subscribe, reconnect once, `agent_unavailable`, `stream_lost` and unknown frames.

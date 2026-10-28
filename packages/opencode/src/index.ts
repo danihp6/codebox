@@ -52,6 +52,22 @@ export type { RunEnvelopeInput } from './prompt.js';
 export { CHAT_HANDOFF_TURNS, CHAT_HANDOFF_VERSION, buildChatHandoff } from './prompt.js';
 export type { ChatHandoffInput, ChatHandoffReason, ChatHandoffTurn } from './prompt.js';
 
+// Accounts: D54 selection, failure classification and the failover decision.
+export {
+  DEFAULT_ACCOUNT_COOLDOWN_SECONDS,
+  QUOTA_REASON_PATTERN,
+  classifyProviderFailure,
+  decideFailover,
+  selectAccount,
+} from './accounts.js';
+export type {
+  ClassifiedProviderFailure,
+  FailoverAction,
+  FailoverInput,
+  ProviderFailure,
+  ProviderFailureKind,
+} from './accounts.js';
+
 // Supervisor: start, probe and restart the server with injected process and clock.
 export { createSupervisor } from './supervisor.js';
 export type {

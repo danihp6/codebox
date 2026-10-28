@@ -103,11 +103,11 @@ hands its key to the session, and `CB_MODEL_PROVIDER_KEYS` stops being the mecha
 | --- | --- |
 | `providerId` | The adapter. Several accounts may share one. |
 | `label` | What the operator calls it ("go · dani", "go · spare"). |
-| `credentialId` | Row in the write-only store (D49), `kind: oauth` or `kind: token`. |
+| `credentialId` | One credential per account in the write-only store (D49), `kind: model_key`, `expose: daemon`; an OAuth account seals `{"v":1,"access","refresh","expiresAt"}`. |
 | `priority` | Lower wins. The order is edited in `Settings → Provider accounts`. |
 | `state` | `active`, `exhausted`, `invalid`, `disabled`. |
-| `resetAt` | The provider's reported reset instant, or `now + CB_ACCOUNT_COOLDOWN_SECONDS` (`900`) when it reports none. |
-| `usedToday` | Projected from usage rows; informational unless `CB_ACCOUNT_DAILY_USD` is set. |
+| `resetAt` | The provider's reported reset instant, or `now + 900 s` (`DEFAULT_ACCOUNT_COOLDOWN_SECONDS`); the cooldown is a constant, not a configuration key, until a contracts task parses one. |
+| `usedToday` | The account's own daily rollup; informational unless the account carries `budgetUsd`. |
 
 Selection takes the lowest `priority` whose state is `active`. On a provider error the daemon
 **classifies** rather than retries blindly: `401/403` sets `invalid`; `429` or a quota error
@@ -120,6 +120,13 @@ half-executed tool is never replayed. When no account is `active` the run fails 
 OAuth accounts store a refresh token and a short-lived access token. The daemon refreshes
 ahead of expiry; a failed refresh marks the account `invalid` and falls through to the next one.
 `opencode-go` is the first adapter to support both OAuth and a pasted token.
+
+Exhaustion surfaces in two places and nowhere else: a request that finds no usable account is a
+`503` with `code: provider_unavailable`, `details.reason: "provider_exhausted"` and
+`details.retryAt`, while a fire records the bare string `provider_exhausted`
+([`docs/jobs.md`](jobs.md) §16.3). The account's key reaches the agent through the
+`opencode serve` environment, because the pinned client creates a session with a `model`, not a
+credential; no response body carries more than the last four characters of that key.
 
 ## 6. Git provider
 
