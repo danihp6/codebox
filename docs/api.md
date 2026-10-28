@@ -510,7 +510,7 @@ A session is a chat with **one target**, and the target is its write boundary.
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/v1/sessions?repoId=&target=` | `read` | Sessions, newest activity first. |
-| `POST` | `/v1/sessions` | `works` | `{ repoId, target: "backlog" \| "design" \| "work" \| "repo", workId? }` → `201`. |
+| `POST` | `/v1/sessions` | `works` | `{ repoId, target: "backlog" \| "design" \| "schedule" \| "work" \| "repo", workId? }` → `201`. |
 | `GET` | `/v1/sessions/{id}` | `read` | Session, target, state, pending proposal. |
 | `GET` | `/v1/sessions/{id}/messages?cursor=` | `read` | Oldest first, paginated. |
 | `POST` | `/v1/sessions/{id}/messages` | `works` | `{ text }` → `202`; the reply arrives as events. |
@@ -519,11 +519,14 @@ A session is a chat with **one target**, and the target is its write boundary.
 | `POST` | `/v1/sessions/{id}/interrupt` | `works` | Stops the agent; the session returns to `idle`. |
 | `DELETE` | `/v1/sessions/{id}` | `works` | Archives it; the branch is kept per retention. |
 
-- `target = backlog` may only write `TODO.md`; `design` only `design/**`; `work` writes no code
-  and produces notes plus an optional backlog proposal. `repo` is **read-only**: the session
+- `target = backlog` may only write `TODO.md`; `design` only `design/**`; `schedule` only
+  `.codebox/schedule.yml`; `work` writes no code and produces notes plus an optional backlog
+  proposal. `repo` is **read-only**: the session
   gets the repository's worktree and context but no branch and no proposal, and `POST /merge` on
   it answers `409` with `details.reason = "read_only_session"`. A write outside the target is
   refused by the daemon **and** by the gate, whichever happens first.
+- A `work` session opened on a **merged** work is a *rework* session: its proposal is a new run
+  with the notes as the prompt (`POST /v1/works/{id}/runs`), never an edit of a merged branch.
 - At most one pending proposal per session: a second one while one is open is `409` with
   `details.reason = "proposal_pending"`.
 - `POST /merge` pushes a docs-only PR and merges it through the normal guardrails; a proposal
@@ -836,12 +839,11 @@ still renders, and the routes it calls are retained.
 | --- | --- |
 | `/pair` | `POST /v1/pair`, `POST /v1/auth/refresh` |
 | `/dashboard` | `GET /v1/health`, `GET /v1/telemetry`, `GET /v1/runs`, `GET /v1/schedules` |
-| `/repos` | `GET /v1/repos`, `POST /v1/repos` |
+| `/repos` | `GET /v1/repos`, `POST /v1/repos`, `GET /v1/integrations/github/repos` |
 | `/repos/:id` | `GET /v1/repos/{id}`, `GET /v1/repos/{id}/backlog`, `GET /v1/works?repoId=` |
 | `/repos/:id/schedule` | `GET /v1/schedules?repoId=`, `POST /v1/schedules`, `PATCH /v1/schedules/{id}`, `POST /v1/schedules/{id}/pause`, `POST /v1/schedules/{id}/resume`, `POST /v1/repos/{id}/run-next` |
 | `/works/:id` | `GET /v1/works/{id}`, `POST /v1/works/{id}/runs`, `POST /v1/works/{id}/decision`, `POST /v1/works/{id}/interrupt` |
 | `/sessions/:id` | `GET /v1/sessions/{id}`, `GET /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/merge`, `POST /v1/sessions/{id}/interrupt`, `POST /v1/sessions/{id}/compact` |
-| `/repos/pick` | `GET /v1/integrations/github/repos`, `POST /v1/repos` |
 | `/settings` | `GET /v1/settings`, `GET /v1/me` |
 | `/settings/providers` | `GET /v1/providers`, `POST /v1/providers/{id}/accounts`, `POST /v1/providers/{id}/oauth/start`, `POST /v1/providers/{id}/oauth/complete`, `PATCH /v1/provider-accounts/{id}`, `POST /v1/provider-accounts/{id}/test` |
 | `/settings/schedules` | Retired: the schedule belongs to a repository (D56). |

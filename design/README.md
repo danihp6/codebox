@@ -44,21 +44,20 @@ Not routes. A sheet is opened over the screen named in its row.
 
 | State | Opened from | Feature folder | dark | light |
 | --- | --- | --- | --- | --- |
-| New session (three targets, or none) | `/repos/:id`, chat button | `features/sessions` | 03a | L9 |
+| New session (four targets, or none) | `/repos/:id`, chat button | `features/sessions` | 03a | L9 |
 | Decision session | `/works/:id`, *Resolve doubt* | `features/sessions` | 04a | L4a |
 | Session sheet | sheet over `/sessions/:id` | `features/sessions` | 04b | L4b |
 | Schedule asked | over `/repos/:id/schedule` | `features/schedules` | 08b | L13 |
 | Proposed schedule card | over `/repos/:id/schedule` | `features/schedules` | 08c | L14 |
-| Connect repository | `/repos/pick` | `features/repos` | 09 | L15 |
-| Repo cloning | after `POST /v1/repos` | `features/repos` | 11 | L17 |
 | First run | `/dashboard`, no repositories | `features/dashboard` | 12 | L18 |
 | Offline | banner on any screen | `shared/offline-banner` | 13 | L19 |
 | Unpaired | `/pair`, after a 401 | `features/pairing` | 14 | L20 |
 | Connect a service | sheet over `/settings/credentials` | `features/credentials` | 18 | L23 |
 | Add credential | sheet over `/settings/credentials` | `features/credentials` | 19 | L24 |
 
-**Retired, kept for the record:** `10 · Retired · free chat menu` (dark, `L16` light). It
-documents the model D43/D47 replaced; delete it once the new session frames are exported.
+**Removed in the 2026-10-28 re-cut:** the connect-repository picker, the cloning screen and the
+free-chat `⋯` menu. Connecting a repository happens from the `+` on `/repos`, and its clone
+state lives in the row, so a whole screen for it was one tap too many.
 
 ## 3. Widths and themes
 

@@ -82,14 +82,13 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | --- | --- | --- |
 | `/pair` | Pairing | Enter the ten-character code and a device name, submit, see one inline reason when the code is used, expired or unknown, and land on the dashboard; the same screen after a 401. |
 | `/dashboard` | Dashboard | *Needs you*, running, unreviewed, today's spend, health, and **one block per repository**; the start card on a fresh box. |
-| `/repos` | Repos list | The repository list with a **search field and no filters**: name, clone/gate state, `pending · running · merged` counts, and **one amber dot** when something needs the operator (an unreviewed PR or a red run); add. |
-| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; **the chat button** opens a session with three targets (backlog, design, or none for a free read-only chat); tabs **Backlog · Works · Schedule · Design**. |
+| `/repos` | Repos list | The repository list with a **search field and no filters**: name, clone/gate state, `pending · running · merged` counts, and **one amber dot** when something needs the operator (an unreviewed PR or a red run); **add** connects one from the GitHub App installation, showing `connected` / `cloning` / `unavailable` per row. |
+| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; **the chat button** opens a session with four targets (backlog, design, schedule, rework) or none for a free read-only chat; tabs **Backlog · Works · Schedule · Design**. |
 | `/repos/:id/works` | Repo · works | Every work of the repository, flat, newest activity first, including ad-hoc ones and orphans. |
 | `/repos/:id/schedule` | Repo · schedule | The one `RepoSchedule`: mode, window, selection, caps, next fire, pause and *Run next* (D56). |
 | `/repos/:id/design` | Repo · design | Screen specs, tokens and snapshots from `design/`, with the state checklist and the preview. |
-| `/works/:id` | Work · run log | Runs, gate and PR cards, context header, cost, and **one action when blocked**: *Resolve doubt*. No composer (D55). |
+| `/works/:id` | Work · run log | Runs, gate and PR cards, context header, cost, and **one action when blocked**: *Resolve doubt*; a merged work offers **Rework**, which opens a session whose proposal is a new run. No composer (D55). |
 | `/sessions/:id` | Session | A chat with one target: thread, the target document, and the **pending proposal** with its diff and *Merge*. With no target it is read-only: no proposal panel, just the thread and the repo's context. |
-| `/repos/pick` | Connect repository | The picker over the GitHub App installation, with `connected` / `cloning` / `unavailable` per row. |
 | `/settings` | Settings | Repository viewers, credentials, provider accounts, devices, notifications, appearance, danger zone. |
 | `/settings/providers` | Provider accounts | Accounts per provider in failover order, each with state (`active` / `exhausted` / `invalid`), reset instant, spend today, and add by OAuth or token; never a value beyond the last four characters (D54). |
 | `/settings/credentials` | Credentials | Connected services (GitHub App by manifest, integrations) and open credentials, write-only; the add sheet has the three `expose` modes, `env` is limited to the model key and shows its warning, saving passes a confirm step, and a value is only ever shown as its last four characters. |

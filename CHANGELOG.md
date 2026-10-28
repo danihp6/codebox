@@ -14,6 +14,11 @@ first release exists.
   and the `+` on a backlog opens exactly that choice. The work screen loses its composer and
   becomes a run log; a run that needs a person ends in `needs_decision` instead of waiting.
   `docs/api.md` §5.6.1 owns the routes.
+- **Four targets and a rework.** The chat button on a backlog offers **backlog**, **design**,
+  **schedule** and **rework** — or none. `schedule` may only write `.codebox/schedule.yml`;
+  `rework` opens on a merged work and proposes a new run with the notes, never an edit of a
+  merged branch. The connect-repository picker, the cloning screen and the free-chat `⋯` menu
+  are removed: connecting happens from the `+` on `/repos`, and the clone state lives in the row.
 - **The schedule belongs to the repository (D56).** `RepoSchedule { repoId, mode, window,
   selection, caps }` fires the next eligible backlog item in file order; `once` is one fire and
   `POST /v1/repos/{id}/run-next` is the same selection without a schedule. Per-work schedules,
