@@ -224,8 +224,8 @@ elsewhere.
   `validation_failed` with `details.path` starting `telemetry.`. A failing read is a `500`
   `internal` whose `requestId` names the log line.
 
-Retention runs on the same timer table as `docs/security.md` §8 — runs 90 d, events 14 d, chat
-90 d, approvals 7 d, log directories 30 d, all from the `CB_RETENTION_*_DAYS` values — six
+Retention runs on the same timer table as `docs/security.md` §8 — runs 90 d, events 14 d, work
+messages 90 d, approvals 7 d, log directories 30 d, all from the `CB_RETENTION_*_DAYS` values — six
 hours apart, one minute after boot. It deletes whole rows and whole `logs/run-run_*/`
 directories, logs one `retention_done` line with the counts, and never touches a `usage` row:
 the ledger is the record of spend. Short windows go first, so a 14-day event is not kept until

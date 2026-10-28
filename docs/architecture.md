@@ -71,12 +71,17 @@ The only long-running process. Responsibilities:
 
 - **HTTP + SSE API** (`/v1`), static hosting of the built Angular app, pairing endpoints.
 - **Auth**: pairing codes, device registry, access/refresh tokens, revocation, scopes.
-- **Scheduler**: cron evaluation, due-job claiming, queue order, misfire policy.
+- **Scheduler**: schedules declared by works, next-fire evaluation, due claiming, queue order,
+  misfire policy, window relaunch (D46).
 - **Run engine**: the state machine (`queued → … → succeeded`), gate execution, PR creation,
-  auto-merge decision, cancellation, timeouts, cost guard.
+  auto-merge decision, cancellation, timeouts, cost guard, backlog tick in the run's branch.
 - **Workspace manager**: bare clone cache, fetch, worktree create/remove, disk cleanup.
+- **Backlog projector**: parses `TODO.md` from the bare clone at the default branch, caches by
+  commit SHA, joins items with works, and applies the surgical tick (D51).
+- **Design validator**: reads `design/` (tokens, routes, screen specs) and checks it in the gate.
 - **OpenCode supervisor**: starts `opencode serve`, health-checks it, restarts it, maps
-  sessions to chats/runs, normalises events, bridges permissions.
+  sessions to runs, normalises events, bridges permissions, and selects the provider account
+  for each session (D54).
 - **Git provider**: GitHub App authentication, branch push, PR open/merge, check status.
 - **Store and event log**: SQLite for state; append-only events for replay and audit.
 - **Notifications**: Web Push and Capacitor push, one payload per event type.
@@ -121,14 +126,16 @@ creates the ten v1 tables below, and `0002_routines.sql` adds the two routine ta
 | Table | Purpose | Migration |
 | --- | --- | --- |
 | `repos` | Registered repositories and per-repo policy. | `0001_init.sql` |
-| `jobs` | Reusable job definitions, cron, timezone, prompt, mode. | `0001_init.sql` |
+| `jobs` | Retired by D44; kept only for the migration history. | `0001_init.sql` |
 | `runs` | One execution: trigger, state, branch, worktree, session, PR, gate, cost. | `0001_init.sql` |
-| `routines` | Chat schedules: `prompt` or `reminder`, cron, IANA timezone, optional chat session. | `0002_routines.sql` |
-| `routine_fires` | One row per fire; `(routine_id, scheduled_for)` is the idempotency key. | `0002_routines.sql` |
+| `works` | The unit: repository, title, prompt, state, backlog ref, origin, design ref. | `0003_works.sql` |
+| `work_messages` | One thread per work; user/assistant/tool messages with the run segment. | `0003_works.sql` |
+| `schedules` | A work's recurrence: rule, window, caps, paused, next fire. | `0003_works.sql` |
+| `schedule_fires` | One row per fire; `(schedule_id, scheduled_for)` is the idempotency key. | `0003_works.sql` |
+| `providers` | Adapters: `opencode-go`, `anthropic`, … and their auth kind. | `0004_providers.sql` |
+| `provider_accounts` | Credential ref, priority, state, `resetAt`, per-account budget (D54). | `0004_providers.sql` |
 | `run_events` | Append-only timeline (`seq`, `type`, `payload`, `ts`). | `0001_init.sql` |
 | `approvals` | Permission requests and their replies. | `0001_init.sql` |
-| `chat_sessions` | Persistent chat sessions bound to a repo. | `0001_init.sql` |
-| `chat_messages` | User/assistant/tool messages with retention. | `0001_init.sql` |
 | `devices` | Paired devices, public keys, token hashes, scopes, revocation. | `0001_init.sql` |
 | `settings` | Non-secret key/value settings and schema version. | `0001_init.sql` |
 | `usage` | Token/cost ledger per run and per day. | `0001_init.sql` |
@@ -230,32 +237,38 @@ sequenceDiagram
 The pairing code is single-use and expires (D17). `cb pair` is only reachable over SSH or a
 loopback admin socket, never through the tunnel without an existing device token.
 
-### 3.2 Chat
+### 3.2 Work → run
 
 ```mermaid
 sequenceDiagram
   participant A as App
   participant D as cbd
+  participant B as Backlog projector
   participant O as opencode serve
   participant R as Repo worktree
 
-  A->>D: POST /v1/chat/sessions { repoId }
-  D->>D: workspace.ensureClone + create chat worktree (or repo HEAD for read-only)
-  D->>O: POST /api/session { location.directory }
-  D-->>A: session { id, repoId, status: idle }
-  A->>D: POST /v1/chat/sessions/{id}/messages { text }
+  A->>D: GET /v1/repos/{id}/backlog
+  D->>B: parse TODO.md at origin/main, cached by SHA
+  B-->>D: sections + items + joined works
+  D-->>A: backlog
+  A->>D: POST /v1/works { backlogRef, repoId }
+  D->>B: verify the item exists and is unchecked
+  D->>D: create the work, cut the worktree
+  D->>O: POST /api/session { location.directory, model account }
+  D-->>A: work { id, repoId, status: queued }
+  A->>D: POST /v1/works/{id}/messages { text }
   D->>O: POST /api/session/{id}/prompt { text }
   O->>R: tools (read, edit, bash) as permitted
   O-->>D: GET /api/event (SSE)
-  D-->>A: GET /v1/events (SSE: chat.delta, chat.tool, chat.permission, chat.idle)
+  D-->>A: GET /v1/events (SSE: message.delta, message.tool, run.*)
 ```
 
-A chat session persists (D36), so the agent keeps context across messages. Chat is not a run:
-it does not open a PR and it never merges. If the operator wants the chat's work shipped,
-they promote it (`POST /v1/chat/sessions/{id}/promote`): a run adopts the same worktree, cuts
-a `cb/` branch and continues through the normal gate and guardrails.
+A work has one thread and one repository (D44); every run starts a new OpenCode session, so
+the thread is a sequence of segments separated by run dividers. A run is the transaction: it
+cuts a `cb/` branch, runs the gate, opens a PR, and ticks the backlog item in that branch
+(D51). There is no promote step and no chat that never ships.
 
-### 3.3 Scheduled job → PR → auto-merge
+### 3.3 Scheduled work → PR → auto-merge
 
 ```mermaid
 sequenceDiagram
@@ -265,17 +278,17 @@ sequenceDiagram
   participant O as OpenCode
   participant G as GitHub
 
-  S->>R: claim due job (tx)
+  S->>R: claim a due work schedule (tx)
   R->>W: create worktree + branch cb/<run>-<slug>
-  R->>O: create session in worktree
+  R->>O: create session in worktree, select provider account
   R->>O: prompt with unattended envelope
   O-->>R: events (tools, permission requests, idle)
-  R->>R: gate command in worktree
+  R->>R: gate command in worktree (+ design checks)
   alt gate red
     R->>G: push branch, open draft PR, label cb:gate-failed
     R-->>S: notify owner, run.failed (no merge)
   else gate green
-    R->>G: commit, push, open PR
+    R->>G: commit (incl. backlog tick), push, open PR
     R->>G: read required checks
     R->>R: evaluate D12 guardrails
     alt every guardrail green
@@ -296,7 +309,7 @@ carries the evidence: prompt, agent/model, diff stat, gate output tail, run link
 OpenCode can ask before a tool runs. The daemon:
 
 1. normalises the request into an `approval` row (`pending`, TTL 10 minutes);
-2. emits `run.permission` / `chat.permission` with a short human summary and the exact tool;
+2. emits `run.permission` with a short human summary and the exact tool;
 3. pushes to the app (unless the run's policy already allows the tool);
 4. on reply, calls OpenCode's permission reply endpoint and emits `approval.resolved`;
 5. on expiry, replies `reject` and marks the approval `expired`.
@@ -375,14 +388,16 @@ Rules enforced by review and, later, by a dependency-cruiser check:
 
 | Failure | Behaviour |
 | --- | --- |
-| OpenCode server crashes | Supervisor restarts it; in-flight runs fail with `agent_unavailable` and keep their branch/worktree for inspection. Chat shows a reconnecting state. |
+| OpenCode server crashes | Supervisor restarts it; in-flight runs fail with `agent_unavailable` and keep their branch/worktree for inspection. The work shows a reconnecting state. |
 | Model stream drops | The run is marked `failed` only if nothing was produced; a retry is a new run, never a silent resume of a half task. |
 | GitHub is down | The run finishes locally, pushes when possible, and parks in `pr_open` with `github_unavailable`; retry is idempotent by branch name. |
 | Tunnel is down | The app cannot reach the daemon; runs continue. On reconnect, SSE replays from `Last-Event-ID` within retention. |
 | VM reboots | systemd starts the units; boot reconciliation marks orphaned `running` runs as `failed` with `instance_restarted`, removes stale locks, and resumes the queue. |
 | Disk full | The run engine refuses new runs, cleans old worktrees, raises `telemetry` with `disk_low`; the app shows a blocking banner. |
 | Clock/DST | Cron uses IANA zones and the misfire policy (D13); a missed fire is explicit, never a silent catch-up storm. |
-| Routine's chat session archived or absent | A `prompt` routine creates a new chat session for the fire; it never appends to an unrelated session. |
+| Backlog file unreadable | The repository screen falls back to its works and shows a banner; no item is invented and no work is created from a guessed ref. |
+| Backlog ref vanished or duplicated | Creation is refused (`backlog_ref_ambiguous`), and a work whose item disappeared is shown as orphaned and fails its tick visibly in the gate. |
+| Every provider account dry | The run fails with `provider_exhausted`, notifies, and keeps the branch; the next run resumes when an account resets (D54). |
 | Token expired/revoked | GitHub App tokens refresh; a revoked device gets `401` and must re-pair; the app clears its local token. |
 | Cost cap reached | The current run is cancelled, the queue pauses, the owner is notified; the next UTC day resets it. |
 | Duplicate scheduler tick | Claiming a run is a SQLite transaction with a unique `(job_id, scheduled_for)` constraint; a second tick updates nothing. |

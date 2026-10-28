@@ -1,18 +1,22 @@
 # Schedules, runs and auto-merge
 
-A schedule is a saved intention: a prompt, a time rule and an optional repository (D44). A run
-is one execution of it. This document owns the state machine, the gate, the PR and the
-guardrails that decide whether a green run may merge itself (D11, D12). The guardrail functions
-live in `packages/core` and are tested as pure functions; this file is their specification.
+A work is a saved intention: a title, a prompt and one repository (D44). A run is one execution
+of it. This document owns the state machine, the gate, the PR and the guardrails that decide
+whether a green run may merge itself (D11, D12). The guardrail functions live in
+`packages/core` and are tested as pure functions; this file is their specification.
 
-## 1. The one recurring object: Schedule
+## 1. A schedule is an attribute of a work
 
-A **schedule** carries a prompt, a time rule and an optional repository (D44), and it is the one
-recurring object the daemon owns end to end.
+A **work** carries a title, a prompt, its repository and, optionally, a **schedule**: a time
+rule (`once`, `every` or `window`) with caps (D44, D46). There is no other recurring object.
 
-- **With a repository** it produces a **run**: a worktree, the gate, a PR and the merge decision
-  of D11/D12 — everything §3–§14 specify.
-- **Without one**, or bound to a chat, it produces a **chat turn** on the fire path of §15.
+- A fire produces a **run of that work**: a worktree, the gate, a PR and the merge decision of
+  D11/D12 — everything §3–§14 specify.
+- Every run of the same work is a separate attempt: its own worktree, its own branch, its own
+  PR. Retrying is starting another run, never resuming a half task.
+- A work without a schedule is manual only.
+- A repo without a work is not a thing: there is no free chat and no schedule that produces a
+  conversation (§15 keeps only push-only reminders).
 
 `mode` is `once`, `every` or `window`, and the schedule id prefix is `sch_`. §16 owns the field
 table, the three modes, the claim and the routes — §16.1 is the window loop — and the API object
@@ -20,11 +24,9 @@ is [`docs/api.md`](api.md) §5.10.
 
 ## 1.1 Legacy jobs
 
-The `jobs` table, `POST /v1/jobs` and the job screens still exist on `main`: they are retained
-for compatibility and they are not the product's path. A row is still served, still fires and
-still owns its runs through `runs.jobId`; what D44 changed is which object the product creates,
-and `runs.jobId` is null for every run a schedule creates. Retiring the table needs the app
-screens, the routes and `runs.job_id` in one change, so it is a later batch.
+The `jobs` table, `POST /v1/jobs` and the job screens are retired by D44: no product path
+creates one. The rows are kept only so the migration history stays honest, and `runs.jobId` is
+null for every run a work creates. Removing the table is a migration, not a product decision.
 
 | Field | Type | Rules |
 | --- | --- | --- |
@@ -175,17 +177,20 @@ The gate is the repository's own check, run in the worktree before any PR exists
 
 ## 6. Commit, push and PR
 
-- One commit is created by the daemon if the agent did not commit: subject from the schedule
-  title (trimmed to 72 characters), body with the run trailer `Codebox-Run: <runId>` (D25),
-  written with the configured author through the injected git runner. Nothing is committed
-  twice: a clean index returns the current `HEAD` and leaves the history alone.
+- One commit is created by the daemon if the agent did not commit: subject from the work's title
+  (trimmed to 72 characters), body with the run trailer `Codebox-Run: <runId>` (D25), written
+  with the configured author through the injected git runner. Nothing is committed twice: a
+  clean index returns the current `HEAD` and leaves the history alone.
+- When the work came from the backlog, that commit also rewrites its item to `- [x]` and
+  appends the PR number — a surgical single-line edit, never a reformat (D51). The tick
+  therefore merges with the code or not at all.
 - The branch is pushed with the installation token; the author is `codebox[bot]`.
 - The PR body is generated, not written by the model:
 
 ```markdown
-## <schedule title>
+## <work title>
 
-Run: run_01J… · Schedule: sch_01J… · Agent: build · Model: …
+Run: run_01J… · Work: wrk_01J… · Backlog: Task-35 · Agent: build · Model: …
 
 ### What changed
 <the agent's final message, trimmed>
@@ -348,99 +353,32 @@ critical.
 - Never retries itself in a loop, and never reuses a worktree.
 - Never rewrites history: no force-push, no amend of a pushed commit.
 
-## 15. Routines (chat schedules)
+## 15. Reminders (D44)
 
-A routine is **not** a run. It is a cron entry with a `kind` (D38):
+A **reminder** is the only recurring object that is not a work: a title, a time rule and a
+push. It costs no tokens, opens no worktree and creates no run. "Remind me to take the pill."
 
-- `reminder` — push only, no model, no session, no worktree. "Remind me to take the pill."
-- `prompt` — the daemon appends an `origin: routine` message to its `chatSessionId`, or creates
-  a new chat session for the routine when it has none or the old one was archived, sends it to
-  OpenCode and streams the reply; the chat stays a chat (D36).
+There is no `prompt` reminder: with chat retired, a schedule whose whole output is a message
+would be a work without a repository, which D44 forbids. An operator who wants the agent to
+answer on a schedule gives a work a schedule; an operator who wants a ping creates a reminder.
 
-The **chat agent creates them** through the `routine.create` tool; unattended run agents never
-get the tool. The app can list, pause, run now and delete, but creation is conversational. The
-scheduler claims `(routine_id, scheduled_for)` transactionally and uses the same D13 misfire
-rule as a schedule. A `prompt` with no `chatSessionId` — or whose session was archived — gets a
-new chat session on that fire; it never appends to an unrelated one. A `reminder` costs nothing;
-a `prompt` is a chat turn, and the chat path does not yet write a usage row, so a routine prompt
-is not capped in this release — the cap and the ledger are a follow-up on the chat path.
-
-### 15.1 Storage and the claim (Task-34)
-
-`0002_routines.sql` adds two tables, forward only:
-
-| Table | Holds |
-| --- | --- |
-| `routines` | The schedule: `kind` (`prompt` or `reminder`), title, `cron`, IANA timezone, `enabled`, `notify`, the `prompt` kind's `repo_id`/`prompt`/`chat_session_id`, `next_fire_at` and `last_fired_at`. |
-| `routine_fires` | One row per fire: `scheduled_for`, `fired_at` and the `outcome` — `claimed`, then `sent`/`replied`/`failed`, or `skipped`. |
-
-`next_fire_at` is the fire **not yet claimed**; `NULL` means the routine is paused. A claim is
-one transaction: the routine must be enabled and its `next_fire_at` must still equal the
-`scheduled_for` being claimed, the fire row is inserted, and `next_fire_at` moves on with
-`last_fired_at = fired_at`. `UNIQUE (routine_id, scheduled_for)` makes that exactly one
-winner: a tick that loses the race — a second process, a double tick, a stale read — gets
-`null` instead of an error and never fires twice. A `skipped` fire writes its row and moves
-`next_fire_at`, but leaves `last_fired_at` alone, because the fire never happened.
-
-### 15.2 The fire (Task-35)
-
-`apps/daemon/src/routines` owns the tick. One `setInterval` runs every
-`max(15, CB_SCHEDULER_TICK_SECONDS)` seconds (unref'd, one pass at a time: a second tick that
-starts while one is running returns an empty report). A pass reads the due rows oldest first
-(`enabled = 1 AND next_fire_at <= now`, twenty at a time), computes the next fire with the same
-cron arithmetic as a schedule, and applies D13: inside `CB_MISFIRE_GRACE_SECONDS` the routine fires;
-outside it the fire is recorded as `skipped` and `next_fire_at` moves on; a schedule the engine
-cannot advance is skipped once as `no_next_fire`, so the routine stops instead of retrying.
-
-The claim is the D38 transaction (§15.1): exactly one tick, process or manual call wins a
-`(routine_id, scheduled_for)`, and a loser writes no second event.
-
-- `reminder` — one `routine.fired` event and one `sent` fire row. No model, no chat, no
-  worktree.
-- `prompt` — the fire row is `claimed`; the routine then appends one `origin: routine` message
-  to its chat (creating the session when it has none or the old one was archived, and storing
-  the new id on the routine), streams the turn through the normal chat pump, and stores
-  `routine.replied` with the chat and message ids, or `routine.failed` with a code and a fixed
-  sentence. At most one prompt fire runs at a time: a second due prompt stays due for the next
-  tick, inside the grace. The fire row ends `replied` with the message id, or `failed` with the
-  code.
-
-**One push per outcome** (§13): a reminder's `routine.fired` is its push; a prompt's
-`routine.fired` is not, so the prompt pushes once at `routine.replied`, with the answer's text
-as the body and a link to the chat. A routine with `notify = false` pushes neither, and quiet
-hours hold both.
-
-`POST /v1/routines/{id}/run` fires by hand: it appends `routine.fired` and runs the same work
-without a `routine_fires` row and without touching `next_fire_at`, `last_fired_at` or `enabled`,
-so a manual fire never consumes the schedule. A routine never creates a `runs` row, a gate or a
-PR.
-
-| Method | Path | Scope | Purpose |
-| --- | --- | --- | --- |
-| `GET` | `/v1/routines` | `read` | Page of routines, newest first; `kind` and `enabled` filters. |
-| `GET` | `/v1/routines/{id}` | `read` | One routine with its next and last fire. |
-| `PATCH` | `/v1/routines/{id}` | `write` | `title`, `cron`, `timezone`, `prompt`, `notify` or `enabled`; a cron or timezone change recomputes `nextFireAt`. |
-| `POST` | `/v1/routines/{id}/pause` | `write` | `enabled = false`, `nextFireAt = null`. |
-| `POST` | `/v1/routines/{id}/resume` | `write` | `enabled = true`, `nextFireAt` recomputed from now. |
-| `POST` | `/v1/routines/{id}/run` | `runs` | Fire once now, outside the schedule. |
-| `DELETE` | `/v1/routines/{id}` | `write` | Delete the routine and stop its schedule; `204`. |
-
-`POST /v1/routines` is not mounted in this release: creation is the `routine.create` chat
-tool's responsibility (Task-38), so `docs/api.md` §5.8's create row stays aspirational until
-that task.
+Storage is the same `schedules` row with `work_id = null` and `kind = reminder` (§16.2), and the
+claim is the same transactional one. A fire emits `schedule.fired` and one `sent` row, and that
+event is the push. There is no model-facing tool that creates a reminder: the operator device
+writes it through `/v1` (supersedes D38/D41), so prompt injection cannot make the box ping
+itself forever.
 
 ## 16. Schedules (D44, D46)
 
-A **schedule** is the one recurring object the daemon owns end to end. It is not a job and not
-a routine: it carries the trigger *and* the intention, it may belong to a repository or to a
-chat, and it decides its own next fire. The legacy table stays as §1.1 says; this section is the
-new path.
+A **schedule** is the recurring field of a work: it carries the trigger, it always has a
+repository through its work, and it decides its own next fire. It is not a job and not a
+routine. The legacy table stays as §1.1 says; this section is the new path.
 
 | Field | Rules |
 | --- | --- |
-| `repoId` | A registered repository, or `null` for a chat schedule. |
-| `chatSessionId` | The chat a `continue` fire appends to; `null` for a fresh chat. |
-| `title`, `prompt` | 1–120 and 1–8 000 characters. |
+| `workId` | The work this schedule fires, or `null` for a push-only reminder (§15). |
+| `repoId` | A registered repository, or `null` only for a reminder. |
+| `title`, `prompt` | 1–120 and 1–8 000 characters; for a work schedule they default to the work's. |
 | `mode` | `once`, `every` or `window` (below). |
 | `cron` | Five fields; non-null for `once` and `every`, `null` for `window`. |
 | `timezone` | IANA zone, used for both the cron and the window. |
@@ -448,12 +386,13 @@ new path.
 | `cooldownMinutes` | Minutes between a fire's **finish** and the next fire inside a window. |
 | `maxFires` | Optional cap on the fires of the whole schedule. |
 | `maxCostPerFireUsd` | Optional cap on the cost of one fire; a fire that reaches it stops the loop. |
-| `firePolicy` | `new_chat` opens a chat per fire; `continue` appends to `chatSessionId`. |
+| `firePolicy` | `run` starts a run; a reminder has none. |
 | `consecutiveFailures`, `firesCount`, `spendUsd` | Written by the fire rows, never by a client. |
 | `enabled`, `policy` | Paused schedules are not selected; `policy` is the run's auto-merge opt-in. |
 | `nextFireAt`, `lastFiredAt` | The fire **not yet claimed**, and when the last claim fired. |
 
-`repoId` and `chatSessionId` cannot both be null: the row belongs to something.
+`workId` is null only for a reminder, and a reminder has no `repoId` either: the row belongs to
+exactly one of the two.
 
 ### 16.1 The three modes
 
@@ -486,7 +425,7 @@ and leaves the selection; `failures` also stores `enabled = false`.
 | Table | Holds |
 | --- | --- |
 | `schedules` | The object above, with `CHECK`s that pin the mode to its cron or window family. |
-| `schedule_fires` | One row per fire: `scheduled_for`, `fired_at`, the `outcome` (`claimed`, `fired`, `skipped`, `failed`), the run or chat it opened, its cost and a code. |
+| `schedule_fires` | One row per fire: `scheduled_for`, `fired_at`, the `outcome` (`claimed`, `fired`, `skipped`, `failed`), the run it opened, its cost and a code. |
 
 A claim is one transaction: the schedule must be enabled and its `next_fire_at` must still
 equal the `scheduled_for` being claimed, the fire row is inserted, then `next_fire_at` moves on
@@ -494,9 +433,8 @@ with `last_fired_at` and `fires_count = fires_count + 1`. `UNIQUE (schedule_id, 
 makes that exactly one winner: a tick that loses the race — a second process, a double tick, a
 stale read — gets `null`, logs `schedule_fire_lost` once and never throws. A `skipped` fire
 writes its row and moves `next_fire_at` but leaves `last_fired_at` and `fires_count` alone,
-because the fire never happened. `finish` writes the outcome plus the run or chat id, adds the
-cost to `spend_usd`, and increments `consecutive_failures` on `failed` or resets it to zero on
-`fired`.
+because the fire never happened. `finish` writes the outcome plus the run id, adds the cost to
+`spend_usd`, and increments `consecutive_failures` on `failed` or resets it to zero on `fired`.
 
 ### 16.3 The tick
 
@@ -507,16 +445,14 @@ applies the D13 grace with `CB_MISFIRE_GRACE_SECONDS`: inside the grace the sche
 fires, outside it the fire is recorded as `skipped` and `next_fire_at` moves on. A missed fire
 is never caught up.
 
-A claimed fire is started, not awaited: `tick` returns while the work runs. A schedule with a
-repository starts a run through `queueRun` with `trigger: 'schedule'`, `jobId: null` and the
-claimed instant as `scheduled_for`, so it obeys the same `CB_MAX_CONCURRENCY` admission as a
-manual run. A schedule without one appends an `origin: routine` message to its chat and starts
-the chat turn; when it has no chat, or the old one was archived, it opens a session named after
-the schedule — which needs a repository, because `chat_sessions.repo_id` is still `NOT NULL`, so
-a repo-less schedule with no chat fails `chat_missing` instead of guessing one. When the fire
-settles, its row ends `fired` with the run or chat id, or `failed` with a code (`repo_missing`,
-`chat_unavailable`, `chat_missing`, `internal`), and the next fire is recomputed from that
-instant. A fire still working at the window's end is allowed to finish; nothing cancels it.
+A claimed fire is started, not awaited: `tick` returns while the work runs. A work schedule
+starts a run through `queueRun` with `trigger: 'schedule'`, `jobId: null` and the claimed
+instant as `scheduled_for`, so it obeys the same `CB_MAX_CONCURRENCY` admission as a manual
+run; the run's prompt is the work's, and its backlog item is ticked only if this run merges.
+A reminder writes no run: its fire row ends `fired` on the push. When the fire settles, its row
+ends `fired` with the run id, or `failed` with a code (`repo_missing`, `work_missing`,
+`provider_exhausted`, `internal`), and the next fire is recomputed from that instant. A fire
+still working at the window's end is allowed to finish; nothing cancels it.
 
 ### 16.4 The routes
 
@@ -534,4 +470,4 @@ instant. A fire still working at the window's end is allowed to finish; nothing 
 `schedule.<key>`, and a cron, a zone or a window that cannot produce a fire is a `422` with
 `details.path` and a machine `details.reason` (`field_count`, `range`, `step`, `syntax`,
 `no_fire`, `timezone`, `window`, `repo_missing`, `repo_required`). A schedule fire emits no
-event of its own: the run or the chat it opens emits the events of §3 and §15.
+event of its own beyond `schedule.fired`: the run it opens emits the events of §3.

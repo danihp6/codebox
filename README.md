@@ -3,10 +3,10 @@
 **Command your coding agents from anywhere.**
 
 Codebox is a private control plane for [OpenCode](https://opencode.ai) running on your
-own cloud VM. A hybrid Angular app — iOS, Android and web — is the ground station: you chat
-in a chat that starts free and takes a repository when you connect one, promote it into a run
-when the work is real, and let a green run merge itself. Schedules open their own chats, and
-nothing asks for permission mid-flight.
+own cloud VM. A hybrid Angular app — iOS, Android and web — is the ground station: you open
+a repository, its backlog is the list, and tapping an item starts a **work** bound to that
+repository. Every run gets its own worktree and branch, and a green run merges itself. A work
+can carry a schedule, and nothing asks for permission mid-flight.
 
 > **Status: bootstrapped (2026-10-26).** The npm workspace skeleton, the root gate and CI are in
 > place, and the tree holds the daemon, the app, the agent pipeline, one provider-neutral
@@ -23,9 +23,11 @@ from a desk. Codebox closes that gap:
 
 - **The app is the terminal.** A native-feeling hybrid app, not a web console in a browser
   tab, with push notifications when a run finishes or needs a decision.
-- **A chat that grows up.** It starts free, takes a repository when you connect one, and is
-  promoted into a run when the work is real; a schedule opens its own chat on time. Every run
-  gets its own git worktree and branch.
+- **The backlog is the product.** `TODO.md` in the repository is the list: in the file's order,
+  with each item's runtime state overlaid. An item is already a prompt — title, body and
+  acceptance criteria — and its tick rides in the work's PR. No second list to drift (D51).
+- **One unit: the work.** One repository, one thread, at most one schedule, as many runs as
+  attempts. The repository is the root; there is no free chat and no handoff (D44, D53).
 - **Autonomy with a leash.** Runs open a PR, run the repo's gate, and merge only when every
   guardrail passes. One switch parks the whole thing.
 - **One box, no inbound ports.** The daemon and OpenCode live on the VM; a tunnel exposes
@@ -36,7 +38,7 @@ from a desk. Codebox closes that gap:
 ```mermaid
 flowchart LR
   subgraph Phone["Hybrid app (Angular + Ionic + Capacitor)"]
-    UI[Dashboard · Chat · Settings]
+    UI[Dashboard · Repos · Settings]
   end
   subgraph Edge["Cloudflare edge"]
     T[Tunnel + Access]
@@ -99,7 +101,7 @@ flowchart LR
 | --- | --- |
 | Name | **Codebox**; binary `codebox`, short alias `cb`. |
 | Client | Hybrid Angular 22 + Ionic Angular 9 + Capacitor. |
-| Agent runtime | OpenCode V2 server on loopback; one session per chat/run. |
+| Agent runtime | OpenCode V2 server on loopback; one session per run. |
 | Runtime | Node 24 LTS + TypeScript, one `cbd` daemon under systemd. |
 | State | SQLite in WAL mode under `/var/lib/codebox`. |
 | Exposure | Cloudflare Tunnel only; no inbound ports except admin SSH. |

@@ -6,6 +6,30 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-28 (one unit: Work; D51-D54)
+
+- **The unit is the work.** D43 is retired and D44/D47/D48 rewritten: there is no free chat, no
+  scope conversion, no promote and no ten-turn handoff. A work belongs to one repository from
+  creation, has one thread, at most one schedule and as many runs as attempts (D44, D53). The
+  app moves to three tabs — Dashboard, Repos, Settings — and the repository becomes a
+  destination instead of a filter (D47).
+- **One owner per fact (D51).** The backlog file is the list and SQLite is the state: an item
+  maps to a work by its stable ref, the runtime state is projected from events, and the tick
+  lands in the run's branch so it merges with the code or not at all. `docs/product.md`,
+  `docs/app.md`, `docs/api.md`, `docs/jobs.md`, `docs/architecture.md`, `docs/agent-runtime.md`,
+  `docs/security.md`, `docs/roadmap.md`, `README.md` and `AGENTS.md` now say so.
+- **Design lives in the repository (D52).** `design/` holds tokens, routes, screen specs with
+  their states and snapshots; Figma, Penpot and OpenDesign are importers that open a PR. The
+  gate validates tokens, routes and declared states, never pixels.
+- **Provider accounts are plural (D54).** `opencode-go` is the first adapter with OAuth or
+  token; accounts have a priority and a state, a classified provider error moves the turn to the
+  next one, and a run with no active account fails as `provider_exhausted` instead of
+  degrading. `docs/providers.md` §5.1 owns the model, `docs/api.md` §5.9.1 the routes.
+- **Reminders are the only non-work recurrence.** The `prompt` routine is retired with chat;
+  a reminder writes a push and nothing else, and no model-facing tool can create a schedule.
+- `TODO.md` gains Batch 19 (Task-70…Task-76) to make the code and the app match, and L2 is
+  re-cut against the new frames.
+
 ### Added — 2026-10-27 (Task-68, documentation catch-up for the runtime)
 
 - `docs/api.md` gains §5.10, the only definition of the schedule object: its 23 fields, the

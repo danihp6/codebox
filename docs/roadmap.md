@@ -38,7 +38,7 @@ output is always attached.
 
 ## Phase 3 — The app is the control surface (Batch 5)
 
-**Outcome:** pairing, dashboard, repos, chat, jobs, runs, approvals and settings work on a
+**Outcome:** pairing, dashboard, repos, backlog, works, runs, approvals and settings work on a
 phone and in a desktop browser as a PWA.
 
 **Exit criterion:** the seven success actions in `product.md` §8 are possible from the
@@ -81,19 +81,17 @@ and cost targets met or explained, and the owner prefers it to SSH for the same 
 **Risks:** the operator stops using it; the app becomes a chore. Mitigation: narrow scope,
 push-first flows, measure time-to-action.
 
-## Phase 7 — Routines (Batch 9)
+## Phase 7 — Reminders (Batch 9, reduced)
 
-**Outcome:** the operator says "remind me to take the pill at 10" or "summarise the repo every
-morning" in chat, the agent creates the routine, and it fires with a push. Reminders spend no
-tokens; a prompt routine is a chat turn, and the chat path writes no usage row, so it is **not
-capped** in this release (`docs/jobs.md` §15).
+**Outcome:** the operator creates a reminder ("take the pill at 10") and it fires with a push.
+Reminders spend no tokens and open no run. The `prompt` routine is retired with chat (D44): a
+recurring agent answer is a work with a schedule, not a notification (D44, `docs/jobs.md` §15).
 
-**Exit criterion:** a reminder and a prompt routine created from chat fire on time in
-`Europe/Madrid`, the reply lands in its session (created on the first fire when it had none),
-and the push deep-links to it.
+**Exit criterion:** a reminder created from the app fires on time in `Europe/Madrid` and its
+push deep-links to the list.
 
-**Risks:** noisy schedules and cost creep. Mitigation: push preferences, quiet hours, the cap
-once the chat path writes a usage row, and no routine tool in unattended runs (D38).
+**Risks:** noisy schedules. Mitigation: push preferences, quiet hours, and the fact that a
+reminder cannot call a model.
 
 ## Sequencing at a glance
 
@@ -115,7 +113,7 @@ gantt
 ```
 
 The Gantt is ordinal, not a calendar. The critical path is
-`contracts → store/core → scheduler → run engine → app shell → chat → e2e → beta`.
+`contracts → store/core → scheduler → run engine → app shell → backlog/works → e2e → beta`.
 
 ## What would make us change the plan
 
@@ -124,6 +122,6 @@ The Gantt is ordinal, not a calendar. The critical path is
 | OCI A1 never yields a slot | Run the same image on the AWS spot stack (`infra/aws`, `docs/aws.md`); the image is provider-neutral, so the host is a stack plus the same first boot, not a rebuild. |
 | OpenCode V2 API breaks repeatedly | Pin the client and the server version together; the wrapper isolates the blast radius. |
 | Auto-merge produces a bad merge | Turn `CB_AUTOMERGE=off` globally, revert, add the missing guardrail test, then re-enable per repo. |
-| The app is slower than SSH for daily work | Cut screens, keep chat + runs + push; the daemon API is the product, the app is a view. |
+| The app is slower than SSH for daily work | Cut screens, keep backlog + works + push; the daemon API is the product, the app is a view. |
 | SQLite becomes a bottleneck | It will not at two concurrent runs; if it does, the store port allows Postgres without touching core. |
 | The owner wants a second operator | That is a new decision (D3), not a feature flag: identity, scopes and audit would need a redesign. |

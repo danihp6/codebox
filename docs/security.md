@@ -148,8 +148,8 @@ provider keys and no line of it starts with `CB_`.
 | Control | Implementation |
 | --- | --- |
 | Working directory | One worktree per session; the process cwd is that directory. |
-| Permissions | Every request is answered inline from `decidePermission`: `allow` replies `once`, `ask` and `deny` reply `reject`. Runs allow in-worktree edits and bash; chat mode is `ask` for both, so a chat reads and drafts and the work is a run (`agent-runtime.md` §6). Nothing waits for an operator. |
-| Routine tool | A daemon-owned MCP server on `127.0.0.1:<ephemeral>`, mounted only in a chat session create body; one bearer token per chat, bound to that chat and repository, never logged; `routine.*` is denied in run mode (D41). |
+| Permissions | Every request is answered inline from `decidePermission`: `allow` replies `once`, `ask` and `deny` reply `reject`. A run allows in-worktree edits and bash (`agent-runtime.md` §6). There is no chat mode and no second tool profile: every session is a run. Nothing waits for an operator. |
+| Schedule writes | There is no model-facing tool that creates or edits a schedule; a schedule is a field of a work written through `/v1` by an operator device (D44, supersedes D41). A run that could write one would turn prompt injection into a persistent primitive. |
 | Environment | Allowlist through `/etc/codebox/agent.env` (`0640 root:codebox-workspace`): the model provider keys only, and no line of it starts with `CB_`. `HOME` is `/var/lib/codebox-agent`; `PATH` and `LANG` are systemd's. No GitHub token, no session secret, no Vault token, no tunnel token. |
 | Network | No inbound listener and no listener of its own. Outbound is **allowed and not filtered**: no egress filter ships in v1, so the permission policy and the sandbox below are the boundary. |
 | Secrets in the repo | The gate runs a secret scan over the run's own diff; a hit fails the run with `gate_failed` before the branch is pushed and no PR exists. |
@@ -209,7 +209,7 @@ own rule keep `main` for merges.
 
 | Data | At rest | Retention |
 | --- | --- | --- |
-| SQLite | On the host's encrypted boot volume (`cb-boot` on OCI, the 100 GB `gp3` volume on AWS); file mode `0600` | Runs 90 d, events 14 d, chat 90 d (D28) |
+| SQLite | On the host's encrypted boot volume (`cb-boot` on OCI, the 100 GB `gp3` volume on AWS); file mode `0600` | Runs 90 d, events 14 d, work messages 90 d (D28) |
 | Worktrees | Disk; removed after 168 h | Branch stays on GitHub |
 | Backups | age-encrypted in the host's object store (`cb-backups` on OCI, `s3://cb-codebox-backups` on AWS), 30 daily copies | 30 d |
 | Logs | journald + `logs/`, redacted | 30 d |

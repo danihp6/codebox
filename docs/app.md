@@ -57,10 +57,11 @@ apps/app/src/
     features/
       dashboard/
       repos/
-      chat/
-      jobs/
+      backlog/
+      works/
       runs-list/
       run-detail/
+      providers/
       approvals/
       settings/
     shared/                   # cards, chips, empty states, log viewer, diff stat
@@ -80,28 +81,27 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | Route | Screen | What it must do |
 | --- | --- | --- |
 | `/pair` | Pairing | Enter the ten-character code and a device name, submit, see one inline reason when the code is used, expired or unknown, and land on the dashboard; the same screen after a 401. |
-| `/dashboard` | Dashboard | What needs you, what is working, what finished unreviewed, today's spend, health; the start card on a fresh box. |
-| `/chat` | Chat list | Flat, ordered by last message; filters `All`/`Repo`/`Schedule`/`Unread`/`Archived`; one scope chip per row; unread dot **and** unreviewed edge; cost and context as micro-text. |
-| `/chat/new` | New chat | Empty state offering a repository or a schedule; the composer is never blocked. |
-| `/chat/:id` | Chat | Streaming text, tool cards, gate and PR cards, the `⋯` menu, the context sheet, promote. |
+| `/dashboard` | Dashboard | *Needs you*, running, unreviewed, today's spend, health, and **one block per repository**; the start card on a fresh box. |
+| `/repos` | Repos | The repository list: clone state, gate state, open works, last activity, add. |
+| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip, cost; ad-hoc works above; `Run` on an idle item; a second tab with every work. |
+| `/works/:id` | Work | One thread with a divider per run, composer, tool cards, gate and PR cards, context header, schedule row and the design snapshot sheet. |
 | `/repos/pick` | Connect repository | The picker over the GitHub App installation, with `connected` / `cloning` / `unavailable` per row. |
-| `/chat?filter=repo` | Repo filter | Registered repositories, clone state, policy badges, add. |
-| `/chat?filter=schedule` | Schedule filter | The running window and the fires grouped by schedule. |
-| `/settings` | Settings | Credentials, schedules, devices, notifications, appearance, danger zone. |
+| `/settings` | Settings | Repository viewers, credentials, provider accounts, schedules, devices, notifications, appearance, danger zone. |
+| `/settings/providers` | Provider accounts | Accounts per provider in failover order, each with state (`active` / `exhausted` / `invalid`), reset instant, spend today, and add by OAuth or token; never a value beyond the last four characters (D54). |
 | `/settings/credentials` | Credentials | Connected services (GitHub App by manifest, integrations) and open credentials, write-only; the add sheet has the three `expose` modes, `env` is limited to the model key and shows its warning, saving passes a confirm step, and a value is only ever shown as its last four characters. |
+| `/settings/schedules` | Schedules | Every work's schedule: next fire, window, pause/resume, run now. |
 | `/settings/devices` | Devices | Scopes per device, revoke, last seen; this device cannot revoke itself. |
 | `/settings/notifications` | Notifications | Five toggleable events plus the non-toggleable credential alert, and quiet hours. |
 | `/about` | About | Version, commit, server health, licences. |
 
-Bottom tabs: **Dashboard · Chat · Settings**. Repositories and schedules are **filters inside
-Chat**, not destinations; Settings owns the row that reaches each filter. Detail screens push
-onto the stack; deep links (`codebox://chat/<id>`, `https://cb.example.com/chat/<id>`) open the
-same route.
+Bottom tabs: **Dashboard · Repos · Settings** (D47). A repository is a destination, not a
+filter; Settings owns the cross-repository lists. Detail screens push onto the stack; deep links
+(`codebox://works/<id>`, `https://cb.example.com/works/<id>`) open the same route.
 
-**The chat's scope is the spine.** A chat is `free`, `repo` or `schedule`, and it changes
-scope in one direction only: connecting a repository costs a new agent session with a
-ten-turn handoff, and promoting to a run is offered only once a worktree exists. There is no
-approval prompt anywhere in this flow (D45).
+**The repository is the spine.** A work exists only inside one repository, chosen at creation,
+and never changes (D44). There is no free chat, no scope chip and no promote: the backlog item
+*is* the prompt, and the work's runs are the attempts. There is no approval prompt anywhere in
+this flow (D45).
 
 ## 5. State and data
 
@@ -111,13 +111,13 @@ approval prompt anywhere in this flow (D45).
   components read signals and call actions. No store reaches into another feature's store.
 - **Optimistic only for toggles** (pause/resume, notification preference) with a rollback on
   error. A run, a message or a job creation is never optimistic: it needs a server id.
-- **Routines refetch on activation.** The routines tab loads on every activation and on every
-  `routine.fired`, `routine.replied` or `routine.failed` frame; pause and resume are optimistic
-  with rollback, like a job toggle. Creation is not optimistic: the card corroborates the new
-  routine from `GET /v1/routines`.
+- **Schedules refetch on activation.** The schedules list loads on every activation and on
+  every `schedule.fired` or `schedule.failed` frame; pause and resume are optimistic with
+  rollback. Creation is not optimistic: the row corroborates the new schedule from
+  `GET /v1/schedules`. A schedule is a field of a work, so the work screen reads the same row.
 - **Caching:** the last successful payload per route in memory; a persisted snapshot of the
-  dashboard and the last 50 runs for offline display. No chat history is persisted on the
-  device beyond the current session (D36) — it is re-fetched.
+  dashboard and the last 50 runs for offline display. No work thread is persisted on the device
+  beyond the current session (D28) — it is re-fetched.
 - **Errors** are typed from the API envelope; a screen renders `code`, a human message and a
   retry. A 401 clears the session and routes to `/pair`.
 
@@ -142,7 +142,7 @@ the UI, not the token, which is already in the OS store.
 
 - subscribes to `/v1/events` with the last processed id, not the last received;
 - reconnects with exponential backoff (1 s → 30 s, jitter) and resumes from `Last-Event-ID`;
-- on `gap`, refetches the open run or chat instead of stitching;
+- on `gap`, refetches the open run or work instead of stitching;
 - pauses on `document.hidden` after 30 s and reconnects on foreground;
 - fans out by event type to feature stores; a screen subscribes to a filtered selector.
 
@@ -150,20 +150,26 @@ Rendering rules: deltas append to the current message, tool events insert a card
 by tool call id), and a reconnect never duplicates a message because the store dedupes by
 `(messageId, seq)`.
 
-## 8. Chat
+## 8. Work
 
-The chat screen is the product's front door:
+The work screen is the product's front door:
 
-- a message list with markdown and syntax-highlighted code (lazy-loaded highlighter);
+- a header with the repository, the state, the context percentage and the cost of the day;
+- a message list with markdown and syntax-highlighted code (lazy-loaded highlighter), and a
+  **divider per run** carrying its branch and outcome, so a re-attempt never looks like the
+  same conversation;
 - tool cards that show the tool, a one-line summary and an expandable redacted payload;
 - permission cards with **Allow once / Allow for session / Deny**, disabled after reply;
-- a composer that stays usable while the agent works, with a stop button;
-- "Promote to run" opens a confirmation with the repo, base branch and the prompt that will
-  be used, then navigates to the new run;
-- a routine created in chat renders a confirmation card with its kind (`reminder` or `prompt`),
-  the cron's local time in the routine's own timezone and the next fire, corroborated from
-  `GET /v1/routines`; an answer a routine produced carries a `routine` badge and a link to the
-  list, taken from the `routine.replied` frame, so it is not redrawn after a full reload.
+- a composer that stays usable while the agent works, with a stop button; `Compact` when the
+  context reaches its warning band (D48);
+- gate and PR cards rendered from run state, never from prose; a merged run also shows the
+  backlog item it ticked;
+- a schedule row (`once` / `every` / `window`, next fire, pause) that opens the same editor as
+  `Settings → Schedules`;
+- a design sheet with the screen snapshot and the states the spec declares, when the repository
+  has `design/` (D52);
+- a `provider.state` line when the agent moved to another account mid-work (D54), never a
+  silent model change.
 
 Streaming text is appended with a single `requestAnimationFrame` flush per frame; the list
 sticks to the bottom only when the user is already at the bottom.
@@ -177,11 +183,11 @@ sticks to the bottom only when the user is already at the bottom.
   signal colour stays for fills and dots.
 - **Monospace** (system mono stack) for logs, diffs, branch names and ids; the UI face is the
   platform default.
-- **Density**: a chat row is three lines — title, last message, and a flow of `scope · cost ·
-  status` — and never three fixed positions, so the same row survives at 320 px.
-- **Two signals, never one**: a green dot means an unread message; an amber edge means work was
-  delivered and not reviewed. Collapsing them into a single dot is how a list stops being
-  honest.
+- **Density**: a backlog row is three lines — `Task-NN · title`, the section, and a flow of
+  `state · runs · cost` — never three fixed positions, so the same row survives at 320 px.
+- **Two facts, never one**: the checkbox is the plan (what should exist) and the chip is the
+  state (what actually happened). Collapsing them is how a backlog starts lying about its own
+  progress (D51).
 - **320 px** is the reference width: no horizontal scroll anywhere; tables become cards.
 - **Motion** is functional (route transitions, a pulsing dot while a run is live) and
   respects `prefers-reduced-motion`.
@@ -197,7 +203,7 @@ sticks to the bottom only when the user is already at the bottom.
 
 | Situation | Behaviour |
 | --- | --- |
-| No network | Cached dashboard and chat list; a banner says the data is stale. |
+| No network | Cached dashboard, repository list and the last backlog read; a banner says the data is stale. |
 | Tunnel down | Same; the SSE service retries with backoff. |
 | Daemon restarting | Health card shows `down`; actions queue nothing and explain why. |
 | 401 after refresh fails | Log out, clear the secure store, route to pairing with the reason. |
@@ -211,10 +217,10 @@ is worse than a disabled button.
 - **Web/PWA:** `PushManager` subscription with the VAPID public key, stored through
   `POST /v1/push/subscriptions`.
 - **Native:** Capacitor Push (FCM/APNs) with the same event-to-payload mapping (D30).
-- Payloads carry `{ type, runId?, chatId?, routineId?, title, body }`; a tap deep-links to the
+- Payloads carry `{ type, runId?, workId?, scheduleId?, title, body }`; a tap deep-links to the
   resource.
 - Preferences per event type (`run.finished`, `run.failed`, `approval.created`, `run.merged`,
-  `routine`), plus quiet hours evaluated on the daemon, not the device.
+  `provider.state`, `schedule`), plus quiet hours evaluated on the daemon, not the device.
 
 ## 12. Testing
 
@@ -248,6 +254,6 @@ npx cap open ios | android         # only when a native change needs Xcode/Gradl
 
 - No code editor, no terminal, no file browser (product.md §7).
 - No account, no organisation, no sharing — one operator (D3).
-- No background sync of chat history or runs; the daemon is the record.
+- No background sync of work threads or runs; the daemon is the record.
 - No custom design system package in v1: tokens and shared components live in the app until a
   second consumer exists.

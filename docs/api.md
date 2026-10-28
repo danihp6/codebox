@@ -9,8 +9,8 @@ schemas does not exist.
 
 - **JSON only**, `Content-Type: application/json`, UTF-8. Timestamps are RFC 3339 in UTC
   (`2026-10-24T18:03:11Z`); durations are seconds unless the name says otherwise.
-- **camelCase** fields; `id` prefixes are stable: `repo_`, `job_`, `run_`, `apv_`, `chat_`,
-  `msg_`, `dev_`, `sub_`, `rtn_`, `sch_`.
+- **camelCase** fields; `id` prefixes are stable: `repo_`, `wrk_`, `run_`, `apv_`, `msg_`,
+  `dev_`, `sub_`, `rmd_`, `sch_`, `prv_`, `acc_`.
 - **Authentication** is a bearer access token on every route except `/v1/health`,
   `/v1/version` and `POST /v1/pair`.
 - **No secret is ever returned.** Provider status is `configured` plus a last-four
@@ -45,7 +45,7 @@ any source that presents a bearer carrying `admin`; anything else is `403 forbid
 {
   "code": "7K3M9QXB2F",
   "expiresAt": "2026-10-25T00:05:00Z",
-  "scopes": ["read", "chat", "runs", "write", "admin"],
+  "scopes": ["read", "works", "runs", "write", "admin"],
   "name": "Dani iPhone"
 }
 ```
@@ -74,14 +74,14 @@ and it never creates a device. A successful exchange returns:
     "id": "dev_01JABCDEFGHJKMNPQRSV",
     "name": "Dani iPhone",
     "platform": "ios",
-    "scopes": ["read", "chat", "runs", "write", "admin"],
+    "scopes": ["read", "works", "runs", "write", "admin"],
     "createdAt": "2026-10-24T18:03:11Z",
     "lastSeenAt": null
   },
   "accessToken": "…",
   "refreshToken": "…",
   "expiresIn": 900,
-  "scopes": ["read", "chat", "runs", "write", "admin"]
+  "scopes": ["read", "works", "runs", "write", "admin"]
 }
 ```
 
@@ -90,10 +90,10 @@ and it never creates a device. A successful exchange returns:
 previous one is kept only to detect replay, and presenting it revokes the device and answers
 `401`.
 
-Scopes: `read` (all GETs), `chat` (messages, interrupt), `runs` (create, cancel, revert, run
-now), `write` (repos, schedules, settings), `admin` (pairing codes, revoke other
-devices, brake, cache wipe). The first device gets all of them; a narrower device is a
-deliberate choice, not a default.
+Scopes: `read` (all GETs), `works` (messages, runs, interrupt, compact, reviewed), `runs`
+(cancel, revert, run now), `write` (repos, schedules, reminders, settings), `admin` (pairing
+codes, revoke other devices, brake, cache wipe, provider accounts). The first device gets all of
+them; a narrower device is a deliberate choice, not a default.
 
 Access tokens live 900 s (`CB_ACCESS_TOKEN_TTL_SECONDS`); refresh tokens 30 days and rotate
 on every use. A used refresh token is dead — replay is treated as theft and revokes the
@@ -151,9 +151,9 @@ List routes take `?limit=50&cursor=<opaque>` (`limit` 1–200). The response is:
 `nextCursor` is `null` on the last page. Cursors are stable under inserts: they encode
 `(createdAt, id)`, not an offset.
 
-`Idempotency-Key` is required on `POST /v1/runs`, `POST /v1/jobs/{id}/run` and
-`POST /v1/chat/sessions/{id}/promote`. A replay returns the original `202` and the same
-resource; the same key with a different body is `409 idempotency_mismatch`.
+`Idempotency-Key` is required on `POST /v1/runs` and `POST /v1/works/{id}/runs`. A replay
+returns the original `202` and the same resource; the same key with a different body is
+`409 idempotency_mismatch`.
 
 `limit` defaults to `50` and is an integer from `1` to `200`; the cursor is opaque, may be
 absent and is returned as `null` on the last page. `Idempotency-Key` is 1–255 characters and is
@@ -173,7 +173,8 @@ retained for 24 h.
 | `POST` | `/v1/admin/cache/wipe` | `admin` | Removes finished worktrees; keeps the bare clones. |
 
 `health.status` is `ok`, `degraded` or `down`. `degraded` means one dependency is missing
-(for example no GitHub credential: chat works, git writes are disabled).
+(for example no GitHub credential: the backlog and works are readable, git writes are
+disabled; or no active provider account: nothing runs).
 
 ### 5.2 Repositories
 
@@ -401,19 +402,19 @@ is `409 conflict` with `details.reason = "diff_unavailable"`:
 }
 ```
 
-`POST /v1/chat/sessions/{id}/promote` (§5.6) is served by this subsystem because only it may
-start a run: it takes the session's last `assistant` message as the prompt (`422` with
-`details.path = "chat.messages"` when there is none), starts a `promote` run on the
-repository's default branch, answers `202`, requires `Idempotency-Key`, and refuses an
-archived session with `409 conflict` and `details.reason = "chat_archived"`.
+`POST /v1/works/{id}/runs` (§5.6) is served by this subsystem because only it may start a run:
+it takes the optional body prompt, or the work's own prompt when absent, and starts a run on
+the repository's default branch with `trigger: "manual"`. It answers `202`, requires
+`Idempotency-Key`, and refuses an archived work with `409 conflict` and
+`details.reason = "work_archived"`.
 
 ### 5.5 Legacy approvals (retained, no writer)
 
-No daemon code creates an approval row, so the inbox is empty on a fresh install and the chat
+No daemon code creates an approval row, so the inbox is empty on a fresh install and the run
 path answers every permission inline (D45). The reply route still resolves a row that exists
 and appends `approval.resolved`.
 
-Nothing in the daemon creates an approval row: a fresh install's inbox is empty, and the chat path answers every permission inline (D45).
+Nothing in the daemon creates an approval row: a fresh install's inbox is empty, and the run path answers every permission inline (D45).
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
@@ -442,73 +443,66 @@ An approval not answered within `CB_APPROVAL_TTL_SECONDS` is rejected and marked
 Every `/v1/approvals` request sweeps first: a row past its `expiresAt` becomes `expired` with
 `resolvedAt` set and one `approval.resolved` whose `decision` is `"expired"`.
 
-### 5.6 Chat
+### 5.6 Works and backlog
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/v1/chat/sessions?repoId=` | `read` | Sessions, newest activity first. |
-| `POST` | `/v1/chat/sessions` | `chat` | `{ repoId?, title? }` — a free chat, or the worktree and the OpenCode session. |
-| `GET` | `/v1/chat/sessions/{id}` | `read` | Session, repo, status (`idle`/`working`), last message. |
-| `DELETE` | `/v1/chat/sessions/{id}` | `chat` | Archives it; the worktree is kept per retention. |
-| `GET` | `/v1/chat/sessions/{id}/messages?cursor=` | `read` | Oldest first, paginated. |
-| `POST` | `/v1/chat/sessions/{id}/messages` | `chat` | `{ text }` → 202; the reply arrives as events. |
-| `POST` | `/v1/chat/sessions/{id}/repo` | `chat` | `{ repoId }` → binds a free chat to a repository. |
-| `POST` | `/v1/chat/sessions/{id}/compact` | `chat` | New session in the same directory; bumps the context epoch. |
-| `POST` | `/v1/chat/sessions/{id}/reviewed` | `chat` | Marks the chat reviewed, once. |
-| `POST` | `/v1/chat/sessions/{id}/interrupt` | `chat` | Stops the agent; the session returns to `idle`. |
-| `POST` | `/v1/chat/sessions/{id}/promote` | `runs` | `{ title? }` → a run from the repository's default branch. |
+| `GET` | `/v1/repos/{id}/backlog` | `read` | The parsed `TODO.md` at the default branch, joined with works. |
+| `GET` | `/v1/works?repoId=&state=` | `read` | Works, newest activity first. |
+| `POST` | `/v1/works` | `works` | `{ repoId, backlogRef? , title?, prompt? }` → `201`. |
+| `GET` | `/v1/works/{id}` | `read` | Work, repository, state, usage, context epoch, last message. |
+| `PATCH` | `/v1/works/{id}` | `works` | `{ title?, prompt? }`; refused when the backlog owns the field. |
+| `DELETE` | `/v1/works/{id}` | `works` | Archives it; the worktree is kept per retention. |
+| `GET` | `/v1/works/{id}/messages?cursor=` | `read` | Oldest first, paginated, each with its run segment. |
+| `POST` | `/v1/works/{id}/messages` | `works` | `{ text }` → `202`; the reply arrives as events. |
+| `POST` | `/v1/works/{id}/runs` | `runs` | `{ prompt? }` → `202` · `Run`; a new attempt in a new worktree. |
+| `POST` | `/v1/works/{id}/compact` | `works` | New session in the same directory; bumps the context epoch. |
+| `POST` | `/v1/works/{id}/reviewed` | `works` | Marks the work reviewed, once. |
+| `POST` | `/v1/works/{id}/interrupt` | `works` | Stops the agent; the work returns to `idle`. |
 
-A session carries its scope and its context accounting (D43, D48):
+A work carries no `kind` and no nullable repository (D44, D51):
 
-- `kind` — `free`, `repo` or `schedule`. A payload without it is read as `repo`, which is what
-  every session created before this field existed is.
-- `repoId` — the repository the chat is bound to, or `null` for a free chat that has none yet.
-  The key is always present; only its value is nullable.
-- `usage` — `{ usd, tokensIn, tokensOut }`, the chat's own ledger; `{ 0, 0, 0 }` when it has
-  not spent anything.
-- `contextTokens` — the last measured window size in tokens; `0` before the first turn.
-- `contextEpoch` — which OpenCode session the numbers belong to; `1` until a compact starts a
-  new one (D48).
-- `reviewedAt` — when the operator last reviewed the chat, or `null`. It is written once: the
-  first timestamp wins and a later write is ignored.
+- `repoId` — always a real repository. There is no free work.
+- `state` — `queued`, `running`, `reviewing`, `merged`, `failed`, `abandoned`; `reviewing` means
+  a run delivered a PR and no one has looked.
+- `origin` — `manual`, `backlog` or `schedule`.
+- `backlogRef` — the item's stable key (`Task-35`), or `null` for a work created by hand.
+- `usage`, `contextTokens`, `contextEpoch`, `reviewedAt` — as before, now per work (D48).
 
-`POST /v1/chat/sessions` takes `{ repoId?, title? }`. Without `repoId` it creates a `free`
-session with `repoId: null`, an idle row and no OpenCode session; no worktree is created and
-the first message only makes a private directory under the workspace root. With `repoId` the
-repository must exist (`404`, `details.path = "chat.repoId"`), and the daemon creates the
-worktree and the OpenCode session before answering `201`.
+`POST /v1/works` with `backlogRef` verifies the item against the cached default branch: an
+unknown or duplicated ref is `422` (`backlog_ref_missing` / `backlog_ref_ambiguous`), an
+already ticked item is `409` (`backlog_ref_checked`), and the item's title and body seed the
+prompt. `PATCH` on `title` or `prompt` answers `409` with `details.reason = "spec_in_git"`
+when `origin` is `backlog`: the file owns those fields and the change belongs in a branch
+(D51). `POST /v1/works/{id}/runs` is the only way to spend tokens on a work, and each run has
+its own worktree, branch and PR.
 
-The three lifecycle routes carry the `chat` scope:
+The backlog object:
 
-- `POST /v1/chat/sessions/{id}/repo` takes `{ repoId }` and binds a free chat to a repository.
-  An unknown chat is `404` (`details.path = "chat.id"`), an archived one is `409` with
-  `details.reason = "chat_archived"`, a chat that already has a repository is `409` with
-  `details.reason = "chat_already_bound"`, and an unknown repository is `404` with
-  `details.path = "chat.repoId"`. On success the free session is closed, the worktree is cut,
-  a new OpenCode session starts and the last ten turns are re-injected; the answer is `200`
-  with the `ChatSession`.
-- `POST /v1/chat/sessions/{id}/compact` takes no body. It closes the current OpenCode session,
-  starts a new one in the same directory (`worktree` does not change), sets
-  `contextEpoch = current + 1`, appends one `chat.compacted` event carrying the new epoch and
-  answers `200` with the `ChatSession`. An archived chat is `409` `chat_archived`.
-- `POST /v1/chat/sessions/{id}/reviewed` takes no body and sets `reviewedAt` once. A second
-  call answers `200` with the first timestamp; an archived chat may be reviewed. An unknown
-  chat is `404` with `details.path = "chat.id"`.
+```json
+{
+  "repoId": "repo_01J...",
+  "revision": "9f1c2ab",
+  "path": "TODO.md",
+  "sections": [
+    {
+      "title": "Batch 15 — Agent pipeline hygiene",
+      "items": [
+        {
+          "ref": "Task-35",
+          "title": "Routine engine",
+          "checked": true,
+          "line": 512,
+          "work": { "id": "wrk_01J...", "state": "merged", "runs": 2 }
+        }
+      ]
+    }
+  ]
+}
+```
 
-The four lifecycle routes, in one table:
-
-| Method | Path | Request body | Answer |
-| --- | --- | --- | --- |
-| `POST` | `/v1/chat/sessions/{id}/repo` | `{ repoId }` | `200` · `ChatSession` |
-| `POST` | `/v1/chat/sessions/{id}/compact` | none | `200` · `ChatSession` |
-| `POST` | `/v1/chat/sessions/{id}/reviewed` | none | `200` · `ChatSession` |
-| `POST` | `/v1/chat/sessions/{id}/promote` | `{ title? }` | `202` · `Run` |
-
-Promote starts a new run with `trigger: "promote"` from the repository's default branch. The
-prompt is the text of the last `assistant` message of the session; a session with no assistant
-message is `422` with `details.path: "chat.messages"`. The response is `202` with the new `Run`.
-A session whose `kind` is not `repo`, or whose `repoId` is `null`, is `409` with
-`details.reason = "chat_not_repo"` before the message is read.
+The daemon never writes the file here: the tick happens in the run's branch (§6 of
+[`docs/jobs.md`](jobs.md)) and reaches `main` through the merge.
 
 ### 5.7 Settings and push
 
@@ -521,46 +515,40 @@ A session whose `kind` is not `repo`, or whose `repoId` is `null`, is `409` with
 | `POST` | `/v1/push/subscriptions` | `write` | `{ kind: "web" \| "fcm" \| "apns", endpoint, keys }`. |
 | `DELETE` | `/v1/push/subscriptions/{id}` | `write` | Unsubscribe. |
 
-### 5.8 Routines
+### 5.8 Reminders
 
-A routine is a chat schedule (D38), not a run: it never opens a worktree, a PR or a merge. The
-chat agent creates one through the `routine.create` tool; the routes below list, edit, pause,
-run now and delete. `reminder` pushes its `title` without a model; `prompt` sends its prompt to
-the chat and streams the answer (D36, [`docs/jobs.md`](jobs.md) §15).
+A reminder is a schedule with no work and no repository: a title, a time rule and a push
+(D44, [`docs/jobs.md`](jobs.md) §15). It costs no tokens, opens no worktree and emits no run.
+There is no `prompt` reminder and no model-facing creation route: the operator device writes it.
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/v1/routines` | `read` | Chat schedules, newest first. |
-| `POST` | `/v1/routines` | `write` | Create a routine; the chat tool is the normal path. |
-| `GET` | `/v1/routines/{id}` | `read` | One routine with its next and last fire. |
-| `PATCH` | `/v1/routines/{id}` | `write` | Title, cron, timezone, prompt, notify or enabled. |
-| `DELETE` | `/v1/routines/{id}` | `write` | Delete a routine and stop its schedule. |
-| `POST` | `/v1/routines/{id}/pause` | `write` | The scheduler stops selecting it. |
-| `POST` | `/v1/routines/{id}/resume` | `write` | Recompute the next fire from now. |
-| `POST` | `/v1/routines/{id}/run` | `runs` | Fire it once now, outside the schedule. |
+| `GET` | `/v1/reminders` | `read` | Reminders, newest first. |
+| `POST` | `/v1/reminders` | `write` | `{ title, mode, cron?, timezone, notify? }` → `201`. |
+| `GET` | `/v1/reminders/{id}` | `read` | One reminder with its next and last fire. |
+| `PATCH` | `/v1/reminders/{id}` | `write` | Title, cron, timezone, notify or enabled. |
+| `DELETE` | `/v1/reminders/{id}` | `write` | Delete it and stop its schedule. |
+| `POST` | `/v1/reminders/{id}/pause` | `write` | The scheduler stops selecting it. |
+| `POST` | `/v1/reminders/{id}/resume` | `write` | Recompute the next fire from now. |
+| `POST` | `/v1/reminders/{id}/run` | `runs` | Fire it once now, outside the schedule. |
 
-- A `prompt` routine **requires** `repoId` and a non-empty `prompt`; `chatSessionId` is a
-  `chat_` id or `null`, and `null` means the daemon creates a chat session on the fire.
-- A `reminder` routine carries **no** `repoId`, `prompt` or `chatSessionId`: it costs no tokens
-  and has no session, and a kind-mismatched field is a 422 like any unknown field.
-- `title` (1–120 chars) is the label and the text a reminder pushes. `notify` is the per-routine
-  push switch and `enabled` the pause switch; `nextFireAt` and `lastFiredAt` are computed by the
-  scheduler, never written by a client.
+`repoId`, `prompt` and `workId` are refused on a reminder: a kind-mismatched field is a `422`
+like any unknown field. `title` (1–120) is the text it pushes, `notify` the per-reminder push
+switch and `enabled` the pause switch; `nextFireAt` and `lastFiredAt` are computed by the
+scheduler, never written by a client.
 
 ```json
 {
-  "id": "rtn_01J...",
-  "kind": "prompt",
-  "title": "Morning summary",
-  "cron": "0 8 * * *",
+  "id": "rmd_01J...",
+  "kind": "reminder",
+  "title": "Take the pill",
+  "mode": "every",
+  "cron": "0 22 * * *",
   "timezone": "Europe/Madrid",
   "enabled": true,
   "notify": true,
-  "repoId": "repo_01J...",
-  "prompt": "Summarise the repository in five bullets.",
-  "chatSessionId": null,
   "createdAt": "2026-10-24T18:03:11Z",
-  "nextFireAt": "2026-10-25T07:00:00Z",
+  "nextFireAt": "2026-10-25T20:00:00Z",
   "lastFiredAt": null
 }
 ```
@@ -629,15 +617,51 @@ ever returns a value, a prefix longer than four characters or the sealed envelop
   `CB_SECRETS_KEY` is a `503` with `details.reason = "secrets_not_configured"`. The PEM becomes
   a `github_app` credential with `expose: "daemon"` and appears in no response byte.
 
+#### 5.9.1 Provider accounts (D54)
+
+A provider is an adapter (`opencode-go`, `anthropic`, …); an account is a credential plus a
+position in the failover order. Neither surface ever returns a value, a prefix longer than four
+characters or the sealed envelope.
+
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/v1/providers` | `read` | Providers with their accounts, states, priorities and spend today. |
+| `POST` | `/v1/providers/{id}/accounts` | `admin` | `{ label, priority, auth: "token", value }` → `201`; the token is sealed. |
+| `POST` | `/v1/providers/{id}/oauth/start` | `admin` | `{ label, priority }` → `{ authorizeUrl, state }`; `state` is single use, 600 s. |
+| `POST` | `/v1/providers/{id}/oauth/complete` | `admin` | `{ code, state }` → `201` with the account; a replay is `422 state_invalid`. |
+| `PATCH` | `/v1/provider-accounts/{id}` | `admin` | `{ label?, priority?, enabled?, budgetUsd? }`. |
+| `POST` | `/v1/provider-accounts/{id}/test` | `admin` | One cheap call; answers `{ ok, state, lastError }`. |
+| `DELETE` | `/v1/provider-accounts/{id}` | `admin` | Removes the account and its credential. |
+
+```json
+{
+  "id": "prv_01JABCDEFG",
+  "name": "opencode-go",
+  "authKinds": ["oauth", "token"],
+  "accounts": [
+    { "id": "acc_01J...", "label": "go · dani", "priority": 1, "state": "active",
+      "lastFour": "a91f", "spentTodayUsd": 2.4, "resetAt": null, "lastUsedAt": "2026-10-28T07:12:00Z" },
+    { "id": "acc_01J...", "label": "go · spare", "priority": 2, "state": "exhausted",
+      "lastFour": null, "spentTodayUsd": 0, "resetAt": "2026-10-28T15:00:00Z", "lastUsedAt": null }
+  ]
+}
+```
+
+`state` is `active`, `exhausted`, `invalid` or `disabled`; it is written by the daemon from
+classified provider errors (D54), never by a client — a client can only `enabled` an account
+or reorder it. Removing the last `active` account of the only provider that serves the
+default model is a `409` with `details.reason = "no_active_account"`, so the box cannot be
+left unable to run.
+
 ### 5.10 Schedules (D44, D46)
 
-A schedule is the one recurring object the daemon owns end to end (D44, D46). It carries a
-prompt, a time rule and an optional repository: with a repository it opens a run, without one it
-opens a chat turn. This subsection is the API object; [`docs/jobs.md`](jobs.md) §16 owns the
-field table, the three modes, the claim and the tick.
+A schedule is the recurrence of a work: `{ workId, mode, cron|window, caps }`. It always
+resolves to a repository through its work; only a reminder (§5.8) has no work. This subsection
+is the API object; [`docs/jobs.md`](jobs.md) §16 owns the field table, the three modes, the
+claim and the tick.
 
-- `GET /v1/schedules` (`read`) — the §4 page, newest first, narrowed by `repoId` and `enabled`;
-  `{ data, nextCursor }` with a cursor stable under inserts.
+- `GET /v1/schedules` (`read`) — the §4 page, newest first, narrowed by `workId`, `repoId` and
+  `enabled`; `{ data, nextCursor }` with a cursor stable under inserts.
 - `POST /v1/schedules` (`write`) — creates the schedule and answers `201` with the stored
   `Schedule`.
 - `GET /v1/schedules/{id}` (`read`) — answers `{ schedule, nextFires }` (`ScheduleDetail`, up
@@ -650,15 +674,15 @@ field table, the three modes, the claim and the tick.
 - `POST /v1/schedules/{id}/resume` (`write`) — `enabled: true` and the next fire recomputed
   from now; answers `200` with the `Schedule`.
 
-**There is no run-now route for a schedule.** A fire is started by the daemon's tick
-([`docs/jobs.md`](jobs.md) §16.3), and a schedule fire emits no event of its own: the run or the
-chat it opens emits the normal events of §6.
+**There is no fire-now route for a schedule.** A fire is started by the daemon's tick
+([`docs/jobs.md`](jobs.md) §16.3); to spend tokens on demand the operator starts a run of the
+work (`POST /v1/works/{id}/runs`), which does not consume the schedule.
 
 ```json
 {
   "id": "sch_01JABCDEFG",
+  "workId": "wrk_01J...",
   "repoId": "repo_01J...",
-  "chatSessionId": null,
   "title": "Overnight pass",
   "prompt": "Take the next failing check, fix it, run the gate.",
   "mode": "window",
@@ -669,7 +693,6 @@ chat it opens emits the normal events of §6.
   "cooldownMinutes": 20,
   "maxFires": 12,
   "maxCostPerFireUsd": 0.75,
-  "firePolicy": "new_chat",
   "consecutiveFailures": 0,
   "firesCount": 3,
   "spendUsd": 1.25,
@@ -685,12 +708,11 @@ chat it opens emits the normal events of §6.
 - `mode` is `once`, `every` or `window`. A `window` schedule has `cron: null`, non-null
   `windowStart`/`windowEnd` of the form `HH:MM` and `windowStart !== windowEnd`; every other
   mode has a 5-field `cron` and null window bounds.
-- `repoId` and `chatSessionId` cannot both be null: the row belongs to a repository or to a
-  chat. `firePolicy` is `new_chat` or `continue`; `continue` appends to `chatSessionId`,
-  `new_chat` opens a chat per fire.
-- Defaults on create: `cooldownMinutes` `0`; `firePolicy` `new_chat` when `chatSessionId` is
-  null and `continue` when it is set; `enabled` `true`; `policy` the repository's policy, or
-  `manual` when there is no repository; `maxFires` and `maxCostPerFireUsd` `null`.
+- `workId` is required and must exist; `repoId` is derived from it and a client cannot set a
+  different one (`422`, `repo_mismatch`). A work has **at most one** schedule: a second create
+  is `409` with `details.reason = "schedule_exists"`.
+- Defaults on create: `cooldownMinutes` `0`; `enabled` `true`; `policy` the repository's
+  policy; `maxFires` and `maxCostPerFireUsd` `null`.
 - `consecutiveFailures`, `firesCount`, `spendUsd`, `nextFireAt` and `lastFiredAt` are written
   by the daemon, never by a client.
 - Refusals: `422 validation_failed` with `details.path = "schedule.<key>"` and `details.reason`
@@ -702,11 +724,11 @@ chat it opens emits the normal events of §6.
 
 ## 6. SSE
 
-`GET /v1/events` is the only stream. Query filters (`types`, `runId`, `chatId`) are additive;
+`GET /v1/events` is the only stream. Query filters (`types`, `runId`, `workId`) are additive;
 the default is everything the device may read.
 
 ```
-GET /v1/events?types=run.output,run.gate,chat.delta
+GET /v1/events?types=run.output,run.gate,message.delta
 Accept: text/event-stream
 Last-Event-ID: 1841
 ```
@@ -728,9 +750,9 @@ data: {"runId":"run_01J...","seq":17,"delta":"…","ts":"2026-10-24T18:04:02Z"}
 
 Event types are the D14/D16 list: `run.queued`, `run.started`, `run.output`, `run.tool`,
 `run.permission`, `run.gate`, `run.pr`, `run.merged`, `run.finished`, `run.failed`,
-`run.cancelled`, `chat.delta`, `chat.message`, `chat.tool`, `chat.permission`, `chat.idle`,
-`chat.compacted`, `job.changed`, `approval.created`, `approval.resolved`, `telemetry`,
-`routine.fired`, `routine.replied`, `routine.failed`.
+`run.cancelled`, `work.created`, `work.updated`, `work.closed`, `message.delta`,
+`message.created`, `message.tool`, `schedule.fired`, `schedule.failed`, `provider.state`,
+`backlog.changed`, `design.changed`, `approval.created`, `approval.resolved`, `telemetry`.
 
 ## 7. Rate limits
 
@@ -745,8 +767,8 @@ Limits are enforced in memory per process; a restart resets them. `429` always c
 `Retry-After`.
 
 The two device budgets are taken in the auth middleware, after the token and the scope check and
-before the handler: the key is `device:<id>`, `POST /v1/runs`, `POST /v1/jobs/{id}/run` and
-`POST /v1/routines/{id}/run` count against the 10/minute budget **only**, and every other
+before the handler: the key is `device:<id>`, `POST /v1/runs`, `POST /v1/works/{id}/runs` and
+`POST /v1/reminders/{id}/run` count against the 10/minute budget **only**, and every other
 authenticated `/v1` request counts against the 120/minute one. The pairing budget is per source
 address and separate. A refusal is the ordinary error envelope — `code: "rate_limited"`,
 `details.retryAfter`, `Retry-After` — so a client renders it like any other `ApiError`. Health,
@@ -789,8 +811,10 @@ characters.
 | Ids, timestamps, enums, event names | `src/primitives.ts` | `RepoId` … `RequestId`, `RUN_STATES`, `SSE_EVENT_NAMES` | — |
 | Errors (§3) | `src/errors.ts` | `errorEnvelopeSchema`, `ERROR_STATUS` | `parseErrorEnvelope` |
 | Pagination and idempotency (§4) | `src/pagination.ts` | `paginationQuerySchema`, `pageSchema`, `IDEMPOTENT_ROUTES` | `parsePage` |
-| Resources (§5) | `src/resources.ts` | `repoSchema`, `jobSchema`, `runSchema`, … | `parseRepo`, `parseJob`, `parseRun`, … |
-| Routines (§5.8) | `src/routines.ts` | `routineSchema`, `ROUTINE_TOOL_NAMES`, the tool schemas | `parseRoutine` |
+| Resources (§5) | `src/resources.ts` | `repoSchema`, `workSchema`, `runSchema`, … | `parseRepo`, `parseWork`, `parseRun`, … |
+| Backlog (§5.6) | `src/backlog.ts` | `backlogSchema`, `backlogItemSchema` | `parseBacklog` |
+| Reminders (§5.8) | `src/reminders.ts` | `reminderSchema` | `parseReminder` |
+| Provider accounts (§5.9.1) | `src/providers.ts` | `providerSchema`, `providerAccountSchema`, `PROVIDER_STATES` | `parseProvider` |
 | Events (§6) | `src/events.ts` | `sseEventSchema`, `sseStreamEventSchema` | `parseSseEvent`, `parseSseStreamEvent` |
 | Configuration | `src/config.ts` | `configSchema`, `CONFIG_DEFAULTS` | `parseConfig` |
 | OpenAPI 3.1 | `src/openapi.ts` | `openApiDocumentSchema` | `parseOpenApiDocument` |
@@ -820,13 +844,13 @@ still renders, and the routes it calls are retained.
 | --- | --- |
 | `/pair` | `POST /v1/pair`, `POST /v1/auth/refresh` |
 | `/dashboard` | `GET /v1/health`, `GET /v1/telemetry`, `GET /v1/runs`, `GET /v1/schedules` |
-| `/chat` | `GET /v1/chat/sessions`, `GET /v1/repos`, `GET /v1/schedules` |
-| `/settings` | `GET /v1/settings`, `GET /v1/me` |
 | `/repos` | `GET /v1/repos`, `POST /v1/repos` |
-| `/repos/:id` | `GET /v1/repos/{id}`, `PATCH /v1/repos/{id}`, `GET /v1/runs?repoId=` |
-| `/chat/:id` | `GET /v1/chat/sessions/{id}`, `GET /v1/chat/sessions/{id}/messages`, `POST /v1/chat/sessions/{id}/messages`, `POST /v1/chat/sessions/{id}/interrupt`, `POST /v1/chat/sessions/{id}/promote` |
-| `/jobs` | `GET /v1/jobs`, `GET /v1/routines` |
-| `/jobs/:id` | `GET /v1/jobs/{id}`, `PATCH /v1/jobs/{id}`, `POST /v1/jobs/{id}/run` |
+| `/repos/:id` | `GET /v1/repos/{id}`, `GET /v1/repos/{id}/backlog`, `GET /v1/works?repoId=`, `GET /v1/schedules?repoId=` |
+| `/works/:id` | `GET /v1/works/{id}`, `GET /v1/works/{id}/messages`, `POST /v1/works/{id}/messages`, `POST /v1/works/{id}/runs`, `POST /v1/works/{id}/interrupt`, `POST /v1/works/{id}/compact` |
+| `/repos/pick` | `GET /v1/integrations/github/repos`, `POST /v1/repos` |
+| `/settings` | `GET /v1/settings`, `GET /v1/me` |
+| `/settings/providers` | `GET /v1/providers`, `POST /v1/providers/{id}/accounts`, `POST /v1/providers/{id}/oauth/start`, `POST /v1/providers/{id}/oauth/complete`, `PATCH /v1/provider-accounts/{id}`, `POST /v1/provider-accounts/{id}/test` |
+| `/settings/schedules` | `GET /v1/schedules`, `PATCH /v1/schedules/{id}`, `POST /v1/schedules/{id}/pause`, `POST /v1/schedules/{id}/resume`, `GET /v1/reminders` |
 | `/runs` | `GET /v1/runs` |
 | `/runs/:id` | `GET /v1/runs/{id}`, `GET /v1/runs/{id}/events`, `GET /v1/runs/{id}/diff`, `POST /v1/runs/{id}/cancel`, `POST /v1/runs/{id}/revert` |
 | `/approvals` | `GET /v1/approvals`, `POST /v1/approvals/{id}/reply` |

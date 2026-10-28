@@ -34,7 +34,7 @@ host their code.
 | # | When | I want to | So that |
 | --- | --- | --- | --- |
 | J1 | A thought strikes away from the desk | send a prompt to a repo-bound agent from my phone | the idea becomes a branch before I forget it |
-| J2 | A task repeats (nightly dependency bump, weekly report, release notes) | define it once with a cron and let it run | I stop being the scheduler |
+| J2 | A task repeats (nightly dependency bump, weekly report, release notes) | give a work a schedule and let it fire in its window | I stop being the scheduler |
 | J3 | A run is working | watch its tools, output and diff live | I can intervene early instead of reading a wall of log later |
 | J4 | The agent asks for something risky | approve or deny from a notification | autonomy never means "no gate" |
 | J5 | A change is ready | see the gate, the checks and the diff stat in one card | I can trust the merge without opening a laptop |
@@ -44,56 +44,58 @@ host their code.
 
 ## 4. The product in five surfaces
 
-1. **Chat.** One surface with three scopes (D43). A chat starts **free** — no repository, so
-   no code — and gains a `repo` scope when you connect one: the cache is cloned, a worktree is
-   cut, and the last ten turns are handed to a new agent session. Promote it and it becomes a
-   `schedule` scope. Streaming text, tool cards, and gate and PR cards once a run exists.
-2. **Schedules.** The only recurring object (D44). Prompt, time rule and an **optional**
-   repository: with one it produces runs, without one it produces chats. `once`, `every`, or a
-   `window` that relaunches itself after each fire finishes (D46).
-3. **Runs.** The transaction behind a repo chat or a schedule fire: timeline, gate output, PR
-   link, guardrail checklist, merge result, cost. A run appears as cards inside the chat that
-   spawned it, not as a separate screen.
-4. **Repositories.** Registered repositories with a gate command, merge policy, protected
-   paths and default branch — reached through a filter in Chat, not a tab (D47). This is where
-   auto-merge is opted into per repo.
-5. **Credentials.** Every secret the box holds (D49, D50): adapters that need OAuth or a
-   manifest (GitHub App, model accounts) and open credentials for anything else. Write-only,
-   and an allowlist decides which hosts the agent may reach with them.
+1. **Repos.** The root. Each repository declares its own gate, merge policy and protected paths
+   in `.codebox/repo.yml`, and its design in `design/` (D52); the app reads those files and keeps
+   no second copy (D51). A repository opens on its backlog.
+2. **Backlog.** The repository's `TODO.md` rendered as the list of what should exist, in the
+   file's order, with each item's runtime state overlaid (D51). An item is already a prompt:
+   title, body and acceptance criteria. *Run* creates a work from it, and the tick lands in that
+   work's PR when it merges.
+3. **Works.** The unit (D44, D53): one repository, one thread, at most one schedule, and as many
+   runs as attempts. A run is the transaction — worktree, gate, PR, merge. The thread is the
+   record: deltas, tool cards, gate and PR cards, and a divider per run.
+4. **Design.** The screen specs and snapshots a work implements against, read from the same
+   worktree and shown beside the thread. The gate validates tokens, routes and declared states,
+   never pixels (D52).
+5. **Credentials and provider accounts.** Every secret the box holds (D49, D50): adapters that
+   need OAuth or a manifest, open credentials for anything else, and **several accounts per
+   provider with ordered failover** (D54). Write-only, with a host allowlist for agent access;
+   the app shows `lastFour`, state and reset instant, never a value.
 
-Plus a **dashboard** (what needs you, what is working, what finished unreviewed, today's spend,
-health) and **settings** (devices, notifications, providers, schedules, danger zone). There are
-no interactive approvals (D45): the gate and the disposable worktree are the only doors.
+Plus a **dashboard** (what needs you, what is running, what finished unreviewed, today's spend,
+health, one block per repository) and **settings** (repository viewers, credentials, provider
+accounts, devices, notifications, danger zone). There are no interactive approvals (D45): the
+gate and the disposable worktree are the only doors.
 
 ## 5. Core flows
 
 ### 5.1 "Do this now"
 
-1. Open a chat. It starts free: ask a question, draft a prompt, think out loud.
-2. Connect a repository from the `⋯` menu, or straight from the empty state. The daemon clones
-   the cache once, cuts a worktree, and hands the last ten turns to a new agent session.
-3. Ask for the work. The agent edits, runs the gate, and reports with a gate card.
-4. Promote the chat when the work is real: the run adopts the same worktree, pushes
-   `cb/<run>-<slug>` and opens a PR. A free chat cannot be promoted — it has no worktree.
-5. If every guardrail is green, it merges and the chat shows the PR card. If not, the card
-   lists what failed and the branch stays.
+1. Open a repository. Its backlog is the list, in the file's order.
+2. Tap an item — or *New work* and type one sentence; the repository is already chosen.
+3. The work opens with the item as its prompt and `design/` as its visual context. The agent
+   edits, runs the gate, and reports with a gate card.
+4. The run pushes `cb/<run>-<slug>` and opens a PR. The item's `- [x]` and the PR link ride in
+   the same branch, so the merge updates the backlog atomically.
+5. If every guardrail is green, it merges and the thread shows the PR card with the ticked item.
+   If not, the card lists what failed and the branch stays.
 
 ### 5.2 "Every night"
 
-1. Say it in a chat: "every night at 3, update the lockfile, run the gate, fix what breaks".
-   The agent proposes a schedule card — prompt, `every day 03:00`, `Europe/Madrid`, an optional
-   repository, a cap per fire — and only the tap creates it (D38, D44).
-2. The scheduler fires at 03:00. With a repository it runs like 5.1 and opens a PR; without
-   one it opens a chat and answers.
-3. A window relaunches after each fire finishes, inside its range, until the cap or the end.
-   A red fire notifies once; three consecutive failures pause the schedule.
-4. The schedule is reached through the `Schedule` filter in Chat and the Settings row; there
-   is no Schedule page.
+1. Open a work — "update the lockfile, run the gate, fix what breaks" — and give it a schedule:
+   `once`, `every`, or a `window` that relaunches after each fire finishes (D46).
+2. Each fire creates a **run of that work**: its own worktree, its own branch, its own PR.
+   There is no schedule without a repository and no schedule that produces a chat.
+3. The window relaunches after the previous fire finished, inside `[start, end]`, bounded by
+   `maxFires` and `maxCostPerFire`. A red fire notifies once; three consecutive failures pause
+   the schedule.
+4. The schedule is reached from the work and from *Settings → Schedules*; there is no Schedule
+   page.
 
 ### 5.3 "What is it doing?"
 
-1. The chat is the record: `preparing`, `running`, tool calls, gate and PR arrive as cards in
-   the thread, and the header carries the context percentage.
+1. The work's thread is the record: `preparing`, `running`, tool calls, gate and PR arrive as
+   cards, one divider per run, and the header carries the context percentage.
 2. Tapping a tool call shows its input/output (redacted).
 3. The diff tab shows files and stat; GitHub opens for the full review.
 4. Cancel is always available and kills the session, not just the UI.
@@ -107,23 +109,39 @@ no interactive approvals (D45): the gate and the disposable worktree are the onl
 4. A host outside the allowlist is refused, and the refusal is logged with the credential name,
    never the value.
 
+### 5.5 "The account ran dry"
+
+1. The daemon classifies the provider error instead of guessing: `invalid` (401/403),
+   `exhausted` (429 or a quota error) or a transient upstream failure.
+2. It marks that account's state and records the reset instant the provider reports, or a
+   cooldown when it reports none, then selects the next account by priority (D54).
+3. The turn is retried there only if **no tool call was emitted**; otherwise the run stops and
+   resumes in a new session, so a half-executed tool is never replayed.
+4. The thread shows a `provider.state` line — the model never changes silently.
+5. With every account dry the run fails as `provider_exhausted` and notifies. The branch and
+   the work stay, and the next run resumes when an account resets.
+
 ## 6. MVP scope (v0.1)
 
 In:
 
 - pairing and device management;
-- one owner, multiple repos;
-- chat with streaming, scope conversion and gate cards;
-- schedules (`once` / `every` / `window`) with or without a repository;
+- one owner, multiple repos, each declaring `.codebox/repo.yml` and `design/`;
+- works with streaming, runs and gate cards;
+- the backlog file as the work list, with the tick riding in the work's PR;
+- schedules as an attribute of a work (`once` / `every` / `window`);
 - worktree isolation, gate, PR, auto-merge guardrails;
 - run timeline, diff stat, cancel, revert;
+- provider accounts with ordered failover (D54);
 - push notifications (Web Push first, native push in the same milestone if the build is
   ready);
-- dashboard and repo settings;
+- dashboard with one block per repository, and repository viewers in settings;
+- design validation in the gate (tokens, routes, declared states) and a snapshot viewer;
 - OCI provisioning, image, tunnel, backup and `cb doctor`.
 
-**Later:** routines (chat schedules and reminders, D38) are Phase 7 / Batch 9; they are not
-v0.1 scope. A routine is not a run and never opens a PR.
+**Later:** the design importers (Figma, Penpot, OpenDesign) are commands over the `design/`
+format, not a v0.1 dependency; the format, the validator and the viewer ship first (D52). A
+`reminder` survives as a notification with no work and no model cost.
 
 Out (deliberately):
 
@@ -152,17 +170,18 @@ A v0.1 is successful when the owner can, from a phone, without SSH:
 
 1. pair a device in under two minutes;
 2. register a repo and see its gate pass on a manual run;
-3. describe a nightly schedule in a chat, see it fire, open a PR and merge green;
-4. connect a repository from a chat and watch the clone, the worktree and the gate land in
-   the thread;
+3. give a work a nightly schedule, see it fire, open a PR and merge green;
+4. open a repository's backlog, tap an item, and watch the work land a PR with the item ticked;
 5. cancel a runaway run and see the worktree cleaned;
-6. revert a bad merge with one action;
-7. lose the VM and restore from the nightly backup with the documented drill.
+6. exhaust one provider account mid-run and watch the next one take over without losing the
+   branch;
+7. revert a bad merge with one action;
+8. lose the VM and restore from the nightly backup with the documented drill.
 
 Numeric targets (measured, not aspirational):
 
 - pairing p95 < 2 min from `cb pair` to first screen;
-- chat first token p95 < 3 s on the reference VM;
+- work first token p95 < 3 s on the reference VM;
 - run event latency (OpenCode event → app) p95 < 1.5 s;
 - zero runs where a red gate reaches `merging`;
 - zero secrets in logs across the beta's test corpus.
@@ -177,6 +196,8 @@ Numeric targets (measured, not aspirational):
 | Token theft from a phone | Device keys, short-lived access tokens, biometric gate, per-device revocation, Cloudflare Access. |
 | Cost runaway | Daily USD cap, run timeout, concurrency cap, visible spend. |
 | The app becomes a second job | Narrow MVP, no channel integrations, no editor, one screen per job. |
+| Design drifts from the code | `design/` lives in the repo, the gate validates tokens, routes and declared states, and the snapshot hash detects drift; a canvas is an importer, never a second truth (D52). |
+| Every provider account runs dry | Ordered failover with per-account state and reset instant; `provider_exhausted` fails closed and notifies instead of silently degrading (D54). |
 | OpenCode V2 API moves | The wrapper is the only place that knows the wire; fixtures pin the behaviour; upgrade is one package. |
 
 ## 10. Open product questions

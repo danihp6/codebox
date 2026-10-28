@@ -154,7 +154,16 @@ tool output that matches the secret scanner, and redact by key. Chat history 90 
   decision, not a pairing.
 - **Q18. Webhooks from GitHub.** Polling checks is enough for v1; webhooks would cut latency
   and add a signature surface.
-- **Q19. Model provider choice per job.** The job schema has `model`; the UI can expose a
-  shortlist. The default is the owner's current model.
-- **Q20. Whether pkm's autopilot becomes a Codebox job.** Attractive (one control plane),
+- **Q19. Model provider choice per work.** The work carries `model`; the UI can expose a
+  shortlist. The default is the active account's provider model.
+- **Q20. Whether pkm's autopilot becomes a Codebox work.** Attractive (one control plane),
   but pkm's cycle is tightly coupled to its repo. Migrate only after Task-32.
+- **Q21. How many provider accounts, and does `opencode-go` report a reset instant?** The
+  failover order is only as good as the reset information: with a reported `resetAt` an account
+  comes back on its own, without one it waits `CB_ACCOUNT_COOLDOWN_SECONDS`. **Recommendation:**
+  start with two accounts of the same provider and verify the error shape against the pinned
+  OpenCode client before promising an automatic reset.
+- **Q22. Design importers in v0.1?** D52 ships the `design/` format, the validator and the
+  viewer; Figma, Penpot and OpenDesign are import commands. **Recommendation:** implement the
+  Figma importer first (the prototype already exists), Penpot only if hand-drawing becomes the
+  bottleneck, and never self-host Penpot on the same box as the agents.
