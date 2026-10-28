@@ -59,6 +59,10 @@ Not routes. A sheet is opened over the screen named in its row.
 free-chat `⋯` menu. Connecting a repository happens from the `+` on `/repos`, and its clone
 state lives in the row, so a whole screen for it was one tap too many.
 
+**In sync (2026-10-28):** dark and light match for `02`, `03`, `04`, `04a`, `04b` and `03a`
+(four targets: Backlog, Design, Schedule, Rework). **Still stale:** `08b`/`08c` keep the
+pre-schedule copy and need a pass before the map is trusted for those two.
+
 ## 3. Widths and themes
 
 | Suffix | Frame | When it applies |
