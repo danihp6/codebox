@@ -54,6 +54,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Should a cycle start?
         id: gate
         env:
@@ -72,7 +76,12 @@ jobs:
           set -euo pipefail
           cap="${CB_AGENT_DAILY_CYCLES:-0}"
           go() { echo "go=$1" >> "$GITHUB_OUTPUT"; echo "REASON=$2" >> "$GITHUB_ENV"; echo "$2"; }
-          red() { gh issue create --label agent-blocked --title "$1" --body "$2" || true; }
+          # The driver parks on the schedule, so the same reason repeats every pass: the
+          # helper keeps one open issue per condition and comments on it instead of
+          # opening a second one. The title is the key, so it must not carry the count.
+          red() {
+            node scripts/agent/issue.mjs --label agent-blocked --title "$1" --body "$2" || true
+          }
 
           if [ "${CB_AGENT_AUTOPILOT:-}" != "on" ]; then
             go false "CB_AGENT_AUTOPILOT is '${CB_AGENT_AUTOPILOT:-unset}': the loop stays parked."
@@ -119,7 +128,7 @@ jobs:
           echo "cycles today=$started failed=$failed cap=$cap"
 
           if [ "$failed" -ge 3 ]; then
-            red "Autopilot parked: $failed red cycles today" \
+            red "Autopilot parked: too many red cycles today" \
                 "The loop stopped itself after $failed failed cycles on $today (limit 3). Look at the last agent / cycle runs, fix or free the task it was on, then re-run this workflow."
             go false "Too many red cycles today."
             exit 0
