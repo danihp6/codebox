@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-28 (Task-71, the backlog package and selection)
+
+- **The backlog file has an owner.** `@codebox/backlog` is a pure package:
+  `parseBacklog(markdown)` turns the markdown into sections and ordered items
+  (`ref`, `title`, `body`, `line`, state, `section`), `applyTick(markdown, ref)` rewrites exactly
+  one checkbox character and leaves every other byte alone, and `selectNextItem(items, works,
+  policy)` is the D56 selection — first pending item in file order, refusing `blocked`,
+  `needs_decision`, `live_work` and `attempts_exhausted`, and answering `nothing_pending` /
+  `nothing_runnable` with the two codes `docs/jobs.md` §16.3 already names. No I/O, no clock, no
+  environment: the daemon reads and writes the file.
+- **The live `TODO.md` is a test fixture, by invariants.** `live-todo.test.ts` parses this
+  repository's backlog and asserts structure — one item per checkbox line, refs unique, every
+  line resolves — never today's counts or titles, because this file changes every cycle. The
+  exact parse and tick behaviour is pinned byte for byte on a small checked-in fixture instead.
+- **Build order stops being luck.** The package's `prebuild` builds `@codebox/contracts` first,
+  so `rm -rf packages/contracts/dist && npm run build` is green even though `packages/backlog`
+  sorts before `packages/contracts` in the workspace walk.
+
 ### Added — 2026-10-28 (Task-70, contracts and store for the work model)
 
 - **The work model is a contract and a schema, not a promise.** `@codebox/contracts` exports

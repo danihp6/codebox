@@ -107,6 +107,22 @@ also waits on Task-30 and Task-32 on Task-31. Task-68 is the only eligible item 
 dependencies, Task-51 to Task-67, are all merged — so the batch is one task and the three empty
 slots have no legal candidate. Task-68 claims no hot file: `TODO.md` and `CHANGELOG.md` stayed
 with the Orchestrator at merge time.
+**Cut — cycle after Task-70 (two of four slots used).** Batch 19 opens with Task-71 and Task-73;
+no task branch was alive and `main` was `c58d8be`. Task-71 is the dependency root — Task-72 is
+written against its three names — and it is the riskier one, so it holds the only new npm
+workspace. Task-73 is path-disjoint from it and needs only the merged Task-70. The two empty
+slots have no legal candidate: Task-72 depends on Task-71 (this batch), Task-75 on Task-72 and
+Task-76 on Task-72 + Task-75; Task-74 would create a **second** new workspace (`packages/design`)
+in the same batch as `packages/backlog`, and both must add a project to `vitest.config.ts` and
+update the lockfile — a workspace missing from `package-lock.json` makes `npm ci` fail with
+`EUSAGE … Missing: @codebox/<name>@0.0.0 from lock file`; Task-02, Task-26 and Task-29 are `[!]`,
+and Task-30/31/32 wait on them. **Hot-file holders in this cut:** Task-71 holds
+`package-lock.json` and `vitest.config.ts`; no task holds `package.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`,
+`opencode.json`, `TODO.md`, `CHANGELOG.md` or `docs/decisions.md`. Docs are shared by section
+only: Task-71 holds `docs/jobs.md` §16 and `docs/architecture.md` §5; Task-73 holds
+`docs/providers.md` §5.1.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -1012,7 +1028,7 @@ same path; the contracts task lands first because every other task reads its typ
   predicate. The OpenAPI document now matches `docs/api.md` at **62** paths (18 works, sessions,
   backlog and provider-account paths added; the 13 retired chat and routine paths removed) — the
   markdown tables stay the owner, so a route added there needs its operation in the same task.
-- [ ] **[Task-71]** Backlog package and selection. `parseBacklog(markdown)`,
+- [x] **[Task-71]** Backlog package and selection. `parseBacklog(markdown)`,
   `applyTick(markdown, ref)` and `selectNextItem(items, works, schedule)` as pure functions with
   fixtures from this repository's real `TODO.md`; tolerant of unknown lines, refuses an ambiguous
   or missing ref, never reformats. *Paths:* `packages/backlog/**`, `docs/jobs.md` §16.
