@@ -15,8 +15,10 @@ const requiredComponents = [
   'Job',
   'Run',
   'Approval',
-  'ChatSession',
-  'ChatMessage',
+  'Work',
+  'Backlog',
+  'Session',
+  'ProviderAccount',
   'Device',
   'Health',
   'Version',
@@ -25,7 +27,6 @@ const requiredComponents = [
   'PushSubscription',
   'Settings',
   'NotificationPreferences',
-  'Routine',
   'SseEvent',
   'Error',
   'Page',
@@ -99,7 +100,7 @@ describe('openapi', () => {
   it('docs/api.md routes match the OpenAPI paths', () => {
     const document = buildOpenApiDocument();
     expect(Object.keys(document.paths).sort()).toEqual(docsPaths());
-    expect(Object.keys(document.paths)).toHaveLength(57);
+    expect(Object.keys(document.paths)).toHaveLength(62);
   });
 
   it('documents the eight credential and integration paths', () => {
@@ -125,24 +126,25 @@ describe('openapi', () => {
     for (const operation of operations) expect(operation?.operationId).toBeTruthy();
   });
 
-  it('documents the three chat lifecycle routes', () => {
+  it('documents the work, backlog and session routes', () => {
     const document = buildOpenApiDocument();
-    const expected: ReadonlyArray<readonly [string, string]> = [
-      ['/v1/chat/sessions/{id}/repo', 'bindChatSessionRepo'],
-      ['/v1/chat/sessions/{id}/compact', 'compactChatSession'],
-      ['/v1/chat/sessions/{id}/reviewed', 'reviewChatSession'],
+    const expected: ReadonlyArray<readonly [string, string, string]> = [
+      ['/v1/repos/{id}/backlog', 'get', 'getRepoBacklog'],
+      ['/v1/works/{id}/decision', 'post', 'openWorkDecision'],
+      ['/v1/sessions/{id}/merge', 'post', 'mergeSession'],
+      ['/v1/sessions/{id}/messages', 'post', 'createSessionMessage'],
     ];
-    for (const [path, operationId] of expected) {
-      const operation = document.paths[path]?.post;
+    for (const [path, method, operationId] of expected) {
+      const operation =
+        method === 'get' ? document.paths[path]?.get : document.paths[path]?.post;
       expect(operation, path).toBeDefined();
       expect(operation?.operationId, path).toBe(operationId);
-      expect(operation?.tags, path).toEqual(['chat']);
-      expect(operation?.responses['200'], path).toBeDefined();
       expect(docsPaths()).toContain(path);
     }
-    const promote = document.paths['/v1/chat/sessions/{id}/promote']?.post;
-    expect(promote?.operationId).toBe('promoteChatSession');
-    expect(Object.keys(promote?.responses ?? {})).toContain('202');
+    expect(document.paths['/v1/works']?.post?.responses['201']).toBeDefined();
+    expect(document.paths['/v1/sessions']?.post?.responses['201']).toBeDefined();
+    expect(document.paths['/v1/chat/sessions']).toBeUndefined();
+    expect(document.paths['/v1/routines']).toBeUndefined();
   });
 
   it('the OpenAPI document lists the three routine events', () => {
@@ -151,7 +153,6 @@ describe('openapi', () => {
     for (const name of ['routine.fired', 'routine.replied', 'routine.failed']) {
       expect(schemas).toContain(name);
     }
-    expect(Object.keys(document.components.schemas)).toContain('Routine');
     expect(parseOpenApiDocument(document)).toEqual(document);
   });
 

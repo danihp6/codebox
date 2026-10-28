@@ -967,7 +967,7 @@ field the contract lacks is a Task-51 amendment, not a local type.
       them **legacy** in one named section (`docs/jobs.md` §1.1, `docs/api.md` §5.3 and §5.5)
       instead of claiming they are gone; the generated OpenAPI document does not carry
       `/v1/schedules`, so `docs/api.md` §5.10 documents the seven schedule routes as bullets
-      and the contracts guard still counts 57 paths — adding those operations to
+      and the contracts guard counts 62 paths — adding those operations to
       `packages/contracts/src/openapi.ts` and bumping the count is a later contracts task.
       `docs/app.md` §8 and §12 still describe permission cards and an approval step that D45
       removed: that file is outside this task's paths and is a deviation for a later docs pass.

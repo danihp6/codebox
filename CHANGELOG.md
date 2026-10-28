@@ -6,6 +6,16 @@ first release exists.
 
 ## Unreleased
 
+### Fixed — 2026-10-28 (the contract mirrors the work model again)
+
+- **The OpenAPI mirror caught up with `docs/api.md`.** `packages/contracts` gains `Work`,
+  `Backlog`, `Session` and the provider-account shapes — `workSchema`, `backlogSchema`,
+  `sessionSchema`, `providerAccountSchema`, the enums, the `parse*` helpers and the
+  `wrk_`/`ses_`/`acc_` ids — and the document carries the 18 routes §5.6, §5.6.1 and §5.9.1
+  document. The retired chat lifecycle and routine routes leave it, since D55 and D56 retired
+  them and the daemon surface they still back goes with Task-76. The guard pins 62 paths, so
+  the gate `main` inherited from the docs merge is green again.
+
 ### Changed — 2026-10-28 (sessions are editors; the schedule belongs to the repository)
 
 - **A chat is an editor, not a unit (D55).** A session has one target — the backlog, the design,

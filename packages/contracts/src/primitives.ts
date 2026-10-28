@@ -11,6 +11,9 @@ export const ID_PREFIXES = {
   pushSubscription: 'sub_',
   routine: 'rtn_',
   schedule: 'sch_',
+  work: 'wrk_',
+  session: 'ses_',
+  account: 'acc_',
   cursor: 'c_',
   request: 'req_',
 } as const;
@@ -50,6 +53,15 @@ export type RoutineId = z.infer<typeof RoutineId>;
 
 export const ScheduleId = idSchema('schedule');
 export type ScheduleId = z.infer<typeof ScheduleId>;
+
+export const WorkId = idSchema('work');
+export type WorkId = z.infer<typeof WorkId>;
+
+export const SessionId = idSchema('session');
+export type SessionId = z.infer<typeof SessionId>;
+
+export const AccountId = idSchema('account');
+export type AccountId = z.infer<typeof AccountId>;
 
 export const Cursor = idSchema('cursor');
 export type Cursor = z.infer<typeof Cursor>;

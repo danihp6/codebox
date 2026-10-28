@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { parseOrThrow } from './parse.js';
 import {
+  AccountId,
   ApprovalId,
   ChatId,
   DeviceId,
@@ -9,8 +10,11 @@ import {
   RepoId,
   RunId,
   ScheduleId,
+  SessionId,
   SubscriptionId,
+  WorkId,
   branchSchema,
+  commitShaSchema,
   cronSchema,
   globSchema,
   repoPolicySchema,
@@ -86,6 +90,37 @@ export const providerStatusSchema = z.strictObject({
 export const providersSchema = z.strictObject({
   providers: z.array(providerStatusSchema),
 });
+
+// §5.9.1 Provider accounts (D54)
+export const PROVIDER_ACCOUNT_STATES = ['active', 'exhausted', 'invalid', 'disabled'] as const;
+export const providerAccountStateSchema = z.enum(PROVIDER_ACCOUNT_STATES);
+
+export const providerAccountSchema = z.strictObject({
+  id: AccountId,
+  label: z.string().min(1),
+  priority: z.number().int().min(1),
+  state: providerAccountStateSchema,
+  enabled: z.boolean(),
+  lastFour: z.string().length(4).nullable(),
+  spentTodayUsd: z.number().nonnegative(),
+  budgetUsd: z.number().nonnegative().nullable(),
+  resetAt: timestampSchema.nullable(),
+  lastUsedAt: timestampSchema.nullable(),
+});
+export type ProviderAccount = z.infer<typeof providerAccountSchema>;
+
+export const providerAccountTestSchema = z.strictObject({
+  ok: z.boolean(),
+  state: providerAccountStateSchema,
+  lastError: z.string().nullable(),
+});
+export type ProviderAccountTest = z.infer<typeof providerAccountTestSchema>;
+
+export const oauthStartSchema = z.strictObject({
+  authorizeUrl: z.string().min(1),
+  state: z.string().min(1),
+});
+export type OAuthStart = z.infer<typeof oauthStartSchema>;
 
 export const brakeSchema = z.strictObject({ enabled: z.boolean() });
 
@@ -249,10 +284,121 @@ export const approvalSchema = z.strictObject({
 });
 export type Approval = z.infer<typeof approvalSchema>;
 
-// §5.6 Chat
+// §5.6 Works and backlog (D44, D51)
+export const WORK_STATES = [
+  'queued',
+  'running',
+  'review',
+  'merged',
+  'failed',
+  'needs_decision',
+  'abandoned',
+] as const;
+export const workStateSchema = z.enum(WORK_STATES);
+export type WorkState = z.infer<typeof workStateSchema>;
+
+export const WORK_ORIGINS = ['manual', 'backlog', 'schedule'] as const;
+export const workOriginSchema = z.enum(WORK_ORIGINS);
+export type WorkOrigin = z.infer<typeof workOriginSchema>;
+
+export const backlogItemRefSchema: z.ZodString = z.string().regex(/^[A-Z][A-Za-z]*-\d{1,4}$/);
+
+export const workSchema = z.strictObject({
+  id: WorkId,
+  repoId: RepoId,
+  title: z.string().min(1),
+  prompt: z.string().min(1),
+  backlogRef: backlogItemRefSchema,
+  state: workStateSchema,
+  origin: workOriginSchema,
+  attempts: z.number().int().nonnegative(),
+  maxAttempts: z.number().int().min(1),
+  usage: costSchema,
+  contextTokens: z.number().int().nonnegative(),
+  contextEpoch: z.number().int().min(1),
+  reviewedAt: timestampSchema.nullable(),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+});
+export type Work = z.infer<typeof workSchema>;
+
+export const backlogWorkSchema = z.strictObject({
+  id: WorkId,
+  state: workStateSchema,
+  runs: z.number().int().nonnegative(),
+});
+export type BacklogWork = z.infer<typeof backlogWorkSchema>;
+
+export const backlogItemSchema = z.strictObject({
+  ref: backlogItemRefSchema,
+  title: z.string(),
+  checked: z.boolean(),
+  line: z.number().int().positive(),
+  work: backlogWorkSchema.nullable(),
+});
+export type BacklogItem = z.infer<typeof backlogItemSchema>;
+
+export const backlogSectionSchema = z.strictObject({
+  title: z.string().min(1),
+  items: z.array(backlogItemSchema),
+});
+export type BacklogSection = z.infer<typeof backlogSectionSchema>;
+
+export const backlogSchema = z.strictObject({
+  repoId: RepoId,
+  revision: commitShaSchema,
+  path: z.string().min(1),
+  sections: z.array(backlogSectionSchema),
+});
+export type Backlog = z.infer<typeof backlogSchema>;
+
+// §5.6.1 Sessions (D55)
 export const CHAT_ROLES = ['user', 'assistant', 'system'] as const;
 export const chatRoleSchema = z.enum(CHAT_ROLES);
+export type ChatRole = z.infer<typeof chatRoleSchema>;
 
+export const SESSION_TARGETS = ['backlog', 'design', 'schedule', 'work', 'repo'] as const;
+export const sessionTargetSchema = z.enum(SESSION_TARGETS);
+export type SessionTarget = z.infer<typeof sessionTargetSchema>;
+
+export const SESSION_STATES = ['idle', 'working', 'archived'] as const;
+export const sessionStateSchema = z.enum(SESSION_STATES);
+export type SessionState = z.infer<typeof sessionStateSchema>;
+
+export const sessionMessageSchema = z.strictObject({
+  id: MessageId,
+  sessionId: SessionId,
+  role: chatRoleSchema,
+  text: z.string(),
+  createdAt: timestampSchema,
+});
+export type SessionMessage = z.infer<typeof sessionMessageSchema>;
+
+export const sessionProposalSchema = z.strictObject({
+  branch: branchSchema,
+  files: z.array(z.string().min(1)),
+  createdAt: timestampSchema,
+});
+export type SessionProposal = z.infer<typeof sessionProposalSchema>;
+
+export const sessionSchema = z.strictObject({
+  id: SessionId,
+  repoId: RepoId,
+  target: sessionTargetSchema,
+  workId: WorkId.nullable(),
+  state: sessionStateSchema,
+  branch: branchSchema.nullable(),
+  pendingProposal: sessionProposalSchema.nullable(),
+  usage: costSchema,
+  contextTokens: z.number().int().nonnegative(),
+  contextEpoch: z.number().int().min(1),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+  lastMessage: sessionMessageSchema.nullable(),
+});
+export type Session = z.infer<typeof sessionSchema>;
+
+// §5.6 Chat (legacy: retired by D55, the daemon surface goes with Task-76)
 export const chatMessageSchema = z.strictObject({
   id: MessageId,
   chatId: ChatId,
@@ -522,6 +668,22 @@ export function parseMe(input: unknown): Me {
 
 export function parseBrake(input: unknown): Brake {
   return parseOrThrow(brakeSchema, input, 'brake');
+}
+
+export function parseWork(input: unknown): Work {
+  return parseOrThrow(workSchema, input, 'work');
+}
+
+export function parseBacklog(input: unknown): Backlog {
+  return parseOrThrow(backlogSchema, input, 'backlog');
+}
+
+export function parseSession(input: unknown): Session {
+  return parseOrThrow(sessionSchema, input, 'session');
+}
+
+export function parseProviderAccount(input: unknown): ProviderAccount {
+  return parseOrThrow(providerAccountSchema, input, 'providerAccount');
 }
 
 export function parseSchedule(input: unknown): Schedule {
