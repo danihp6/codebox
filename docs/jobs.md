@@ -390,6 +390,19 @@ The selection is the whole point: a fire has no prompt of its own. It reads the 
 `needs_decision`, `attempts < maxAttempts`, and matching `refs` when set), and opens a run of
 that item with the item as the prompt.
 
+`@codebox/backlog` owns that file: `parseBacklog` reads it into ordered items, `applyTick`
+rewrites exactly one checkbox and `selectNextItem` decides what a fire takes — the daemon never
+re-implements either. An item is `{ ref, title, body, line, state, section }`; `body` is the title
+plus the item's continuation lines and it is the only prompt seed a fire has. Only `[ ]` is
+selectable: `[x]` and `[~]` are not pending, and `[!]` is *reported* as a refusal (`blocked`),
+never silently skipped. The refusals are `ambiguous_ref`, `blocked`, `needs_decision`,
+`live_work` and `attempts_exhausted`; the result is `nothing_pending` when there is no pending
+candidate at all and `nothing_runnable` when every candidate was refused — the two codes §16.3
+already names. The attempts cap is the schedule's `maxAttempts`, measured against the highest
+`attempts` among the ref's works; a work row's own `maxAttempts` is not consulted. A tick changes
+exactly one checkbox character and leaves every other byte of the file alone, so the merge carries
+one line.
+
 ### 16.1 The three modes
 
 - **`once`** fires once at the cron's next instant and then has no next fire. It is a deferred

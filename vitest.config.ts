@@ -38,6 +38,7 @@ export default defineConfig({
       daemonProject,
       project('packages/contracts'),
       project('packages/core'),
+      project('packages/backlog'),
       project('packages/store'),
       project('packages/opencode'),
       project('packages/workspaces'),

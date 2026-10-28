@@ -375,6 +375,7 @@ apps/daemon        → may import every package; owns all I/O and process lifecy
 apps/app           → imports contracts only; never a daemon package
 packages/contracts → no imports outside zod
 packages/core      → contracts only; pure; no node:fs, no fetch
+packages/backlog   → contracts only; pure; no I/O
 packages/store     → contracts + node:sqlite
 packages/opencode  → contracts + @opencode/client
 packages/workspaces→ contracts + node:child_process (git)
