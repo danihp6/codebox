@@ -6,6 +6,27 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-28 (Task-73, provider accounts and failover)
+
+- **A provider error is classified, not retried blindly (D54).** `@codebox/opencode` gains
+  `selectAccount`, `classifyProviderFailure` and `decideFailover` as pure functions with the
+  clock injected: `401/403` writes `invalid`, `429` or a quota reason writes `exhausted` until
+  the provider's own `resetAt` or `now + 900 s`, anything else is transient and retried once on
+  the same account, and a turn that has already emitted a tool call is never replayed. Exhaustion
+  surfaces as `503 provider_unavailable` with `details.reason = "provider_exhausted"` — a run and
+  fire code, not a new contract `ErrorCode`.
+- **A `providers` subsystem with the seven documented routes.** `GET /v1/providers` and the six
+  account mutations of `docs/api.md` §5.9.1, mounted by name from `SUBSYSTEMS` (fourteen now) so
+  `apps/daemon/src/main.ts` did not move. Every response carries at most the last four characters
+  of an account's credential; the value lives only in the write-only store.
+- **Accounts are sealed through the credentials store.** One `model_key` credential per account,
+  removed with the account; OAuth accounts seal `{"v":1,"access","refresh","expiresAt"}`, the
+  state is single use with a 600 s TTL, and no adapter is registered yet, so `/oauth/start`
+  answers `422 provider_oauth_unsupported` instead of inventing an endpoint.
+- **The phantom configuration goes.** `docs/providers.md` §5.1 stops promising
+  `CB_ACCOUNT_COOLDOWN_SECONDS` and `CB_ACCOUNT_DAILY_USD`; the cooldown is the constant `900`
+  and the per-account cap is the account's own `budgetUsd` until a contracts task parses a key.
+
 ### Added — 2026-10-28 (Task-71, the backlog package and selection)
 
 - **The backlog file has an owner.** `@codebox/backlog` is a pure package:

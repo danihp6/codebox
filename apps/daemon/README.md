@@ -102,7 +102,31 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `src/credentials/routes.test.ts` — the ten-route contract: bodies, scopes, refusals and the
   no-value walk.
 - `src/credentials/index.test.ts` — the module seam and the unconfigured warning.
-- `src/integrations/index.ts` — the integration barrel: routes, service types and storage.
+- `src/providers/index.ts` — the providers subsystem module: seeds the catalog, builds one
+  service per context, mounts the seven §5.9.1 routes.
+- `src/providers/service.ts` — account CRUD, the turn handle, the failure recording, the reset
+  sweep and the OAuth state machine.
+- `src/providers/routes.ts` — the `docs/api.md` §5.9.1 handlers, their `admin` checks and bodies.
+- `src/providers/schemas.ts` — the zod boundary for the account, patch and OAuth bodies.
+- `src/providers/errors.ts` — `PROVIDER_EXHAUSTED`, `ProviderExhaustedError` and its one 503
+  mapping.
+- `src/providers/oauth.ts` — the OAuth adapter port, the empty default set and the sealed token
+  envelope.
+- `src/providers/credentials.ts` — the write-only credential port: one `model_key` credential
+  per account, never its value.
+- `src/providers/catalog.ts` — the three known adapters and the idempotent seed.
+- `src/providers/ids.ts` — the only `acct_` account id and OAuth state generators.
+- `src/providers/service.test.ts` — sealing, selection, failure recording, the reset sweep and
+  `testAccount` against an in-memory store and an injected clock.
+- `src/providers/routes.test.ts` — the §5.9.1 HTTP contract: bodies, refusals, scopes and
+  redacted logs.
+- `src/providers/errors.test.ts` — the exhaustion error and its 503 mapping.
+- `src/providers/oauth.test.ts` — the token envelope, the single-use state, its 600 s expiry and
+  the exchange.
+- `src/providers/credentials.test.ts` — the `model_key` credential, the last four and removal.
+- `src/providers/catalog.test.ts` — the three seeded rows, idempotence and catalog order.
+- `src/providers/ids.test.ts` — id shapes, uniqueness and injectable randomness.
+- `src/providers/index.test.ts` — the module seam and the one service per context.
 - `src/integrations/service.ts` — the allowlist-first outbound request and the GitHub manifest
   exchange.
 - `src/integrations/routes.ts` — the six integration handlers.

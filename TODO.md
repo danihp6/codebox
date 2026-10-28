@@ -1044,7 +1044,7 @@ same path; the contracts task lands first because every other task reads its typ
   Task-71. *Acceptance:* `[unit]` a work created from an unchecked item carries its ref and
   prompt; `[unit]` a merged run ticks exactly one line; `[unit]` a session write outside its
   target is `target_violation`; `[live]` a nightly window opens two runs from two items.
-- [ ] **[Task-73]** Provider accounts and failover. Classify the provider error, set the
+- [x] **[Task-73]** Provider accounts and failover. Classify the provider error, set the
   account state and `resetAt`, retry only when no tool call was emitted, fail with
   `provider_exhausted` when none is active, and expose `GET /v1/providers` plus the account
   routes. *Paths:* `packages/opencode/**` (account selection), `apps/daemon/src/providers/**`,
