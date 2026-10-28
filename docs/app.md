@@ -82,7 +82,7 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | --- | --- | --- |
 | `/pair` | Pairing | Enter the ten-character code and a device name, submit, see one inline reason when the code is used, expired or unknown, and land on the dashboard; the same screen after a 401. |
 | `/dashboard` | Dashboard | *Needs you*, running, unreviewed, today's spend, health, and **one block per repository**; the start card on a fresh box. |
-| `/repos` | Repos | The repository list: clone state, gate state, open works, last activity, add. |
+| `/repos` | Repos list | The repository list with a **search field and no filters**: name, clone/gate state, `pending · running · merged` counts, and **one amber dot** when something needs the operator (an unreviewed PR or a red run); add. |
 | `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip, cost; ad-hoc works above; `Run` on an idle item; a second tab with every work. |
 | `/works/:id` | Work | One thread with a divider per run, composer, tool cards, gate and PR cards, context header, schedule row and the design snapshot sheet. |
 | `/repos/pick` | Connect repository | The picker over the GitHub App installation, with `connected` / `cloning` / `unavailable` per row. |
@@ -188,6 +188,9 @@ sticks to the bottom only when the user is already at the bottom.
 - **Two facts, never one**: the checkbox is the plan (what should exist) and the chip is the
   state (what actually happened). Collapsing them is how a backlog starts lying about its own
   progress (D51).
+- **A list of repositories is not filtered, it is counted.** Three numbers — `pending ·
+  running · merged` — say more than a filter bar, and a single amber dot marks the only thing
+  that needs a person. No chevron does that job.
 - **320 px** is the reference width: no horizontal scroll anywhere; tables become cards.
 - **Motion** is functional (route transitions, a pulsing dot while a run is live) and
   respects `prefers-reduced-motion`.
