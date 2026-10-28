@@ -61,3 +61,28 @@ export type {
   FinishScheduleFireInput,
   ScheduleFireRepository,
 } from './schedule-fires.js';
+
+// Works, sessions and the repository schedule: D44, D51–D56.
+export { createWorkRepository } from './works.js';
+export type { WorkFilter, WorkPatch, WorkRepository } from './works.js';
+export { createSessionRepository } from './sessions.js';
+export type { SessionFilter, SessionPatch, SessionRepository } from './sessions.js';
+export { createRepoScheduleRepository } from './repo-schedules.js';
+export type {
+  RepoScheduleFilter,
+  RepoSchedulePatch,
+  RepoScheduleRepository,
+} from './repo-schedules.js';
+
+// Providers and their failover accounts: D54.
+export { createProviderRepository, createProviderAccountRepository } from './providers.js';
+export type {
+  ProviderRepository,
+  ProviderAccountFilter,
+  ProviderAccountPatch,
+  ProviderAccountRepository,
+} from './providers.js';
+
+// The D44 read-only marker.
+export { createLegacyRepository } from './legacy.js';
+export type { LegacyTable, LegacyRepository } from './legacy.js';

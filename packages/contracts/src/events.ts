@@ -5,13 +5,21 @@ import {
   ChatId,
   JobId,
   MessageId,
+  ProviderAccountId,
   RepoId,
   RoutineId,
   RunId,
+  ScheduleId,
+  SessionId,
+  WorkId,
+  backlogRefSchema,
   commitShaSchema,
   routineKindSchema,
   runTriggerSchema,
+  sessionTargetSchema,
   timestampSchema,
+  workOriginSchema,
+  workStateSchema,
 } from './primitives.js';
 import type { SseEventName } from './primitives.js';
 import {
@@ -21,6 +29,8 @@ import {
   healthSchema,
   prRefSchema,
 } from './resources.js';
+import { sessionProposalSchema } from './works.js';
+import { providerAccountStateSchema, providerIdSchema } from './providers.js';
 
 const toolStatusSchema = z.enum(['start', 'ok', 'error']);
 
@@ -152,6 +162,94 @@ export const routineFailedDataSchema = routineEventBase.extend({
   message: z.string().min(1),
 });
 
+export const workEventBase = z.strictObject({
+  workId: WorkId,
+  seq: z.number().int().min(1),
+  ts: timestampSchema,
+});
+
+export const workCreatedDataSchema = workEventBase.extend({
+  repoId: RepoId,
+  backlogRef: backlogRefSchema,
+  origin: workOriginSchema,
+});
+
+export const workUpdatedDataSchema = workEventBase.extend({
+  state: workStateSchema,
+  attempts: z.number().int().nonnegative(),
+});
+
+export const workNeedsDecisionDataSchema = workEventBase.extend({
+  reason: z.string().min(1),
+});
+
+export const workClosedDataSchema = workEventBase.extend({
+  state: z.enum(['merged', 'failed', 'abandoned']),
+});
+
+export const sessionEventBase = z.strictObject({
+  sessionId: SessionId,
+  seq: z.number().int().min(1),
+  ts: timestampSchema,
+});
+
+export const sessionCreatedDataSchema = sessionEventBase.extend({
+  repoId: RepoId,
+  target: sessionTargetSchema,
+  workId: WorkId.nullable(),
+});
+
+export const sessionDeltaDataSchema = sessionEventBase.extend({ delta: z.string() });
+
+export const sessionToolDataSchema = sessionEventBase.extend({
+  tool: z.string().min(1),
+  status: toolStatusSchema,
+  detail: z.string().optional(),
+});
+
+export const sessionProposalDataSchema = sessionEventBase.extend({
+  proposal: sessionProposalSchema,
+});
+
+export const sessionClosedDataSchema = sessionEventBase.extend({
+  status: z.literal('archived'),
+});
+
+export const scheduleFiredDataSchema = z.strictObject({
+  scheduleId: ScheduleId,
+  scheduledFor: timestampSchema,
+  workId: WorkId.nullable(),
+  runId: RunId.nullable(),
+  ts: timestampSchema,
+});
+
+export const scheduleSkippedDataSchema = z.strictObject({
+  scheduleId: ScheduleId,
+  scheduledFor: timestampSchema,
+  reason: z.enum(['nothing_pending', 'nothing_runnable', 'misfire_grace']),
+  ts: timestampSchema,
+});
+
+export const providerStateDataSchema = z.strictObject({
+  providerId: providerIdSchema,
+  accountId: ProviderAccountId,
+  state: providerAccountStateSchema,
+  resetAt: timestampSchema.nullable(),
+  ts: timestampSchema,
+});
+
+export const backlogChangedDataSchema = z.strictObject({
+  repoId: RepoId,
+  revision: commitShaSchema,
+  ts: timestampSchema,
+});
+
+export const designChangedDataSchema = z.strictObject({
+  repoId: RepoId,
+  revision: commitShaSchema,
+  ts: timestampSchema,
+});
+
 export const sseEventSchema = z.discriminatedUnion('event', [
   z.strictObject({ event: z.literal('run.queued'), data: runQueuedDataSchema }),
   z.strictObject({ event: z.literal('run.started'), data: runStartedDataSchema }),
@@ -177,6 +275,20 @@ export const sseEventSchema = z.discriminatedUnion('event', [
   z.strictObject({ event: z.literal('routine.fired'), data: routineFiredDataSchema }),
   z.strictObject({ event: z.literal('routine.replied'), data: routineRepliedDataSchema }),
   z.strictObject({ event: z.literal('routine.failed'), data: routineFailedDataSchema }),
+  z.strictObject({ event: z.literal('work.created'), data: workCreatedDataSchema }),
+  z.strictObject({ event: z.literal('work.updated'), data: workUpdatedDataSchema }),
+  z.strictObject({ event: z.literal('work.needs_decision'), data: workNeedsDecisionDataSchema }),
+  z.strictObject({ event: z.literal('work.closed'), data: workClosedDataSchema }),
+  z.strictObject({ event: z.literal('session.created'), data: sessionCreatedDataSchema }),
+  z.strictObject({ event: z.literal('session.delta'), data: sessionDeltaDataSchema }),
+  z.strictObject({ event: z.literal('session.tool'), data: sessionToolDataSchema }),
+  z.strictObject({ event: z.literal('session.proposal'), data: sessionProposalDataSchema }),
+  z.strictObject({ event: z.literal('session.closed'), data: sessionClosedDataSchema }),
+  z.strictObject({ event: z.literal('schedule.fired'), data: scheduleFiredDataSchema }),
+  z.strictObject({ event: z.literal('schedule.skipped'), data: scheduleSkippedDataSchema }),
+  z.strictObject({ event: z.literal('provider.state'), data: providerStateDataSchema }),
+  z.strictObject({ event: z.literal('backlog.changed'), data: backlogChangedDataSchema }),
+  z.strictObject({ event: z.literal('design.changed'), data: designChangedDataSchema }),
 ]);
 export type SseEvent = z.infer<typeof sseEventSchema>;
 

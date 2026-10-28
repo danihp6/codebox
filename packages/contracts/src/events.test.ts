@@ -18,6 +18,10 @@ const jobId = 'job_01JABCDEFG';
 const repoId = 'repo_01JABCDEFG';
 const routineId = 'rtn_01JABCDEFG';
 const messageId = 'msg_01JABCDEFG';
+const workId = 'wrk_01JABCDEFG';
+const sessionId = 'sess_01JABCDEFG';
+const accountId = 'acct_01JABCDEFG';
+const scheduleId = 'sch_01JABCDEFG';
 
 const pr = { number: 42, url: 'https://github.com/dani/example/pull/42', mergeable: true };
 const gate = { status: 'passed', exitCode: 0, durationMs: 184000 };
@@ -125,6 +129,72 @@ const fixtures: Readonly<Record<SseEventName, { event: SseEventName; data: unkno
   'routine.failed': {
     event: 'routine.failed',
     data: { routineId, code: 'chat_unavailable', message: 'No chat could be opened.', ts },
+  },
+  'work.created': {
+    event: 'work.created',
+    data: { workId, seq: 1, ts, repoId, backlogRef: 'Task-35', origin: 'backlog' },
+  },
+  'work.updated': {
+    event: 'work.updated',
+    data: { workId, seq: 2, ts, state: 'running', attempts: 1 },
+  },
+  'work.needs_decision': {
+    event: 'work.needs_decision',
+    data: { workId, seq: 3, ts, reason: 'the gate is ambiguous' },
+  },
+  'work.closed': { event: 'work.closed', data: { workId, seq: 4, ts, state: 'merged' } },
+  'session.created': {
+    event: 'session.created',
+    data: { sessionId, seq: 1, ts, repoId, target: 'work', workId },
+  },
+  'session.delta': { event: 'session.delta', data: { sessionId, seq: 2, ts, delta: 'Hola' } },
+  'session.tool': {
+    event: 'session.tool',
+    data: { sessionId, seq: 3, ts, tool: 'edit', status: 'ok' },
+  },
+  'session.proposal': {
+    event: 'session.proposal',
+    data: {
+      sessionId,
+      seq: 4,
+      ts,
+      proposal: {
+        branch: 'cb/design-edit',
+        sha: '9f1c2ab',
+        paths: ['design/tokens/core.json'],
+        createdAt: ts,
+      },
+    },
+  },
+  'session.closed': {
+    event: 'session.closed',
+    data: { sessionId, seq: 5, ts, status: 'archived' },
+  },
+  'schedule.fired': {
+    event: 'schedule.fired',
+    data: { scheduleId, scheduledFor: '2026-10-24T07:00:00Z', workId, runId, ts },
+  },
+  'schedule.skipped': {
+    event: 'schedule.skipped',
+    data: { scheduleId, scheduledFor: '2026-10-24T07:00:00Z', reason: 'nothing_pending', ts },
+  },
+  'provider.state': {
+    event: 'provider.state',
+    data: {
+      providerId: 'opencode-go',
+      accountId: accountId,
+      state: 'exhausted',
+      resetAt: '2026-10-24T15:00:00Z',
+      ts,
+    },
+  },
+  'backlog.changed': {
+    event: 'backlog.changed',
+    data: { repoId, revision: '9f1c2ab', ts },
+  },
+  'design.changed': {
+    event: 'design.changed',
+    data: { repoId, revision: '9f1c2ab', ts },
   },
 };
 

@@ -1,4 +1,4 @@
-import type { Repo } from '@codebox/contracts';
+import type { Repo, Work } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { StoreError } from './errors.js';
 import type { RunRecord } from './runs.js';
@@ -17,7 +17,28 @@ const REPO: Repo = {
 
 const RUN_ID = 'run_0000001';
 const CHAT_ID = 'chat_000001';
+const WORK_ID = 'wrk_000001';
+const SESSION_ID = 'sess_000001';
 const TS = '2026-01-01T00:00:00.000Z';
+
+const WORK: Work = {
+  id: WORK_ID,
+  repoId: REPO.id,
+  backlogRef: 'Task-35',
+  title: 'Routine engine',
+  prompt: 'Build the routine engine and its tests.',
+  specSha: '9f1c2ab',
+  state: 'queued',
+  origin: 'backlog',
+  attempts: 0,
+  maxAttempts: 2,
+  usage: { usd: 0, tokensIn: 0, tokensOut: 0 },
+  contextTokens: 0,
+  contextEpoch: 1,
+  reviewedAt: null,
+  createdAt: TS,
+  updatedAt: TS,
+};
 
 function storeErrorCode(run: () => unknown): string {
   try {
@@ -151,6 +172,71 @@ describe('events', () => {
     expect(store.events.readRunAfterSeq(RUN_ID, 0, 10).map((event) => event.type)).toEqual([
       'run.started',
     ]);
+  });
+
+  it('keeps one sequence per works and one per session', () => {
+    store.works.create(WORK);
+    store.sessions.createSession({
+      id: SESSION_ID,
+      repoId: REPO.id,
+      target: 'design',
+      workId: null,
+      title: 'Edit the design tokens',
+      status: 'idle',
+      branch: 'cb/design-edit',
+      pendingProposal: null,
+      usage: { usd: 0, tokensIn: 0, tokensOut: 0 },
+      contextTokens: 0,
+      contextEpoch: 1,
+      createdAt: TS,
+      updatedAt: TS,
+      lastMessage: null,
+    });
+
+    expect(store.events.nextSeq({ workId: WORK_ID })).toBe(1);
+    const created = store.events.append({
+      runId: null,
+      chatId: null,
+      workId: WORK_ID,
+      seq: 1,
+      type: 'work.created',
+      data: { workId: WORK_ID, seq: 1, ts: TS },
+      ts: TS,
+    });
+    expect(created.workId).toBe(WORK_ID);
+    expect(created.sessionId).toBeNull();
+    expect(store.events.nextSeq({ workId: WORK_ID })).toBe(2);
+
+    expect(store.events.nextSeq({ sessionId: SESSION_ID })).toBe(1);
+    store.events.append({
+      runId: null,
+      chatId: null,
+      sessionId: SESSION_ID,
+      seq: 1,
+      type: 'session.delta',
+      data: { sessionId: SESSION_ID, seq: 1, delta: 'Hola', ts: TS },
+      ts: TS,
+    });
+    expect(store.events.nextSeq({ sessionId: SESSION_ID })).toBe(2);
+
+    const replay = store.events.readAfterId(0, 10);
+    expect(replay.map((event) => event.type)).toEqual(['work.created', 'session.delta']);
+    expect(replay[0]?.workId).toBe(WORK_ID);
+    expect(replay[1]?.sessionId).toBe(SESSION_ID);
+    expect(replay[1]?.seq).toBe(1);
+
+    const duplicate = storeErrorCode(() =>
+      store.events.append({
+        runId: null,
+        chatId: null,
+        sessionId: SESSION_ID,
+        seq: 1,
+        type: 'session.delta',
+        data: { sessionId: SESSION_ID, seq: 1, delta: 'again', ts: TS },
+        ts: TS,
+      }),
+    );
+    expect(duplicate).toBe('unique_violation');
   });
 
   it('stores a global event with a null seq and no stream', () => {

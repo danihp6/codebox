@@ -990,15 +990,28 @@ backlog file is the list (D51), design lives in the repo (D52) and provider acco
 in order (D54). This batch makes the code and the app match. Each task is cut so no two touch the
 same path; the contracts task lands first because every other task reads its types.
 
-- [ ] **[Task-70]** Contracts and store for the work model. `workSchema`, `sessionSchema`,
+- [x] **[Task-70]** Contracts and store for the work model. `workSchema`, `sessionSchema`,
   `backlogSchema`, `repoScheduleSchema`, `providerSchema`, `providerAccountSchema` and the new
-  event names; migration `0003_works.sql` (`works`, `sessions`, `session_messages`, `schedules`
-  with `repo_id` and `selection`, `schedule_fires`) and `0004_providers.sql` (`providers`,
+  event names; migration `0006_works.sql` (`works`, `sessions`, `session_messages`, `schedules`
+  with `repo_id` and `selection`, `schedule_fires`) and `0007_providers.sql` (`providers`,
   `provider_accounts`); `chats` becomes a read-only legacy table. *Paths:*
   `packages/contracts/src/**`, `packages/store/**`, `docs/api.md` (§5.6, §5.6.1, §5.10),
   `docs/architecture.md` (tables). *Dependencies:* none. *Acceptance:* `[unit]` a work row
   round-trips with `backlogRef` and `attempts`; `[unit]` a second schedule on one repository is
   refused; `[unit]` the migration is forward-only and idempotent.
+  LANDED AS: migrations are **`0006_works.sql`** and **`0007_providers.sql`** — `0003`–`0005`
+  already existed and are checksum-pinned — and `schedules` is altered additively, not rebuilt,
+  because the legacy `/v1/schedules` accessors still read its `title`/`prompt` columns. The
+  one-schedule-per-repository index is `WHERE repo_id IS NOT NULL AND title = ''`: a D56 row
+  writes the empty-title sentinel, a legacy row keeps a real title until Task-76 removes its
+  writer, and `getByRepo` binds the same sentinel. **Task-72:** `list()` and `listDue()` do not
+  filter the sentinel, so a legacy row still surfaces as a `RepoSchedule` — filter it before
+  firing. `SSE_EVENT_NAMES` holds **38** names (24 existing + 14 new; the batch note's 37
+  miscounted the routine triple). `chats` read-only means the `schema_legacy` marker plus no new
+  writer; the refusal triggers land with Task-76, whose own migration also drops the sentinel
+  predicate. The OpenAPI document now matches `docs/api.md` at **62** paths (18 works, sessions,
+  backlog and provider-account paths added; the 13 retired chat and routine paths removed) — the
+  markdown tables stay the owner, so a route added there needs its operation in the same task.
 - [ ] **[Task-71]** Backlog package and selection. `parseBacklog(markdown)`,
   `applyTick(markdown, ref)` and `selectNextItem(items, works, schedule)` as pure functions with
   fixtures from this repository's real `TODO.md`; tolerant of unknown lines, refuses an ambiguous

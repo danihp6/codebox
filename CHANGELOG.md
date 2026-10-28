@@ -6,6 +6,33 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-28 (Task-70, contracts and store for the work model)
+
+- **The work model is a contract and a schema, not a promise.** `@codebox/contracts` exports
+  `workSchema`, `sessionSchema`, `backlogSchema`, `repoScheduleSchema`, `providerSchema` and
+  `providerAccountSchema` with their `parse*` helpers and page schemas, plus fourteen SSE event
+  names (`work.*`, `session.*`, `schedule.fired|skipped`, `provider.state`,
+  `backlog.changed`, `design.changed`) — 38 names in total, chat and routines included until
+  their writers go. `sessionSchema` enforces the D55 target boundary: only a work session names
+  a work, and a repository session carries no branch and no proposal.
+- **Migrations `0006_works.sql` and `0007_providers.sql`.** `works`, `sessions`,
+  `session_messages`, `schema_legacy`, `providers` and `provider_accounts`; `runs.work_id` and
+  the two new `run_events` scopes; `schedules` gains `selection`, `refs` and `max_attempts`
+  additively and a one-D56-schedule-per-repository unique index. One work in flight per backlog
+  item is a partial unique index, so a second run of the same item is refused by the database.
+- **The store owns the new tables.** `store.works`, `store.sessions`, `store.repoSchedules`,
+  `store.providers`, `store.providerAccounts` and `store.legacy`; no repository reads the clock
+  or generates an id, and a constraint violation is a `StoreError` code the daemon maps to
+  `409`/`404`. `store.legacy.list()` names `chat_sessions` and `chat_messages` read-only by D44;
+  their refusal triggers land with Task-76, when the last writer goes.
+- **The API document is the documented surface again.** `docs/api.md` is the owner and the
+  generated OpenAPI document now matches it at 62 paths: the works, sessions, backlog and
+  provider-account operations are in, and the retired chat and routine paths are out, pinned by
+  `retires the chat and routine paths`. `docs/architecture.md` names the real migration files.
+- Deviations recorded in `TODO.md`: the `0003`/`0004` numbers in the backlog were stale, and the
+  repository-schedule index carries the empty-title sentinel so a legacy row stays insertable
+  until Task-76; Task-72 must filter that sentinel in `listDue()` before firing.
+
 ### Changed — 2026-10-28 (sessions are editors; the schedule belongs to the repository)
 
 - **A chat is an editor, not a unit (D55).** A session has one target — the backlog, the design,
