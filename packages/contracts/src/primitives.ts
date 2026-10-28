@@ -11,6 +11,9 @@ export const ID_PREFIXES = {
   pushSubscription: 'sub_',
   routine: 'rtn_',
   schedule: 'sch_',
+  work: 'wrk_',
+  session: 'sess_',
+  providerAccount: 'acct_',
   cursor: 'c_',
   request: 'req_',
 } as const;
@@ -50,6 +53,19 @@ export type RoutineId = z.infer<typeof RoutineId>;
 
 export const ScheduleId = idSchema('schedule');
 export type ScheduleId = z.infer<typeof ScheduleId>;
+
+export const WorkId = idSchema('work');
+export type WorkId = z.infer<typeof WorkId>;
+
+export const SessionId = idSchema('session');
+export type SessionId = z.infer<typeof SessionId>;
+
+export const ProviderAccountId = idSchema('providerAccount');
+export type ProviderAccountId = z.infer<typeof ProviderAccountId>;
+
+/** D53: the backlog item's key, `Task-<digits>`. One definition, used by Work and Backlog. */
+export const backlogRefSchema: z.ZodString = z.string().regex(/^Task-\d+$/);
+export type BacklogRef = z.infer<typeof backlogRefSchema>;
 
 export const Cursor = idSchema('cursor');
 export type Cursor = z.infer<typeof Cursor>;
@@ -117,6 +133,41 @@ export const ROUTINE_KINDS = ['prompt', 'reminder'] as const;
 export const routineKindSchema = z.enum(ROUTINE_KINDS);
 export type RoutineKind = z.infer<typeof routineKindSchema>;
 
+export const WORK_STATES = [
+  'queued',
+  'running',
+  'review',
+  'merged',
+  'failed',
+  'needs_decision',
+  'abandoned',
+] as const;
+export const workStateSchema = z.enum(WORK_STATES);
+export type WorkState = z.infer<typeof workStateSchema>;
+
+/** A work in one of these states blocks its backlog item (docs/jobs.md §16 selection). */
+export const WORK_STATE_IN_FLIGHT: readonly WorkState[] = Object.freeze([
+  'queued',
+  'running',
+  'needs_decision',
+]);
+
+export const WORK_ORIGINS = ['manual', 'backlog', 'schedule'] as const;
+export const workOriginSchema = z.enum(WORK_ORIGINS);
+export type WorkOrigin = z.infer<typeof workOriginSchema>;
+
+export const SESSION_TARGETS = ['backlog', 'design', 'schedule', 'work', 'repo'] as const;
+export const sessionTargetSchema = z.enum(SESSION_TARGETS);
+export type SessionTarget = z.infer<typeof sessionTargetSchema>;
+
+export const SESSION_STATUSES = ['idle', 'working', 'archived'] as const;
+export const sessionStatusSchema = z.enum(SESSION_STATUSES);
+export type SessionStatus = z.infer<typeof sessionStatusSchema>;
+
+export const SELECTIONS = ['nextPending', 'refs'] as const;
+export const selectionSchema = z.enum(SELECTIONS);
+export type Selection = z.infer<typeof selectionSchema>;
+
 export const RUN_STATE_TERMINAL: readonly RunState[] = Object.freeze(
   RUN_STATES.filter(
     (state) => state === 'succeeded' || state === 'failed' || state === 'cancelled',
@@ -152,6 +203,20 @@ export const SSE_EVENT_NAMES = [
   'approval.resolved',
   'telemetry',
   ...ROUTINE_EVENT_NAMES,
+  'work.created',
+  'work.updated',
+  'work.needs_decision',
+  'work.closed',
+  'session.created',
+  'session.delta',
+  'session.tool',
+  'session.proposal',
+  'session.closed',
+  'schedule.fired',
+  'schedule.skipped',
+  'provider.state',
+  'backlog.changed',
+  'design.changed',
 ] as const;
 
 export const sseEventNameSchema = z.enum(SSE_EVENT_NAMES);

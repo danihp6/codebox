@@ -12,6 +12,8 @@ import {
 import type { Approval, ChatMessage, ChatSession, Device, Job, Repo, Run } from './resources.js';
 import { routineSchema } from './routines.js';
 import type { Routine } from './routines.js';
+import { repoScheduleSchema, sessionMessageSchema, sessionSchema, workSchema } from './works.js';
+import type { RepoSchedule, Session, SessionMessage, Work } from './works.js';
 
 export const PAGINATION_DEFAULT_LIMIT = 50;
 export const PAGINATION_MAX_LIMIT = 200;
@@ -47,6 +49,11 @@ export const pageOfChatSession: z.ZodType<Page<ChatSession>> = pageSchema(chatSe
 export const pageOfChatMessage: z.ZodType<Page<ChatMessage>> = pageSchema(chatMessageSchema);
 export const pageOfDevice: z.ZodType<Page<Device>> = pageSchema(deviceSchema);
 export const pageOfRoutine: z.ZodType<Page<Routine>> = pageSchema(routineSchema);
+export const pageOfWork: z.ZodType<Page<Work>> = pageSchema(workSchema);
+export const pageOfSession: z.ZodType<Page<Session>> = pageSchema(sessionSchema);
+export const pageOfSessionMessage: z.ZodType<Page<SessionMessage>> =
+  pageSchema(sessionMessageSchema);
+export const pageOfRepoSchedule: z.ZodType<Page<RepoSchedule>> = pageSchema(repoScheduleSchema);
 
 export function parsePage<T>(item: z.ZodType<T>, input: unknown, boundary: string): Page<T> {
   return parseOrThrow(pageSchema(item), input, boundary);

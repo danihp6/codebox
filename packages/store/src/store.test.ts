@@ -51,7 +51,7 @@ afterEach(() => {
 describe('openStore', () => {
   it('applies migrations, enables WAL and foreign keys on a file database', () => {
     const store = track(openStore({ path: join(directory, 'state.db') }));
-    expect(store.schemaVersion).toBe(5);
+    expect(store.schemaVersion).toBe(7);
     expect(store.db.prepare('PRAGMA journal_mode').get()?.['journal_mode']).toBe('wal');
     expect(store.db.prepare('PRAGMA foreign_keys').get()?.['foreign_keys']).toBe(1);
     expect(store.db.prepare('PRAGMA busy_timeout').get()?.['timeout']).toBe(5000);
@@ -66,13 +66,13 @@ describe('openStore', () => {
   it('is a no-op on an already migrated database', () => {
     const path = join(directory, 'state.db');
     const first = openStore({ path });
-    expect(first.schemaVersion).toBe(5);
+    expect(first.schemaVersion).toBe(7);
     first.close();
 
     const second = track(openStore({ path }));
-    expect(second.schemaVersion).toBe(5);
+    expect(second.schemaVersion).toBe(7);
     const rows = second.db.prepare('SELECT version, applied_at FROM schema_migrations').all();
-    expect(rows).toHaveLength(5);
+    expect(rows).toHaveLength(7);
     expect(String(rows[0]?.['applied_at'])).toMatch(/^\d{4}-\d{2}-\d{2}T/);
   });
 
@@ -87,10 +87,10 @@ describe('openStore', () => {
     raw.close();
 
     const store = track(openStore({ path, applyMigrations: false }));
-    expect(store.schemaVersion).toBe(5);
+    expect(store.schemaVersion).toBe(7);
     expect(store.repos.list()).toEqual([]);
     const applied = store.db.prepare('SELECT COUNT(*) AS total FROM schema_migrations').get();
-    expect(Number(applied?.['total'])).toBe(5);
+    expect(Number(applied?.['total'])).toBe(7);
   });
 
   it('has an idempotent close', () => {
@@ -104,7 +104,7 @@ describe('openStore', () => {
 describe('openInMemoryStore', () => {
   it('gives every repository a migrated in-memory database', () => {
     const store = track(openInMemoryStore());
-    expect(store.schemaVersion).toBe(5);
+    expect(store.schemaVersion).toBe(7);
     expect(store.repos.list()).toEqual([]);
     expect(store.jobs.list({ limit: 10, cursor: null })).toEqual({ data: [], nextCursor: null });
     expect(store.runs.countLive()).toBe(0);

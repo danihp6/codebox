@@ -121,20 +121,24 @@ Every function here is deterministic and unit-tested. It does no I/O and knows n
 
 SQLite schema, numbered migrations, repositories. One connection in the daemon; WAL; a
 single writer. Migrations are forward-only SQL files pinned by checksum: `0001_init.sql`
-creates the ten v1 tables below, and the works/schedules migration adds their tables. Tables:
+creates the ten v1 tables below, `0006_works.sql` adds the work model and `0007_providers.sql`
+the provider accounts. Tables:
 
 | Table | Purpose | Migration |
 | --- | --- | --- |
 | `repos` | Registered repositories and per-repo policy. | `0001_init.sql` |
 | `jobs` | Retired by D44; kept only for the migration history. | `0001_init.sql` |
 | `runs` | One execution: trigger, state, branch, worktree, session, PR, gate, cost. | `0001_init.sql` |
-| `works` | One backlog item: repository, title, prompt, state, backlog ref, origin, attempts. | `0003_works.sql` |
-| `sessions` | A chat with one target (`backlog`/`design`/`schedule`/`work:<id>`/`repo`), its branch and pending proposal. | `0003_works.sql` |
-| `session_messages` | One thread per session; user/assistant/tool messages. | `0003_works.sql` |
-| `schedules` | The repository's recurrence: mode, window, selection, caps, paused. | `0003_works.sql` |
-| `schedule_fires` | One row per fire; `(schedule_id, scheduled_for)` is the idempotency key. | `0003_works.sql` |
-| `providers` | Adapters: `opencode-go`, `anthropic`, … and their auth kind. | `0004_providers.sql` |
-| `provider_accounts` | Credential ref, priority, state, `resetAt`, per-account budget (D54). | `0004_providers.sql` |
+| `works` | One backlog item: repository, title, prompt, state, backlog ref, origin, attempts. | `0006_works.sql` |
+| `sessions` | A chat with one target (`backlog`/`design`/`schedule`/`work:<id>`/`repo`), its branch and pending proposal. | `0006_works.sql` |
+| `session_messages` | One thread per session; user/assistant/tool messages. | `0006_works.sql` |
+| `schedules` | The repository's recurrence: mode, window, selection, caps, paused. | `0004_schedules.sql (altered by 0006_works.sql)` |
+| `schedule_fires` | One row per fire; `(schedule_id, scheduled_for)` is the idempotency key. | `0004_schedules.sql (altered by 0006_works.sql)` |
+| `providers` | Adapters: `opencode-go`, `anthropic`, … and their auth kind. | `0007_providers.sql` |
+| `provider_accounts` | Credential ref, priority, state, `resetAt`, per-account budget (D54). | `0007_providers.sql` |
+| `chat_sessions` | Legacy chat thread, read-only by D44; no new writer. | `0001_init.sql` |
+| `chat_messages` | Legacy chat messages, read-only by D44. | `0001_init.sql` |
+| `schema_legacy` | The tables D44 retired, with their read-only marker. | `0006_works.sql` |
 | `run_events` | Append-only timeline (`seq`, `type`, `payload`, `ts`). | `0001_init.sql` |
 | `approvals` | Permission requests and their replies. | `0001_init.sql` |
 | `devices` | Paired devices, public keys, token hashes, scopes, revocation. | `0001_init.sql` |

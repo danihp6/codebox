@@ -3,10 +3,17 @@ import type {
   ChatMessage,
   ChatSession,
   Job,
+  Provider,
+  ProviderAccount,
   Repo,
+  RepoSchedule,
   Routine,
   Run,
   Schedule,
+  Session,
+  SessionMessage,
+  SessionProposal,
+  Work,
 } from '@codebox/contracts';
 import type { Device, RunState, SseEventName } from '@codebox/contracts';
 import type { SQLOutputValue } from 'node:sqlite';
@@ -68,6 +75,21 @@ const SCHEDULE_MODES = ['once', 'every', 'window'] as const;
 const SCHEDULE_FIRE_POLICIES = ['new_chat', 'continue'] as const;
 const SCHEDULE_FIRE_OUTCOMES = ['claimed', 'fired', 'skipped', 'failed'] as const;
 const ROUTINE_FIRE_OUTCOMES = ['claimed', 'sent', 'replied', 'failed', 'skipped'] as const;
+const WORK_STATES = [
+  'queued',
+  'running',
+  'review',
+  'merged',
+  'failed',
+  'needs_decision',
+  'abandoned',
+] as const;
+const WORK_ORIGINS = ['manual', 'backlog', 'schedule'] as const;
+const SESSION_TARGETS = ['backlog', 'design', 'schedule', 'work', 'repo'] as const;
+const SESSION_STATUSES = ['idle', 'working', 'archived'] as const;
+const SELECTIONS = ['nextPending', 'refs'] as const;
+const PROVIDER_STATES = ['active', 'exhausted', 'invalid', 'disabled'] as const;
+const PROVIDER_AUTH_KINDS = ['oauth', 'token'] as const;
 const SSE_EVENT_NAMES = [
   'run.queued',
   'run.started',
@@ -93,6 +115,20 @@ const SSE_EVENT_NAMES = [
   'routine.fired',
   'routine.replied',
   'routine.failed',
+  'work.created',
+  'work.updated',
+  'work.needs_decision',
+  'work.closed',
+  'session.created',
+  'session.delta',
+  'session.tool',
+  'session.proposal',
+  'session.closed',
+  'schedule.fired',
+  'schedule.skipped',
+  'provider.state',
+  'backlog.changed',
+  'design.changed',
 ] as const;
 
 export type Row = Record<string, unknown>;
@@ -425,6 +461,8 @@ export function eventFromRow(rowValue: Row): EventRecord {
     id: integerColumn(rowValue, 'id'),
     runId: nullableTextColumn(rowValue, 'run_id'),
     chatId: nullableTextColumn(rowValue, 'chat_id'),
+    workId: nullableTextColumn(rowValue, 'work_id'),
+    sessionId: nullableTextColumn(rowValue, 'session_id'),
     seq: nullableIntegerColumn(rowValue, 'seq'),
     type: enumColumn<SseEventName>(rowValue, 'type', SSE_EVENT_NAMES),
     data: jsonObjectColumn(rowValue, 'payload'),
@@ -466,6 +504,140 @@ export function chatSessionFromRow(rowValue: Row, lastMessage: ChatMessage | nul
     createdAt: textColumn(rowValue, 'created_at'),
     updatedAt: textColumn(rowValue, 'updated_at'),
     lastMessage,
+  };
+}
+
+export function workFromRow(rowValue: Row): Work {
+  return {
+    id: textColumn(rowValue, 'id'),
+    repoId: textColumn(rowValue, 'repo_id'),
+    backlogRef: textColumn(rowValue, 'backlog_ref'),
+    title: textColumn(rowValue, 'title'),
+    prompt: textColumn(rowValue, 'prompt'),
+    specSha: textColumn(rowValue, 'spec_sha'),
+    state: enumColumn(rowValue, 'state', WORK_STATES),
+    origin: enumColumn(rowValue, 'origin', WORK_ORIGINS),
+    attempts: integerColumn(rowValue, 'attempts'),
+    maxAttempts: integerColumn(rowValue, 'max_attempts'),
+    usage: {
+      usd: realColumn(rowValue, 'usage_usd'),
+      tokensIn: integerColumn(rowValue, 'usage_tokens_in'),
+      tokensOut: integerColumn(rowValue, 'usage_tokens_out'),
+    },
+    contextTokens: integerColumn(rowValue, 'context_tokens'),
+    contextEpoch: integerColumn(rowValue, 'context_epoch'),
+    reviewedAt: nullableTextColumn(rowValue, 'reviewed_at'),
+    createdAt: textColumn(rowValue, 'created_at'),
+    updatedAt: textColumn(rowValue, 'updated_at'),
+  };
+}
+
+function proposalColumn(rowValue: Row): SessionProposal | null {
+  const value = nullableTextColumn(rowValue, 'pending_proposal');
+  if (value === null) return null;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(value);
+  } catch {
+    throw invalidColumn('pending_proposal');
+  }
+  if (!isRecord(parsed)) throw invalidColumn('pending_proposal');
+  const paths = parsed['paths'];
+  if (!Array.isArray(paths) || paths.length === 0) throw invalidColumn('pending_proposal');
+  return {
+    branch: requiredString(parsed['branch'], 'pending_proposal'),
+    sha: requiredString(parsed['sha'], 'pending_proposal'),
+    paths: paths.map((entry) => requiredString(entry, 'pending_proposal')),
+    createdAt: requiredString(parsed['createdAt'], 'pending_proposal'),
+  };
+}
+
+export function sessionMessageFromRow(rowValue: Row): SessionMessage {
+  return {
+    id: textColumn(rowValue, 'id'),
+    sessionId: textColumn(rowValue, 'session_id'),
+    role: enumColumn(rowValue, 'role', CHAT_ROLES),
+    text: textColumn(rowValue, 'text'),
+    createdAt: textColumn(rowValue, 'created_at'),
+  };
+}
+
+export function sessionFromRow(rowValue: Row, lastMessage: SessionMessage | null): Session {
+  return {
+    id: textColumn(rowValue, 'id'),
+    repoId: textColumn(rowValue, 'repo_id'),
+    target: enumColumn(rowValue, 'target', SESSION_TARGETS),
+    workId: nullableTextColumn(rowValue, 'work_id'),
+    title: textColumn(rowValue, 'title'),
+    status: enumColumn(rowValue, 'status', SESSION_STATUSES),
+    branch: nullableTextColumn(rowValue, 'branch'),
+    pendingProposal: proposalColumn(rowValue),
+    usage: {
+      usd: realColumn(rowValue, 'usage_usd'),
+      tokensIn: integerColumn(rowValue, 'usage_tokens_in'),
+      tokensOut: integerColumn(rowValue, 'usage_tokens_out'),
+    },
+    contextTokens: integerColumn(rowValue, 'context_tokens'),
+    contextEpoch: integerColumn(rowValue, 'context_epoch'),
+    createdAt: textColumn(rowValue, 'created_at'),
+    updatedAt: textColumn(rowValue, 'updated_at'),
+    lastMessage,
+  };
+}
+
+export function repoScheduleFromRow(rowValue: Row): RepoSchedule {
+  return {
+    id: textColumn(rowValue, 'id'),
+    repoId: textColumn(rowValue, 'repo_id'),
+    mode: enumColumn(rowValue, 'mode', SCHEDULE_MODES),
+    cron: nullableTextColumn(rowValue, 'cron'),
+    timezone: textColumn(rowValue, 'timezone'),
+    windowStart: nullableTextColumn(rowValue, 'window_start'),
+    windowEnd: nullableTextColumn(rowValue, 'window_end'),
+    cooldownMinutes: integerColumn(rowValue, 'cooldown_minutes'),
+    selection: enumColumn(rowValue, 'selection', SELECTIONS),
+    refs: stringArrayColumn(rowValue, 'refs'),
+    maxAttempts: integerColumn(rowValue, 'max_attempts'),
+    maxFires: nullableIntegerColumn(rowValue, 'max_fires'),
+    maxCostPerFireUsd: nullableRealColumn(rowValue, 'max_cost_per_fire_usd'),
+    consecutiveFailures: integerColumn(rowValue, 'consecutive_failures'),
+    firesCount: integerColumn(rowValue, 'fires_count'),
+    spendUsd: realColumn(rowValue, 'spend_usd'),
+    enabled: booleanColumn(rowValue, 'enabled'),
+    nextFireAt: nullableTextColumn(rowValue, 'next_fire_at'),
+    lastFiredAt: nullableTextColumn(rowValue, 'last_fired_at'),
+    createdAt: textColumn(rowValue, 'created_at'),
+    updatedAt: textColumn(rowValue, 'updated_at'),
+  };
+}
+
+export function providerFromRow(rowValue: Row): Provider {
+  return {
+    id: textColumn(rowValue, 'id'),
+    label: textColumn(rowValue, 'label'),
+    authKind: enumColumn(rowValue, 'auth_kind', PROVIDER_AUTH_KINDS),
+    baseUrl: nullableTextColumn(rowValue, 'base_url'),
+    createdAt: textColumn(rowValue, 'created_at'),
+    updatedAt: textColumn(rowValue, 'updated_at'),
+  };
+}
+
+export function providerAccountFromRow(rowValue: Row): ProviderAccount {
+  return {
+    id: textColumn(rowValue, 'id'),
+    providerId: textColumn(rowValue, 'provider_id'),
+    label: textColumn(rowValue, 'label'),
+    credentialId: textColumn(rowValue, 'credential_id'),
+    priority: integerColumn(rowValue, 'priority'),
+    state: enumColumn(rowValue, 'state', PROVIDER_STATES),
+    resetAt: nullableTextColumn(rowValue, 'reset_at'),
+    budgetUsd: nullableRealColumn(rowValue, 'budget_usd'),
+    usedToday: {
+      day: textColumn(rowValue, 'used_today_day'),
+      usd: realColumn(rowValue, 'used_today_usd'),
+    },
+    createdAt: textColumn(rowValue, 'created_at'),
+    updatedAt: textColumn(rowValue, 'updated_at'),
   };
 }
 

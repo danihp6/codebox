@@ -294,7 +294,7 @@ describe('the file database', () => {
     writer.close();
 
     const reader = track(openStore({ path }));
-    expect(reader.schemaVersion).toBe(5);
+    expect(reader.schemaVersion).toBe(7);
     expect(reader.schedules.get(WINDOW.id)).toEqual(WINDOW);
   });
 });

@@ -7,6 +7,7 @@ import {
   ID_PREFIXES,
   JobId,
   MessageId,
+  ProviderAccountId,
   ROUTINE_EVENT_NAMES,
   ROUTINE_KINDS,
   RepoId,
@@ -17,11 +18,20 @@ import {
   RUN_STATES,
   RUN_TRIGGERS,
   RunId,
+  SELECTIONS,
+  SESSION_STATUSES,
+  SESSION_TARGETS,
   ScheduleId,
+  SessionId,
   SCOPES,
   SSE_CONTROL_EVENT_NAMES,
   SSE_EVENT_NAMES,
   SubscriptionId,
+  WORK_ORIGINS,
+  WORK_STATE_IN_FLIGHT,
+  WORK_STATES,
+  WorkId,
+  backlogRefSchema,
   branchSchema,
   commitShaSchema,
   cronSchema,
@@ -30,12 +40,17 @@ import {
   isTerminalRunState,
   routineKindSchema,
   runStateSchema,
+  selectionSchema,
+  sessionStatusSchema,
+  sessionTargetSchema,
   sseEventNameSchema,
   slugSchema,
   timestampSchema,
   timezoneSchema,
+  workOriginSchema,
+  workStateSchema,
 } from './primitives.js';
-import type { RunState } from './primitives.js';
+import type { RunState, WorkState } from './primitives.js';
 
 describe('ids', () => {
   it('accepts one prefix per resource and rejects a foreign prefix', () => {
@@ -50,6 +65,9 @@ describe('ids', () => {
       ['sub_01JABCDEFG', 'pushSubscription'],
       ['rtn_01JABCDEFG', 'routine'],
       ['sch_01JABCDEFG', 'schedule'],
+      ['wrk_01JABCDEFG', 'work'],
+      ['sess_01JABCDEFG', 'session'],
+      ['acct_01JABCDEFG', 'providerAccount'],
       ['c_01JABCDEFG', 'cursor'],
       ['req_01JABCDEFG', 'request'],
     ];
@@ -58,6 +76,9 @@ describe('ids', () => {
     }
     expect(ID_PREFIXES.routine).toBe('rtn_');
     expect(ID_PREFIXES.schedule).toBe('sch_');
+    expect(ID_PREFIXES.work).toBe('wrk_');
+    expect(ID_PREFIXES.session).toBe('sess_');
+    expect(ID_PREFIXES.providerAccount).toBe('acct_');
     expect(RepoId.safeParse('run_01JABCDEFG').success).toBe(false);
     expect(JobId.safeParse('job_short').success).toBe(false);
     expect(RunId.safeParse('run_01JABCDEFG').success).toBe(true);
@@ -71,8 +92,22 @@ describe('ids', () => {
     expect(RoutineId.safeParse('rtn_short').success).toBe(false);
     expect(ScheduleId.safeParse('sch_01JABCDEFG').success).toBe(true);
     expect(ScheduleId.safeParse('rtn_01JABCDEFG').success).toBe(false);
+    expect(WorkId.safeParse('wrk_01JABCDEFG').success).toBe(true);
+    expect(WorkId.safeParse('sess_01JABCDEFG').success).toBe(false);
+    expect(SessionId.safeParse('sess_01JABCDEFG').success).toBe(true);
+    expect(ProviderAccountId.safeParse('acct_01JABCDEFG').success).toBe(true);
+    expect(ProviderAccountId.safeParse('wrk_01JABCDEFG').success).toBe(false);
     expect(Cursor.safeParse('c_01JABCDEFG').success).toBe(true);
     expect(RequestId.safeParse('req_01JABCDEFG').success).toBe(true);
+  });
+
+  it('accepts a backlog ref and nothing else', () => {
+    expect(backlogRefSchema.safeParse('Task-35').success).toBe(true);
+    expect(backlogRefSchema.safeParse('Task-0').success).toBe(true);
+    expect(backlogRefSchema.safeParse('task-35').success).toBe(false);
+    expect(backlogRefSchema.safeParse('Task-').success).toBe(false);
+    expect(backlogRefSchema.safeParse('Task-35a').success).toBe(false);
+    expect(backlogRefSchema.safeParse(' wrk_35').success).toBe(false);
   });
 });
 
@@ -152,11 +187,37 @@ describe('enums', () => {
     expect(routineKindSchema.safeParse('reminder').success).toBe(true);
     expect(routineKindSchema.safeParse('job').success).toBe(false);
   });
+
+  it('freezes the work, session and selection vocabularies', () => {
+    expect([...WORK_STATES]).toEqual([
+      'queued',
+      'running',
+      'review',
+      'merged',
+      'failed',
+      'needs_decision',
+      'abandoned',
+    ]);
+    expect([...WORK_STATE_IN_FLIGHT]).toEqual(['queued', 'running', 'needs_decision']);
+    expect([...WORK_ORIGINS]).toEqual(['manual', 'backlog', 'schedule']);
+    expect([...SESSION_TARGETS]).toEqual(['backlog', 'design', 'schedule', 'work', 'repo']);
+    expect([...SESSION_STATUSES]).toEqual(['idle', 'working', 'archived']);
+    expect([...SELECTIONS]).toEqual(['nextPending', 'refs']);
+    expect(workStateSchema.safeParse('merged').success).toBe(true);
+    expect(workStateSchema.safeParse('done').success).toBe(false);
+    expect(workOriginSchema.safeParse('schedule').success).toBe(true);
+    expect(sessionTargetSchema.safeParse('work').success).toBe(true);
+    expect(sessionTargetSchema.safeParse('code').success).toBe(false);
+    expect(sessionStatusSchema.safeParse('archived').success).toBe(true);
+    expect(selectionSchema.safeParse('refs').success).toBe(true);
+    const states: WorkState[] = ['queued', 'merged'];
+    expect(states).toHaveLength(2);
+  });
 });
 
 describe('events', () => {
   it('the event name list is the D14 list', () => {
-    expect(SSE_EVENT_NAMES).toHaveLength(24);
+    expect(SSE_EVENT_NAMES).toHaveLength(38);
     expect([...SSE_EVENT_NAMES]).toEqual([
       'run.queued',
       'run.started',
@@ -182,13 +243,38 @@ describe('events', () => {
       'routine.fired',
       'routine.replied',
       'routine.failed',
+      'work.created',
+      'work.updated',
+      'work.needs_decision',
+      'work.closed',
+      'session.created',
+      'session.delta',
+      'session.tool',
+      'session.proposal',
+      'session.closed',
+      'schedule.fired',
+      'schedule.skipped',
+      'provider.state',
+      'backlog.changed',
+      'design.changed',
     ]);
-    expect([...ROUTINE_EVENT_NAMES]).toEqual([
-      'routine.fired',
-      'routine.replied',
-      'routine.failed',
+    expect([...SSE_EVENT_NAMES].slice(21, 24)).toEqual([...ROUTINE_EVENT_NAMES]);
+    expect([...SSE_EVENT_NAMES].slice(24)).toEqual([
+      'work.created',
+      'work.updated',
+      'work.needs_decision',
+      'work.closed',
+      'session.created',
+      'session.delta',
+      'session.tool',
+      'session.proposal',
+      'session.closed',
+      'schedule.fired',
+      'schedule.skipped',
+      'provider.state',
+      'backlog.changed',
+      'design.changed',
     ]);
-    expect([...SSE_EVENT_NAMES].slice(-3)).toEqual([...ROUTINE_EVENT_NAMES]);
     expect([...SSE_EVENT_NAMES].indexOf('chat.compacted')).toBe(16);
     expect([...SSE_EVENT_NAMES].indexOf('telemetry')).toBe(20);
     expect([...SSE_CONTROL_EVENT_NAMES]).toEqual(['gap']);

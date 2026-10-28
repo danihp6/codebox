@@ -23,6 +23,12 @@ const TABLES = [
   'routine_fires',
   'schedules',
   'schedule_fires',
+  'works',
+  'sessions',
+  'session_messages',
+  'schema_legacy',
+  'providers',
+  'provider_accounts',
 ];
 
 const INDEXES = [
@@ -46,6 +52,20 @@ const INDEXES = [
   'schedules_due',
   'schedules_repo',
   'schedule_fires_schedule',
+  'works_repo_state',
+  'works_repo_backlog',
+  'works_live_item',
+  'sessions_repo',
+  'sessions_target',
+  'sessions_work',
+  'session_messages_session',
+  'schedules_one_per_repo',
+  'runs_work_created',
+  'run_events_work_seq',
+  'run_events_session_seq',
+  'provider_accounts_credential',
+  'provider_accounts_selection',
+  'provider_accounts_reset',
 ];
 
 const FIXED_NOW = '2026-10-24T18:03:11.000Z';
@@ -149,21 +169,23 @@ describe('migrations', () => {
   it('migrations apply to an empty database and are idempotent', () => {
     const files = loadMigrationsFromDisk(MIGRATIONS_DIRECTORY);
     expect(files.length).toBeGreaterThanOrEqual(1);
-    expect(files.map((file) => file.version)).toEqual([1, 2, 3, 4, 5]);
+    expect(files.map((file) => file.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
 
     const first = runMigrations(db, files, () => FIXED_NOW);
-    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5]);
-    expect(first.currentVersion).toBe(5);
+    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(first.currentVersion).toBe(7);
     expect(first.applied.map((migration) => migration.name)).toEqual([
       '0001_init.sql',
       '0002_routines.sql',
       '0003_chat_scope.sql',
       '0004_schedules.sql',
       '0005_chat_free.sql',
+      '0006_works.sql',
+      '0007_providers.sql',
     ]);
 
     const userVersion = db.prepare('PRAGMA user_version').get()?.['user_version'];
-    expect(Number(userVersion)).toBe(5);
+    expect(Number(userVersion)).toBe(7);
 
     const tables = names(db, 'table');
     for (const table of TABLES) expect(tables).toContain(table);
@@ -172,10 +194,19 @@ describe('migrations', () => {
     const indexes = names(db, 'index');
     for (const index of INDEXES) expect(indexes).toContain(index);
     expect(Number(db.prepare('PRAGMA foreign_keys').get()?.['foreign_keys'])).toBe(1);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+
+    const legacy = db
+      .prepare('SELECT table_name, retired_by, read_only FROM schema_legacy ORDER BY table_name')
+      .all();
+    expect(legacy).toEqual([
+      { table_name: 'chat_messages', retired_by: 'D44', read_only: 1 },
+      { table_name: 'chat_sessions', retired_by: 'D44', read_only: 1 },
+    ]);
 
     const second = runMigrations(db, files, () => FIXED_NOW);
     expect(second.applied).toEqual([]);
-    expect(second.currentVersion).toBe(5);
+    expect(second.currentVersion).toBe(7);
 
     const tampered = files.map((file) =>
       file.version === 2 ? { ...file, checksum: 'deadbeef' } : file,
@@ -200,8 +231,8 @@ describe('migrations', () => {
     seedChildren(db);
 
     const applied = runMigrations(db, files, () => FIXED_NOW);
-    expect(applied.applied.map((migration) => migration.version)).toEqual([5]);
-    expect(applied.currentVersion).toBe(5);
+    expect(applied.applied.map((migration) => migration.version)).toEqual([5, 6, 7]);
+    expect(applied.currentVersion).toBe(7);
 
     const sessions = db
       .prepare(

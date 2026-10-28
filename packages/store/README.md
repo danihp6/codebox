@@ -19,6 +19,8 @@ before `npm run build`.
 - `migrations/0003_chat_scope.sql` — the chat scope, its usage ledger, the context epoch and `reviewed_at`.
 - `migrations/0004_schedules.sql` — the schedule object, its fires and the three indexes, additively.
 - `migrations/0005_chat_free.sql` — the twelve-step rebuild that makes `chat_sessions.repo_id` nullable.
+- `migrations/0006_works.sql` — the work model (`works`, `sessions`, `session_messages`), the D44 read-only marker and the additive columns on `runs`, `run_events` and `schedules`.
+- `migrations/0007_providers.sql` — the provider adapters and their failover accounts and indexes.
 
 ## `src/`
 
@@ -42,11 +44,20 @@ before `npm run build`.
 - `routine-fires.ts` — the transactional claim on `(routine_id, scheduled_for)`, skip and outcome.
 - `schedules.ts` — the schedule object: the newest-first page, the patch and the due queue; a patch stamps `updated_at` from SQLite because the frozen patch carries no timestamp.
 - `schedule-fires.ts` — the transactional claim on `(schedule_id, scheduled_for)`, skip, outcome and the cost ledger.
+- `works.ts` — one backlog item: the newest-first page, the patch and the one-live-work-per-item rule.
+- `sessions.ts` — a chat with one target, its pending proposal, its messages and the last-message projection.
+- `repo-schedules.ts` — the repository's recurrence over the existing `schedules` table: one per repository, the D56 columns and the legacy sentinels.
+- `providers.ts` — provider adapters, their accounts, the D54 priority selection and the reset sweep.
+- `legacy.ts` — the D44 read-only marker of the retired chat tables.
 - `migrate.test.ts` — migration application, idempotency, checksum, failure rollback and the
   `chat_sessions` rebuild with every child row.
 - `store.test.ts` — open/close, WAL, file format, the in-memory fake and the cursor.
 - `runs.test.ts` — the claim race, run round-trip, paging and live-state counting.
-- `events.test.ts` — replay by `seq` and by `Last-Event-ID`, stream sequences and pruning.
+- `events.test.ts` — replay by `seq` and by `Last-Event-ID`, the four sequence scopes and pruning.
+- `works.test.ts` — the work round-trip, the one-live-work rule, the patch and the page.
+- `sessions.test.ts` — the session round-trip, its proposal, the message paging and the target CHECK.
+- `repo-schedules.test.ts` — the D56 round-trip, the legacy sentinels, one schedule per repository and the due queue.
+- `providers.test.ts` — the provider round-trip, the account states, `selectActive` and the reset sweep.
 - `repositories.test.ts` — repos, jobs, approvals, chats, devices, settings, usage and the deleted-repo rules.
 - `routines.test.ts` — the routine round-trip, the list filters, the patches and the two delete rules.
 - `routine-fires.test.ts` — the claim race, the claim guards, skip, finish and the reads.

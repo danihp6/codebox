@@ -469,6 +469,30 @@ A work carries no `kind`, no nullable repository and **no conversation** (D44, D
 - `attempts` / `maxAttempts` — the retry budget the schedule respects (default 2).
 - `usage`, `contextTokens`, `contextEpoch`, `reviewedAt` — as before (D48).
 
+```json
+{
+  "id": "wrk_01JABCDEFG",
+  "repoId": "repo_01JABCDEFG",
+  "backlogRef": "Task-35",
+  "title": "Routine engine",
+  "prompt": "Build the routine engine and its tests.",
+  "specSha": "9f1c2ab",
+  "state": "queued",
+  "origin": "backlog",
+  "attempts": 0,
+  "maxAttempts": 2,
+  "usage": { "usd": 0.25, "tokensIn": 1200, "tokensOut": 300 },
+  "contextTokens": 1500,
+  "contextEpoch": 1,
+  "reviewedAt": null,
+  "createdAt": "2026-10-28T09:12:00Z",
+  "updatedAt": "2026-10-28T09:12:00Z"
+}
+```
+
+`specSha` is the default-branch commit the item's title and body were read at (D51) — the file
+stays the owner, the row is the cache.
+
 `POST /v1/works` with `backlogRef` verifies the item against the cached default branch: an
 unknown or duplicated ref is `422` (`backlog_ref_missing` / `backlog_ref_ambiguous`), an
 already ticked item is `409` (`backlog_ref_checked`), and the item's title and body seed the
@@ -532,6 +556,36 @@ A session is a chat with **one target**, and the target is its write boundary.
 - `POST /merge` pushes a docs-only PR and merges it through the normal guardrails; a proposal
   that touches anything outside its target fails the gate as `target_violation`.
 - A session never starts a run and never ticks a backlog item.
+
+```json
+{
+  "id": "sess_01JABCDEFG",
+  "repoId": "repo_01JABCDEFG",
+  "target": "design",
+  "workId": null,
+  "title": "Edit the design tokens",
+  "status": "idle",
+  "branch": "cb/design-edit",
+  "pendingProposal": null,
+  "usage": { "usd": 0, "tokensIn": 0, "tokensOut": 0 },
+  "contextTokens": 0,
+  "contextEpoch": 1,
+  "createdAt": "2026-10-28T09:12:00Z",
+  "updatedAt": "2026-10-28T09:12:00Z",
+  "lastMessage": null
+}
+```
+
+The pending proposal is one object and nothing else:
+
+```json
+{ "branch": "cb/design-edit", "sha": "9f1c2ab",
+  "paths": ["design/tokens/core.json"], "createdAt": "2026-10-28T09:12:00Z" }
+```
+
+`workId` is non-null exactly when `target = "work"`; every other target carries a null
+`workId`. A `target = "repo"` session carries a null `branch` and a null `pendingProposal`: it
+has the repository's context and writes nothing.
 
 ### 5.7 Settings and push
 
@@ -698,6 +752,11 @@ field table, the selection rule, the three modes, the claim and the tick.
   "updatedAt": "2026-10-26T18:03:11Z"
 }
 ```
+
+`refs` is stored as a JSON array (`[]` for `nextPending`) and `maxAttempts` defaults to `2`.
+The table also keeps the legacy `title`, `prompt`, `chat_session_id`, `fire_policy` and
+`policy` columns that D56 no longer reads; a repository schedule stores them as
+`''`/`NULL`/`'new_chat'`/`'auto'` until they are dropped.
 
 - `mode` is `once`, `every` or `window`. A `window` schedule has `cron: null`, non-null
   `windowStart`/`windowEnd` of the form `HH:MM` and `windowStart !== windowEnd`; every other

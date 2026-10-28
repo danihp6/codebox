@@ -8,6 +8,8 @@ export interface EventRecord {
   readonly id: number;
   readonly runId: string | null;
   readonly chatId: string | null;
+  readonly workId?: string | null;
+  readonly sessionId?: string | null;
   readonly seq: number | null;
   readonly type: SseEventName;
   readonly data: Record<string, unknown>;
@@ -17,6 +19,8 @@ export interface EventRecord {
 export interface NewEventRecord {
   readonly runId: string | null;
   readonly chatId: string | null;
+  readonly workId?: string | null;
+  readonly sessionId?: string | null;
   readonly seq: number | null;
   readonly type: SseEventName;
   readonly data: Record<string, unknown>;
@@ -24,7 +28,9 @@ export interface NewEventRecord {
 }
 
 export interface EventRepository {
-  nextSeq(scope: { runId: string } | { chatId: string }): number;
+  nextSeq(
+    scope: { runId: string } | { chatId: string } | { workId: string } | { sessionId: string },
+  ): number;
   append(record: NewEventRecord): EventRecord;
   readAfterId(afterId: number, limit: number): EventRecord[];
   readRunAfterSeq(runId: string, afterSeq: number, limit: number): EventRecord[];
@@ -32,7 +38,7 @@ export interface EventRepository {
   pruneBefore(ts: string): number;
 }
 
-const COLUMNS = 'id, run_id, chat_id, seq, type, payload, ts';
+const COLUMNS = 'id, run_id, chat_id, work_id, session_id, seq, type, payload, ts';
 
 export function createEventRepository(db: DatabaseSync): EventRepository {
   const nextRunSeq = db.prepare(
@@ -41,8 +47,15 @@ export function createEventRepository(db: DatabaseSync): EventRepository {
   const nextChatSeq = db.prepare(
     'SELECT COALESCE(MAX(seq), 0) + 1 AS next FROM run_events WHERE chat_id = ?',
   );
+  const nextWorkSeq = db.prepare(
+    'SELECT COALESCE(MAX(seq), 0) + 1 AS next FROM run_events WHERE work_id = ?',
+  );
+  const nextSessionSeq = db.prepare(
+    'SELECT COALESCE(MAX(seq), 0) + 1 AS next FROM run_events WHERE session_id = ?',
+  );
   const insert = db.prepare(
-    'INSERT INTO run_events (run_id, chat_id, seq, type, payload, ts) VALUES (?, ?, ?, ?, ?, ?)',
+    `INSERT INTO run_events (run_id, chat_id, work_id, session_id, seq, type, payload, ts)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
   );
   const selectAfterId = db.prepare(
     `SELECT ${COLUMNS} FROM run_events WHERE id > ? ORDER BY id ASC LIMIT ?`,
@@ -59,9 +72,13 @@ export function createEventRepository(db: DatabaseSync): EventRepository {
   }
 
   return {
-    nextSeq(scope: { runId: string } | { chatId: string }): number {
+    nextSeq(
+      scope: { runId: string } | { chatId: string } | { workId: string } | { sessionId: string },
+    ): number {
       if ('runId' in scope) return nextFrom(nextRunSeq, scope.runId);
-      return nextFrom(nextChatSeq, scope.chatId);
+      if ('chatId' in scope) return nextFrom(nextChatSeq, scope.chatId);
+      if ('workId' in scope) return nextFrom(nextWorkSeq, scope.workId);
+      return nextFrom(nextSessionSeq, scope.sessionId);
     },
 
     append(record: NewEventRecord): EventRecord {
@@ -70,6 +87,8 @@ export function createEventRepository(db: DatabaseSync): EventRepository {
         inserted = insert.run(
           record.runId,
           record.chatId,
+          record.workId ?? null,
+          record.sessionId ?? null,
           record.seq,
           record.type,
           jsonText(record.data),
@@ -88,6 +107,8 @@ export function createEventRepository(db: DatabaseSync): EventRepository {
         id: Number(inserted.lastInsertRowid),
         runId: record.runId,
         chatId: record.chatId,
+        workId: record.workId ?? null,
+        sessionId: record.sessionId ?? null,
         seq: record.seq,
         type: record.type,
         data: record.data,

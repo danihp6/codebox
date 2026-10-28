@@ -5,15 +5,25 @@ import { openDatabase } from './db.js';
 import { createDeviceRepository, type DeviceRepository } from './devices.js';
 import { createEventRepository, type EventRepository } from './events.js';
 import { createJobRepository, type JobRepository } from './jobs.js';
+import { createLegacyRepository, type LegacyRepository } from './legacy.js';
 import { loadMigrationsFromDisk, MIGRATIONS_DIRECTORY, runMigrations } from './migrate.js';
+import {
+  createProviderAccountRepository,
+  createProviderRepository,
+  type ProviderAccountRepository,
+  type ProviderRepository,
+} from './providers.js';
+import { createRepoScheduleRepository, type RepoScheduleRepository } from './repo-schedules.js';
 import { createRepoRepository, type RepoRepository } from './repos.js';
 import { createRoutineFireRepository, type RoutineFireRepository } from './routine-fires.js';
 import { createRoutineRepository, type RoutineRepository } from './routines.js';
 import { createScheduleFireRepository, type ScheduleFireRepository } from './schedule-fires.js';
 import { createScheduleRepository, type ScheduleRepository } from './schedules.js';
 import { createRunRepository, type RunRepository } from './runs.js';
+import { createSessionRepository, type SessionRepository } from './sessions.js';
 import { createSettingsRepository, type SettingsRepository } from './settings.js';
 import { createUsageRepository, type UsageRepository } from './usage.js';
+import { createWorkRepository, type WorkRepository } from './works.js';
 import { row, textColumn } from './mappers.js';
 
 export interface Store {
@@ -32,6 +42,12 @@ export interface Store {
   readonly routineFires: RoutineFireRepository;
   readonly schedules: ScheduleRepository;
   readonly scheduleFires: ScheduleFireRepository;
+  readonly works: WorkRepository;
+  readonly sessions: SessionRepository;
+  readonly repoSchedules: RepoScheduleRepository;
+  readonly providers: ProviderRepository;
+  readonly providerAccounts: ProviderAccountRepository;
+  readonly legacy: LegacyRepository;
   close(): void;
 }
 
@@ -80,6 +96,12 @@ export function openStore(options: OpenStoreOptions): Store {
     routineFires: createRoutineFireRepository(db),
     schedules: createScheduleRepository(db),
     scheduleFires: createScheduleFireRepository(db),
+    works: createWorkRepository(db),
+    sessions: createSessionRepository(db),
+    repoSchedules: createRepoScheduleRepository(db),
+    providers: createProviderRepository(db),
+    providerAccounts: createProviderAccountRepository(db),
+    legacy: createLegacyRepository(db),
     close(): void {
       if (closed) return;
       closed = true;
