@@ -23,10 +23,10 @@ Figma, not the layer names.
 | Screen | Route | Feature folder | dark | light | desktop | 320 |
 | --- | --- | --- | --- | --- | --- | --- |
 | Pairing | `/pair` | `features/pairing` | 01 | L1 | — | — |
-| Repo · backlog | `/repos/:id` | `features/backlog` | 02 | L2 | D1 · D3 | S1 |
-| Work · run log | `/works/:id` | `features/works` | 03 | L3 | D1 · D3 | S2 |
-| Repo list | `/repos` | `features/repos` | 04 | L4 | — | — |
-| Repo · schedule | `/repos/:id/schedule` | `features/schedules` | 04b | L12 | — | — |
+| Repo list | `/repos` | `features/repos` | 02 | L2 | — | — |
+| Repo · backlog | `/repos/:id` | `features/backlog` | 03 | L3 | D1 · D3 | S1 |
+| Work · run log | `/works/:id` | `features/works` | 04 | L4 | D1 · D3 | S2 |
+| Repo · schedule | `/repos/:id/schedule` | `features/schedules` | 02b | L12 | — | — |
 | Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | — |
 | Settings | `/settings` | `features/settings` | 06 | L6 | — | — |
 | Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
@@ -45,8 +45,8 @@ Not routes. A sheet is opened over the screen named in its row.
 | State | Opened from | Feature folder | dark | light |
 | --- | --- | --- | --- | --- |
 | New backlog item | `/repos/:id`, `+` | `features/sessions` | 03a | L9 |
-| Decision session | `/works/:id`, *Resolve doubt* | `features/sessions` | 03b | L10 |
-| Session sheet | sheet over `/sessions/:id` | `features/sessions` | 03c | L11 |
+| Decision session | `/works/:id`, *Resolve doubt* | `features/sessions` | 04a | L4a |
+| Session sheet | sheet over `/sessions/:id` | `features/sessions` | 04b | L4b |
 | Schedule asked | over `/repos/:id/schedule` | `features/schedules` | 08b | L13 |
 | Proposed schedule card | over `/repos/:id/schedule` | `features/schedules` | 08c | L14 |
 | Connect repository | `/repos/pick` | `features/repos` | 09 | L15 |
