@@ -56,7 +56,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 16 | Contract and daemon for the reshape | 51–54, 58 | 4 |
 | 17 | One task per screen | 55–57, 59–67 | 4 |
 | 18 | Documentation and legal | 68–69 | 1 |
-| 19 | Repo views: workers factory, backlog deps, design preview | 77–80 | 4 |
+| 20 | Repo views: workers factory, backlog deps, design preview | 77–80 | 4 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -1060,11 +1060,16 @@ same path; the contracts task lands first because every other task reads its typ
 
 ---
 
-## Batch 19 — Repo views (design recut, 2026-10-28)
+## Batch 20 — Repo views (design recut, 2026-10-28)
 
 The Figma file now draws the repository as two tabs over one site: `Backlog` with a dependency
 rail and `Workers` as a factory with four role rooms. These four tasks land that cut in the app.
-`design/README.md` §1 and §2 carry the frame numbers.
+`design/README.md` §1 and §2 carry the frame numbers. **Wave 1 runs two devs in parallel:**
+`77` (app-only — its spec explicitly releases `packages/contracts`) and `79` (which holds the
+serial `packages/contracts` slice: `design.ts`, `index.ts`, `openapi.ts`). **Wave 2:** `78`
+(after `79`, because it adds the required `needs` field to the same contract and edits
+`apps/daemon/src/backlog/**`; it also needs `Task-71` and `Task-72`) and `80` (after `77`, same
+`features/works` path). `apps/app/README.md` gets a single owner per wave.
 
 - [ ] **[Task-77]** Workers view: the repository's `Workers` tab. Replace the work-level run page
   with the repo-level factory: four role rooms (`ORQ`, `ARC`, `DEV`, `QA`), one face and one task

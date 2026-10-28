@@ -38,7 +38,7 @@ Figma, not the layer names.
 | Repo list | `/repos` | `features/repos` | 02 | L2 | — | — |
 | Repo · backlog | `/repos/:id` | `features/backlog` | 22 | L22 | D9 · LD9 | — |
 | Repo · workers | `/repos/:id/workers` | `features/works` | 20c · 20e–20i | L20 · L20e–L20i | D5–D8 · LD5–LD8 | — |
-| Design · session | `/sessions/:id` (`design`) | `features/sessions` | 25 | L25 | — | — |
+| Design · session | `/sessions/:id` (`design`) | `features/sessions` | 26 | L26 | — | — |
 | Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | — |
 | Settings | `/settings` | `features/settings` | 06 | L6 | — | — |
 | Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
