@@ -197,8 +197,8 @@ run; it is not atomic and does not claim to be.
   else parks the loop. It takes effect at a cycle boundary, so no merge is cut in half.
 - No `agent-cycle` run is in flight, other than the one that asked. A cycle hands the baton
   at its end by dispatching this workflow with its own run id in `ignore_run`.
-- At least one `- [ ]` task remains. With none, the loop parks itself and says so in one
-  issue per day.
+- At least one `- [ ]` task remains. With none, the loop parks itself and says so in one open
+  issue.
 - Fewer than three red cycles today. **Red means the verdict above**, not any non-zero exit:
   a run that shipped and then lost its socket is green. Three in a day is a broken loop, not
   a busy one; a human resets it.
@@ -217,10 +217,15 @@ Chaining matters and it is measured: cron is a request. The donor's `*/30` sched
 three times in six hours overnight, so the schedule is the safety net and the chain is the
 loop. `agent-cycle.yml` dispatches the driver at its end and the driver decides.
 
+A park repeats on every pass, so its issue is opened through `scripts/agent/issue.mjs` with the
+`agent-blocked` label: one open issue per condition, and a later pass **comments** on it instead
+of opening a second one. The title is the comparison key, so it never carries the day's count;
+the body does.
+
 `agent-cycle.yml` is also dispatchable by hand, which is the recovery path when the loop is
-parked. Its first step refuses to start unless the brake reads `on` **or** the dispatch sets
-`force: true`, and the summary records which. A forced run is the only way a human overrides
-the brake; it is a decision, not a retry.
+parked: the cycle has no brake gate of its own, so a hand dispatch starts one cycle even while
+the driver is parked, and the next automatic one is still the driver's decision. Its inputs are
+`model` and `merge` (`false` stops after QA), and no input overrides a guard.
 
 ## 9. The timed window
 
