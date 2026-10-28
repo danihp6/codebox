@@ -1,9 +1,10 @@
 # Project: Codebox
 
 Private control plane for **OpenCode** running on your own OCI VM. A hybrid **Angular +
-Ionic + Capacitor** app is the only client: the unit is a **work**, bound to one repository from
-creation, with an optional schedule that fires runs of that work; a green run merges itself with
-no approval prompt in the loop (D44, D45, D51-D54).
+Ionic + Capacitor** app is the only client: the unit is a **work**, one backlog item bound to one
+repository; the repository's schedule consumes the backlog in file order, sessions edit the
+backlog, the design or a work's decisions, and a green run merges itself with no approval prompt
+in the loop (D44, D45, D51-D56).
 
 This file is the operating manual for humans and agents. The frozen decisions live in
 [`docs/decisions.md`](docs/decisions.md); the backlog lives in [`TODO.md`](TODO.md). When a
