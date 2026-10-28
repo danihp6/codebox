@@ -56,6 +56,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 16 | Contract and daemon for the reshape | 51–54, 58 | 4 |
 | 17 | One task per screen | 55–57, 59–67 | 4 |
 | 18 | Documentation and legal | 68–69 | 1 |
+| 19 | Repo views: workers factory, backlog deps, design preview | 77–80 | 4 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -1056,6 +1057,45 @@ same path; the contracts task lands first because every other task reads its typ
   `docs/agent-runtime.md`. *Dependencies:* Task-72, Task-75. *Acceptance:* `[unit]` no route
   answers under `/v1/chat` or `/v1/reminders`; `[unit]` the matrix has one mode; `[live]` a fresh
   install has no chat screen and no orphan table write.
+
+---
+
+## Batch 19 — Repo views (design recut, 2026-10-28)
+
+The Figma file now draws the repository as two tabs over one site: `Backlog` with a dependency
+rail and `Workers` as a factory with four role rooms. These four tasks land that cut in the app.
+`design/README.md` §1 and §2 carry the frame numbers.
+
+- [ ] **[Task-77]** Workers view: the repository's `Workers` tab. Replace the work-level run page
+  with the repo-level factory: four role rooms (`ORQ`, `ARC`, `DEV`, `QA`), one face and one task
+  chip per subagent, the road in and the belt out, and the four states `queued`, `running`,
+  `needs you`, `asleep`. `needs you` is a badge over the worker whose task is blocked; the
+  orchestrator holds the blocked card and the decision, and the worker takes another task. No
+  per-agent button: a face opens that agent's log. *Paths:*
+  `apps/app/src/app/features/works/**`, `apps/app/src/app/app.routes.ts`,
+  `packages/contracts/src/**`, `docs/app.md` (§4, §8). *Dependencies:* Task-75.
+  *Acceptance:* `[unit]` each of the four states renders from a fixture; `[unit]` a blocked task
+  shows the dev on a different task; `[unit]` no per-agent button exists in the tree; `[live]`
+  tapping a face opens the agent's log; `[live]` 320 px with four workers in `DEV`.
+- [ ] **[Task-78]** Backlog with dependencies. The ordered list gains a dependency rail: the
+  chain, the branch and the external prerequisite, with `needs` on the row and a detail panel on
+  desktop. *Paths:* `apps/app/src/app/features/backlog/**`, `packages/backlog/**`,
+  `packages/contracts/src/**`. *Dependencies:* Task-75. *Acceptance:* `[unit]` the rail draws one
+  edge per dependency and none for a root; `[unit]` a blocked row carries every unmet id; `[live]`
+  the rail stays legible with 8 rows at 320 px.
+- [ ] **[Task-79]** Design session: preview the repository's artifact. A `design` session opens
+  with the prototype card (`design/` at a commit, its declared states, the tokens/routes/states
+  check) above the chat; an edit updates the preview and states what is pending. The preview is
+  the repository's spec, never a canvas (D52). *Paths:*
+  `apps/app/src/app/features/sessions/**`, `packages/design/**`, `design/README.md`.
+  *Dependencies:* Task-75. *Acceptance:* `[unit]` the card renders a commit and a state list from
+  `design/`; `[unit]` a pending change is visible; `[live]` a chat edit moves the preview.
+- [ ] **[Task-80]** Workers motion. The factory animates: the truck pulls in, the package runs the
+  belt, a token crosses the doors on a hand-off and the faces blink on offset cycles. All of it
+  honours `prefers-reduced-motion` and never blocks the tap targets. *Paths:*
+  `apps/app/src/app/features/works/**`, `apps/app/src/theme/**`. *Dependencies:* Task-77.
+  *Acceptance:* `[unit]` the loop is off under reduced motion; `[live]` the four faces blink out
+  of phase; `[live]` a tap during the animation still opens the log.
 
 ---
 

@@ -9,11 +9,23 @@ the operator's input for the app tasks (L2 in `TODO.md`).
 | `exports/` | One PNG per frame, named after its caption. Created by the export step in §4. |
 
 The file the map describes is `codebox` in Figma, edited through the `figma-edit` plugin. It
-holds **55 frames in 11 bands**, two themes and three widths, re-cut on 2026-10-28 against
-D44/D47/D51-D56: the unit is a work and one backlog item, the repository is the root, the
-backlog file is the list and the schedule belongs to the repository. Dark is the default (`docs/app.md` §9); light exists for every screen; 320 px is the
-reference width; 1280 is the desktop layout. Do not commit the `.fig` itself — only the link
-below and the exports.
+holds the routed screens, the repository's two views (backlog and workers), the design session
+and the agent cast, in two themes and three widths, re-cut on 2026-10-28 against
+D44/D47/D51-D56: the unit is a work and one backlog item, the repository is the root and the
+backlog file is the list. Dark is the default (`docs/app.md` §9); light exists for every mobile
+screen; 1280 is the desktop layout. Do not commit the `.fig` itself — only the link below and
+the exports.
+
+**The workers view is a factory, not a chat.** The repository screen has two tabs, `Backlog` and
+`Workers`. The workers tab draws four role rooms (`ORQ`, `ARC`, `DEV`, `QA`) with one face and
+one task chip per subagent, a road in on the left and a belt out on the right. Its states are
+four, not six: `queued`, `running`, `needs you` and `asleep`. A failed run is not a screen: the
+failed package leaves on the belt with a red strap and the orchestrator blocks the task and
+opens a decision, while the dev takes another task. A shipped run is not a screen either: the
+work moves on and the crew sleeps until it is given work.
+
+**The schedule screen is retired.** The repository's schedule is configuration, not a screen;
+its three dark frames and three light frames were deleted on 2026-10-28.
 
 ## 1. Routed screens
 
@@ -24,9 +36,9 @@ Figma, not the layer names.
 | --- | --- | --- | --- | --- | --- | --- |
 | Pairing | `/pair` | `features/pairing` | 01 | L1 | — | — |
 | Repo list | `/repos` | `features/repos` | 02 | L2 | — | — |
-| Repo · backlog | `/repos/:id` | `features/backlog` | 03 | L3 | D1 · D3 | S1 |
-| Work · run log | `/works/:id` | `features/works` | 04 | L4 | D1 · D3 | S2 |
-| Repo · schedule | `/repos/:id/schedule` | `features/schedules` | 02b | L12 | — | — |
+| Repo · backlog | `/repos/:id` | `features/backlog` | 22 | L22 | D9 · LD9 | — |
+| Repo · workers | `/repos/:id/workers` | `features/works` | 20c · 20e–20i | L20 · L20e–L20i | D5–D8 · LD5–LD8 | — |
+| Design · session | `/sessions/:id` (`design`) | `features/sessions` | 25 | L25 | — | — |
 | Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | — |
 | Settings | `/settings` | `features/settings` | 06 | L6 | — | — |
 | Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
@@ -34,9 +46,13 @@ Figma, not the layer names.
 | Notifications | `/settings/notifications` | `features/settings` | 17 | L22 | — | — |
 | About | `/about` | `features/about` | 07 | L7 | — | — |
 
+**One row per state of the workers view:** `20i` queued, `20c` running, `20f` needs you, `20e`
+asleep — and `L20`, `L20f`, `L20i`, `L20e` in light. `20h` (shipped) and `20g` (failed) were
+deleted: a merged run hands the work on and sleeps, a failed one becomes a decision.
+
 **Missing and known:** there is no frame yet for `/settings/providers` (provider accounts,
 D54), for the per-repository blocks on the dashboard, or for the checkbox column of a backlog
-row. Task-75 draws them before the app lands.
+row.
 
 ## 2. States and sheets
 
@@ -45,10 +61,10 @@ Not routes. A sheet is opened over the screen named in its row.
 | State | Opened from | Feature folder | dark | light |
 | --- | --- | --- | --- | --- |
 | New session (four targets, or none) | `/repos/:id`, chat button | `features/sessions` | 03a | L9 |
-| Decision session | `/works/:id`, *Resolve doubt* | `features/sessions` | 04a | L4a |
+| Decision session | `/repos/:id/workers`, *needs you* | `features/sessions` | 04a | L4a |
 | Session sheet | sheet over `/sessions/:id` | `features/sessions` | 04b | L4b |
-| Schedule asked | over `/repos/:id/schedule` | `features/schedules` | 08b | L13 |
-| Proposed schedule card | over `/repos/:id/schedule` | `features/schedules` | 08c | L14 |
+| Waiting to enter | `▤` chip on the workers view | `features/works` | 23 · D10 | L23 |
+| Delivered | `🔔` chip on the workers view | `features/works` | 24 · D11 | L24 |
 | First run | `/dashboard`, no repositories | `features/dashboard` | 12 | L18 |
 | Offline | banner on any screen | `shared/offline-banner` | 13 | L19 |
 | Unpaired | `/pair`, after a 401 | `features/pairing` | 14 | L20 |
@@ -59,6 +75,10 @@ Not routes. A sheet is opened over the screen named in its row.
 free-chat `⋯` menu. Connecting a repository happens from the `+` on `/repos`, and its clone
 state lives in the row, so a whole screen for it was one tap too many.
 
+**The workers sheets are the task lists.** The two chips over the drawing are the only two
+controls: `▤` opens the tasks waiting to enter, `🔔` opens the delivered ones, and each row is
+the task the worker is holding. Tapping a face opens that agent's log (frame `04`).
+
 **In sync (2026-10-28):** dark and light match for `02`, `03`, `04`, `04a`, `04b` and `03a`
 (four targets: Backlog, Design, Schedule, Rework). **Still stale:** `08b`/`08c` keep the
 pre-schedule copy and need a pass before the map is trusted for those two.
@@ -68,8 +88,9 @@ pre-schedule copy and need a pass before the map is trusted for those two.
 | Suffix | Frame | When it applies |
 | --- | --- | --- |
 | none | 390 × 844 | Phone reference for dark; the default frame of a band |
-| `L` | 390 × 844 | The same screen in light |
-| `D` | 1280 × 800 | Desktop: rail 76, list 320, content 760. D1/D2 light, D3/D4 dark |
+| `L` | 390 × 844 | The same screen in light. A screen without an `L` twin is unfinished |
+| `D` | 1280 × 800 | Desktop dark: rail 76, repos 300, content 904. `D5`–`D8` workers, `D9` backlog, `D10`/`D11` sheets |
+| `LD` | 1280 × 800 | The same desktop frames in light: `LD5`–`LD8`, `LD9` |
 | `S` | 320 × 568 | The reference width. If a row survives here, it survives everywhere |
 
 ## 4. Export
@@ -102,3 +123,13 @@ reserved for fills and dots.
   target, no promote, no approval prompt, no scope chip.
 - The header of a backlog is a **chat button**, never a `+`: the only way to create work is to
   talk, and the sheet asks for the target (backlog, design, or none for a read-only chat).
+- **The workers view has two controls and no buttons per agent.** The `▤` and `🔔` chips are the
+  only tappable chrome; a face is a target to its own log. A new per-agent button is a design
+  regression.
+- **State lives on the worker, not on the room.** `needs you` is a 20 px badge over the head of
+  the worker whose task is blocked; the room keeps its normal fill.
+- **Motion frames** live outside the routed bands: `25`/`25b` (truck, package and hand-off,
+  smart animate in a loop) and `28`/`28b` (blink, 80 ms). `27` documents the four faces. A new
+  animated flow adds its pair next to them and states the trigger.
+- **The design session previews the repository's artifact** (D52) and never invents a canvas:
+  `25` shows `design/` at a commit, its declared states and what is pending.
