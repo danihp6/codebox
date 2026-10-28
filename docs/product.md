@@ -56,9 +56,10 @@ host their code.
    deltas, tool cards, gate and PR cards, one divider per run. It has no composer: a run that
    needs a person **ends** in `needs_decision` (D45, D55).
 4. **Sessions.** A chat is an editor with one target (D55): the **backlog** (`TODO.md`), the
-   **design** (`design/`) or **one work** (a doubt to resolve). The target is both its job and
-   its write boundary, and every session ends in a proposal — a diff or a decision — never in a
-   direct write.
+   **design** (`design/`) or **one work** (a doubt to resolve) — or **no target**, which is a
+   read-only chat about the repository with its context. The target is both its job and its
+   write boundary, and a targeted session ends in a proposal — a diff or a decision — never in a
+   direct write. The `+` on a backlog opens exactly this choice.
 5. **Design.** The screen specs and snapshots a work implements against, read from the same
    worktree and shown beside the thread. The gate validates tokens, routes and declared states,
    never pixels (D52).

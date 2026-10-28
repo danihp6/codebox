@@ -8,10 +8,12 @@ first release exists.
 
 ### Changed — 2026-10-28 (sessions are editors; the schedule belongs to the repository)
 
-- **A chat is an editor, not a unit (D55).** A session has one target — the backlog, the design
-  or one work — and the target is its write boundary; every session ends in a proposal and a
-  merge disposes. The work screen loses its composer and becomes a run log; a run that needs a
-  person ends in `needs_decision` instead of waiting. `docs/api.md` §5.6.1 owns the routes.
+- **A chat is an editor, not a unit (D55).** A session has one target — the backlog, the design,
+  one work, or none — and the target is its write boundary; every targeted session ends in a
+  proposal and a merge disposes. **No target is a read-only chat with the repository's context**,
+  and the `+` on a backlog opens exactly that choice. The work screen loses its composer and
+  becomes a run log; a run that needs a person ends in `needs_decision` instead of waiting.
+  `docs/api.md` §5.6.1 owns the routes.
 - **The schedule belongs to the repository (D56).** `RepoSchedule { repoId, mode, window,
   selection, caps }` fires the next eligible backlog item in file order; `once` is one fire and
   `POST /v1/repos/{id}/run-next` is the same selection without a schedule. Per-work schedules,

@@ -510,7 +510,7 @@ A session is a chat with **one target**, and the target is its write boundary.
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/v1/sessions?repoId=&target=` | `read` | Sessions, newest activity first. |
-| `POST` | `/v1/sessions` | `works` | `{ repoId, target: "backlog" \| "design" \| "work", workId? }` → `201`. |
+| `POST` | `/v1/sessions` | `works` | `{ repoId, target: "backlog" \| "design" \| "work" \| "repo", workId? }` → `201`. |
 | `GET` | `/v1/sessions/{id}` | `read` | Session, target, state, pending proposal. |
 | `GET` | `/v1/sessions/{id}/messages?cursor=` | `read` | Oldest first, paginated. |
 | `POST` | `/v1/sessions/{id}/messages` | `works` | `{ text }` → `202`; the reply arrives as events. |
@@ -520,8 +520,10 @@ A session is a chat with **one target**, and the target is its write boundary.
 | `DELETE` | `/v1/sessions/{id}` | `works` | Archives it; the branch is kept per retention. |
 
 - `target = backlog` may only write `TODO.md`; `design` only `design/**`; `work` writes no code
-  and produces notes plus an optional backlog proposal. A write outside the target is refused by
-  the daemon **and** by the gate, whichever happens first.
+  and produces notes plus an optional backlog proposal. `repo` is **read-only**: the session
+  gets the repository's worktree and context but no branch and no proposal, and `POST /merge` on
+  it answers `409` with `details.reason = "read_only_session"`. A write outside the target is
+  refused by the daemon **and** by the gate, whichever happens first.
 - At most one pending proposal per session: a second one while one is open is `409` with
   `details.reason = "proposal_pending"`.
 - `POST /merge` pushes a docs-only PR and merges it through the normal guardrails; a proposal

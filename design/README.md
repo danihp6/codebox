@@ -44,7 +44,7 @@ Not routes. A sheet is opened over the screen named in its row.
 
 | State | Opened from | Feature folder | dark | light |
 | --- | --- | --- | --- | --- |
-| New backlog item | `/repos/:id`, `+` | `features/sessions` | 03a | L9 |
+| New session (three targets, or none) | `/repos/:id`, chat button | `features/sessions` | 03a | L9 |
 | Decision session | `/works/:id`, *Resolve doubt* | `features/sessions` | 04a | L4a |
 | Session sheet | sheet over `/sessions/:id` | `features/sessions` | 04b | L4b |
 | Schedule asked | over `/repos/:id/schedule` | `features/schedules` | 08b | L13 |
@@ -95,5 +95,7 @@ reserved for fills and dots.
 - A new route adds one row to §1 in the same task that adds the route.
 - A frame that stops matching the code is fixed in Figma or deleted; a stale frame is worse
   than no frame.
-- A frame never shows a control the product does not have: no free chat, no promote, no
-  approval prompt, no scope chip.
+- A frame never shows a control the product does not have: no chat that writes without a
+  target, no promote, no approval prompt, no scope chip.
+- The header of a backlog is a **chat button**, never a `+`: the only way to create work is to
+  talk, and the sheet asks for the target (backlog, design, or none for a read-only chat).
