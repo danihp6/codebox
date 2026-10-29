@@ -336,6 +336,28 @@ export type {
   RepoSchedule,
 } from './works.js';
 
+// Design preview: docs/api.md §5.2, D52.
+export {
+  DESIGN_RULES,
+  designRuleSchema,
+  designTokenViewSchema,
+  designRouteViewSchema,
+  designStatesSchema,
+  designScreenViewSchema,
+  designFindingViewSchema,
+  designPreviewSchema,
+  parseDesignPreview,
+} from './design.js';
+export type {
+  DesignRule,
+  DesignTokenView,
+  DesignRouteView,
+  DesignStates,
+  DesignScreenView,
+  DesignFindingView,
+  DesignPreview,
+} from './design.js';
+
 // Providers and their failover accounts: docs/api.md §5.9.1, D54.
 export {
   providerIdSchema,

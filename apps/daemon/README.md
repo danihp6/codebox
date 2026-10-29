@@ -119,6 +119,13 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
   exchange.
 - `src/integrations/routes.ts` — the six integration handlers.
 - `src/integrations/storage.ts` — the integration file store beside the sealed credentials.
+- `src/design/index.ts` — the design subsystem module: one service, the `GET /v1/repos/{id}/design` route and no timer.
+- `src/design/service.ts` — the bare-clone read: the revision resolution, the three document kinds and the absent-path rule.
+- `src/design/preview.ts` — the pure projection: tokens, routes, each screen's declared states and `checkDocuments`' findings.
+- `src/design/routes.ts` — the §5.2 handler, its query schema and its 422/503 mapping.
+- `src/design/preview.test.ts` — `present: false`, the three sortings, the findings order and each document that does not parse.
+- `src/design/service.test.ts` — the revision resolution, the absent rule for `show` and `ls-tree` and the two error classes.
+- `src/design/routes.test.ts` — the §5.2 HTTP contract: the projection, the refusals, the missing token and the redacted warnings.
 - `src/integrations/service.test.ts` — allowlist refusal before `fetch`, header injection,
   truncation and the manifest flow.
 - `src/config.test.ts` — config loading, failure naming, bind parsing, paths, build info.

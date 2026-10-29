@@ -3,12 +3,13 @@ import { Injectable } from '@angular/core';
 import {
   errorCodeSchema,
   errorEnvelopeSchema,
+  parseDesignPreview,
   parsePage,
   parseSession,
   parseSessionMessage,
   sessionMessageSchema,
 } from '@codebox/contracts';
-import type { Page, Session, SessionMessage } from '@codebox/contracts';
+import type { DesignPreview, Page, Session, SessionMessage } from '@codebox/contracts';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { ApiError } from '../../core/api/api-client';
 import { API_BASE_URL, API_PREFIX } from '../../core/api/http';
@@ -46,6 +47,14 @@ export class SessionsApi {
 
   merge(id: string): Observable<Session> {
     return this.request(this.http.post<unknown>(this.url(`/sessions/${id}/merge`), {}), parseSession);
+  }
+
+  designPreview(repoId: string, revision: string | null): Observable<DesignPreview> {
+    const params = this.query({ revision: revision ?? undefined });
+    return this.request(
+      this.http.get<unknown>(this.url(`/repos/${repoId}/design`), { params }),
+      parseDesignPreview,
+    );
   }
 
   private url(path: string): string {

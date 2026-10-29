@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { Session, SessionMessage } from '@codebox/contracts';
+import type { DesignPreview, Session, SessionMessage } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError } from '../../core/api/api-client';
 import { SessionsApi } from './sessions.api';
@@ -23,6 +23,24 @@ const SESSION: Session = {
   createdAt: '2026-10-28T09:12:00Z',
   updatedAt: '2026-10-28T09:12:00Z',
   lastMessage: null,
+};
+
+const PREVIEW: DesignPreview = {
+  repoId: SESSION.repoId,
+  revision: '9f1c2ab',
+  present: true,
+  tokens: [{ name: 'color.brand.bright', type: 'color', value: '#22c55e' }],
+  routes: [{ path: '/repos/:id', screen: 'Repo · backlog', component: 'RepoBacklogPage' }],
+  screens: [
+    {
+      screen: 'Repo · backlog',
+      route: '/repos/:id',
+      states: { loading: 'Rows grey', empty: null, error: 'Envelope' },
+      snapshotSha256: null,
+    },
+  ],
+  findings: [],
+  checkedAt: '2026-10-29T10:00:00Z',
 };
 
 const MESSAGE: SessionMessage = {
@@ -96,6 +114,38 @@ describe('SessionsApi', () => {
     http.expectOne({ method: 'POST', url: `/v1/sessions/${SESSION_ID}/merge` }).flush(SESSION);
 
     expect(sessions).toHaveLength(2);
+  });
+
+  it('reads the design preview with and without a revision', () => {
+    let withRevision: DesignPreview | null = null;
+    let head: DesignPreview | null = null;
+
+    api.designPreview(SESSION.repoId, '9f1c2ab').subscribe((preview) => {
+      withRevision = preview;
+    });
+    http
+      .expectOne(`/v1/repos/${SESSION.repoId}/design?revision=9f1c2ab`)
+      .flush(PREVIEW);
+
+    api.designPreview(SESSION.repoId, null).subscribe((preview) => {
+      head = preview;
+    });
+    http.expectOne(`/v1/repos/${SESSION.repoId}/design`).flush({ ...PREVIEW, revision: '4d2e0aa' });
+
+    expect(withRevision).toEqual(PREVIEW);
+    expect(head).toEqual({ ...PREVIEW, revision: '4d2e0aa' });
+  });
+
+  it('maps a malformed design preview to a contract failure', () => {
+    const failures: ApiError[] = [];
+    api.designPreview(SESSION.repoId, null).subscribe({
+      error: (error: ApiError) => failures.push(error),
+    });
+    http
+      .expectOne(`/v1/repos/${SESSION.repoId}/design`)
+      .flush({ repoId: SESSION.repoId, revision: 'not-a-sha' });
+
+    expect(failures[0]).toMatchObject({ status: 200, code: 'contract' });
   });
 
   it('maps the envelope and a boundary failure to ApiError', () => {

@@ -21,6 +21,8 @@ not exist. No I/O, no logger, no `Date.now()`; `zod` is the only runtime depende
 - `pagination.ts` — the §4 limits, the page envelope and the idempotent routes.
 - `resources.ts` — every resource of `docs/api.md` §5 with one `parse*` helper each.
 - `works.ts` — §5.6/§5.6.1/§5.10: the parsed backlog, `Work`, `Session`, `SessionMessage` and the repository schedule.
+- `design.ts` — §5.2: the design preview at a commit, its tokens, routes, declared states, findings and `parseDesignPreview`.
+- `design.test.ts` — the preview fixture round-trip and each refused shape: revision, rule, line, snapshot hash and unknown key.
 - `providers.ts` — §5.9.1: the provider adapter and its failover account (D54).
 - `routines.ts` — the §5.8 routine union (`prompt`/`reminder`) and the chat-tool schemas.
 - `events.ts` — the §6 SSE union, the gap control frame and the retry constants.
