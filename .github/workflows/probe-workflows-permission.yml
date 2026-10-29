@@ -28,9 +28,13 @@ jobs:
           fetch-depth: 0
 
       - name: Configure git identity
+        env:
+          PAT: ${{ secrets.CB_AGENT_TOKEN }}
         run: |
           git config user.name codebox-bot
           git config user.email codebox-bot@users.noreply.github.com
+          echo "CB_AGENT_TOKEN length: ${#PAT}"
+          echo "extraheader bytes: $(git config --get-all http.https://github.com/.extraheader | wc -c)"
 
       - name: A. CB_AGENT_TOKEN, plain file
         id: a
@@ -69,9 +73,10 @@ jobs:
         continue-on-error: true
         env:
           BRANCH: probe/c-contents
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          git config --local --unset-all http.https://github.com/.extraheader || true
           git switch -c "$BRANCH"
           printf 'probe\n' > probe-token.txt
           git add probe-token.txt
@@ -86,9 +91,10 @@ jobs:
         continue-on-error: true
         env:
           BRANCH: probe/d-workflows
-          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          git config --local --unset-all http.https://github.com/.extraheader || true
           git switch -c "$BRANCH"
           mkdir -p .github/workflows
           printf 'name: probe\non: workflow_dispatch\njobs:\n  noop:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo probe\n' > .github/workflows/probe.yml
