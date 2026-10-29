@@ -162,6 +162,62 @@ path: each daemon subsystem owns its own `routes.ts`, and the real removals live
 in `apps/daemon/src/schedules/**`, and the app consumers the item did not name
 (`features/schedules/**`, the dashboard's `/v1/chat/sessions` read).
 
+**Cut — cycle after Task-76 (two of four slots used).** No task branch was alive and `main` was
+`0a17286`. Batch 20 is two waves by construction, and this cut is **wave 1**: Task-77 (the
+repository's `Workers` tab) and Task-79 (the design session's preview card). **Wave 2 waits for
+it:** Task-78's `*Dependencies:*` line names Task-79 and Task-80's names Task-77, and neither
+dependency is merged until this wave lands; on top of the graph, Task-78 claims
+`packages/contracts/src/index.ts` — Task-79's serial contract slice, which carries `design.ts`,
+`openapi.ts` and `openapi.test.ts` — and edits `apps/daemon/src/backlog/**`, while Task-80
+claims `apps/app/src/app/features/works/**`, which Task-77 rewrites and Task-79 does not touch.
+The two empty slots have no legal candidate in any later batch: Task-30 and Task-31 wait on
+Task-29 and Task-26, `[!]` on issue #11, and Task-32 waits on Task-31. **Hot-file holders in
+this cut:** Task-77 holds `apps/app/src/app/app.routes.ts`; Task-79 holds
+`packages/contracts/src/index.ts` and, with it, the whole contract surface it has to keep
+coherent (`packages/contracts/src/design.ts`, `openapi.ts`, `openapi.test.ts`, `docs/api.md`
+§5.2). No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`,
+`TODO.md`, `CHANGELOG.md` or `docs/decisions.md`. Docs are claimed by section only: Task-77
+holds `docs/app.md` §4; Task-79 holds `docs/app.md` §8's *Session* block and `docs/api.md`
+§5.2; `apps/app/README.md` is split by line block — Task-77 owns the `features/works/**` lines
+(adds `repo-workers.page.*` and `workers.model.*`, removes `repo-works.page.*`), Task-79 owns
+the `features/sessions/**` lines (adds `design-preview.card.*`), and neither edits the other's.
+**Deviations from the items' `*Paths:*` lines.** Task-77 **releases**
+`packages/contracts/src/**`: `workSchema` (`state`, `backlogRef`, `title`, `attempts`,
+`updatedAt`) and `WorkState` already carry everything the factory draws, the room is a
+presentation of the daemon's state machine and not a new fact (D51), and the one gap — no work
+phase or agent role, so nothing can be attributed to the `ARC` room — is rendered as an honest
+empty room and recorded in the spec for a later contract task. Task-77 **claims** four app paths
+the item did not name, because the tab strip is one component and a renamed route with a stale
+link is a dead tab: `apps/app/src/app/app.routes.spec.ts` (the frozen path table the rename
+breaks), `features/repos/repo-tabs.ts`, `features/repos/repo-tabs.spec.ts` and
+`features/repos/repo-chrome.i18n.ts` (`repoTabs.works` → `repoTabs.workers`, its two locale
+lines only). Task-77 **narrows** `docs/app.md` to §4: §8's *Work* block stays true because
+`/works/:id` survives as the agent's log, and §8's *Session* block belongs to Task-79. `/works/:id`
+is kept on purpose — deleting it would leave the `features/backlog` links
+(`repo-backlog.page.ts`, `backlog.store.ts`), outside this task's paths, pointing at nothing, and
+`design/README.md` §7 already says a face is a target to its own log. Both app tasks also claim
+`apps/app/README.md`, which `readme.spec.ts` forces on any task that adds or deletes a file under
+`src/app`; the block split is the one described above. Task-79 **adds** the
+daemon surface the preview cannot do without — `packages/contracts/src/design.ts`,
+`packages/contracts/src/design.test.ts`, `openapi.ts`, `openapi.test.ts`,
+`packages/contracts/README.md`, a new `apps/daemon/src/design/**` subsystem (the sixteenth
+`SubsystemName`, appended last to `SUBSYSTEMS`, so `apps/daemon/src/main.ts` does not move) with its
+`modules.ts`/`modules.test.ts` entries, `apps/daemon/README.md`, `docs/api.md` §5.2, and the app
+consumers `features/sessions/{sessions.api.ts,sessions.api.spec.ts,session.page.ts,
+session.page.spec.ts,i18n.ts}` — because no route serves `design/` today (`gate/design-check.ts`
+is the only reader) and a card without a route would be a fixture pretending to be a preview.
+Task-79 **releases** `packages/design/**` (the projection is built over the package's existing
+`parseTokens`, `parseRoutes`, `parseScreenSpec` and `checkDocuments`, with no new pure rule) and
+`design/README.md` (no section of it is false once the task lands: §1 already maps
+`/repos/:id/workers`, §7 already states the preview rule, and this task adds no route to
+`app.routes.ts`). Two readings are frozen in the specs instead of guessed at run time: the
+repository keeps **four** tabs (`Backlog · Workers · Schedule · Design`) because retiring the
+schedule and design tabs has no home for the schedule configuration yet and is not in any open
+item, so `design/README.md`'s "two tabs" prose is the target of a later cut, not of this one;
+and the `needs you` decision session opens from the blocked work's log, which already carries
+the one allowed action, because the item forbids a per-agent button on the board.
+
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
