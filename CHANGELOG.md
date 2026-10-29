@@ -6,6 +6,25 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-83, the design check is the gate's second step)
+
+- **A green gate is no longer green until the run's own `design/` is checked.** `gating()` runs
+  `scanDesign` after the secret scan and only on a green gate, and a new pure rule in
+  `packages/core` (`designRuleEnforcement`, `classifyDesignFindings`) splits the findings:
+  `colour_outside_tokens`, `route_without_component` and `snapshot_hash_mismatch` fail the run,
+  `screen_state_missing` is appended as `<file>:<line> <rule> (report-only)` and never fails it,
+  and a rule this build does not know is enforced. No `design/tokens.json` skips the step
+  unchanged; a git failure is `design_scan: git_failed` and fails closed, like the secret scan.
+- **The tail and the log carry the verdict.** One `design_scan_reported` per run with findings
+  (`findings`, `enforced`, `reportOnly`, `oversized`) and one `design_scan_failed` with the code;
+  no file contents and no diff. The secret scan still comes first, so a patch that trips it is
+  reported by the secret scan alone. The policy is `docs/jobs.md` §5 and decision **D57**
+  (amending D52).
+- **One deviation, recorded:** the item's "a screen declaring `#ffffff` ends `failed`" is measured
+  with `#0b1120` instead — `#ffffff` is one of Task-84's twelve token values, so it is a legal
+  literal once this wave lands. The engine tests author their own twelve-value token document, so
+  they never read `design/tokens.json`.
+
 ### Added — 2026-10-29 (Task-81, the Figma import core)
 
 - **`@codebox/design` turns a projected Figma page and the committed import map into the three

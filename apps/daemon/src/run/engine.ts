@@ -10,7 +10,9 @@ import {
   canCancel,
   checkCost,
   checkRunTimeout,
+  classifyDesignFindings,
   decidePermission,
+  designRuleEnforcement,
   evaluateAutoMerge,
   transitionRun,
 } from '@codebox/core';
@@ -37,6 +39,8 @@ import type { RepoInfo } from '@codebox/git-provider';
 import type { Worktree, WorkspaceStatus } from '@codebox/workspaces';
 import { GATE_TAIL_LINES } from '../gate/run-gate.js';
 import type { GateExecutionResult } from '../gate/run-gate.js';
+import { DesignScanError, formatDesignFinding, scanDesign } from '../gate/design-check.js';
+import type { DesignScanOutcome } from '../gate/design-check.js';
 import { SecretScanError, scanWorktree } from '../gate/secret-scan.js';
 import { commitWorktree } from './commit.js';
 import { createRunEventWriter } from './events.js';
@@ -749,14 +753,16 @@ export function createRunEngine(ports: RunPorts): RunEngine {
     ctx.gate = result;
     if (ctx.cancelled) return result;
     const scanned = result.status === 'passed' ? await secretScanStep(ctx, result) : result;
-    ctx.gate = scanned;
+    const designed =
+      !ctx.cancelled && scanned.status === 'passed' ? await designScanStep(ctx, scanned) : scanned;
+    ctx.gate = designed;
     const gate = {
-      status: scanned.status,
-      exitCode: scanned.exitCode,
-      durationMs: scanned.durationMs,
+      status: designed.status,
+      exitCode: designed.exitCode,
+      durationMs: designed.durationMs,
     };
     amend(ctx, { gate, diff: diffStatOf(status.diff) }, [{ event: 'run.gate', data: { gate } }]);
-    return scanned;
+    return designed;
   }
 
   /**
@@ -798,6 +804,61 @@ export function createRunEngine(ports: RunPorts): RunEngine {
       exitCode: 1,
       tail: [...result.tail, ...lines].slice(-GATE_TAIL_LINES),
     };
+  }
+
+  /**
+   * D57: the repository's design documents are the second gate step, read from the run's own
+   * worktree after the secret scan. Only an enforced finding turns the gate red; a missing token
+   * document skips the step, and a diff git cannot produce fails closed.
+   */
+  async function designScanStep(
+    ctx: RunContext,
+    result: GateExecutionResult,
+  ): Promise<GateExecutionResult> {
+    const worktree = ctx.worktree;
+    if (worktree === null) throw new RunFailure('internal', 'no worktree');
+    let outcome: DesignScanOutcome;
+    try {
+      outcome = await scanDesign(ports.gitRunner, {
+        cwd: worktree.path,
+        baseSha: worktree.baseSha,
+        timeoutMs: settings.gitTimeoutMs,
+      });
+    } catch (error) {
+      if (!(error instanceof DesignScanError)) throw error;
+      const lines = [`design_scan: ${error.code}`];
+      logger.error({ msg: 'design_scan_failed', runId: ctx.input.runId, code: error.code });
+      appendToGateLog(result.logFile, lines);
+      return {
+        ...result,
+        status: 'failed',
+        exitCode: 1,
+        tail: [...result.tail, ...lines].slice(-GATE_TAIL_LINES),
+      };
+    }
+    if (outcome.skipped || outcome.oversized) return result;
+    const findings = outcome.findings;
+    if (findings.length === 0) return result;
+    const { enforced, reportOnly } = classifyDesignFindings(findings);
+    const lines = findings.map((finding) =>
+      designRuleEnforcement(finding.rule) === 'report-only'
+        ? `${formatDesignFinding(finding)} (report-only)`
+        : formatDesignFinding(finding),
+    );
+    const fields = {
+      msg: 'design_scan_reported',
+      runId: ctx.input.runId,
+      findings: findings.length,
+      enforced: enforced.length,
+      reportOnly: reportOnly.length,
+      oversized: false,
+    };
+    if (enforced.length > 0) logger.error(fields);
+    else logger.info(fields);
+    appendToGateLog(result.logFile, lines);
+    const tail = [...result.tail, ...lines].slice(-GATE_TAIL_LINES);
+    if (enforced.length === 0) return { ...result, tail };
+    return { ...result, status: 'failed', exitCode: 1, tail };
   }
 
   function protectedPaths(ctx: RunContext): readonly string[] {

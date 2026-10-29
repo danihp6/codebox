@@ -1402,7 +1402,7 @@ implement does not exist yet; a screen task that names no spec is not ready to l
       API calls carry `X-Figma-Token` and the PNG URL requests do not; `[unit]` a page name absent
       from the file fails naming the page and the pages present, and writes nothing.
 
-- [ ] **[Task-83]** The design check stops skipping (issue #75). Call `scanDesign` from `gating()`
+- [x] **[Task-83]** The design check stops skipping (issue #75). Call `scanDesign` from `gating()`
       after the secret scan, on every run, and append its findings to the gate tail as
       `<file>:<line> <rule>`. **Enforce** `colour_outside_tokens`, `route_without_component` and
       `snapshot_hash_mismatch`; **report** `screen_state_missing` as a `(report-only)` tail line
@@ -1427,6 +1427,12 @@ implement does not exist yet; a screen task that names no spec is not ready to l
       `design_scan_reported` log; `[unit]` a worktree without `design/tokens.json` is skipped and
       the run is unchanged; `[unit]` `design_scan: git_failed` fails the run; `[unit]` a diff that
       trips the secret scan reports the secret alone.
+      LANDED AS: the step is wired between the secret scan and the single `run.gate` event, and the
+      policy is `docs/jobs.md` §5 plus **D57**. The `#ffffff` clause is measured with `#0b1120`
+      because `#ffffff` is one of Task-84's twelve values and therefore a legal literal; the engine
+      tests author their own twelve-value token document instead of reading `design/tokens.json`.
+      From this merge on a green-gate run issues two identical `git diff` calls (`scanDesign` reads
+      the diff before it looks for the token document); the exact-call assertion was updated here.
 
 - [ ] **[Task-84]** The colour token document. Author `design/tokens.json` — DTCG, colour only —
       from the palette the app already uses: `#0b0f14`, `#121821`, `#e6edf3`, `#8b98a5`,
