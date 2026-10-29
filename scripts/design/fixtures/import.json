@@ -1,0 +1,126 @@
+{
+  "fileKey": "3HMV2UN6QviuNXe2T3Htsr",
+  "page": "Page 1",
+  "frames": [
+    {
+      "caption": "01 · Pairing — mobile dark",
+      "screen": "Pairing",
+      "route": "/pair",
+      "component": "PairingPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": "14 · Unpaired — 401"
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "02 · Repo list — mobile dark",
+      "screen": "Repo list",
+      "route": "/repos",
+      "component": "ReposPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "22 · Repo · backlog — deps (dark)",
+      "screen": "Repo · backlog",
+      "route": "/repos/:id",
+      "component": "RepoBacklogPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "20c · Crew · aerial — dark",
+      "screen": "Repo · workers",
+      "route": "/repos/:id/workers",
+      "component": "RepoWorkersPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "26 · Design · preview + chat — dark",
+      "screen": "Design · session",
+      "route": "/sessions/:id",
+      "component": "SessionPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "05 · Dashboard — mobile dark",
+      "screen": "Dashboard",
+      "route": "/dashboard",
+      "component": "DashboardPage",
+      "states": {
+        "loading": null,
+        "empty": "12 · First run — after pairing",
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "06 · Settings — mobile dark",
+      "screen": "Settings",
+      "route": "/settings",
+      "component": "SettingsPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "15 · Settings / Devices",
+      "screen": "Devices",
+      "route": "/settings/devices",
+      "component": "DevicesPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "16 · Settings / Credentials",
+      "screen": "Credentials",
+      "route": "/settings/credentials",
+      "component": "CredentialsPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
+      "caption": "07 · About — mobile dark",
+      "screen": "About",
+      "route": "/about",
+      "component": "AboutPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    }
+  ]
+}
