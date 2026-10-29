@@ -24,6 +24,7 @@ contract's `dist` exists.
 - `limits.ts` — the D29 daily/job cost caps and the run timeout.
 - `admission.ts` — the D15 global and per-repository concurrency caps as one pure decision.
 - `usage.ts` — the telemetry ranges, their window, the UTC days it spans and the in-range summary.
+- `design-gate.ts` — the D57 split: which design finding fails the run and which is report-only.
 - `run-state.test.ts` — the 9 × 9 transition walk.
 - `guardrails.test.ts` — one red and one green case per guardrail.
 - `cron.test.ts` — parser failures, the Madrid DST rows and the impossible date.
@@ -34,6 +35,7 @@ contract's `dist` exists.
 - `limits.test.ts` — cost caps and timeouts.
 - `admission.test.ts` — the per-repo refusal first, the free slots and the zero limits.
 - `usage.test.ts` — the four windows, the midnight-spanning day list and the six-decimal sum.
+- `design-gate.test.ts` — the one report-only rule, the fail-closed unknown rule and the partition order.
 
 ## Checks
 

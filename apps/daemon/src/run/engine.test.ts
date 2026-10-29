@@ -1,4 +1,4 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -389,11 +389,14 @@ interface FakeGitRunnerOptions {
   readonly sha?: string;
   readonly patch?: string;
   readonly scanCode?: number;
+  /** The 1-based non-cached `diff` call that answers `code: 1`; the secret scan is the first. */
+  readonly failScanCall?: number;
 }
 
 function fakeGitRunner(options: FakeGitRunnerOptions = {}): FakeGitRunner {
   const calls: string[][] = [];
   const sha = options.sha ?? HEAD_SHA;
+  let scanCalls = 0;
   return {
     calls,
     run(input): Promise<{ code: number; stdout: string; stderr: string }> {
@@ -401,12 +404,13 @@ function fakeGitRunner(options: FakeGitRunnerOptions = {}): FakeGitRunner {
       const [command] = input.args;
       if (command === 'add') return Promise.resolve({ code: 0, stdout: '', stderr: '' });
       if (command === 'diff') {
-        // `diff --cached --quiet` is the commit step; anything else is the secret scan's patch.
+        // `diff --cached --quiet` is the commit step; anything else is a gate scan's patch.
         if (input.args.includes('--cached')) {
           return Promise.resolve({ code: 1, stdout: '', stderr: '' });
         }
+        scanCalls += 1;
         return Promise.resolve({
-          code: options.scanCode ?? 0,
+          code: scanCalls === options.failScanCall ? 1 : (options.scanCode ?? 0),
           stdout: options.patch ?? '',
           stderr: '',
         });
@@ -625,6 +629,100 @@ function guardrailOf(record: {
   return record.guardrails.map((guardrail) => guardrail.id);
 }
 
+/** The twelve colour leaves the design gate needs: authored here, never read from `design/`. */
+const DESIGN_TOKEN_VALUES: Readonly<Record<string, string>> = {
+  'color.surface.page': '#0b0f14',
+  'color.surface.overlay': '#121821',
+  'color.text.primary': '#e6edf3',
+  'color.text.secondary': '#8b98a5',
+  'color.state.success': '#22c55e',
+  'color.state.warning': '#f59e0b',
+  'color.state.danger': '#ef4444',
+  'color.border.default': '#5b6772',
+  'color.surface.subtle': '#f7f9fb',
+  'color.surface.raised-light': '#ffffff',
+  'color.state.success-strong': '#15803d',
+  'color.state.warning-strong': '#b45309',
+};
+
+function tokenDocument(values: Readonly<Record<string, string>>): Record<string, unknown> {
+  const root: Record<string, unknown> = {};
+  for (const [path, value] of Object.entries(values)) {
+    const segments = path.split('.');
+    const leaf = segments[segments.length - 1];
+    if (leaf === undefined) continue;
+    let node = root;
+    for (const segment of segments.slice(0, -1)) {
+      const child = node[segment];
+      if (typeof child === 'object' && child !== null && !Array.isArray(child)) {
+        node = child as Record<string, unknown>;
+        continue;
+      }
+      const created: Record<string, unknown> = {};
+      node[segment] = created;
+      node = created;
+    }
+    node[leaf] = { $value: value, $type: 'color' };
+  }
+  return root;
+}
+
+interface DesignStates {
+  readonly loading?: string | null;
+  readonly empty?: string | null;
+  readonly error?: string | null;
+}
+
+/** Writes the design documents into the harness worktree, because the step reads the real one. */
+function writeDesignFixture(test: Harness, states: DesignStates = {}): void {
+  const root = test.workspaces.worktree.path;
+  const screens = join(root, 'design', 'screens');
+  mkdirSync(screens, { recursive: true });
+  writeFileSync(
+    join(root, 'design', 'tokens.json'),
+    JSON.stringify(tokenDocument(DESIGN_TOKEN_VALUES)),
+    'utf8',
+  );
+  writeFileSync(
+    join(root, 'design', 'routes.json'),
+    JSON.stringify({
+      routes: [{ path: '/dashboard', screen: 'Dashboard', component: 'DashboardPage' }],
+    }),
+    'utf8',
+  );
+  writeFileSync(
+    join(screens, 'dashboard.json'),
+    JSON.stringify({
+      screen: 'Dashboard',
+      route: '/dashboard',
+      states: {
+        loading: 'Loading the dashboard',
+        empty: 'No works yet',
+        error: 'The dashboard could not load',
+        ...states,
+      },
+    }),
+    'utf8',
+  );
+}
+
+function patchWithColour(colour: string, path = 'apps/app/src/theme/extra.css'): string {
+  return [
+    `diff --git a/${path} b/${path}`,
+    `--- a/${path}`,
+    `+++ b/${path}`,
+    '@@ -1,0 +1,1 @@',
+    `+color: ${colour};`,
+    '',
+  ].join('\n');
+}
+
+function designLogs(test: Harness): Record<string, unknown>[] {
+  return test.lines.filter(
+    (line) => line['msg'] === 'design_scan_reported' || line['msg'] === 'design_scan_failed',
+  );
+}
+
 describe('run engine — happy path', () => {
   it('walks queued to succeeded, one state per transition, six events in order', async () => {
     const session = { sessionId: 'ses_fake1' };
@@ -739,6 +837,7 @@ describe('run engine — happy path', () => {
     test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
     await test.engine.start(runInput());
     expect(test.gitRunner.calls).toEqual([
+      ['diff', '--no-color', '--unified=0', '--no-ext-diff', BASE_SHA, '--'],
       ['diff', '--no-color', '--unified=0', '--no-ext-diff', BASE_SHA, '--'],
     ]);
   });
@@ -1021,6 +1120,8 @@ describe('run engine — failures before the merge', () => {
       'run.gate',
       'run.failed',
     ]);
+    expect((outcome.gate?.tail ?? []).join('\n')).not.toContain('design_scan');
+    expect(designLogs(test)).toEqual([]);
   });
 
   it('parks a protected path in pr_open with eight guardrails and never merges', async () => {
@@ -1197,6 +1298,144 @@ describe('run engine — the secret scan gate step', () => {
     });
     expect(test.lines.filter((line) => line['msg'] === 'secret_scan_failed')).toEqual([]);
     expect(test.git.pushes).toHaveLength(1);
+  });
+});
+
+describe('run engine — the design scan gate step', () => {
+  const SECRET = `ghp_${'A'.repeat(36)}`;
+
+  function patchWithSecretAndColour(): string {
+    return [
+      'diff --git a/src/x.ts b/src/x.ts',
+      '--- a/src/x.ts',
+      '+++ b/src/x.ts',
+      '@@ -1,2 +1,4 @@',
+      ' const a = 1;',
+      ' const b = 2;',
+      `+const cred = '${SECRET}';`,
+      '+color: #0b1120;',
+      '',
+    ].join('\n');
+  }
+
+  it('passes a token literal and fails the same line written outside the tokens', async () => {
+    const green = harness({ git: { patch: patchWithColour('#0b0f14') } });
+    writeDesignFixture(green);
+    green.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const passed = await green.engine.start(runInput());
+
+    expect(passed.state).toBe('succeeded');
+    expect(passed.gate?.status).toBe('passed');
+    expect((passed.gate?.tail ?? []).join('\n')).not.toContain('colour_outside_tokens');
+    expect(designLogs(green)).toEqual([]);
+
+    const drift = harness({ git: { patch: patchWithColour('#0b1120') } });
+    writeDesignFixture(drift);
+    drift.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const failed = await drift.engine.start(runInput());
+
+    expect(failed.state).toBe('failed');
+    expect(failed.failure?.code).toBe('gate_failed');
+    expect(failed.gate?.status).toBe('failed');
+    expect(failed.gate?.tail).toContain('apps/app/src/theme/extra.css:1 colour_outside_tokens');
+  });
+
+  it('fails the run when a screen declares a colour outside the tokens', async () => {
+    const test = harness();
+    writeDesignFixture(test, { error: 'The dashboard failed with #0b1120' });
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('failed');
+    expect(outcome.failure?.code).toBe('gate_failed');
+    expect(outcome.gate?.status).toBe('failed');
+    expect(outcome.gate?.exitCode).toBe(1);
+    expect(outcome.gate?.tail).toContain('design/screens/dashboard.json:1 colour_outside_tokens');
+    expect(test.git.pushes).toEqual([]);
+    expect(test.git.opened).toEqual([]);
+    expect(eventTypes(test.emitted)).not.toContain('run.pr');
+    const logs = designLogs(test);
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({
+      level: 'error',
+      msg: 'design_scan_reported',
+      runId: RUN_ID,
+      findings: 1,
+      enforced: 1,
+      reportOnly: 0,
+    });
+  });
+
+  it('reports a missing screen state without failing the run', async () => {
+    const test = harness();
+    writeDesignFixture(test, { empty: null });
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('succeeded');
+    expect(outcome.gate?.status).toBe('passed');
+    expect(outcome.gate?.exitCode).toBe(0);
+    expect(outcome.gate?.tail).toContain(
+      'design/screens/dashboard.json:1 screen_state_missing (report-only)',
+    );
+    expect(test.git.opened).toHaveLength(1);
+    const logs = designLogs(test);
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({
+      level: 'info',
+      msg: 'design_scan_reported',
+      runId: RUN_ID,
+      findings: 1,
+      enforced: 0,
+      reportOnly: 1,
+    });
+  });
+
+  it('skips the step when the repository has no token document', async () => {
+    const test = harness();
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('succeeded');
+    expect(test.git.pushes).toHaveLength(1);
+    expect(designLogs(test)).toEqual([]);
+    expect(outcome.gate?.tail).toEqual(['gate ok']);
+  });
+
+  it('fails closed when the design scan cannot read the diff', async () => {
+    const test = harness({ git: { failScanCall: 2 } });
+    writeDesignFixture(test);
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('failed');
+    expect(outcome.failure?.code).toBe('gate_failed');
+    expect(outcome.gate?.tail).toContain('design_scan: git_failed');
+    expect((outcome.gate?.tail ?? []).join('\n')).not.toContain('secret_scan:');
+    const logs = test.lines.filter((line) => line['msg'] === 'design_scan_failed');
+    expect(logs).toHaveLength(1);
+    expect(logs[0]).toMatchObject({ runId: RUN_ID, code: 'git_failed' });
+  });
+
+  it('leaves the report to the secret scan when the same diff also holds a colour', async () => {
+    const test = harness({ git: { patch: patchWithSecretAndColour() } });
+    writeDesignFixture(test);
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('failed');
+    expect(outcome.failure?.code).toBe('gate_failed');
+    const tail = (outcome.gate?.tail ?? []).join('\n');
+    expect(tail).toContain('src/x.ts:3 github_token');
+    expect(tail).not.toContain('colour_outside_tokens');
+    expect(designLogs(test)).toEqual([]);
   });
 });
 

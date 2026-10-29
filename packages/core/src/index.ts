@@ -74,3 +74,11 @@ export {
   summariseUsage,
 } from './usage.js';
 export type { UsageRange, UsageWindow, UsageEntry, UsageSummary } from './usage.js';
+
+// Design gate: the D57 split between a finding that fails the run and one that is reported.
+export {
+  REPORT_ONLY_DESIGN_RULES,
+  designRuleEnforcement,
+  classifyDesignFindings,
+} from './design-gate.js';
+export type { DesignRuleEnforcement, ClassifiedDesignFindings } from './design-gate.js';

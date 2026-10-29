@@ -184,13 +184,25 @@ The gate is the repository's own check, run in the worktree before any PR exists
   (`colour_outside_tokens`), a route that names no component (`route_without_component`), a
   screen that does not declare `loading`, `empty` and `error` (`screen_state_missing`), and a
   declared snapshot hash that does not match its export (`snapshot_hash_mismatch`). A finding is
-  appended to the gate tail and its log as `<file>:<line> <rule>`, the way a secret finding is,
-  and turns the gate into `failed`; no pixel or image comparison exists anywhere, only a sha256
-  of the exported bytes. A patch over 4 MiB is not scanned, a repository without
-  `design/tokens.json` is skipped — no `design/` is not a gate failure, as no tests is not — and
-  a token document that does not parse fails the gate closed rather than guessing which colours
-  were legal. The step is a module only: the run engine does not call it yet, so a green gate on
-  the running box is not re-decided by this check until that one call is added.
+  appended to the gate tail and its log as `<file>:<line> <rule>`, the way a secret finding is;
+  no pixel or image comparison exists anywhere, only a sha256 of the exported bytes. A patch over
+  4 MiB is not scanned, a repository without `design/tokens.json` is skipped — no `design/` is not
+  a gate failure, as no tests is not — and a token document that does not parse fails the gate
+  closed rather than guessing which colours were legal.
+- **The design check runs on every run, as the second gate step after the secret scan, and only
+  when the command gate and the secret scan are both green.** A patch that trips the secret scan
+  is reported by the secret scan alone: no `design_scan` line and no `design_scan_*` log is
+  written for it. The split is three-way. `colour_outside_tokens`, `route_without_component` and
+  `snapshot_hash_mismatch` fail the run. `screen_state_missing` is reported as
+  `<file>:<line> <rule> (report-only)` in the gate tail and its log and never fails the run: the
+  frames the missing state would name do not exist yet (D57). A rule this build does not know is
+  enforced, so a new rule fails closed. A run with an enforced finding ends `gate_failed`, pushes
+  nothing and opens no PR; a run whose only findings are report-only stays `passed` and its tail
+  and log keep the `(report-only)` lines. One `design_scan_reported` line carries the counts
+  (`findings`, `enforced`, `reportOnly`, `oversized`) at `error` when something is enforced and at
+  `info` when nothing is. A diff git cannot produce is `design_scan: git_failed`, logged once as
+  `design_scan_failed` with its `code`, and fails the gate closed. A repository without
+  `design/tokens.json` skips the step and the run is exactly as before.
 
 ## 6. Commit, push and PR
 
