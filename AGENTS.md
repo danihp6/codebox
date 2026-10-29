@@ -92,6 +92,7 @@ ops/
 docs/
 design/              # Design source: tokens, routes.json, screen specs, snapshots
 scripts/agent/       # deterministic recon, gate, verdict, brake, cycle (Batch 9)
+scripts/dev-local.mjs  # the local loop: build, serve, pair, one command (`npm run dev`)
 .agent_roles/        # orchestrator, architect, dev, qa
 ```
 

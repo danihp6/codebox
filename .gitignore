@@ -3,6 +3,7 @@ dist/
 coverage/
 .agent_specs/
 *.log
+.state/
 .env
 .env.*
 !.env.example

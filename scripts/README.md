@@ -1,4 +1,16 @@
-# scripts/agent
+# scripts
+
+Local scripts. `## scripts/agent` maps the pipeline's deterministic half; `## Local development`
+is the loop that builds and runs the app and the daemon on this machine.
+
+## Local development
+
+| File | What it is |
+| --- | --- |
+| `dev-local.mjs` | The local loop in one command: build the app and the daemon, link the bundle into `<CB_INSTALL_DIR>/app`, start the daemon with `.env` and mint a pairing code (`--no-build`, `--fresh`, `--port`, `--open`, `--no-pair`). |
+| `dev-local.test.mjs` | Unit tests for the flags, the bind port, the `--port` rewrite and the install path. |
+
+## scripts/agent
 
 The deterministic half of the agent pipeline: it reads git refs and writes decisions, and it
 runs before any dependency is installed (Node built-ins only). `scripts/agent/issue.mjs` is the
