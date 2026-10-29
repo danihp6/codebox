@@ -1,0 +1,41 @@
+name: probe / workflows permission
+
+# One-shot measurement for issue #11: can the credential the cycle pushes with write a file
+# under `.github/workflows/**`? It creates a throwaway branch carrying one workflow file,
+# pushes it with the same secret `agent-cycle` uses, and deletes it. No inference, no merge,
+# nothing left behind. Green means Task-26 and Task-29 can create their workflow files.
+#
+# The other door is the App installation the daemon uses at runtime; that one is measured by
+# the first run that pushes such a branch, not by this probe.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.CB_AGENT_TOKEN }}
+          fetch-depth: 0
+
+      - name: Push a workflow file to a throwaway branch, then delete it
+        env:
+          BRANCH: probe/workflows-permission
+        run: |
+          set -euo pipefail
+          git config user.name codebox-bot
+          git config user.email codebox-bot@users.noreply.github.com
+          git switch -c "$BRANCH"
+          mkdir -p .github/workflows
+          printf 'name: probe\non: workflow_dispatch\njobs:\n  noop:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo probe\n' > .github/workflows/probe.yml
+          git add .github/workflows/probe.yml
+          git commit -m "probe: can this credential write a workflow file"
+          git push --force origin "$BRANCH"
+          echo "::notice::pushed $BRANCH with a workflow file: the credential can write .github/workflows/**"
+          git push origin --delete "$BRANCH"
+          echo "::notice::branch deleted; nothing was merged"

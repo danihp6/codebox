@@ -57,7 +57,8 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 17 | One task per screen | 55–57, 59–67 | 4 |
 | 18 | Documentation and legal | 68–69 | 1 |
 | 20 | Repo views: workers factory, backlog deps, design preview | 77–80 | 4 |
-| 21 | Figma → `design/` import (D52) | 81–84 | 3, then 1 |
+| 21 | Figma → `design/` import (D52) | 81-84 | 3, then 1 |
+| 22 | Measured spec, Inter and the missing route (D58) | 85-87 | 3 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -1467,6 +1468,68 @@ implement does not exist yet; a screen task that names no spec is not ready to l
 
 ---
 
+## Batch 22 — The measured spec (D58)
+
+Batch 21 made `design/` an importable boundary; it did not make it sufficient. A spec with four
+fields — screen, route, states, hash — still leaves a dev implementing from a picture, and the app
+draws with the system font where the prototype draws Inter. This batch adds the geometry and the
+type the API has always been able to return, bundles the typeface the frames use, and mounts the
+one documented screen that has no route.
+
+**All three run in parallel.** Task-85 owns `packages/design`, `scripts/design` and §4 of
+`design/README.md`; Task-86 owns the app theme, the manifests and `design/tokens.json`; Task-87 owns
+the router, the settings feature, `design/import.json` and §1–§2 of `design/README.md`. Hot files:
+Task-86 holds `package.json` and `package-lock.json` — it is the only task that adds a dependency —
+and Task-87 holds `apps/app/src/app/app.routes.ts`. No task touches a Batch 21 path.
+**L6 runs after Task-85**, because it is L6 that writes the specs and they should carry `layout`;
+**L7 runs after L6**, and the per-screen alignment batch is cut only when both are done.
+
+- [ ] **[Task-85]** Measured layout. `ScreenSpec` gains `layout`: the frame's box and layout mode,
+      its regions (`name`, `x`, `y`, `width`, `height`, `fill` as a token key or `null`, `radius`,
+      `stroke`) and the type scale (`role`, `family`, `weight`, `size`, `lineHeight`, `colour` as a
+      token key). `parseScreenSpec` requires the three keys it declares and rejects a colour that is
+      not a token key; the projection reads `layoutMode`, `padding*`, `itemSpacing`, `cornerRadius`,
+      `strokes` and each TEXT node's `style` when the file has them, and falls back to the
+      `absoluteBoundingBox` order, marked `inferred`, when it does not. Accept `FRAME`, `COMPONENT`
+      and `SECTION` as page children and traverse a `SECTION`: L7 turns frames into components, and
+      an importer that filters `FRAME` alone would silently lose every screen after it. *Paths:*
+      `packages/design/src/types.ts`, `packages/design/src/screens.ts`,
+      `packages/design/src/import.ts`, their tests and `packages/design/src/fixtures/figma/**`,
+      `scripts/design/import.mjs`, `scripts/design/import.test.mjs`, `scripts/design/fixtures/**`,
+      `design/README.md` (§4), `packages/design/README.md`. *Dependencies:* Task-81, Task-82.
+      *Acceptance:* `[unit]` a frame with autolayout projects its `padding` and `gap`; one without
+      projects `inferred` and boxes; `[unit]` a `COMPONENT` child and a `SECTION` both project their
+      frames; `[unit]` a spec whose `layout` names a colour outside `design/tokens.json` throws with
+      the key; `[unit]` `--check` on the committed tree still writes nothing and exits 0.
+
+- [ ] **[Task-86]** Inter. Bundle the typeface the prototype draws — Inter 400/500/600 at 11–30 px —
+      and make it the app's sans: `@fontsource-variable/inter` as a dependency of `apps/app`,
+      imported once from the theme, with `--ion-font-family` and `font.sans` pointing at it. A
+      variable font is the one thing a few lines cannot reproduce, hence the dependency, and it is
+      served from the bundle: no CDN, no network at first paint. `design/tokens.json` gains the
+      typography group so the choice is a document, not a stylesheet line. *Paths:*
+      `apps/app/package.json`, `package.json`, `package-lock.json`, `apps/app/src/theme/**`,
+      `design/tokens.json`, `docs/app.md` (§9). *Dependencies:* none. *Acceptance:* `[unit]` the app
+      build emits a `woff2` and the theme names the family the package declares; `[unit]`
+      `design/tokens.json` keeps the twelve colour leaves and adds exactly `font.sans` and
+      `font.mono`; `[unit]` every hex literal under `apps/app/src/**` is still a token value;
+      `[live]` a capture of `/pair` at 390 px matches the metrics of `01 · Pairing — mobile dark`.
+
+- [ ] **[Task-87]** The notifications route, and the map against the router. Mount
+      `/settings/notifications` over the page that already exists, add `17 · Settings /
+      Notifications` to `design/import.json`, restore its row in `design/README.md` §1, and close
+      the gap the batch left open: a test that every route in `design/import.json` and in
+      `design/routes.json` exists in `apps/app/src/app/app.routes.ts`, so a screen cannot be
+      documented and unreachable again. *Paths:* `apps/app/src/app/app.routes.ts`,
+      `apps/app/src/app/features/settings/notifications.*`, `apps/app/src/app/app.routes.spec.ts`,
+      `design/import.json`, `design/README.md` (§1, §2). *Dependencies:* none. *Acceptance:*
+      `[unit]` the route loads the page behind `authGuard`; `[unit]` the map parses to eleven
+      entries and the notifications frame resolves to `/settings/notifications` and
+      `NotificationsPage`; `[unit]` the router test fails when a documented route is missing, proven
+      by removing one; `[unit]` no `/chat` or `/routines` route reappears.
+
+---
+
 ## Local / human (never picked by the driver)
 
 The driver only counts `- [ ] **[Task-NN]**`; these `L<n>` items are outside the queue by
@@ -1500,11 +1563,23 @@ construction. They need a local key, an external tool or a store account.
       committed and `design/tokens.json` is Task-84's, so the map and the tokens are not authored
       here; the review checks that ten screens and ten exports landed and that no frame caption in
       the map drifted. Record the summary and the resulting finding count in the commit message.
-      *Dependencies:* Task-81, Task-82, Task-83, Task-84. *Acceptance:* `[unit]` the three artifact
+      *Dependencies:* Task-81, Task-82, Task-83, Task-84, Task-85 (the specs must carry `layout`).
+      *Acceptance:* `[unit]` the three artifact
       families are committed and `npm test` is green; `[live]` the next run whose diff touches
       `design/` reports zero enforced findings and N report-only `screen_state_missing` tail lines,
       with N — and the `frames` / `mapped` / `unmapped` / `colours` / `coloursOutsideTokens`
       summary — written in the commit message and visible in that run's gate tail in the app.
+- [ ] **L7 — Restructure the prototype (D58).** Before the alignment batch, turn the file into the
+      shape the importer can read *semantically*: a **colour style per palette value** (the twelve
+      of `design/tokens.json`), **autolayout** on the main column of the ten routed frames with real
+      padding and gap, and **components/variants** where a row, a chip or a header repeats. Keep
+      every frame caption byte-identical — `design/import.json` matches on the exact name — and do
+      not convert a routed frame into a component until Task-85 is merged, because only from then is
+      a `COMPONENT` child accepted. **No Variables**: the REST endpoint answers 403 outside
+      Enterprise, so styles are the source. *Dependencies:* L6 and Task-85. *Acceptance:* `[unit]` a
+      re-import reports `styles` > 0 and `layoutMode` present on the ten routed frames, with the ten
+      captions still resolving; `[live]` `GET /v1/files/:key/styles` lists the palette names and
+      every routed frame reports `VERTICAL` or `HORIZONTAL`.
 - [ ] **L3 — AWS account guardrails.** A dedicated IAM user with MFA (never root), the region
       pinned, the access keys rotated and a budget alarm above the spot cost; `terraform` deploys
       with a named profile and no key in the repository. *Dependencies:* Task-42.
