@@ -76,10 +76,20 @@ originals:
 - `apps/app/src/app/core/util/time-format.ts` and `.spec.ts` (the move above; listed here so the
   create side is explicit)
 
-**Modify — daemon (22 files).**
+**Modify — daemon (24 files).**
 
 - `apps/daemon/src/modules.ts` — drop `'chat'` and `'routines'` from `SubsystemName`,
   `SUBSYSTEMS` and `DEFAULT_SUBSYSTEM_FLAGS`
+- `apps/daemon/src/auth/middleware.ts` — delete the `^/v1/routines/[^/]+/run$` entry from
+  `WORK_ROUTES` and the stale half of the comment above it that calls that route
+  "not served yet". Nothing else in the file moves: `NO_SCOPE_PATHS`, `DEVICE_PATH`, the
+  limits and `isWorkRoute`'s body stay as they are.
+- `apps/daemon/src/auth/middleware.test.ts` — delete the two `'/v1/routines/rtn_…'` assertions
+  in `describe('isWorkRoute')`, leaving the two remaining `true` cases and the three remaining
+  `false` cases. **Do not add an assertion about `/v1/works/{id}/runs`**: whether it belongs in
+  `WORK_ROUTES` is a pre-existing drift between `docs/api.md` §4, `docs/security.md` and the
+  code, it is outside this task, and the first QA pass failed the branch precisely for pinning
+  the wrong side of it.
 - `apps/daemon/src/modules.test.ts`
 - `apps/daemon/src/app.test.ts` — `flags:` fixture only
 - `apps/daemon/src/auth/routes.test.ts` — `flags:` fixture only
