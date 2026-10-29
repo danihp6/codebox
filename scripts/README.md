@@ -31,3 +31,10 @@ only sanctioned way to open a work order.
 
 The hosts are `docs/agent-ci.md` (GitHub Actions) and `docs/agent-vm.md` (the box). The
 protocol they implement is `docs/agent-pipeline.md`.
+
+## scripts/design
+
+| File | What it is |
+| --- | --- |
+| `import.mjs` | The Figma import command: fetches the mapped page, projects its frames and writes `design/routes.json`, `design/screens/<slug>.json` and `design/exports/<slug>.png` (`--file`, `--map`, `--root`, `--check`). |
+| `import.test.mjs` | Unit tests over fixture responses and an injected `fetch`: the projection, the three artifact families, `--check` drift and every exit code. |
