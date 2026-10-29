@@ -2,18 +2,18 @@ import type { Type } from '@angular/core';
 import type { Route, Routes } from '@angular/router';
 import { authGuard } from './core/auth/auth.guard';
 
-export type ShellTabId = 'dashboard' | 'chat' | 'settings';
+export type ShellTabId = 'dashboard' | 'repos' | 'settings';
 
 export interface ShellTab {
   readonly id: ShellTabId;
-  readonly path: '/dashboard' | '/chat' | '/settings';
-  readonly labelKey: 'tabs.dashboard' | 'tabs.chat' | 'tabs.settings';
+  readonly path: '/dashboard' | '/repos' | '/settings';
+  readonly labelKey: 'tabs.dashboard' | 'tabs.repos' | 'tabs.settings';
 }
 
 /** The single source of truth for the bottom tab bar (D47). Exactly three, in this order. */
 export const SHELL_TABS: readonly ShellTab[] = Object.freeze([
   { id: 'dashboard', path: '/dashboard', labelKey: 'tabs.dashboard' },
-  { id: 'chat', path: '/chat', labelKey: 'tabs.chat' },
+  { id: 'repos', path: '/repos', labelKey: 'tabs.repos' },
   { id: 'settings', path: '/settings', labelKey: 'tabs.settings' },
 ]);
 
@@ -22,7 +22,7 @@ type LazyComponent = () => Promise<Type<unknown>>;
 const TAB_COMPONENTS: Readonly<Record<ShellTabId, LazyComponent>> = {
   dashboard: () =>
     import('./features/dashboard/dashboard.page').then((module) => module.DashboardPage),
-  chat: () => import('./features/chat/chat-list.page').then((module) => module.ChatListPage),
+  repos: () => import('./features/repos/repos.page').then((module) => module.ReposPage),
   settings: () => import('./features/settings/settings.page').then((module) => module.SettingsPage),
 };
 
@@ -35,8 +35,8 @@ const tabRoutes: readonly Route[] = SHELL_TABS.map((tab) => ({
 }));
 
 /**
- * Frozen by Task-18: feature tasks replace the placeholder components in place and never edit
- * this table. `/pair` is the only public route.
+ * The route table of `docs/app.md` §4. A repository is a pushed destination with four tabs, so
+ * no `repos/:id` route carries `data.tab`; `/pair` is the only unguarded route.
  */
 export const routes: Routes = [
   { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
@@ -47,20 +47,39 @@ export const routes: Routes = [
   },
   ...tabRoutes,
   {
-    path: 'repos',
+    path: 'repos/:id/works',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/repos/repos.page').then((module) => module.ReposPage),
+    loadComponent: () =>
+      import('./features/works/repo-works.page').then((module) => module.RepoWorksPage),
+  },
+  {
+    path: 'repos/:id/schedule',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/repos/repo-schedule.page').then((module) => module.RepoSchedulePage),
+  },
+  {
+    path: 'repos/:id/design',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/repos/repo-design.page').then((module) => module.RepoDesignPage),
   },
   {
     path: 'repos/:id',
     canActivate: [authGuard],
-    loadComponent: () => import('./features/repos/repo.page').then((module) => module.RepoPage),
+    loadComponent: () =>
+      import('./features/backlog/repo-backlog.page').then((module) => module.RepoBacklogPage),
   },
   {
-    path: 'chat/:id',
+    path: 'works/:id',
     canActivate: [authGuard],
-    data: { tab: 'chat' },
-    loadComponent: () => import('./features/chat/chat.page').then((module) => module.ChatPage),
+    loadComponent: () => import('./features/works/work.page').then((module) => module.WorkPage),
+  },
+  {
+    path: 'sessions/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/sessions/session.page').then((module) => module.SessionPage),
   },
   {
     path: 'jobs',

@@ -295,7 +295,7 @@ describe('DashboardPage', () => {
     expect(start).not.toBeNull();
     expect(start?.getAttribute('data-repos')).toBe('0');
     expect(hook(element, 'dashboard-start-repos')?.getAttribute('href')).toBe('/repos');
-    expect(hook(element, 'dashboard-start-chat')?.getAttribute('href')).toBe('/chat');
+    expect(hook(element, 'dashboard-start-chat')?.getAttribute('href')).toBe('/repos');
     expect(hook(element, 'dashboard-needs-you')).toBeNull();
     expect(hook(element, 'dashboard-working')).toBeNull();
     expect(hook(element, 'dashboard-ready')).toBeNull();
@@ -349,7 +349,7 @@ describe('DashboardPage', () => {
     expect(block?.getAttribute('data-awaiting')).toBe('1');
     expect(block?.getAttribute('data-unreviewed')).toBe('1');
     expect(block?.textContent).toContain('2');
-    expect(hook(element, 'dashboard-needs-you-chat')?.getAttribute('href')).toBe('/chat');
+    expect(hook(element, 'dashboard-needs-you-chat')?.getAttribute('href')).toBe('/repos');
   });
 
   it('renders the empty state for an empty runs page', async () => {

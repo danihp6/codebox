@@ -88,8 +88,8 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | `/repos/:id/schedule` | Repo · schedule | The one `RepoSchedule`: mode, window, selection, caps, next fire, pause and *Run next* (D56). |
 | `/repos/:id/design` | Repo · design | Screen specs, tokens and snapshots from `design/`, with the state checklist and the preview. |
 | `/works/:id` | Work · run log | Runs, gate and PR cards, context header, cost, and **one action when blocked**: *Resolve doubt*; a merged work offers **Rework**, which opens a session whose proposal is a new run. No composer (D55). |
-| `/sessions/:id` | Session | A chat with one target: thread, the target document, and the **pending proposal** with its diff and *Merge*. With no target it is read-only: no proposal panel, just the thread and the repo's context. |
-| `/settings` | Settings | Repository viewers, credentials, provider accounts, devices, notifications, appearance, danger zone. |
+| `/sessions/:id` | Session | A chat with one target: thread, the target document, and the **pending proposal** with its files and *Merge*. With no target it is read-only: no proposal panel, just the thread and the repo's context. |
+| `/settings` | Settings | Repository viewers, credentials, provider accounts, devices, notifications, appearance, danger zone. The providers and notifications panels render inside this route; they have no route of their own. |
 | `/settings/providers` | Provider accounts | Accounts per provider in failover order, each with state (`active` / `exhausted` / `invalid`), reset instant, spend today, and add by OAuth or token; never a value beyond the last four characters (D54). |
 | `/settings/credentials` | Credentials | Connected services (GitHub App by manifest, integrations) and open credentials, write-only; the add sheet has the three `expose` modes, `env` is limited to the model key and shows its warning, saving passes a confirm step, and a value is only ever shown as its last four characters. |
 | `/settings/devices` | Devices | Scopes per device, revoke, last seen; this device cannot revoke itself. |
@@ -99,6 +99,13 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 Bottom tabs: **Dashboard · Repos · Settings** (D47). A repository is a destination, not a
 filter; Settings owns the cross-repository lists. Detail screens push onto the stack; deep links
 (`codebox://works/<id>`, `https://cb.example.com/works/<id>`) open the same route.
+
+A repository carries exactly four tabs — **Backlog · Works · Schedule · Design** — and the tab
+strip is one component, so a tab can never exist on one screen and not another.
+
+**Legacy, retired by Task-76:** `/jobs`, `/jobs/:id`, `/runs`, `/runs/:id` and `/approvals`
+are still routed and still guarded while the daemon answers their endpoints; no screen above
+targets them and the next task removes them.
 
 **The repository is the spine.** A work exists only inside one repository, one per backlog item,
 and never changes (D44). There is no free chat, no scope chip and no promote: the backlog item
@@ -157,24 +164,31 @@ by tool call id), and a reconnect never duplicates a message because the store d
 
 **Work** is the run log, not a conversation (D55):
 
-- a header with the repository, the state, the context percentage and the cost;
-- one segment per run — branch, outcome, gate and PR cards rendered from run state, never from
-  prose — and the ticked backlog item on a merged run;
+- a header with the repository, the state, the backlog item, the attempt count, the context
+  tokens with their epoch and the cost;
+- one segment per run — branch, outcome, gate and PR cards rendered from the `Run` object,
+  never from prose — and the ticked backlog item on a merged run;
 - tool cards with the tool, a one-line summary and an expandable redacted payload;
-- a **single action when blocked**: *Resolve doubt* opens the decision session. No composer,
-  no free-form chat: a work that needs to talk is a work that ended in `needs_decision`;
+- a **single action when blocked**: *Resolve doubt* opens the decision session, and a `merged`
+  work offers *Rework*, which opens a new attempt on the same work and refetches the log. No
+  composer, no free-form chat: a work that needs to talk is a work that ended in
+  `needs_decision`;
 - a design sheet with the snapshot and the states the spec declares, when the repository has
   `design/` (D52);
 - a `provider.state` line when the agent moved to another account mid-run (D54).
 
 **Session** is the editor (D55):
 
-- a header naming its target — `TODO.md`, `design/`, or `Task-68 · work` — because the target is
-  also the write boundary;
+- a header naming its target — `TODO.md`, `design/`, `.codebox/schedule.yml` or the work it is
+  bound to — because the target is also the write boundary;
 - the thread, the same streaming and tool-card rules, and a composer that stays usable with a
   stop button;
-- a **proposal panel** with the diff, the files it may touch, and *Merge*; while a proposal is
-  pending the composer is disabled, so one change lands at a time;
+- a **proposal panel** with the branch, the commit, the files it may touch and *Merge*; while a
+  proposal is pending the composer is disabled, so one change lands at a time;
+- a proposal is cleared whatever the merge answers, so a refused merge re-enables *Merge* and
+  names its reason;
+- a `repo` session is read-only: no proposal panel and no merge button, just the thread and the
+  composer;
 - `Compact` when the context reaches its warning band (D48).
 
 Streaming text is appended with a single `requestAnimationFrame` flush per frame; the list

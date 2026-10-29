@@ -10,7 +10,7 @@ import { TabsPage } from './tabs.page';
 
 const LABELS: Readonly<Record<string, string>> = {
   'tabs.dashboard': 'Dashboard',
-  'tabs.chat': 'Chat',
+  'tabs.repos': 'Repos',
   'tabs.settings': 'Settings',
 };
 
@@ -42,19 +42,19 @@ describe('TabsPage', () => {
     const fixture = TestBed.createComponent(TabsPage);
     await fixture.whenStable();
 
-    expect(SHELL_TABS.map((tab) => tab.id)).toEqual(['dashboard', 'chat', 'settings']);
+    expect(SHELL_TABS.map((tab) => tab.id)).toEqual(['dashboard', 'repos', 'settings']);
 
     const element = fixture.nativeElement as HTMLElement;
     const buttons = element.querySelectorAll<HTMLElement>('[data-testid^="tab-"]');
     expect(buttons).toHaveLength(3);
     expect([...buttons].map((button) => button.getAttribute('data-testid'))).toEqual([
       'tab-dashboard',
-      'tab-chat',
+      'tab-repos',
       'tab-settings',
     ]);
     expect([...buttons].map((button) => button.textContent?.trim())).toEqual([
       'Dashboard',
-      'Chat',
+      'Repos',
       'Settings',
     ]);
   });
@@ -73,7 +73,7 @@ describe('shared dictionaries', () => {
       const keys = keysOf(readDictionary(locale));
       expect(keys.filter((key) => key.startsWith('tabs.'))).toEqual([
         'tabs.dashboard',
-        'tabs.chat',
+        'tabs.repos',
         'tabs.settings',
       ]);
     }
