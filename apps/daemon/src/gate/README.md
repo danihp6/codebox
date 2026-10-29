@@ -10,10 +10,15 @@ reaches a push.
   every byte, keep the tail and decide timeout, cancel and spawn failures.
 - `secret-scan.ts` — one `git diff` against the run's base, the 4 MiB cap, `secret_finding`s or
   `git_failed`.
+- `design-check.ts` — the same `git diff`, then `@codebox/design` over the design documents: four
+  rules, the 4 MiB cap, `design_finding`s or `git_failed`, and a skip when `design/` is absent.
 - `run-gate.test.ts` — a clean exit, a red exit, the log and the tail, the timeout and its
   process group, cancel, a missing shell and the environment allowlist.
 - `secret-scan.test.ts` — the exact git call, a finding, a failed diff, an oversized patch and a
   clean one.
+- `design-check.test.ts` — the exact git call, a colour outside the tokens and its file and line,
+  the skip, a failed diff, an oversized patch, a token document that does not parse and a
+  snapshot hash that does not match.
 - `README.md` — this map.
 
 ## Notes

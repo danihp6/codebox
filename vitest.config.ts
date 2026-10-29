@@ -39,6 +39,7 @@ export default defineConfig({
       project('packages/contracts'),
       project('packages/core'),
       project('packages/backlog'),
+      project('packages/design'),
       project('packages/store'),
       project('packages/opencode'),
       project('packages/workspaces'),

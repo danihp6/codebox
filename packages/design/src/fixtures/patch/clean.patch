@@ -1,0 +1,13 @@
+diff --git a/apps/app/src/theme/extra.css b/apps/app/src/theme/extra.css
+index 1111111..3333333 100644
+--- a/apps/app/src/theme/extra.css
++++ b/apps/app/src/theme/extra.css
+@@ -2,0 +3,2 @@
++  color: #15803d;
++  border-color: #ff00ff; /* codebox-design: allow */
+diff --git a/design/tokens.json b/design/tokens.json
+index 4444444..5555555 100644
+--- a/design/tokens.json
++++ b/design/tokens.json
+@@ -1,0 +2,1 @@
++    "slate": { "$value": "#94a3b8", "$type": "color" },

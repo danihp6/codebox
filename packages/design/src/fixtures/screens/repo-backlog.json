@@ -1,0 +1,10 @@
+{
+  "screen": "Repo · backlog",
+  "route": "/repos/:id",
+  "states": {
+    "loading": "Rows grey until the file parses",
+    "empty": "Empty file, one chat button",
+    "error": "Envelope over the list"
+  },
+  "snapshotSha256": null
+}

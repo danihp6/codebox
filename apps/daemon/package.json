@@ -17,7 +17,7 @@
     "dist"
   ],
   "scripts": {
-    "prebuild": "npm run build -w @codebox/contracts -w @codebox/core -w @codebox/security -w @codebox/store -w @codebox/opencode -w @codebox/workspaces -w @codebox/git-provider -w @codebox/scheduler -w @codebox/backlog",
+    "prebuild": "npm run build -w @codebox/contracts -w @codebox/core -w @codebox/security -w @codebox/store -w @codebox/opencode -w @codebox/workspaces -w @codebox/git-provider -w @codebox/scheduler -w @codebox/backlog -w @codebox/design",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "start": "node dist/main.js",
@@ -27,6 +27,7 @@
     "@codebox/backlog": "0.0.0",
     "@codebox/contracts": "0.0.0",
     "@codebox/core": "0.0.0",
+    "@codebox/design": "0.0.0",
     "@codebox/git-provider": "0.0.0",
     "@codebox/opencode": "0.0.0",
     "@codebox/scheduler": "0.0.0",

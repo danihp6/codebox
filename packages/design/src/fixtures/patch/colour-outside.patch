@@ -1,0 +1,6 @@
+diff --git a/apps/app/src/theme/extra.css b/apps/app/src/theme/extra.css
+index 1111111..2222222 100644
+--- a/apps/app/src/theme/extra.css
++++ b/apps/app/src/theme/extra.css
+@@ -2,0 +3,1 @@
++  color: #ff00ff;
