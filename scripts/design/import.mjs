@@ -138,14 +138,178 @@ function collectFills(node, frameId, into) {
   }
 }
 
+function measurableBox(node) {
+  const box = node.absoluteBoundingBox;
+  if (!isRecord(box)) return null;
+  const values = [box.x, box.y, box.width, box.height];
+  if (!values.every((value) => Number.isFinite(value))) return null;
+  return { x: box.x, y: box.y, width: box.width, height: box.height };
+}
+
+function finiteOrZero(value) {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function radiusOf(node) {
+  if (Number.isFinite(node.cornerRadius)) return node.cornerRadius;
+  const radii = node.rectangleCornerRadii;
+  if (Array.isArray(radii)) {
+    const usable = radii.filter((value) => Number.isFinite(value));
+    if (usable.length > 0) return Math.max(...usable);
+  }
+  return 0;
+}
+
+function strokeOf(node) {
+  const paints = node.strokes;
+  const visible =
+    Array.isArray(paints) && paints.some((paint) => isRecord(paint) && paint.visible !== false);
+  if (!visible || !Number.isFinite(node.strokeWeight)) return 0;
+  return node.strokeWeight;
+}
+
+function solidColour(node, frameId) {
+  const paints = node.fills;
+  if (!Array.isArray(paints)) return null;
+  for (const paint of paints) {
+    if (!isRecord(paint)) continue;
+    if (paint.type !== 'SOLID' || paint.visible === false) continue;
+    return paintColour(paint, frameId);
+  }
+  return null;
+}
+
+function regionOf(child, origin, frameId) {
+  const box = measurableBox(child);
+  if (box === null) return null;
+  const name = typeof child.name === 'string' ? child.name.trim() : '';
+  return {
+    name: name === '' ? 'region' : name,
+    x: box.x - origin.x,
+    y: box.y - origin.y,
+    width: box.width,
+    height: box.height,
+    fill: solidColour(child, frameId),
+    radius: radiusOf(child),
+    stroke: strokeOf(child),
+  };
+}
+
+function textNodesOf(node, into) {
+  const children = node.children;
+  if (!Array.isArray(children)) return;
+  for (const child of children) {
+    if (!isRecord(child)) continue;
+    if (child.type === 'TEXT') into.push(child);
+    textNodesOf(child, into);
+  }
+}
+
+function typeRowOf(node) {
+  const id = typeof node.id === 'string' ? node.id : '?';
+  const style = node.style;
+  if (!isRecord(style)) throw invalid(`text node '${id}' has no style`);
+  if (!Number.isFinite(style.fontSize)) throw invalid(`text node '${id}' has no style.fontSize`);
+  const family = typeof style.fontFamily === 'string' ? style.fontFamily.trim() : '';
+  if (family === '') throw invalid(`text node '${id}' has no style.fontFamily`);
+  const role = typeof node.name === 'string' ? node.name.trim() : '';
+  const size = style.fontSize;
+  return {
+    role: role === '' ? 'text' : role,
+    family: style.fontFamily,
+    weight: Number.isFinite(style.fontWeight) ? style.fontWeight : 400,
+    size,
+    lineHeight: Number.isFinite(style.lineHeightPx) ? style.lineHeightPx : size,
+    colour: solidColour(node, id),
+  };
+}
+
+function typeOf(node) {
+  const nodes = [];
+  textNodesOf(node, nodes);
+  const rows = [];
+  const seen = new Set();
+  for (const text of nodes) {
+    const row = typeRowOf(text);
+    const key = [row.role, row.family, row.weight, row.size, row.lineHeight, row.colour].join('|');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    rows.push(row);
+  }
+  return rows;
+}
+
+function layoutOf(node, frameId) {
+  const own = node.absoluteBoundingBox;
+  const origin = {
+    x: isRecord(own) ? finiteOrZero(own.x) : 0,
+    y: isRecord(own) ? finiteOrZero(own.y) : 0,
+  };
+  const children = Array.isArray(node.children) ? node.children.filter(isRecord) : [];
+  const measured = [];
+  children.forEach((child, index) => {
+    const region = regionOf(child, origin, frameId);
+    if (region !== null) measured.push({ region, index });
+  });
+  if (measured.length === 0) return undefined;
+
+  const declared = typeof node.layoutMode === 'string' ? node.layoutMode.toLowerCase() : '';
+  const layoutMode = declared === 'horizontal' || declared === 'vertical' ? declared : 'none';
+  const inferred = layoutMode === 'none';
+  const ordered = inferred
+    ? [...measured].sort(
+        (left, right) =>
+          left.region.y - right.region.y ||
+          left.region.x - right.region.x ||
+          left.index - right.index,
+      )
+    : measured;
+
+  return {
+    box: {
+      x: origin.x,
+      y: origin.y,
+      width: own.width,
+      height: own.height,
+    },
+    layoutMode,
+    paddingTop: finiteOrZero(node.paddingTop),
+    paddingRight: finiteOrZero(node.paddingRight),
+    paddingBottom: finiteOrZero(node.paddingBottom),
+    paddingLeft: finiteOrZero(node.paddingLeft),
+    itemSpacing: finiteOrZero(node.itemSpacing),
+    cornerRadius: radiusOf(node),
+    strokes: strokeOf(node),
+    inferred,
+    regions: ordered.map((entry) => entry.region),
+    type: typeOf(node),
+  };
+}
+
+function collectFrameNodes(nodes, into) {
+  for (const node of nodes) {
+    if (!isRecord(node)) continue;
+    if (node.type === 'FRAME' || node.type === 'COMPONENT') {
+      into.push(node);
+      continue;
+    }
+    if (node.type === 'SECTION') {
+      collectFrameNodes(Array.isArray(node.children) ? node.children : [], into);
+    }
+  }
+}
+
 /**
  * One page of the `/v1/files/:key?depth=6` body, projected. Walks only what the response
- * contains; the command never assumes a deeper tree than `depth=6` returned.
+ * contains; the command never assumes a deeper tree than `depth=6` returned. A `SECTION` is
+ * traversed for the frames it holds and never becomes a frame of its own; a frame carries a
+ * `layout` only when at least one direct child has a measurable box.
  * @param {unknown} body        the parsed JSON body
  * @param {string} page         the page caption to select, from the map
  * @param {string} fileKey      the key the command asked for; becomes `snapshot.fileKey`
  * @returns {{ fileKey: string, page: string, frames: Array<{
- *   id: string, caption: string, width: number, height: number, fills: string[] }> }}
+ *   id: string, caption: string, width: number, height: number, fills: string[],
+ *   layout?: Record<string, unknown> }> }}
  * @throws {ImportCommandError} 'page_missing' (exit 1) or 'file_invalid' (exit 1)
  */
 export function projectPage(body, page, fileKey) {
@@ -167,9 +331,9 @@ export function projectPage(body, page, fileKey) {
   }
 
   const frames = [];
-  const nodes = Array.isArray(canvas.children) ? canvas.children : [];
+  const nodes = [];
+  collectFrameNodes(Array.isArray(canvas.children) ? canvas.children : [], nodes);
   for (const node of nodes) {
-    if (!isRecord(node) || node.type !== 'FRAME') continue;
     const id = node.id;
     if (typeof id !== 'string') throw invalid('a frame is missing its id');
     const box = node.absoluteBoundingBox;
@@ -188,7 +352,9 @@ export function projectPage(body, page, fileKey) {
       seen.add(fill);
       fills.push(fill);
     }
-    frames.push({ id, caption, width: box.width, height: box.height, fills });
+    const frame = { id, caption, width: box.width, height: box.height, fills };
+    const layout = layoutOf(node, id);
+    frames.push(layout === undefined ? frame : { ...frame, layout });
   }
 
   return { fileKey, page, frames };
@@ -357,6 +523,18 @@ export async function main(argv, io = {}) {
       throw frameMissing(error);
     }
 
+    let tokens = null;
+    let tokenValues = null;
+    try {
+      const tokensDocument = JSON.parse(readFileSync(join(root, design.TOKENS_PATH), 'utf8'));
+      tokens = design.parseTokens(tokensDocument);
+      tokenValues = design.tokenValues(tokens);
+    } catch {
+      tokens = null;
+      tokenValues = null;
+      stderr(`tokens_unavailable: ${design.TOKENS_PATH}\n`);
+    }
+
     const targets = [];
     for (const entry of map.frames) {
       if (entry.snapshot !== true) continue;
@@ -402,20 +580,17 @@ export async function main(argv, io = {}) {
 
     let result;
     try {
-      result = design.importDesign({ snapshot, map, exports: exported });
+      result = design.importDesign({
+        snapshot,
+        map,
+        exports: exported,
+        tokens: tokens ?? undefined,
+      });
     } catch (error) {
       throw frameMissing(error);
     }
 
     let coloursOutsideTokens = null;
-    let tokenValues = null;
-    try {
-      const tokensDocument = JSON.parse(readFileSync(join(root, design.TOKENS_PATH), 'utf8'));
-      tokenValues = design.tokenValues(design.parseTokens(tokensDocument));
-    } catch {
-      tokenValues = null;
-      stderr(`tokens_unavailable: ${design.TOKENS_PATH}\n`);
-    }
     if (tokenValues !== null) {
       const known = new Set(tokenValues);
       const outside = result.colours.filter((colour) => !known.has(colour));

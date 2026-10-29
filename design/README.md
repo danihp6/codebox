@@ -121,6 +121,15 @@ The three families are `design/routes.json`, one `design/screens/<slug>.json` pe
 derives from the screen name in §1 (`Repo · backlog` → `repo-backlog`), so a screen's spec and
 its export share one slug and a task can name both.
 
+A spec whose frame is measurable also carries a `layout`: the frame's box, its layout mode,
+padding and item spacing, its regions (box, corner radius, stroke and the fill as a
+`design/tokens.json` key) and its type scale — role, family, weight, size, line height and the
+colour key. A colour that is not an exact token value, an `rgba(…)` or a hex outside the twelve,
+projects `null` and is still measured by `coloursOutsideTokens`: the importer never invents a
+key. A frame with no autolayout is projected with `inferred: true`, zero padding, zero gap and
+its regions in reading order (y, then x). A frame with no direct child that has a box writes no
+`layout` at all, so every spec written before the measurement keeps parsing.
+
 The last stdout line is a one-line summary: `frames`, `mapped`, `unmapped`, `colours`,
 `coloursOutsideTokens`, `routes`, `screens` and `exports`. `coloursOutsideTokens` is a
 measurement, not a failure: a colour outside `design/tokens.json` prints its own line and the

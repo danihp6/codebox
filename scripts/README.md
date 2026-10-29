@@ -38,3 +38,6 @@ protocol they implement is `docs/agent-pipeline.md`.
 | --- | --- |
 | `import.mjs` | The Figma import command: fetches the mapped page, projects its frames and writes `design/routes.json`, `design/screens/<slug>.json` and `design/exports/<slug>.png` (`--file`, `--map`, `--root`, `--check`). |
 | `import.test.mjs` | Unit tests over fixture responses and an injected `fetch`: the projection, the three artifact families, `--check` drift and every exit code. |
+| `layout.test.mjs` | The measured layout: autolayout padding and gap, reading order, a `COMPONENT` child, a traversed `SECTION`, the token-keyed specs and a byte-stable `--check`. |
+| `fixtures/file-layout.json` | A `/v1/files` body with an autolayout frame, an inferred frame, a `COMPONENT`, a `SECTION` and the TEXT nodes the type scale needs. |
+| `fixtures/import-layout.json` | The two-entry map that projects the component and the section frame of `file-layout.json`. |

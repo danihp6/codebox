@@ -1,0 +1,30 @@
+{
+  "fileKey": "3HMV2UN6QviuNXe2T3Htsr",
+  "page": "Page 1",
+  "frames": [
+    {
+      "caption": "12 · Component — dark",
+      "screen": "Component · measured",
+      "route": "/measured/component",
+      "component": "ComponentMeasuredPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": false
+    },
+    {
+      "caption": "13 · In section — dark",
+      "screen": "Section · measured",
+      "route": "/measured/section",
+      "component": "SectionMeasuredPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": false
+    }
+  ]
+}
