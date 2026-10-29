@@ -277,6 +277,17 @@ and its decision record, Task-84 holds `docs/app.md` §9. The root `package.json
 `scripts/dev-local.test.mjs` are the operator's uncommitted work: no task touches any of them, and
 the new command is invoked as `node scripts/design/import.mjs`.
 
+**Cut — cycle after Batch 21 wave 1 and wave 2 (one of four slots used).** Wave 1 shipped Task-81,
+Task-83 and Task-84 (`main` `31d3a23`), which made the rest of Batch 21 legal: Task-82 was cut as
+wave 2 in the same cycle, at three empty slots. There is no legal candidate for them: Task-30
+waits on Task-29 and Task-32 on Task-31, both behind Task-26/Task-29 `[!]` on issue #11 (the App
+token has no `workflows` permission), and every other open item is one of these four or an `L<n>`
+the driver never picks. **Hot-file holders in this cut:** none — Task-82 claims no hot file;
+`design/README.md`, `docs/providers.md` §13.1, `scripts/README.md` and `scripts/design/**` are its
+own and `TODO.md`/`CHANGELOG.md` stayed with the Orchestrator. One forced addition to its
+`*Paths:*` line: `scripts/README.md`, the folder's file map (`AGENTS.md`), only the new
+`## scripts/design` block.
+
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
@@ -1377,7 +1388,7 @@ implement does not exist yet; a screen task that names no spec is not ready to l
       `[unit]` the output re-parses through `parseRoutes` and `parseScreenSpec` and yields no
       `route_without_component`.
 
-- [ ] **[Task-82]** The import command. `node scripts/design/import.mjs --file <key>` reads
+- [x] **[Task-82]** The import command. `node scripts/design/import.mjs --file <key>` reads
       `FIGMA_TOKEN` and `FIGMA_FILE_KEY`, reads the committed `design/import.json`, calls the Figma
       REST API with `fetch` (`GET /v1/files/:key?depth=6`,
       `GET /v1/images/:key?ids=…&format=png&scale=2`, then the pre-signed PNG URLs), projects the
@@ -1401,6 +1412,13 @@ implement does not exist yet; a screen task that names no spec is not ready to l
       map fails with `map_missing` and the default path is `design/import.json`; `[unit]` the two
       API calls carry `X-Figma-Token` and the PNG URL requests do not; `[unit]` a page name absent
       from the file fails naming the page and the pages present, and writes nothing.
+      LANDED AS: the command and its 31-test suite, over fixture responses and an injected `fetch`
+      — no real token, no network. `@codebox/design` is loaded lazily inside `main`, so `--help`,
+      `token_missing`, `file_missing` and `map_missing` work before `npm run build`; the test passes
+      the real namespace instead of a stub and records the twelve HTTP calls. `scripts/README.md`
+      was added to the item's paths (the folder map would otherwise not list the two new files).
+      Nothing generated: `design/routes.json`, `design/screens/**` and `design/exports/**` stay
+      absent until L6 runs it with the operator's token.
 
 - [x] **[Task-83]** The design check stops skipping (issue #75). Call `scanDesign` from `gating()`
       after the secret scan, on every run, and append its findings to the gate tail as

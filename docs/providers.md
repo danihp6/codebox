@@ -283,6 +283,23 @@ The inference key keeps the name OpenCode documents (`ANTHROPIC_API_KEY`, `OPENA
 must not collide**: a daemon key in a workflow, or a pipeline key in `apps/daemon`, is a test
 failure.
 
+### 13.1 Figma import (operator only)
+
+`scripts/design/import.mjs` reads the committed `design/import.json` and one Figma page, then
+writes `design/routes.json`, `design/screens/<slug>.json` and `design/exports/<slug>.png`. It
+reads these two keys itself — never `cbd`, `apps/daemon`, a workflow or the driver:
+
+| Key | Read by | Default | Failure |
+| --- | --- | --- | --- |
+| `FIGMA_TOKEN` | `scripts/design/import.mjs` only | none | `token_missing`, exit 2, before the first request |
+| `FIGMA_FILE_KEY` | `scripts/design/import.mjs` only | `--file` when given | `file_missing`, exit 2, before the first request |
+
+The operator runs the command at L6 (`TODO.md`) with the real token; the driver queue never gets
+this task. A missing token exits 2 before any request. The token is sent as `X-Figma-Token` on
+`GET /v1/files/:key` and `GET /v1/images/:key` only — the pre-signed PNG URLs those images
+answer with are fetched with no header. The command never calls `/v1/styles`, and the token never
+enters the repository, a log line or a filename.
+
 ## 14. Example (development)
 
 ```dotenv

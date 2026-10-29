@@ -1,0 +1,571 @@
+{
+  "name": "codebox",
+  "key": "3HMV2UN6QviuNXe2T3Htsr",
+  "document": {
+    "id": "0:0",
+    "name": "Document",
+    "type": "DOCUMENT",
+    "children": [
+      {
+        "id": "0:1",
+        "name": "Cover",
+        "type": "CANVAS",
+        "children": [
+          {
+            "id": "0:2",
+            "name": "Cover frame",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "0:3",
+        "name": "Page 1",
+        "type": "CANVAS",
+        "children": [
+          {
+            "id": "1:100",
+            "name": "01 · Pairing — mobile dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "1:101",
+                "name": "Card",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.071,
+                      "g": 0.094,
+                      "b": 0.129
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "1:102",
+                "name": "Title",
+                "type": "TEXT",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.902,
+                      "g": 0.929,
+                      "b": 0.953
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "1:103",
+                "name": "Hidden",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.2,
+                      "g": 0.4,
+                      "b": 0.6
+                    },
+                    "visible": false
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "2:110",
+            "name": "02 · Repo list — mobile dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "2:111",
+                "name": "Row",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.545,
+                      "g": 0.596,
+                      "b": 0.647
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "3:120",
+            "name": "22 · Repo · backlog — deps (dark)",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "3:121",
+                "name": "Card",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.071,
+                      "g": 0.094,
+                      "b": 0.129
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "4:130",
+            "name": "20c · Crew · aerial — dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "4:131",
+                "name": "Lamp",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.133,
+                      "g": 0.773,
+                      "b": 0.369
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "5:140",
+            "name": "26 · Design · preview + chat — dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "5:141",
+                "name": "Badge",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.961,
+                      "g": 0.62,
+                      "b": 0.043
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "5:142",
+                "name": "Dot",
+                "type": "ELLIPSE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.2,
+                      "g": 0.4,
+                      "b": 0.6
+                    },
+                    "opacity": 0.25
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "6:150",
+            "name": "05 · Dashboard — mobile dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "6:151",
+                "name": "Card",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.071,
+                      "g": 0.094,
+                      "b": 0.129
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "6:152",
+                "name": "Title",
+                "type": "TEXT",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.902,
+                      "g": 0.929,
+                      "b": 0.953
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "6:153",
+                "name": "Glow",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "GRADIENT_LINEAR",
+                    "gradientStops": [
+                      {
+                        "position": 0,
+                        "color": {
+                          "r": 1,
+                          "g": 0,
+                          "b": 1
+                        }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "7:160",
+            "name": "06 · Settings — mobile dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "7:161",
+                "name": "Row",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.545,
+                      "g": 0.596,
+                      "b": 0.647
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "8:170",
+            "name": "15 · Settings / Devices",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ]
+          },
+          {
+            "id": "9:180",
+            "name": "16 · Settings / Credentials",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ]
+          },
+          {
+            "id": "10:190",
+            "name": "07 · About — mobile dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "10:191",
+                "name": "Note",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.357,
+                      "g": 0.404,
+                      "b": 0.447
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "11:900",
+            "name": "Design System",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 1280,
+              "height": 800
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "11:901",
+                "name": "Swatch",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 1,
+                      "g": 0,
+                      "b": 1
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "12:910",
+            "name": "01b · Sheets — dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 1280,
+              "height": 800
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.071,
+                  "g": 0.094,
+                  "b": 0.129
+                }
+              }
+            ],
+            "children": [
+              {
+                "id": "12:911",
+                "name": "Sheet",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": {
+                      "r": 0.671,
+                      "g": 0.804,
+                      "b": 0.937
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "13:950",
+            "name": "Annotation",
+            "type": "TEXT",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 0,
+              "width": 390,
+              "height": 40
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.071,
+                  "g": 0.204,
+                  "b": 0.337
+                }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -6,6 +6,25 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-82, the Figma import command)
+
+- **`node scripts/design/import.mjs --file <key>` is the L6 tool.** It reads the committed
+  `design/import.json`, fetches `GET /v1/files/:key?depth=6` and `GET /v1/images/:key` with
+  `X-Figma-Token` (never on the pre-signed PNG URLs, never `/v1/styles`), projects the mapped page
+  into `FigmaFileSnapshot`, runs Task-81's `parseImportMap` + `importDesign`, and writes
+  `design/routes.json`, `design/screens/<slug>.json` and `design/exports/<slug>.png` — 21 status
+  lines and one summary line (`frames`, `mapped`, `unmapped`, `colours`, `coloursOutsideTokens`,
+  `routes`, `screens`, `exports`). `--check` regenerates in memory and exits 1 on any byte of
+  drift; `--map` and `--root` make the run reproducible in a temp tree.
+- **Offline, and lazy about the package.** `@codebox/design` is loaded inside `main`, so `--help`,
+  `token_missing`, `file_missing` and `map_missing` work in a tree where the package is not built
+  yet; the 31-test suite injects `fetch` over fixtures and passes the real namespace, so `npm test`
+  runs it with no token and no network. `coloursOutsideTokens` is a measurement against
+  `design/tokens.json`, never a failure. Documented in `docs/providers.md` §13.1 and
+  `design/README.md` (§4 command, §5 tokens, §7 the map).
+- **Nothing generated yet:** `design/routes.json`, `design/screens/**` and `design/exports/**`
+  stay absent until the operator runs it with the real `FIGMA_TOKEN` at L6.
+
 ### Added — 2026-10-29 (Task-84, the colour token document)
 
 - **`design/tokens.json` lands as the design source: twelve DTCG colour leaves, twelve distinct

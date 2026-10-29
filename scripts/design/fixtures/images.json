@@ -1,0 +1,15 @@
+{
+  "err": null,
+  "images": {
+    "1:100": "https://figma-images.example/1-100.png",
+    "2:110": "https://figma-images.example/2-110.png",
+    "3:120": "https://figma-images.example/3-120.png",
+    "4:130": "https://figma-images.example/4-130.png",
+    "5:140": "https://figma-images.example/5-140.png",
+    "6:150": "https://figma-images.example/6-150.png",
+    "7:160": "https://figma-images.example/7-160.png",
+    "8:170": "https://figma-images.example/8-170.png",
+    "9:180": "https://figma-images.example/9-180.png",
+    "10:190": "https://figma-images.example/10-190.png"
+  }
+}
