@@ -128,10 +128,12 @@ const NO_SCOPE_PATHS: readonly string[] = Object.freeze([
 
 const DEVICE_PATH = new RegExp(`^${API_PREFIX}/devices/[^/]+$`);
 
-// The two routes that create a run: a new one ships with the tighter budget in the same change.
+// `POST /v1/routines/{id}/run` is not served yet: the predicate is forward-looking so a new
+// run-creating route cannot ship without the tighter budget.
 const WORK_ROUTES: readonly RegExp[] = Object.freeze([
   new RegExp(`^${API_PREFIX}/runs$`),
   new RegExp(`^${API_PREFIX}/jobs/[^/]+/run$`),
+  new RegExp(`^${API_PREFIX}/routines/[^/]+/run$`),
 ]);
 
 export function isWorkRoute(method: string, path: string): boolean {

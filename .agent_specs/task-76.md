@@ -119,6 +119,8 @@ originals:
 - `apps/app/src/app/features/dashboard/i18n.ts`
 - `apps/app/src/app/features/dashboard/dashboard.store.spec.ts`
 - `apps/app/src/app/features/dashboard/dashboard.page.spec.ts`
+- `apps/app/src/app/features/dashboard/dashboard.api.spec.ts` — it pins `DashboardApi.sessions()`,
+  which this task deletes; amended after the first QA pass, which found it missing from the list
 - `apps/app/README.md`
 
 **Modify — docs (3 files, by section).**
@@ -578,9 +580,11 @@ QA runs this verbatim from the repository root of the worktree `../wt-cb-76`
     specs). The parentheses keep the working directory at the repository root for the checks
     below.
   - The four structural checks below must print **nothing**; `git grep` exits `1` when it finds
-    no match, so `1` with empty output is the pass:
-    - `git grep -n "v1/chat" -- apps packages/core packages/store packages/opencode packages/scheduler packages/security scripts ops`
-    - `git grep -n "v1/routines" -- apps`
+    no match, so `1` with empty output is the pass. The two retired-prefix greps have exactly one
+    permitted match, `apps/daemon/src/route-table.test.ts`, which must name `/v1/chat`,
+    `/v1/routines` and `/v1/reminders` in order to assert that no such route is mounted:
+    - `git grep -n "v1/chat" -- apps packages/core packages/store packages/opencode packages/scheduler packages/security scripts ops` — anything outside `route-table.test.ts` is a failure
+    - `git grep -n "v1/routines" -- apps` — anything outside `route-table.test.ts` is a failure
     - `git grep -n "needsYou\|countNeedsYou\|isUnreviewedChat\|isAwaitingAnswer" -- apps/app`
     - `git grep -n "features/chat\|features/jobs\|features/runs-list\|features/run-detail\|features/approvals\|features/schedules" -- apps`
   - `test ! -d apps/daemon/src/chat && test ! -d apps/daemon/src/routines && test ! -d apps/app/src/app/features/jobs && test ! -d apps/app/src/app/features/runs-list && test ! -d apps/app/src/app/features/run-detail && test ! -d apps/app/src/app/features/approvals && test ! -d apps/app/src/app/features/chat && test ! -d apps/app/src/app/features/schedules` — expected exit code `0`.
@@ -588,6 +592,9 @@ QA runs this verbatim from the repository root of the worktree `../wt-cb-76`
   - `git diff --name-only main...task-76` — every path must be in the exclusive list above;
     `packages/contracts/**`, `apps/daemon/src/main.ts`, `package.json`, `package-lock.json`,
     `vitest.config.ts`, `TODO.md`, `CHANGELOG.md` and `docs/decisions.md` must **not** appear.
+    `.agent_specs/task-76.md` is the only exception: it is the harness copy of this spec, it is
+    gitignored, and the Orchestrator drops it with `git rm -r --cached .agent_specs` at merge, so
+    it never reaches `main`.
 
 - **Acceptance criteria:**
   - [ ] `[unit]` `npm run lint`, `npm test` and `npm run build` exit `0` (method above).

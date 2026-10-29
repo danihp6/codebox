@@ -85,16 +85,17 @@ describe('the rate limit values', () => {
 });
 
 describe('isWorkRoute', () => {
-  it('is true for exactly the two run-creating routes', () => {
+  it('is true for exactly the three run-creating routes', () => {
     expect(isWorkRoute('POST', '/v1/runs')).toBe(true);
     expect(isWorkRoute('POST', '/v1/jobs/job_01JABCDEF/run')).toBe(true);
+    expect(isWorkRoute('POST', '/v1/routines/rtn_01JABCDEF/run')).toBe(true);
   });
 
   it('is false for a read and for a non-run mutation', () => {
     expect(isWorkRoute('GET', '/v1/runs')).toBe(false);
     expect(isWorkRoute('POST', '/v1/jobs/job_01JABCDEF/pause')).toBe(false);
     expect(isWorkRoute('POST', '/v1/runs/run_01JABCDEF/cancel')).toBe(false);
-    expect(isWorkRoute('POST', '/v1/works/work_01JABCDEF/runs')).toBe(false);
+    expect(isWorkRoute('POST', '/v1/routines/rtn_01JABCDEF/pause')).toBe(false);
   });
 });
 
