@@ -38,6 +38,10 @@ export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>>
     'repos.detail.disabled': 'Disabled',
     'repos.detail.lastRun': 'Last run',
     'repos.detail.noRun': 'No run yet.',
+    'repoPicker.aria': 'Repositories',
+    'repoPicker.state.connected': 'Connected',
+    'repoPicker.state.cloning': 'Cloning…',
+    'repoPicker.state.unavailable': 'Unavailable',
   }),
   es: Object.freeze({
     'common.loading': 'Cargando…',
@@ -75,6 +79,10 @@ export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>>
     'repos.detail.disabled': 'Inactivo',
     'repos.detail.lastRun': 'Última ejecución',
     'repos.detail.noRun': 'Sin ejecuciones.',
+    'repoPicker.aria': 'Repositorios',
+    'repoPicker.state.connected': 'Conectado',
+    'repoPicker.state.cloning': 'Clonando…',
+    'repoPicker.state.unavailable': 'No disponible',
   }),
 });
 

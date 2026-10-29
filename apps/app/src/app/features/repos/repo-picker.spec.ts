@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import type { SecureStore } from '../../core/auth/secure-store';
 import { SECURE_STORE } from '../../core/auth/secure-store';
 import type { Locale } from '../../core/i18n/i18n.service';
-import { STRINGS, translate } from '../chat/new-chat.i18n';
+import { STRINGS, translate } from './i18n';
 import { RepoPicker, pickerState } from './repo-picker';
 
 const TS = '2026-10-27T11:00:00Z';

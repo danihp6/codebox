@@ -34,14 +34,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/app.component.spec.ts` — the banner reaches the shell and drops out when fresh.
 - `src/app/app.config.ts` — zoneless, Ionic, router, HTTP, service-worker providers.
 - `src/app/app.routes.ts` — every route of `docs/app.md` §4, lazy and guarded.
-- `src/app/app.routes.spec.ts` — path table and lazy-loader resolution.
+- `src/app/app.routes.spec.ts` — the frozen 20-row path table, the guard walk, the three tabs and the `docs/app.md` §4 agreement test.
 - `src/app/readme.spec.ts` — every `src/app` file appears in this map and every map entry exists.
-- `src/app/shared/chat-row.ts` — one chat row: title, preview and the wrapping scope/cost/context flow with both signals.
-- `src/app/shared/chat-row.spec.ts` — both signals, the omitted micro-text, the emitted id and the wrapping styles.
 - `src/app/shared/offline-banner.ts` — the connectivity signals and the read-only offline banner.
 - `src/app/shared/offline-banner.i18n.ts` — the offline banner dictionary in `en` and `es`.
 - `src/app/shared/offline-banner.spec.ts` — the stale/fresh banner, the browser events, the single listener attach and the dictionary parity.
-- `src/app/shell/tabs.page.ts` — the three top-level tabs: Dashboard, Chat and Settings.
+- `src/app/shell/tabs.page.ts` — the three top-level tabs: Dashboard, Repos and Settings.
 - `src/app/shell/tabs.page.spec.ts` — tab order and rendered hooks.
 - `src/app/core/api/api-client.ts` — typed `/v1` client, `ApiError`, pair parsing, the run detail reads, cancel and revert.
 - `src/app/core/api/api-client.spec.ts` — payload parsing, error-envelope mapping, the event page and the run detail calls.
@@ -72,38 +70,17 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/about/notice.ts` — the shipped `NOTICE` copy and its pure bullet parser.
 - `src/app/features/about/notice.spec.ts` — the verbatim `NOTICE` copy, the parser rules and every licence it lists.
 - `src/app/features/approvals/approvals.page.ts` — approvals placeholder.
-- `src/app/features/chat/chat-list.page.ts` — the chat list: search, the five client-side filters and one row per session.
-- `src/app/features/chat/chat-list.page.spec.ts` — the chips, the filter order, both signals, the search, the error and the empty states.
-- `src/app/features/chat/chat-list.store.ts` — the session page, the per-device read markers, the client-side filters, start-chat and the list stream frames.
-- `src/app/features/chat/chat-list.store.spec.ts` — the two reads, the row helpers, the read markers, the filters, create and the stream frames.
-- `src/app/features/chat/chat.page.ts` — chat detail: streaming messages, tool and permission cards, the system gate/PR cards, the promote confirmation and the routine badge.
-- `src/app/features/chat/chat.page.spec.ts` — streaming hooks, the permission reply, the system cards, the promote confirmation, stop and dictionary completeness.
-- `src/app/features/chat/chat.api.ts` — sessions, send, interrupt, promote, approval reply and the repo list.
+- `src/app/features/backlog/backlog.api.ts` — the backlog read, the work create, the attempt start and the session create.
+- `src/app/features/backlog/backlog.api.spec.ts` — every backlog URL and method, the empty attempt body and the boundary parse failure.
+- `src/app/features/backlog/backlog.store.ts` — the backlog read, the `Run` flow and the live-work conflict.
+- `src/app/features/backlog/backlog.store.spec.ts` — one work then one attempt in order, the navigation, the live work and the screen error.
+- `src/app/features/backlog/i18n.ts` — the backlog row states and the new-session sheet dictionary in `en` and `es`.
+- `src/app/features/backlog/new-session.sheet.ts` — the four targets, the read-only `repo` entry, the busy guard and one create per tap.
+- `src/app/features/backlog/new-session.sheet.spec.ts` — no request on render, the four buttons, the body without a work id, the 409 and the read-only create.
+- `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog: the header chat button, the four tabs, the rows with plan and state apart, the run action and the live-work block.
+- `src/app/features/backlog/repo-backlog.page.spec.ts` — the row hooks, every work state label, the run visibility, the live work, the error/retry and the sheet.
+- `src/app/features/chat/chat.api.ts` — the retired `/v1/chat/sessions` client, kept for `features/schedules` until Task-76 removes the routes.
 - `src/app/features/chat/chat.api.spec.ts` — every chat URL and method, the approval reply and the boundary parse failure.
-- `src/app/features/chat/chat.store.ts` — one session's state: load, draft, send, interrupt, promote confirmation, the run link and its gate/PR cards.
-- `src/app/features/chat/chat.store.spec.ts` — load, send, interrupt, the promote flow, the run frames and the stream frames.
-- `src/app/features/chat/chat-store.ts` — the session-scoped chat-to-run link, in memory only.
-- `src/app/features/chat/chat-store.spec.ts` — remember, read, forget and clear of the chat-to-run link.
-- `src/app/features/chat/chat-stream.ts` — the pure stream state: message merge, tool/permission/routine/system cards and event application.
-- `src/app/features/chat/chat-stream.spec.ts` — ordered deltas, replay identity, the cards from run state and the routine window.
-- `src/app/features/chat/context-sheet.ts` — the context sheet: the usage bar in its four states, the composer block at 95 %, the chat and day cost, the environment rows and the two actions.
-- `src/app/features/chat/context-sheet.spec.ts` — the thresholds, the composer block, one compact POST per tap, the divider, both error codes, the new-chat POST and the EN/ES parity.
-- `src/app/features/chat/context-sheet.api.ts` — compact, a new chat in a repository, the repo list and the day spend.
-- `src/app/features/chat/context-sheet.store.ts` — the sheet's session, day spend, errors, the single-flight compact and the created chat.
-- `src/app/features/chat/context-sheet.store.spec.ts` — no read before load, the failed day spend, one compact per tap, the archived conflict and the created chat.
-- `src/app/features/chat/context-sheet.i18n.ts` — the context sheet dictionary in `en` and `es`.
-- `src/app/features/chat/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
-- `src/app/features/chat/markdown.spec.ts` — fences, lists and unclosed markup.
-- `src/app/features/chat/new-chat.api.ts` — the new-chat reads and writes: create, bind, send and the repo list.
-- `src/app/features/chat/new-chat.i18n.ts` — the new-chat and repo-picker dictionary in `en` and `es`.
-- `src/app/features/chat/new-chat.spec.ts` — the two proposals, the enabled composer, the three picker states, the convert/bind flows and the error codes.
-- `src/app/features/chat/new-chat.store.spec.ts` — the proposals, the repo read, create-free, the trimmed draft, convert, bind and the busy guard.
-- `src/app/features/chat/new-chat.store.ts` — the new-chat state: proposals, repo read, draft, create-free, convert and bind.
-- `src/app/features/chat/new-chat.ts` — the new-chat panel: the empty state, the picker, the never-blocked composer and the handoff outputs.
-- `src/app/features/chat/i18n.ts` — the chat dictionary in `en` and `es`.
-- `src/app/features/chat/schedule-propose.ts` — the proposed-schedule card and its create-body mapping.
-- `src/app/features/chat/schedule-propose.i18n.ts` — the proposed-schedule dictionary in `en` and `es`.
-- `src/app/features/chat/schedule-propose.spec.ts` — zero requests on render, one POST per tap, the mapped body, the 422 and the dictionary parity.
 - `src/app/features/credentials/add-credential.sheet.ts` — the two-step add-credential sheet: name, kind, expose, the env warning, the confirmation tail and the save.
 - `src/app/features/credentials/add-credential.sheet.spec.ts` — the review step, the four-character tail, the env warning/blocked states and the cleared value.
 - `src/app/features/credentials/connect-service.sheet.ts` — the GitHub App manifest form and the generic integration form.
@@ -151,8 +128,6 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/pairing/i18n.ts` — the pairing dictionary in `en` and `es`.
 - `src/app/features/repos/repos.page.ts` — the repo list, the add wizard entry and the gate/policy badges.
 - `src/app/features/repos/repos.page.spec.ts` — the list hooks, the wizard and the empty/error blocks.
-- `src/app/features/repos/repo.page.ts` — repo detail: verification, the policy editor and the protected-paths preview.
-- `src/app/features/repos/repo.page.spec.ts` — the detail hooks, the policy patch and the preview.
 - `src/app/features/repos/repos.api.ts` — `/v1/repos` list, get, create, patch, remove and verify.
 - `src/app/features/repos/repos.api.spec.ts` — every repos URL and method and the boundary parse failure.
 - `src/app/features/repos/repos.store.ts` — the list, create and verify with their optimistic state.
@@ -163,7 +138,18 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/repos/repo-form.spec.ts` — a missing owner, a bad slug and the trimmed value.
 - `src/app/features/repos/repo-picker.spec.ts` — the three states, the unavailable refusal, the picked id and the picker copy.
 - `src/app/features/repos/repo-picker.ts` — the repository picker: one row per repo with `connected`/`cloning`/`unavailable`.
-- `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`.
+- `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`, including the four `repoPicker.*` keys.
+- `src/app/features/repos/repo-chrome.i18n.ts` — the repository tabs, schedule and design dictionary in `en` and `es`.
+- `src/app/features/repos/repo-tabs.ts` — the four repository tabs as one source of truth and the tab strip component.
+- `src/app/features/repos/repo-tabs.spec.ts` — the four tabs in order, their links and their labels in both locales.
+- `src/app/features/repos/repo-design.page.ts` — the design tab: the tabs, the honest unavailable block and the design new-session sheet.
+- `src/app/features/repos/repo-design.page.spec.ts` — the unavailable block, no request on render, the preselected design target and one create.
+- `src/app/features/repos/repo-schedule.api.ts` — `/v1/schedules` list, create, pause, resume and `/v1/repos/{id}/run-next`.
+- `src/app/features/repos/repo-schedule.api.spec.ts` — every schedule URL and method, the create body and the error mapping.
+- `src/app/features/repos/repo-schedule.store.ts` — the single row, the optimistic pause/resume, the run-next notice and the create conflict.
+- `src/app/features/repos/repo-schedule.store.spec.ts` — load, the pause rollback, resume, the empty selection, the accepted run and the create flows.
+- `src/app/features/repos/repo-schedule.page.ts` — the schedule tab: the legacy row, its caps and fires, the actions and the create form.
+- `src/app/features/repos/repo-schedule.page.spec.ts` — the mode, the window and the next fire, no unexposed field, the notice and the create.
 - `src/app/features/run-detail/run.page.ts` — run detail: timeline, gate, guardrails, blockers, diff, PR, cost, cancel and revert.
 - `src/app/features/run-detail/run.page.spec.ts` — run hooks, guardrail states, actions and dictionary completeness.
 - `src/app/features/run-detail/run-detail.store.ts` — the run projection, its two actions and the stream reducer.
@@ -175,6 +161,17 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/runs-list/runs.store.ts` — the paged runs list, the state filter and the run stream frames.
 - `src/app/features/runs-list/runs.store.spec.ts` — load, filter, more and the stream frames.
 - `src/app/features/runs-list/i18n.ts` — the runs list dictionary in `en` and `es`.
+- `src/app/features/sessions/sessions.api.ts` — one session, its transcript, the send, the stop and the merge.
+- `src/app/features/sessions/sessions.api.spec.ts` — every session URL and method, the transcript query and the error mapping.
+- `src/app/features/sessions/session-stream.ts` — the pure thread: message merge by id, the live delta buffer, the tool cards and the event application.
+- `src/app/features/sessions/session-stream.spec.ts` — replayed frames, idempotent merges, the foreign session, the tool key and the proposal.
+- `src/app/features/sessions/session.store.ts` — one session: the load, the draft, the send, the stop, the single merge and the pending proposal.
+- `src/app/features/sessions/session.store.spec.ts` — load, send, the blocked composer, the merge and its refusal, the frames and the proposal.
+- `src/app/features/sessions/session.page.ts` — the editor: the target, the thread through `markdown.ts`, the tool cards, the proposal panel and the composer.
+- `src/app/features/sessions/session.page.spec.ts` — the thread, the blocked composer, the proposal panel and the single merge, the read-only target and the error/retry.
+- `src/app/features/sessions/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
+- `src/app/features/sessions/markdown.spec.ts` — fences, lists and unclosed markup.
+- `src/app/features/sessions/i18n.ts` — the session dictionary in `en` and `es`.
 - `src/app/features/schedules/schedules.api.ts` — `/v1/schedules` list, detail and create, plus the create body.
 - `src/app/features/schedules/schedule-filter.ts` — the window rule, the group order and the Schedule filter screen.
 - `src/app/features/schedules/schedule-filter.store.ts` — the schedule list, the capped detail reads and the session review reads.
@@ -203,3 +200,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/settings/providers.page.spec.ts` — the rows from the response, the fingerprint prefix, the formatted last-OK, the 404/503 unavailable copy and the close output.
 - `src/app/features/settings/providers.store.ts` — the single `/v1/providers` read, its rows, and 404/503 as unavailable rather than an empty list.
 - `src/app/features/settings/providers.store.spec.ts` — load, absent route, 503, a 500 and the retry that clears the mark.
+- `src/app/features/works/works.api.ts` — the works of a repository, the work detail, the decision session and the rework attempt.
+- `src/app/features/works/works.api.spec.ts` — every works URL and method, the empty bodies and the error mapping.
+- `src/app/features/works/work.store.ts` — one work: the detail, the one blocked action, the rework refetch and the state.
+- `src/app/features/works/work.store.spec.ts` — load, the decision navigation, the rework refetch and the refused action.
+- `src/app/features/works/repo-works.page.ts` — the works tab: a flat list in the daemon order with no rooms and no faces.
+- `src/app/features/works/repo-works.page.spec.ts` — the rows and links, the empty state and the error/retry.
+- `src/app/features/works/work.page.ts` — the work run log: the header facts, one segment per run, the gate/PR cards, the tick and one action, with no composer.
+- `src/app/features/works/work.page.spec.ts` — no textarea or send hook, the header, the cards from run state, the state flip, the tick and the one action.
+- `src/app/features/works/i18n.ts` — the works, work and run-state dictionary in `en` and `es`.

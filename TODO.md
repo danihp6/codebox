@@ -1099,7 +1099,7 @@ same path; the contracts task lands first because every other task reads its typ
   (`prebuild` + dependency), `package-lock.json` and `vitest.config.ts` (one project). No
   `design/` artifact is created here: `routes.json` must be derived from the post-Task-75
   router by Task-79.
-- [ ] **[Task-75]** App: Repos, four repository tabs, run log and sessions. Three tabs
+- [x] **[Task-75]** App: Repos, four repository tabs, run log and sessions. Three tabs
   (`Dashboard · Repos · Settings`), `/repos/:id` with the backlog as the list and `works`,
   `schedule`, `design` as its other tabs, `/works/:id` as a **run log without composer**,
   `/sessions/:id` with its proposal panel; delete the chat list, the filters, the scope chip, the
@@ -1107,6 +1107,19 @@ same path; the contracts task lands first because every other task reads its typ
   `docs/app.md` (§4, §8). *Dependencies:* Task-70, Task-72. *Acceptance:* `[unit]` the backlog
   row renders plan and state separately; `[unit]` no route reaches `/chat`; `[unit]` the work
   screen has no composer; `[live]` 320 px with a long `Task-NN` title.
+  LANDED AS: the router is the 20 rows of the spec (`/repos/:id` backlog, `/repos/:id/works`,
+  `/repos/:id/schedule`, `/repos/:id/design`, `/works/:id`, `/sessions/:id`, the legacy `/jobs`,
+  `/runs` and `/approvals` left for Task-76), `SHELL_TABS` is `Dashboard · Repos · Settings`,
+  and 30 chat UI files, `shared/chat-row.*` and `repos/repo.page.*` are gone. **`features/chat`
+  keeps exactly `chat.api.ts` and `chat.api.spec.ts`**: `features/schedules/schedule-filter.store.ts`
+  (outside this task) imports `ChatApi`, and the daemon still answers `/v1/chat/sessions` until
+  Task-76 retires them. The `repoPicker.*` copy moved into `features/repos/i18n.ts` so the picker
+  stopped importing the deleted chat dictionary. The `[live]` 320 px criterion is **not
+  measured** (no browser on this runner, no `playwright.config.*`); an `agent-review` issue owns
+  it. Two documented gaps the screen reports instead of inventing: the schedule tab renders the
+  legacy `Schedule` because no route projects `repoScheduleSchema` (so `selection`, `refs` and
+  `maxAttempts` are unreachable), and `/repos/:id/design` is an honest unavailable block until
+  Task-79 ships the preview.
 - [ ] **[Task-76]** Retire chat, routines and reminders end to end. Remove the chat routes, the
   routine tool seam, `/v1/reminders`, the legacy job screens and the `mode: chat` branch; update
   the e2e, the fixtures and the guards. *Paths:* `apps/daemon/src/routes/**`,

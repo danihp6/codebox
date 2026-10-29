@@ -6,6 +6,37 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-75, the app goes to repositories, run logs and sessions)
+
+- **The bottom bar is `Dashboard · Repos · Settings` (D47).** `SHELL_TABS` is frozen at three
+  entries and the three tab roots stay derived from it; `/repos` is a tab again, `/chat` is not
+  a route, and the dashboard's two links point at `/repos`.
+- **A repository is a destination with four tabs.** `/repos/:id` renders the backlog as the
+  list, `/repos/:id/works` the works, `/repos/:id/schedule` the repository's single schedule and
+  `/repos/:id/design` an honest unavailable block until Task-79 ships the preview. The four tabs
+  come from one `REPO_TABS` source, and every one of the four screens renders it.
+- **The backlog row separates the plan from the state (D53).** `Task-NN`, the item's title, its
+  work state (all seven `WorkState` values plus `none`, from a `Record`, never a string match),
+  its run count and a `Run` action that creates one work and one attempt — a `409 live_work`
+  links the existing work instead of opening a second one.
+- **`/works/:id` is a run log without a composer.** The header carries state, context, cost and
+  attempts; each run renders its branch, its gate card, its PR card and the backlog tick, all
+  from the contract. A `needs_decision` work offers exactly one action (resolve the doubt), a
+  merged work offers rework, and a running work offers none. No `textarea`, no send.
+- **`/sessions/:id` is the editor (D55).** Thread, tool cards, a pending-proposal panel with the
+  branch and the paths, one merge action, and a composer that a pending proposal blocks. A
+  `target: 'repo'` session is read-only: no proposal panel, no merge.
+- **The chat model leaves the app.** The chat list, its five filters, the scope chip, the
+  promote action, the handoff divider and the chat composer are deleted with their stores,
+  APIs, dictionaries and specs (30 files, plus `shared/chat-row.*` and `repos/repo.page.*`).
+  `features/chat` keeps only `chat.api.ts` and its spec, because `features/schedules` still
+  imports `ChatApi` until Task-76 retires the legacy routes; the `repoPicker.*` strings moved to
+  `features/repos/i18n.ts`. `docs/app.md` §4 and §8 describe the router the app now has, and a
+  test holds the two in agreement in both directions.
+- **Documented gaps, not papered over:** the schedule tab renders the legacy `Schedule` because
+  no route projects `repoScheduleSchema` yet, and the 320 px criterion is browser-only and
+  therefore unmeasured on this runner (an `agent-review` issue owns it).
+
 ### Added — 2026-10-29 (Task-74, the design package and its gate step)
 
 - **The repository's `design/` has one parser (D52).** `packages/design` is a new npm workspace

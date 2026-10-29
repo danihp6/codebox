@@ -131,7 +131,7 @@ export function formatUsd(usd: number): string {
               <a data-testid="dashboard-start-repos" routerLink="/repos">
                 {{ t('dashboard.start.repos') }}
               </a>
-              <a data-testid="dashboard-start-chat" routerLink="/chat">
+              <a data-testid="dashboard-start-chat" routerLink="/repos">
                 {{ t('dashboard.start.chat') }}
               </a>
             </div>
@@ -155,7 +155,7 @@ export function formatUsd(usd: number): string {
                 {{ t('dashboard.needs-you.unreviewed') }}:
                 <span class="cb-mono">{{ store.needsYou().unreviewedChats }}</span>
               </p>
-              <a data-testid="dashboard-needs-you-chat" routerLink="/chat">
+              <a data-testid="dashboard-needs-you-chat" routerLink="/repos">
                 {{ t('dashboard.needs-you.open-chat') }}
               </a>
             </article>

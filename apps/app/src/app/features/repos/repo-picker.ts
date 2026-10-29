@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, inject, input, output } from '@angular/core';
 import type { Repo } from '@codebox/contracts';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { translate } from '../chat/new-chat.i18n';
+import { translate } from './i18n';
 
 export type RepoPickerState = 'connected' | 'cloning' | 'unavailable';
 
