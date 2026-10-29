@@ -1,0 +1,302 @@
+{
+  "name": "codebox",
+  "key": "3HMV2UN6QviuNXe2T3Htsr",
+  "document": {
+    "id": "0:0",
+    "name": "Document",
+    "type": "DOCUMENT",
+    "children": [
+      {
+        "id": "0:1",
+        "name": "Cover",
+        "type": "CANVAS",
+        "children": [
+          {
+            "id": "0:2",
+            "name": "Cover frame",
+            "type": "FRAME",
+            "absoluteBoundingBox": { "x": 0, "y": 0, "width": 390, "height": 844 },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": { "r": 0.043, "g": 0.059, "b": 0.078 }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "0:3",
+        "name": "Page 1",
+        "type": "CANVAS",
+        "children": [
+          {
+            "id": "20:100",
+            "name": "10 · Measured — mobile dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": { "x": 100, "y": 100, "width": 390, "height": 844 },
+            "layoutMode": "VERTICAL",
+            "paddingTop": 16,
+            "paddingRight": 8,
+            "paddingBottom": 16,
+            "paddingLeft": 16,
+            "itemSpacing": 8,
+            "cornerRadius": 12,
+            "strokeWeight": 2,
+            "strokes": [
+              {
+                "type": "SOLID",
+                "color": { "r": 0.902, "g": 0.929, "b": 0.953 },
+                "visible": true
+              }
+            ],
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": { "r": 0.043, "g": 0.059, "b": 0.078 }
+              }
+            ],
+            "children": [
+              {
+                "id": "20:101",
+                "name": "Header",
+                "type": "RECTANGLE",
+                "absoluteBoundingBox": { "x": 116, "y": 116, "width": 358, "height": 56 },
+                "cornerRadius": 8,
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.071, "g": 0.094, "b": 0.129 }
+                  }
+                ]
+              },
+              {
+                "id": "20:102",
+                "name": "Title",
+                "type": "TEXT",
+                "absoluteBoundingBox": { "x": 116, "y": 180, "width": 200, "height": 24 },
+                "style": {
+                  "fontFamily": "Inter",
+                  "fontWeight": 600,
+                  "fontSize": 16,
+                  "lineHeightPx": 24
+                },
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.902, "g": 0.929, "b": 0.953 }
+                  }
+                ]
+              },
+              {
+                "id": "20:103",
+                "name": "Dot",
+                "type": "ELLIPSE",
+                "absoluteBoundingBox": { "x": 116, "y": 212, "width": 20, "height": 20 },
+                "cornerRadius": 10,
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.2, "g": 0.4, "b": 0.6 },
+                    "opacity": 0.25
+                  }
+                ]
+              },
+              {
+                "id": "20:104",
+                "name": "Hidden",
+                "type": "RECTANGLE",
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.2, "g": 0.4, "b": 0.6 },
+                    "visible": false
+                  }
+                ]
+              },
+              {
+                "id": "20:105",
+                "name": "Ghost",
+                "type": "RECTANGLE",
+                "absoluteBoundingBox": { "x": 116, "y": 240, "width": 100, "height": 40 },
+                "fills": [{ "type": "GRADIENT_LINEAR", "gradientStops": [] }]
+              },
+              {
+                "id": "20:106",
+                "name": "Stack",
+                "type": "FRAME",
+                "absoluteBoundingBox": { "x": 116, "y": 288, "width": 200, "height": 60 },
+                "fills": [],
+                "children": [
+                  {
+                    "id": "20:107",
+                    "name": "Title",
+                    "type": "TEXT",
+                    "absoluteBoundingBox": { "x": 120, "y": 292, "width": 200, "height": 24 },
+                    "style": {
+                      "fontFamily": "Inter",
+                      "fontWeight": 600,
+                      "fontSize": 16,
+                      "lineHeightPx": 24
+                    },
+                    "fills": [
+                      {
+                        "type": "SOLID",
+                        "color": { "r": 0.902, "g": 0.929, "b": 0.953 }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "21:100",
+            "name": "11 · Inferred — mobile dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": { "x": 600, "y": 100, "width": 390, "height": 844 },
+            "rectangleCornerRadii": [4, 8, 12, 16],
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": { "r": 0.043, "g": 0.059, "b": 0.078 }
+              }
+            ],
+            "children": [
+              {
+                "id": "21:101",
+                "name": "Bottom",
+                "type": "RECTANGLE",
+                "absoluteBoundingBox": { "x": 700, "y": 600, "width": 100, "height": 40 },
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.071, "g": 0.094, "b": 0.129 }
+                  }
+                ]
+              },
+              {
+                "id": "21:102",
+                "name": "Top right",
+                "type": "RECTANGLE",
+                "absoluteBoundingBox": { "x": 700, "y": 200, "width": 100, "height": 40 },
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.545, "g": 0.596, "b": 0.647 }
+                  }
+                ]
+              },
+              {
+                "id": "21:103",
+                "name": "Top left",
+                "type": "RECTANGLE",
+                "absoluteBoundingBox": { "x": 610, "y": 200, "width": 80, "height": 40 },
+                "fills": []
+              },
+              {
+                "id": "21:104",
+                "name": "No box",
+                "type": "RECTANGLE",
+                "fills": []
+              }
+            ]
+          },
+          {
+            "id": "22:100",
+            "name": "12 · Component — dark",
+            "type": "COMPONENT",
+            "absoluteBoundingBox": { "x": 1100, "y": 100, "width": 390, "height": 844 },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": { "r": 0.071, "g": 0.094, "b": 0.129 }
+              }
+            ],
+            "children": [
+              {
+                "id": "22:101",
+                "name": "Card",
+                "type": "RECTANGLE",
+                "absoluteBoundingBox": { "x": 1100, "y": 100, "width": 390, "height": 200 },
+                "cornerRadius": 8,
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.071, "g": 0.094, "b": 0.129 }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "23:000",
+            "name": "13 · Section — dark",
+            "type": "SECTION",
+            "absoluteBoundingBox": { "x": 1600, "y": 100, "width": 800, "height": 900 },
+            "children": [
+              {
+                "id": "23:100",
+                "name": "13 · In section — dark",
+                "type": "FRAME",
+                "absoluteBoundingBox": { "x": 1600, "y": 100, "width": 390, "height": 844 },
+                "strokeWeight": 1.5,
+                "strokes": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.545, "g": 0.596, "b": 0.647 }
+                  }
+                ],
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.043, "g": 0.059, "b": 0.078 }
+                  }
+                ],
+                "children": [
+                  {
+                    "id": "23:101",
+                    "name": "Row",
+                    "type": "RECTANGLE",
+                    "absoluteBoundingBox": { "x": 1600, "y": 100, "width": 390, "height": 60 },
+                    "cornerRadius": 4,
+                    "fills": [
+                      {
+                        "type": "SOLID",
+                        "color": { "r": 0.545, "g": 0.596, "b": 0.647 }
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "id": "23:200",
+                "name": "Section note",
+                "type": "TEXT",
+                "absoluteBoundingBox": { "x": 1600, "y": 20, "width": 390, "height": 20 },
+                "fills": [
+                  {
+                    "type": "SOLID",
+                    "color": { "r": 0.902, "g": 0.929, "b": 0.953 }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "24:000",
+            "name": "Annotation",
+            "type": "TEXT",
+            "absoluteBoundingBox": { "x": 0, "y": 0, "width": 390, "height": 40 },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": { "r": 0.071, "g": 0.204, "b": 0.337 }
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

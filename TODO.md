@@ -289,6 +289,20 @@ own and `TODO.md`/`CHANGELOG.md` stayed with the Orchestrator. One forced additi
 `*Paths:*` line: `scripts/README.md`, the folder's file map (`AGENTS.md`), only the new
 `## scripts/design` block.
 
+**Cut — cycle after Task-84 (three of four slots used).** No task branch was alive and `main` was
+`2375565`. Batch 22 is cut whole: Task-85, Task-86 and Task-87 run in parallel, their paths are
+disjoint (`packages/design/**` + `scripts/design/**` against the app theme, manifests and
+`design/tokens.json` against the router, the settings feature and the import map), and the two
+shared files are claimed by section (`docs/app.md`: §9 for Task-86, §4 for Task-87) or moved as
+one fact (Task-87 holds `design/import.json` and the two byte-copy fixtures plus the count pins,
+because splitting them makes both branches red). **Hot-file holders in this cut:** Task-86 holds
+`package.json` and `package-lock.json` (the batch's only dependency, `@fontsource-variable/inter`);
+Task-87 holds `apps/app/src/app/app.routes.ts`. No task holds `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`packages/contracts/src/index.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or
+`docs/decisions.md`. The fourth slot has no legal candidate: Task-30 waits on Task-29, Task-31 on
+Task-26/28/30 and Task-32 on Task-31, all behind the `[!]` roots on issue #11.
+
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
@@ -1484,7 +1498,7 @@ and Task-87 holds `apps/app/src/app/app.routes.ts`. No task touches a Batch 21 p
 **L6 runs after Task-85**, because it is L6 that writes the specs and they should carry `layout`;
 **L7 runs after L6**, and the per-screen alignment batch is cut only when both are done.
 
-- [ ] **[Task-85]** Measured layout. `ScreenSpec` gains `layout`: the frame's box and layout mode,
+- [x] **[Task-85]** Measured layout. `ScreenSpec` gains `layout`: the frame's box and layout mode,
       its regions (`name`, `x`, `y`, `width`, `height`, `fill` as a token key or `null`, `radius`,
       `stroke`) and the type scale (`role`, `family`, `weight`, `size`, `lineHeight`, `colour` as a
       token key). `parseScreenSpec` requires the three keys it declares and rejects a colour that is

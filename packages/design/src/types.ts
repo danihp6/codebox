@@ -59,11 +59,64 @@ export interface DesignRoute {
   readonly component: string;
 }
 
+export type ScreenLayoutMode = 'none' | 'horizontal' | 'vertical';
+
+export interface ScreenBox {
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface ScreenRegion {
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  /** A `design/tokens.json` key (e.g. `color.surface.raised`), or null. */
+  readonly fill: string | null;
+  /** `cornerRadius` in px; 0 when absent. */
+  readonly radius: number;
+  /** `strokeWeight` in px when the node has a visible stroke; 0 otherwise. */
+  readonly stroke: number;
+}
+
+export interface ScreenTypeRow {
+  readonly role: string;
+  readonly family: string;
+  readonly weight: number;
+  readonly size: number;
+  readonly lineHeight: number;
+  /** A `design/tokens.json` key, or null. */
+  readonly colour: string | null;
+}
+
+export interface ScreenLayout {
+  /** The frame's own `absoluteBoundingBox`, absolute. */
+  readonly box: ScreenBox;
+  readonly layoutMode: ScreenLayoutMode;
+  readonly paddingTop: number;
+  readonly paddingRight: number;
+  readonly paddingBottom: number;
+  readonly paddingLeft: number;
+  readonly itemSpacing: number;
+  readonly cornerRadius: number;
+  /** Stroke width in px when the frame has a visible stroke paint; 0 otherwise. */
+  readonly strokes: number;
+  /** True when the frame declared no autolayout and the regions are boxes in reading order. */
+  readonly inferred: boolean;
+  readonly regions: readonly ScreenRegion[];
+  readonly type: readonly ScreenTypeRow[];
+}
+
 export interface ScreenSpec {
   readonly screen: string;
   readonly route: string;
   readonly states: Readonly<Record<ScreenState, string | null>>;
   readonly snapshotSha256: string | null;
+  /** Absent on a spec whose frame is not measurable, and on every spec written before this task. */
+  readonly layout?: ScreenLayout;
 }
 
 export interface DesignDocuments {

@@ -1,6 +1,53 @@
 import { z } from 'zod';
 import { snapshotHash } from './snapshot.js';
-import type { DesignIssue, DesignRoute, ScreenSpec, ScreenState } from './types.js';
+import type {
+  DesignIssue,
+  DesignRoute,
+  DesignTokens,
+  ScreenBox,
+  ScreenLayout,
+  ScreenLayoutMode,
+  ScreenRegion,
+  ScreenSpec,
+  ScreenState,
+  ScreenTypeRow,
+} from './types.js';
+
+export interface FigmaRegion {
+  readonly name: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  /** The fill exactly as the file writes it (`#121821`, `rgba(…, 0.25)`), or null. */
+  readonly fill: string | null;
+  readonly radius: number;
+  readonly stroke: number;
+}
+
+export interface FigmaTypeRow {
+  readonly role: string;
+  readonly family: string;
+  readonly weight: number;
+  readonly size: number;
+  readonly lineHeight: number;
+  readonly colour: string | null;
+}
+
+export interface FigmaFrameLayout {
+  readonly box: ScreenBox;
+  readonly layoutMode: ScreenLayoutMode;
+  readonly paddingTop: number;
+  readonly paddingRight: number;
+  readonly paddingBottom: number;
+  readonly paddingLeft: number;
+  readonly itemSpacing: number;
+  readonly cornerRadius: number;
+  readonly strokes: number;
+  readonly inferred: boolean;
+  readonly regions: readonly FigmaRegion[];
+  readonly type: readonly FigmaTypeRow[];
+}
 
 export interface FigmaFrame {
   /** The Figma node id, e.g. `12:34`. Opaque to this package. */
@@ -11,6 +58,8 @@ export interface FigmaFrame {
   readonly height: number;
   /** The frame's distinct fills, as written in the file (`#0b0f14`, `rgba(…, 0.5)`). */
   readonly fills: readonly string[];
+  /** Absent when the frame is not measurable (no direct child with a box). */
+  readonly layout?: FigmaFrameLayout;
 }
 
 export interface FigmaFileSnapshot {
@@ -39,6 +88,8 @@ export interface DesignImportInput {
   readonly map: ImportMap;
   /** PNG bytes keyed by the map's `caption`. Absent when the caller did not download one. */
   readonly exports?: Readonly<Record<string, Uint8Array>>;
+  /** When given, every projected layout colour is resolved to one of its keys. */
+  readonly tokens?: DesignTokens;
 }
 
 export interface DesignImportResult {
@@ -138,6 +189,82 @@ export function parseImportMap(input: unknown): ImportMap {
   return parsed.data;
 }
 
+/** First key in `Object.keys(tokens)` order wins when two tokens hold the same colour. */
+function tokenKeysByValue(tokens: DesignTokens | undefined): ReadonlyMap<string, string> | null {
+  if (tokens === undefined) return null;
+  const byValue = new Map<string, string>();
+  for (const key of Object.keys(tokens)) {
+    const value = tokens[key]?.$value;
+    if (value === undefined) continue;
+    const normalised = String(value).trim().toLowerCase();
+    if (!byValue.has(normalised)) byValue.set(normalised, key);
+  }
+  return byValue;
+}
+
+function tokenKeyOf(
+  value: string | null,
+  byValue: ReadonlyMap<string, string> | null,
+): string | null {
+  if (value === null || byValue === null) return null;
+  return byValue.get(value.trim().toLowerCase()) ?? null;
+}
+
+function projectRegions(
+  regions: readonly FigmaRegion[],
+  byValue: ReadonlyMap<string, string> | null,
+): readonly ScreenRegion[] {
+  return regions.map((region) => ({
+    name: region.name,
+    x: region.x,
+    y: region.y,
+    width: region.width,
+    height: region.height,
+    fill: tokenKeyOf(region.fill, byValue),
+    radius: region.radius,
+    stroke: region.stroke,
+  }));
+}
+
+function projectType(
+  rows: readonly FigmaTypeRow[],
+  byValue: ReadonlyMap<string, string> | null,
+): readonly ScreenTypeRow[] {
+  return rows.map((row) => ({
+    role: row.role,
+    family: row.family,
+    weight: row.weight,
+    size: row.size,
+    lineHeight: row.lineHeight,
+    colour: tokenKeyOf(row.colour, byValue),
+  }));
+}
+
+function projectLayout(
+  layout: FigmaFrameLayout,
+  byValue: ReadonlyMap<string, string> | null,
+): ScreenLayout {
+  return {
+    box: {
+      x: layout.box.x,
+      y: layout.box.y,
+      width: layout.box.width,
+      height: layout.box.height,
+    },
+    layoutMode: layout.layoutMode,
+    paddingTop: layout.paddingTop,
+    paddingRight: layout.paddingRight,
+    paddingBottom: layout.paddingBottom,
+    paddingLeft: layout.paddingLeft,
+    itemSpacing: layout.itemSpacing,
+    cornerRadius: layout.cornerRadius,
+    strokes: layout.strokes,
+    inferred: layout.inferred,
+    regions: projectRegions(layout.regions, byValue),
+    type: projectType(layout.type, byValue),
+  };
+}
+
 /**
  * One projected page in, three artifact families out. The snapshot frames outside the map are
  * ignored rather than reported: only the caller knows whether it downloaded the whole page.
@@ -147,6 +274,7 @@ export function importDesign(input: DesignImportInput): DesignImportResult {
   for (const frame of input.snapshot.frames) {
     if (!byCaption.has(frame.caption)) byCaption.set(frame.caption, frame);
   }
+  const byValue = tokenKeysByValue(input.tokens);
 
   const routes: DesignRoute[] = [];
   const screens: ScreenSpec[] = [];
@@ -166,12 +294,15 @@ export function importDesign(input: DesignImportInput): DesignImportResult {
     routes.push({ path: entry.route, screen: entry.screen, component: entry.component });
 
     const bytes = input.exports?.[entry.caption];
-    screens.push({
+    const spec: ScreenSpec = {
       screen: entry.screen,
       route: entry.route,
       states: entry.states,
       snapshotSha256: entry.snapshot === true && bytes !== undefined ? snapshotSha256(bytes) : null,
-    });
+    };
+    screens.push(
+      frame.layout === undefined ? spec : { ...spec, layout: projectLayout(frame.layout, byValue) },
+    );
 
     for (const fill of frame.fills) colours.add(fill.trim().toLowerCase());
   });

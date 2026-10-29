@@ -7,6 +7,9 @@ export type {
   DesignImportResult,
   FigmaFileSnapshot,
   FigmaFrame,
+  FigmaFrameLayout,
+  FigmaRegion,
+  FigmaTypeRow,
   ImportMap,
   ImportMapFrame,
 } from './import.js';
@@ -33,6 +36,11 @@ export type {
   DesignRule,
   DesignToken,
   DesignTokens,
+  ScreenBox,
+  ScreenLayout,
+  ScreenLayoutMode,
+  ScreenRegion,
   ScreenSpec,
   ScreenState,
+  ScreenTypeRow,
 } from './types.js';

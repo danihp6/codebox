@@ -1,0 +1,67 @@
+{
+  "fileKey": "3HMV2UN6QviuNXe2T3Htsr",
+  "page": "Page 1",
+  "frames": [
+    {
+      "id": "20:100",
+      "caption": "10 · Measured — mobile dark",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14", "#121821", "#e6edf3", "rgba(51, 102, 153, 0.25)"],
+      "layout": {
+        "box": { "x": 100, "y": 100, "width": 390, "height": 844 },
+        "layoutMode": "vertical",
+        "paddingTop": 16,
+        "paddingRight": 8,
+        "paddingBottom": 16,
+        "paddingLeft": 16,
+        "itemSpacing": 8,
+        "cornerRadius": 12,
+        "strokes": 2,
+        "inferred": false,
+        "regions": [
+          {
+            "name": "Header",
+            "x": 16,
+            "y": 16,
+            "width": 358,
+            "height": 56,
+            "fill": "#121821",
+            "radius": 8,
+            "stroke": 0
+          },
+          {
+            "name": "Title",
+            "x": 16,
+            "y": 80,
+            "width": 200,
+            "height": 24,
+            "fill": "#e6edf3",
+            "radius": 0,
+            "stroke": 0
+          },
+          {
+            "name": "Dot",
+            "x": 16,
+            "y": 112,
+            "width": 20,
+            "height": 20,
+            "fill": "rgba(51, 102, 153, 0.25)",
+            "radius": 10,
+            "stroke": 0
+          }
+        ],
+        "type": [
+          {
+            "role": "Title",
+            "family": "Inter",
+            "weight": 600,
+            "size": 16,
+            "lineHeight": 24,
+            "colour": "#e6edf3"
+          }
+        ]
+      }
+    }
+  ]
+}

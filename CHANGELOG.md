@@ -6,6 +6,34 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-85, a screen spec carries its measured layout)
+
+- **`ScreenSpec` gains an optional `layout`.** The frame's `box`, `layoutMode`, padding and item
+  spacing, `cornerRadius`, `strokes`, a `inferred` flag, its `regions` (`name`, box, `radius`,
+  `stroke`, `fill` as a token key or `null`) and its type scale (`role`, `family`, `weight`,
+  `size`, `lineHeight`, `colour` as a token key). The key stays optional in the document:
+  every spec written before this task, and every frame that is not measurable, still parses
+  exactly as it did and `parseScreenSpec` never emits `layout: undefined`.
+- **The importer projects it from the page.** `projectPage` accepts `FRAME`, `COMPONENT` and
+  `SECTION` page children (a `SECTION` is traversed, never a frame of its own), reads
+  `layoutMode`, `padding*`, `itemSpacing`, `cornerRadius`, `rectangleCornerRadii`/`strokeWeight`
+  and each `TEXT` node's `style`, and falls back to the children's absolute boxes in reading
+  order with `inferred: true` when the frame declares no autolayout. `importDesign` resolves
+  each `fill`/`colour` to its `design/tokens.json` key; an `rgba(…)` or an outside literal is
+  `null`, never an invented key and never an error.
+- **`parseScreenSpec(input, tokens?)` validates membership.** When the token document is given,
+  a layout key that is not a leaf throws `DesignDocumentError('screen')` with the key and the
+  dotted path (`layout.regions.2.fill`); when it is not, only the key shape is checked, which is
+  the gate's current call. `--check` stays byte-stable: the write/check cycle on the new
+  fixtures writes nothing and exits 0.
+- **One cut decision, recorded:** the map fact (`design/import.json`, its two byte-copy fixtures,
+  the two page fixtures and the count pins in `packages/design/src/import.test.ts` and
+  `scripts/design/import.test.mjs`) moved whole into Task-87, because the suites assert the
+  copies are byte-identical and pin the entry count; this task ships **new** fixtures instead
+  (`layout.json`, `file-layout.json`, `import-layout.json`) and leaves those four files
+  unmodified. `design/screens/**`, `design/exports/**` and `design/routes.json` still do not
+  exist: L6 writes them after this merge.
+
 ### Added — 2026-10-29 (Task-82, the Figma import command)
 
 - **`node scripts/design/import.mjs --file <key>` is the L6 tool.** It reads the committed
