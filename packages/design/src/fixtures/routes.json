@@ -1,0 +1,14 @@
+{
+  "routes": [
+    {
+      "path": "/dashboard",
+      "screen": "Dashboard",
+      "component": "DashboardPage"
+    },
+    {
+      "path": "/repos/:id",
+      "screen": "Repo · backlog",
+      "component": "RepoBacklogPage"
+    }
+  ]
+}

@@ -177,6 +177,20 @@ The gate is the repository's own check, run in the worktree before any PR exists
   `example`, `placeholder`, `changeme`, `dummy`, `replace`, `your_`, `xxxx`), is skipped.
 - A red gate stops the run **before** the PR: it pushes nothing, opens no PR, and the run ends
   `failed` with `gate_failed`. The worktree is kept for inspection.
+- **The design check is a second gate step, over the same patch and the repository's `design/`
+  directory.** `scanDesign` (`apps/daemon/src/gate/design-check.ts`) reads the diff git already
+  produced, parses `design/tokens.json`, `design/routes.json` and `design/screens/*.json` through
+  `@codebox/design`, and answers four questions: a colour written outside the tokens
+  (`colour_outside_tokens`), a route that names no component (`route_without_component`), a
+  screen that does not declare `loading`, `empty` and `error` (`screen_state_missing`), and a
+  declared snapshot hash that does not match its export (`snapshot_hash_mismatch`). A finding is
+  appended to the gate tail and its log as `<file>:<line> <rule>`, the way a secret finding is,
+  and turns the gate into `failed`; no pixel or image comparison exists anywhere, only a sha256
+  of the exported bytes. A patch over 4 MiB is not scanned, a repository without
+  `design/tokens.json` is skipped — no `design/` is not a gate failure, as no tests is not — and
+  a token document that does not parse fails the gate closed rather than guessing which colours
+  were legal. The step is a module only: the run engine does not call it yet, so a green gate on
+  the running box is not re-decided by this check until that one call is added.
 
 ## 6. Commit, push and PR
 

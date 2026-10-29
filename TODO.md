@@ -125,6 +125,21 @@ and Task-30/31/32 wait on them. **Hot-file holders in this cut:** Task-71 holds
 only: Task-71 holds `docs/jobs.md` §16 and `docs/architecture.md` §5; Task-73 holds
 `docs/providers.md` §5.1.
 
+**Cut — cycle after Task-72 (two of four slots used).** No task branch was alive and `main` was
+`b93e224`. The lowest open work was the rest of Batch 19: Task-74 and Task-75. Both are eligible
+— their dependencies (Task-70, Task-72) are merged, their paths are disjoint
+(`packages/design/**` + one gate step + `docs/jobs.md` §5 against `apps/app/src/app/**` +
+`docs/app.md` §4/§8), and no hot file is claimed twice. **Hot-file holders in this cut:**
+Task-74 holds `package-lock.json` (and `vitest.config.ts`, the new workspace wiring); Task-75
+holds `apps/app/src/app/app.routes.ts`. No task holds `package.json`, `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`packages/contracts/src/index.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or
+`docs/decisions.md`. The two empty slots have no legal candidate: Task-76 depends on Task-75
+(this batch); Tasks 77–80 each depend on Task-75 and/or would collide on
+`apps/app/src/app/features/works/**` (77 and 80) or on the contract (78); Task-30 depends on
+Task-29 and Task-31 on Task-26/28/30, and those roots (Task-02, Task-26, Task-29) are `[!]` on
+issue #11.
+
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
@@ -1068,12 +1083,22 @@ same path; the contracts task lands first because every other task reads its typ
       `apps/daemon/src/providers/service.ts` because `ProviderAccountRepository` has no
       `delete`. The `[live]` clause (two accounts, the first dry) is **not** delivered: there is
       no per-account key handoff yet and `TurnHandle.model` is always `null`.
-- [ ] **[Task-74]** Design package and the gate step. `design/` parsing (DTCG tokens,
+- [x] **[Task-74]** Design package and the gate step. `design/` parsing (DTCG tokens,
   `routes.json`, screen specs with states) and the deterministic checks: no colour outside
   tokens, every route with a component, every screen declaring its three states, snapshot hash
   matching. *Paths:* `packages/design/**`, `apps/daemon/src/gate/**` (one step), `docs/jobs.md`
   §5. *Dependencies:* Task-70. *Acceptance:* `[unit]` a hardcoded hex fails the gate with the
   file and line; `[unit]` a missing state fails; `[unit]` no pixel comparison exists anywhere.
+  LANDED AS: `@codebox/design` is the only parser (`parseTokens`, `parseRoutes`,
+  `parseScreenSpec`, `checkDocuments`, `checkPatch`, `snapshotHash`) and
+  `apps/daemon/src/gate/design-check.ts` turns its findings into `<file>:<line> <rule>` tail
+  lines, failing closed on a git error and skipping a repository with no `design/`. **The step
+  is not yet called by the run engine** — `apps/daemon/src/run/engine.ts` was outside the cut,
+  so a green gate is not re-decided by it until that one-line wiring lands; the issue owns it.
+  Three files the cut did not name were forced by the workspace: `apps/daemon/package.json`
+  (`prebuild` + dependency), `package-lock.json` and `vitest.config.ts` (one project). No
+  `design/` artifact is created here: `routes.json` must be derived from the post-Task-75
+  router by Task-79.
 - [ ] **[Task-75]** App: Repos, four repository tabs, run log and sessions. Three tabs
   (`Dashboard · Repos · Settings`), `/repos/:id` with the backlog as the list and `works`,
   `schedule`, `design` as its other tabs, `/works/:id` as a **run log without composer**,

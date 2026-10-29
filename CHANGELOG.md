@@ -6,6 +6,26 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-74, the design package and its gate step)
+
+- **The repository's `design/` has one parser (D52).** `packages/design` is a new npm workspace
+  exporting `parseTokens`, `parseRoutes` and `parseScreenSpec` (DTCG tokens with alias resolution,
+  `design/routes.json`, `design/screens/<slug>.json`), plus the four pure checks —
+  `checkDocuments`, `checkPatch`, `checkSnapshots` and `snapshotHash` — and a typed
+  `DesignDocumentError` per boundary. No clock, no filesystem, no environment: tests pass
+  documents in, fixtures are read by the test.
+- **The gate gains a design step.** `apps/daemon/src/gate/design-check.ts` mirrors
+  `scanWorktree`: one `git diff --unified=0` against the base sha, a 4 MiB cap, a
+  `design/tokens.json`-absent skip, and `<file>:<line> <rule>` tail lines for a colour written
+  outside the tokens, a route without a component, a screen missing one of its three states and
+  a snapshot hash that does not match its export. A git failure or an unparsable token document
+  fails closed. **It is not called yet:** the call site in `apps/daemon/src/run/engine.ts` was
+  outside the task's cut and is an open work order. No pixel or image comparison exists.
+- **The new workspace is wired without touching the root manifest.** `apps/daemon/package.json`
+  builds it in `prebuild` and depends on it, `vitest.config.ts` carries exactly one project, and
+  `package-lock.json` is an npm regeneration (12 added lines, 0 removed). `docs/jobs.md` §5
+  documents the step and names the missing call site.
+
 ### Added — 2026-10-28 (Task-72, works, backlog projection, sessions and the tick)
 
 - **The work is the unit (D44, D51, D53).** `apps/daemon/src/works/` serves `GET/POST

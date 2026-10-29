@@ -1,0 +1,10 @@
+{
+  "screen": "Dashboard",
+  "route": "/dashboard",
+  "states": {
+    "loading": "Skeleton cards",
+    "empty": "First run",
+    "error": "Envelope with the failing call"
+  },
+  "snapshotSha256": null
+}
