@@ -1,5 +1,15 @@
 export { checkDocuments, checkPatch } from './check.js';
 export type { DesignPatchInput } from './check.js';
+export { DesignImportError, importDesign, parseImportMap, snapshotSha256 } from './import.js';
+export type {
+  DesignImportErrorCode,
+  DesignImportInput,
+  DesignImportResult,
+  FigmaFileSnapshot,
+  FigmaFrame,
+  ImportMap,
+  ImportMapFrame,
+} from './import.js';
 export { parseRoutes } from './routes.js';
 export { parseScreenSpec } from './screens.js';
 export { parseTokens, tokenValues } from './tokens.js';
