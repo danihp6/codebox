@@ -218,6 +218,39 @@ item, so `design/README.md`'s "two tabs" prose is the target of a later cut, not
 and the `needs you` decision session opens from the blocked work's log, which already carries
 the one allowed action, because the item forbids a per-agent button on the board.
 
+**Cut — cycle after Task-79 (two of four slots used).** No task branch was alive and `main` was
+`38bd0f3`. This is **wave 2** of Batch 20: Task-78 (the backlog dependency rail) and Task-80
+(workers motion), in parallel. Both are legal now: Task-76, Task-77 and Task-79 are merged,
+Task-78's own dependency Task-75 is merged and the contract slice Task-79 held
+(`design.ts`, `openapi.ts`, `openapi.test.ts`, `packages/contracts/src/index.ts`) is no longer
+in flight, and Task-80's dependency Task-77 is merged. Their paths are disjoint: Task-78 holds
+`packages/contracts/src/index.ts` (the spec freezes the surface but the task needs no edit
+there) together with `packages/contracts/src/works.ts`/`works.test.ts`,
+`packages/backlog/**`, `apps/daemon/src/backlog/**`,
+`apps/app/src/app/features/backlog/**` and `docs/api.md` §5.6; Task-80 holds
+`apps/app/src/app/features/works/**` and `apps/app/src/theme/**` and claims no hot file. The
+only shared path is `apps/app/README.md`, which `readme.spec.ts` forces on both app tasks: it
+is split by line block — Task-78 owns the `features/backlog/**` lines, Task-80 owns the
+`features/works/**` and `src/theme/**` lines, and neither edits the other's. The two empty
+slots have no legal candidate: Task-30 and Task-31 wait on Task-29 and Task-26, `[!]` on issue
+#11, and Task-32 waits on Task-31. **Hot-file holders in this cut:** Task-78 holds
+`packages/contracts/src/index.ts`; no task holds `package.json`, `package-lock.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md`
+or `docs/decisions.md`. Docs are claimed by section only: Task-78 holds `docs/api.md` §5.6; no
+other doc is touched. **Deviations from the items' `*Paths:*` lines.** Task-78 **adds**
+`apps/daemon/src/backlog/**` (the projection must carry `needs` to the app; the item's
+`*Paths:*` line omits it and the Batch 20 note names it), `packages/contracts/src/works.ts` and
+`works.test.ts` (the `needs` key and its contract tests; `index.ts` is held and left unchanged
+because `BacklogItem` is already exported), `packages/backlog/src/dependencies.ts` and its test
+(one grammar for `*Dependencies:*`), and `docs/api.md` §5.6 (the payload is a contract change).
+It **releases** `packages/contracts/src/openapi.ts` and `openapi.test.ts`: the `Backlog`
+component is built from `backlogSchema`, no route is added, and the pinned path count stays
+**63**. Task-80 **narrows** `apps/app/src/theme/**` to `variables.css` (the motion keyframes and
+the reduced-motion block; `tokens.ts` is not touched) and adds `workers.motion.ts`/
+`workers.motion.spec.ts` for the phase rule. Both app tasks claim `apps/app/README.md`, the
+line-block split above.
+
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
