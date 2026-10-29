@@ -81,7 +81,7 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | `/dashboard` | Dashboard | **Running** and **ready** (an open PR), today's spend, health, and **one block per repository**; the start card on a fresh box. |
 | `/repos` | Repos list | The repository list with a **search field and no filters**: name, clone/gate state, `pending · running · merged` counts, and **one amber dot** when something needs the operator (an unreviewed PR or a red run); **add** connects one from the GitHub App installation, showing `connected` / `cloning` / `unavailable` per row. |
 | `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; **the chat button** opens a session with four targets (backlog, design, schedule, rework) or `repo` for a read-only chat; tabs **Backlog · Works · Schedule · Design**. |
-| `/repos/:id/works` | Repo · works | Every work of the repository, flat, newest activity first, including ad-hoc ones and orphans. |
+| `/repos/:id/workers` | Repo · workers | The repository's factory: four role rooms (`ORQ`, `ARC`, `DEV`, `QA`), one face and one task chip per subagent, the road in and the belt out, and the four states `queued`, `running`, `needs you`, `asleep`. `needs you` is a badge on the worker whose task is blocked: the orchestrator holds the card and the decision, the builder takes another task. A face opens that agent's log (`/works/:id`); there is no per-agent button. |
 | `/repos/:id/schedule` | Repo · schedule | The one `RepoSchedule`: mode, window, selection, caps, next fire, pause and *Run next* (D56). |
 | `/repos/:id/design` | Repo · design | Screen specs, tokens and snapshots from `design/`, with the state checklist and the preview. |
 | `/works/:id` | Work · run log | Runs, gate and PR cards, context header, cost, and **one action when blocked**: *Resolve doubt*; a merged work offers **Rework**, which opens a session whose proposal is a new run. No composer (D55). |
@@ -97,7 +97,7 @@ Bottom tabs: **Dashboard · Repos · Settings** (D47). A repository is a destina
 filter; Settings owns the cross-repository lists. Detail screens push onto the stack; deep links
 (`codebox://works/<id>`, `https://cb.example.com/works/<id>`) open the same route.
 
-A repository carries exactly four tabs — **Backlog · Works · Schedule · Design** — and the tab
+A repository carries exactly four tabs — **Backlog · Workers · Schedule · Design** — and the tab
 strip is one component, so a tab can never exist on one screen and not another.
 
 **The repository is the spine.** A work exists only inside one repository, one per backlog item,

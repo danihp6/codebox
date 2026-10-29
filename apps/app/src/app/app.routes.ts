@@ -47,10 +47,10 @@ export const routes: Routes = [
   },
   ...tabRoutes,
   {
-    path: 'repos/:id/works',
+    path: 'repos/:id/workers',
     canActivate: [authGuard],
     loadComponent: () =>
-      import('./features/works/repo-works.page').then((module) => module.RepoWorksPage),
+      import('./features/works/repo-workers.page').then((module) => module.RepoWorkersPage),
   },
   {
     path: 'repos/:id/schedule',
