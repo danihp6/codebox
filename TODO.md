@@ -1354,7 +1354,7 @@ the frame caption from `design/README.md` §1. They cannot be cut before L6 beca
 implement does not exist yet; a screen task that names no spec is not ready to launch
 (`AGENTS.md`, Workflow).
 
-- [ ] **[Task-81]** Design importer core. `packages/design/src/import.ts` maps a narrow
+- [x] **[Task-81]** Design importer core. `packages/design/src/import.ts` maps a narrow
       `FigmaFileSnapshot` — one page of frames with `id`, `caption` (the frame name exactly as
       drawn), `width`, `height` and the frame's distinct fills — plus an `ImportMap` (the committed
       `design/import.json`: `fileKey`, `page`, one entry per routed screen with `caption`,

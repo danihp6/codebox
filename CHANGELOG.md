@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-81, the Figma import core)
+
+- **`@codebox/design` turns a projected Figma page and the committed import map into the three
+  artifact families.** `parseImportMap` validates `design/import.json` as one strict zod document
+  — ten frames, three states each, a component that can never trip `route_without_component` —
+  and `importDesign` maps the frames in map order to `DesignRoute[]` and `ScreenSpec[]`, hashes
+  the export the map asks for through `snapshotHash`, and collects the mapped frames' distinct
+  fills, lowercased and sorted. A mapped caption the page no longer carries is `frame_missing`
+  naming the caption; a frame outside the map is the caller's arithmetic, never an error.
+- **Fixtures:** a twelve-frame page with two unmapped frames and a repeated uppercase fill, a
+  renamed-caption page for the missing case, a byte copy of the shipped map that the test asserts
+  equals `design/import.json`, and a 70-byte 1×1 PNG. Pure: no fetch, no filesystem, no clock,
+  no environment, no image decoding, and no new dependency (`zod` was already the package's).
+
 ### Added — 2026-10-29 (Task-80, the workers factory moves)
 
 - **The factory animates from CSS, not from JavaScript.** Three decorations the board draws only

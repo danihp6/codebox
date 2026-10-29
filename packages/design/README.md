@@ -23,17 +23,26 @@ environment, and no image decoding — the only thing done to a PNG is hashing i
 - `check.ts` — `checkDocuments` and `checkPatch`, the four rules over the parsed documents and
   over the added lines of a diff.
 - `snapshot.ts` — `snapshotHash` and `checkSnapshots`.
+- `import.ts` — the import-map parser and the projection of one Figma page into routes, screen
+  specs and the mapped fills, plus the hash that fills a spec's field.
 - `tokens.test.ts` — flattening, aliases, every pinned `$type`, and each parse error.
 - `routes.test.ts` — the route list, an empty component kept as data, and the rejected shapes.
 - `screens.test.ts` — the three states, the hash format and the rejected shapes.
 - `check.test.ts` — the four document rules, the caption colour rule and the patch walk.
 - `snapshot.test.ts` — the pinned hashes, a match, a mismatch and a missing export.
+- `import.test.ts` — the mapped and unmapped frames, a missing caption, the three states, the
+  duplicates, the component rule and the hash round trip.
 - `fixtures/tokens.json` — a small DTCG document the suites share.
 - `fixtures/routes.json` — the route map that matches `fixtures/screens/`.
 - `fixtures/screens/dashboard.json` — a complete screen spec, `Repo · backlog`'s is its sibling.
 - `fixtures/screens/repo-backlog.json` — a screen whose name carries a `·`.
 - `fixtures/patch/colour-outside.patch` — one added line with a hardcoded hex.
 - `fixtures/patch/clean.patch` — a token literal, an allowed line and the token document.
+- `fixtures/figma/file.json` — a twelve-frame page snapshot: the ten mapped captions and two
+  frames outside the map.
+- `fixtures/figma/file-missing.json` — the same page with the Dashboard frame renamed.
+- `fixtures/figma/import.json` — a byte copy of `design/import.json`, asserted equal by the suite.
+- `fixtures/figma/export-dashboard.png` — a 1 × 1 PNG, hashed and never decoded.
 
 ## Notes
 

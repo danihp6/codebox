@@ -1,0 +1,90 @@
+{
+  "fileKey": "3HMV2UN6QviuNXe2T3Htsr",
+  "page": "Page 1",
+  "frames": [
+    {
+      "id": "1:100",
+      "caption": "01 · Pairing — mobile dark",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14", "#121821", "#E6EDF3"]
+    },
+    {
+      "id": "2:101",
+      "caption": "02 · Repo list — mobile dark",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14", "#121821", "#8b98a5"]
+    },
+    {
+      "id": "3:102",
+      "caption": "22 · Repo · backlog — deps (dark)",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14", "#121821"]
+    },
+    {
+      "id": "4:103",
+      "caption": "20c · Crew · aerial — dark",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14", "#22c55e"]
+    },
+    {
+      "id": "5:104",
+      "caption": "26 · Design · preview + chat — dark",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14", "#f59e0b"]
+    },
+    {
+      "id": "6:105",
+      "caption": "05 · Dashboard — renamed",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14", "#121821", "#e6edf3"]
+    },
+    {
+      "id": "7:106",
+      "caption": "06 · Settings — mobile dark",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14", "#8b98a5"]
+    },
+    {
+      "id": "8:107",
+      "caption": "15 · Settings / Devices",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14"]
+    },
+    {
+      "id": "9:108",
+      "caption": "16 · Settings / Credentials",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14"]
+    },
+    {
+      "id": "10:109",
+      "caption": "07 · About — mobile dark",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14"]
+    },
+    {
+      "id": "11:900",
+      "caption": "Design System",
+      "width": 1280,
+      "height": 800,
+      "fills": ["#0b0f14", "#ff00ff"]
+    },
+    {
+      "id": "12:901",
+      "caption": "01b · Sheets — dark",
+      "width": 1280,
+      "height": 800,
+      "fills": ["#121821", "#abcdef"]
+    }
+  ]
+}
