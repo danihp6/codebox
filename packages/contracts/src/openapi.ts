@@ -3,6 +3,7 @@ import { parseOrThrow } from './parse.js';
 import { errorEnvelopeSchema } from './errors.js';
 import { sseEventSchema } from './events.js';
 import { pageOfRun, pageOfSession, pageOfSessionMessage, pageOfWork } from './pagination.js';
+import { designPreviewSchema } from './design.js';
 import { providerAccountSchema, providerAccountStateSchema } from './providers.js';
 import { routineSchema } from './routines.js';
 import {
@@ -528,6 +529,15 @@ const ROUTES: readonly RouteSpec[] = [
     response: 'Backlog',
   },
   {
+    path: '/v1/repos/{id}/design',
+    method: 'get',
+    operationId: 'getRepoDesign',
+    summary: 'The design/ directory at a commit: tokens, routes, declared states and the check.',
+    tag: 'repos',
+    status: '200',
+    response: 'DesignPreview',
+  },
+  {
     path: '/v1/repos/{id}/verify',
     method: 'post',
     operationId: 'verifyRepo',
@@ -838,6 +848,7 @@ const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
   Work: workSchema,
   WorkDetail: workDetailSchema,
   Backlog: backlogSchema,
+  DesignPreview: designPreviewSchema,
   Session: sessionSchema,
   SessionMessage: sessionMessageSchema,
   WorkPage: pageOfWork,

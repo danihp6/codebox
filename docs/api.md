@@ -186,6 +186,7 @@ disabled; or no active provider account: nothing runs).
 | `PATCH` | `/v1/repos/{id}` | `write` | Gate, policy (`auto`/`manual`), protected paths, enabled. |
 | `DELETE` | `/v1/repos/{id}` | `write` | 409 while a run is live. |
 | `POST` | `/v1/repos/{id}/verify` | `write` | `{ ok, defaultBranch, canPush, checks }`. |
+| `GET` | `/v1/repos/{id}/design?revision=` | `read` | `design/` at a commit: tokens, routes, declared states and the check's findings (D52). |
 
 ```json
 {
@@ -197,6 +198,49 @@ disabled; or no active provider account: nothing runs).
   "protectedPaths": [".github/**", "ops/**", "infra/**", "**/*.env"],
   "enabled": true,
   "createdAt": "2026-10-24T18:03:11Z"
+}
+```
+
+`GET /v1/repos/{id}/design` reads the repository's `design/` at `revision`, or at the default
+branch head when the query is absent. `present` is false when `design/tokens.json` is not at
+that commit, and then the four collections are empty — a repository without a design says so
+instead of guessing. `tokens` are the flat DTCG paths with their resolved value, `routes` and
+`screens` are the documents' own rows, and each screen carries the three states it declares
+(`loading`, `empty`, `error`, `null` when it declines one). `findings` are `@codebox/design`'s
+`checkDocuments` answers — a colour outside the tokens, a route without a component, a screen
+state missing — and never a pixel comparison: `snapshot_hash_mismatch` needs the exported PNG
+and stays the gate's rule (`docs/jobs.md` §5), so a declared `snapshotSha256` is echoed as data
+and not as a verdict. A commit the clone does not know is `422` with
+`details.reason = "revision_unknown"`; a repository with no usable clone is `503`
+`agent_unavailable` with `details.reason = "workspace_unavailable"`. The route writes nothing
+and emits no event.
+
+```json
+{
+  "repoId": "repo_01J...",
+  "revision": "9f1c2ab",
+  "present": true,
+  "tokens": [
+    { "name": "color.brand.bright", "type": "color", "value": "#22c55e" },
+    { "name": "space.gap", "type": "dimension", "value": "8" }
+  ],
+  "routes": [
+    { "path": "/repos/:id", "screen": "Repo · backlog", "component": "RepoBacklogPage" }
+  ],
+  "screens": [
+    {
+      "screen": "Repo · backlog",
+      "route": "/repos/:id",
+      "states": {
+        "loading": "Rows grey until the file parses",
+        "empty": "Empty file, one chat button",
+        "error": "Envelope over the list"
+      },
+      "snapshotSha256": null
+    }
+  ],
+  "findings": [],
+  "checkedAt": "2026-10-29T10:00:00Z"
 }
 ```
 

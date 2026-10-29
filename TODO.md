@@ -1255,7 +1255,7 @@ serial `packages/contracts` slice: `design.ts`, `index.ts`, `openapi.ts`). **Wav
   `packages/contracts/src/**`. *Dependencies:* Task-75. *Acceptance:* `[unit]` the rail draws one
   edge per dependency and none for a root; `[unit]` a blocked row carries every unmet id; `[live]`
   the rail stays legible with 8 rows at 320 px.
-- [ ] **[Task-79]** Design session: preview the repository's artifact. A `design` session opens
+- [x] **[Task-79]** Design session: preview the repository's artifact. A `design` session opens
   with the prototype card (`design/` at a commit, its declared states, the tokens/routes/states
   check) above the chat; an edit updates the preview and states what is pending. The preview is
   the repository's spec, never a canvas (D52). *Paths:*

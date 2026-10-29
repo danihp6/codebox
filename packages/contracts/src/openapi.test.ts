@@ -29,6 +29,7 @@ const requiredComponents = [
   'Work',
   'WorkDetail',
   'Backlog',
+  'DesignPreview',
   'Session',
   'SessionMessage',
   'WorkPage',
@@ -110,7 +111,7 @@ describe('openapi', () => {
   it('docs/api.md routes match the OpenAPI paths', () => {
     const document = buildOpenApiDocument();
     expect(Object.keys(document.paths).sort()).toEqual(docsPaths());
-    expect(Object.keys(document.paths)).toHaveLength(62);
+    expect(Object.keys(document.paths)).toHaveLength(63);
   });
 
   it('documents the eight credential and integration paths', () => {

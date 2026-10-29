@@ -4,7 +4,12 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { Session, SessionMessage, SseStreamEvent } from '@codebox/contracts';
+import type {
+  DesignPreview,
+  Session,
+  SessionMessage,
+  SseStreamEvent,
+} from '@codebox/contracts';
 import { provideIonicAngular } from '@ionic/angular';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SseService } from '../../core/events/sse.service';
@@ -41,6 +46,26 @@ const SESSION: Session = {
   lastMessage: null,
 };
 
+const DESIGN_URL = `/v1/repos/${SESSION.repoId}/design`;
+
+const PREVIEW: DesignPreview = {
+  repoId: SESSION.repoId,
+  revision: '9f1c2ab',
+  present: true,
+  tokens: [{ name: 'color.brand.bright', type: 'color', value: '#22c55e' }],
+  routes: [{ path: '/repos/:id', screen: 'Repo · backlog', component: 'RepoBacklogPage' }],
+  screens: [
+    {
+      screen: 'Repo · backlog',
+      route: '/repos/:id',
+      states: { loading: 'Rows grey', empty: null, error: 'Envelope' },
+      snapshotSha256: null,
+    },
+  ],
+  findings: [],
+  checkedAt: '2026-10-29T10:00:00Z',
+};
+
 const MESSAGE: SessionMessage = {
   id: 'msg_01JABCDEFGHJK',
   sessionId: SESSION_ID,
@@ -48,6 +73,15 @@ const MESSAGE: SessionMessage = {
   text: 'Here is the change.\n\n```json\n{"a":1}\n```',
   createdAt: TS,
 };
+
+function designUrl(session: Session): string {
+  const sha = session.pendingProposal?.sha ?? null;
+  return sha === null ? DESIGN_URL : `${DESIGN_URL}?revision=${sha}`;
+}
+
+function previewAt(session: Session): DesignPreview {
+  return { ...PREVIEW, repoId: session.repoId, revision: session.pendingProposal?.sha ?? '4d2e0aa' };
+}
 
 const i18nStub = { locale: () => 'en' as const };
 
@@ -75,6 +109,10 @@ async function mount(session: Session = SESSION, messages: readonly SessionMessa
   http.expectOne(SESSION_URL).flush(session);
   http.expectOne(MESSAGES_URL).flush({ data: [...messages], nextCursor: null });
   await fixture.whenStable();
+  if (session.target === 'design') {
+    http.expectOne(designUrl(session)).flush(previewAt(session));
+    await fixture.whenStable();
+  }
   return { fixture, element: fixture.nativeElement as HTMLElement, http };
 }
 
@@ -125,6 +163,8 @@ describe('SessionPage', () => {
       .expectOne({ method: 'POST', url: `/v1/sessions/${SESSION_ID}/merge` })
       .flush({ ...SESSION, pendingProposal: null });
     await fixture.whenStable();
+    http.expectOne(DESIGN_URL).flush(PREVIEW);
+    await fixture.whenStable();
 
     expect(hook(element, 'session-proposal')).toBeNull();
     const after = element.querySelector<HTMLTextAreaElement>('[data-testid="session-composer"]');
@@ -155,7 +195,7 @@ describe('SessionPage', () => {
   });
 
   it('draws no proposal panel on a read-only repository session', async () => {
-    const { element } = await mount({
+    const { element, http } = await mount({
       ...SESSION,
       target: 'repo',
       branch: null,
@@ -167,6 +207,8 @@ describe('SessionPage', () => {
     );
     expect(hook(element, 'session-proposal')).toBeNull();
     expect(hook(element, 'session-merge')).toBeNull();
+    expect(hook(element, 'design-preview')).toBeNull();
+    http.expectNone(DESIGN_URL);
     const composer = element.querySelector<HTMLTextAreaElement>('[data-testid="session-composer"]');
     expect(composer?.disabled).toBe(false);
   });
@@ -203,9 +245,30 @@ describe('SessionPage', () => {
     http.expectOne(SESSION_URL).flush(SESSION);
     http.expectOne(MESSAGES_URL).flush({ data: [MESSAGE], nextCursor: null });
     await fixture.whenStable();
+    http.expectOne(DESIGN_URL).flush(PREVIEW);
+    await fixture.whenStable();
 
     expect(hook(element, 'session-error')).toBeNull();
     expect(hook(element, 'session-message')).not.toBeNull();
+  });
+
+  it('asks the preview for the proposal commit once a proposal lands', async () => {
+    const { element, fixture, http } = await mount();
+    expect(hook(element, 'design-preview')?.getAttribute('data-revision')).toBe('4d2e0aa');
+    expect(hook(element, 'design-preview-pending')).toBeNull();
+
+    fixture.componentInstance.store.reload();
+    await fixture.whenStable();
+    const carried = { ...SESSION, pendingProposal: PROPOSAL };
+    http.expectOne(SESSION_URL).flush(carried);
+    http.expectOne(MESSAGES_URL).flush({ data: [MESSAGE], nextCursor: null });
+    await fixture.whenStable();
+
+    http.expectOne(`${DESIGN_URL}?revision=${PROPOSAL.sha}`).flush(previewAt(carried));
+    await fixture.whenStable();
+
+    expect(hook(element, 'design-preview-revision')?.getAttribute('data-sha')).toBe(PROPOSAL.sha);
+    expect(hook(element, 'design-preview-pending')).not.toBeNull();
   });
 
   it('ships both locales key-for-key', () => {

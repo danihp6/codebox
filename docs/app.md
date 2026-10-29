@@ -174,6 +174,13 @@ by tool call id), and a reconnect never duplicates a message because the store d
 
 - a header naming its target — `TODO.md`, `design/`, `.codebox/schedule.yml` or the work it is
   bound to — because the target is also the write boundary;
+- a `design` session renders the repository's preview **above the thread**: `design/` at the
+  pending proposal's commit, or at the default branch head when nothing is pending, with its
+  tokens, its routes, each screen's three declared states and the findings of the
+  tokens/routes/states check (D52). It is the repository's spec, never a canvas; a repository
+  with no `design/` says so, and a pending change names the commit it will land;
+- the preview refetches when that commit changes and never draws a state the file does not
+  declare;
 - the thread, the same streaming and tool-card rules, and a composer that stays usable with a
   stop button;
 - a **proposal panel** with the branch, the commit, the files it may touch and *Merge*; while a

@@ -10,6 +10,7 @@ import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import type { Session, SessionMessage } from '@codebox/contracts';
 import { SseService } from '../../core/events/sse.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { DesignPreviewCard } from './design-preview.card';
 import { translate } from './i18n';
 import { parseMarkdown } from './markdown';
 import type { MarkdownBlock } from './markdown';
@@ -18,7 +19,7 @@ import { SessionStore } from './session.store';
 @Component({
   selector: 'app-session-page',
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar],
+  imports: [IonContent, IonHeader, IonTitle, IonToolbar, DesignPreviewCard],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [SessionStore],
   styles: [
@@ -157,6 +158,13 @@ import { SessionStore } from './session.store';
               <span class="cb-muted" data-testid="session-working">{{ t('session.working') }}</span>
             }
           </header>
+
+          @if (session.target === 'design') {
+            <app-design-preview-card
+              [repoId]="session.repoId"
+              [revision]="session.pendingProposal?.sha ?? null"
+            />
+          }
         }
 
         @if (store.thread().messages.length === 0) {

@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-79, the design preview is the repository's own spec)
+
+- **`GET /v1/repos/{id}/design?revision=<sha>` serves the repository's `design/` at a commit**
+  (D52). The response carries the resolved sha, the tokens, the routes, each screen's three
+  declared states and the `checkDocuments` findings, parsed by `@codebox/design`; an unknown
+  revision is a `422 revision_unknown`, a repository with no `design/` answers `present: false`,
+  and a workspace that cannot be read is `503 workspace_unavailable`. The route is the daemon's
+  sixteenth subsystem (`apps/daemon/src/design/**`), and `packages/contracts/src/design.ts`
+  types both the request and the response — the OpenAPI document is 63 paths.
+- **The session screen shows the prototype card above the thread.** A `design` session renders
+  the commit, the collections, one row per screen with its three states (declared or not), the
+  clean result or each finding, and the pending line when the commit is not the branch head; a
+  proposal re-reads the preview at the proposal's sha.
+- **One deviation, recorded:** the repository's `design` tab still renders its honest
+  unavailable block — the card landed in the session screen, and wiring the tab to the new route
+  is a later cut. The `[live]` criterion (a chat edit moves the preview) is unmeasured on a
+  headless runner; issue #82 carries its measurement.
+
 ### Added — 2026-10-29 (Task-77, the repository's workers floor)
 
 - **The repository's second tab is a factory, not a list (D44).** `/repos/:id/workers` renders
