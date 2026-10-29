@@ -1,6 +1,6 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
-import type { WritableSignal } from '@angular/core';
+import type { EnvironmentProviders, Provider, Type, WritableSignal } from '@angular/core';
 import { signal } from '@angular/core';
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
@@ -8,7 +8,7 @@ import type { NotificationPreferences } from '@codebox/contracts';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Locale } from '../../core/i18n/i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { NotificationsPanel } from './notifications.page';
+import { NotificationsPage, NotificationsPanel } from './notifications.page';
 import { NOTIFICATION_EVENTS } from './notifications.store';
 
 const PREFERENCES_URL = '/v1/notifications/preferences';
@@ -22,23 +22,31 @@ const FAILURE = {
   error: { code: 'internal', message: 'Boom', requestId: 'req_01JABCDEFGHJKMNPQRSV' },
 };
 
-interface Mounted {
-  readonly fixture: ComponentFixture<NotificationsPanel>;
+interface MountedOf<T> {
+  readonly fixture: ComponentFixture<T>;
   readonly element: HTMLElement;
   readonly http: HttpTestingController;
   readonly locale: WritableSignal<Locale>;
 }
 
+type Mounted = MountedOf<NotificationsPanel>;
+
 async function mount(locale: Locale = 'en'): Promise<Mounted> {
+  return mountComponent(NotificationsPanel, locale);
+}
+
+function testProviders(localeSignal: WritableSignal<Locale>): (Provider | EnvironmentProviders)[] {
+  return [
+    provideHttpClient(),
+    provideHttpClientTesting(),
+    { provide: I18nService, useValue: { locale: localeSignal } },
+  ];
+}
+
+async function mountComponent<T>(component: Type<T>, locale: Locale = 'en'): Promise<MountedOf<T>> {
   const localeSignal = signal<Locale>(locale);
-  TestBed.configureTestingModule({
-    providers: [
-      provideHttpClient(),
-      provideHttpClientTesting(),
-      { provide: I18nService, useValue: { locale: localeSignal } },
-    ],
-  });
-  const fixture = TestBed.createComponent(NotificationsPanel);
+  TestBed.configureTestingModule({ providers: testProviders(localeSignal) });
+  const fixture = TestBed.createComponent(component);
   await fixture.whenStable();
   return {
     fixture,
@@ -245,6 +253,17 @@ describe('NotificationsPanel', () => {
     hook(mounted.element, 'notifications-close')?.click();
 
     expect(closed).toBe(1);
+    mounted.http.verify();
+  });
+
+  it('mounts the panel on the routed page', async () => {
+    const mounted = await mountComponent(NotificationsPage);
+
+    mounted.http.expectOne({ method: 'GET', url: PREFERENCES_URL }).flush(PREFERENCES_BODY);
+    await mounted.fixture.whenStable();
+
+    expect(hook(mounted.element, 'notifications-panel')).not.toBeNull();
+    expect(toggles(mounted.element)).toHaveLength(5);
     mounted.http.verify();
   });
 });

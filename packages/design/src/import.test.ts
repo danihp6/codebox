@@ -80,9 +80,9 @@ describe('importDesign', () => {
   it('projects the mapped frames in map order and ignores the frames outside the map', () => {
     const result = importedFixture();
 
-    expect(fileSnapshot('file.json').frames).toHaveLength(12);
-    expect(result.routes).toHaveLength(10);
-    expect(result.screens).toHaveLength(10);
+    expect(fileSnapshot('file.json').frames).toHaveLength(13);
+    expect(result.routes).toHaveLength(11);
+    expect(result.screens).toHaveLength(11);
     expect(result.routes[DASHBOARD_INDEX]).toEqual({
       path: '/dashboard',
       screen: 'Dashboard',
@@ -152,7 +152,7 @@ describe('parseImportMap', () => {
   it('reads the shipped map, and the package copy is byte-identical to it', () => {
     const map = parseImportMap(jsonOf(SHIPPED_MAP));
 
-    expect(map.frames).toHaveLength(10);
+    expect(map.frames).toHaveLength(11);
     expect(map.frames.every((frame) => frame.snapshot)).toBe(true);
     expect(
       readFileSync(new URL('./fixtures/figma/import.json', import.meta.url)).equals(
@@ -244,7 +244,7 @@ describe('round trip', () => {
     const result = importedFixture();
     const routes = parseRoutes({ routes: result.routes });
 
-    expect(routes).toHaveLength(10);
+    expect(routes).toHaveLength(11);
     for (const spec of result.screens) expect(parseScreenSpec(spec)).toEqual(spec);
 
     const findings = checkDocuments({

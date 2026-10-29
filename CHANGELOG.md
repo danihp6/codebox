@@ -6,6 +6,28 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-87, the notifications route and a map that cannot drift)
+
+- **`/settings/notifications` is a real route.** `NotificationsPage` (the existing panel plus a
+  thin standalone page in the same file, so no new file and no README line) mounts behind
+  `authGuard` between `settings/credentials` and `about`; `/settings` keeps rendering the panel.
+  `docs/app.md` §4 says so, and the eleventh import entry names the frame
+  `17 · Settings / Notifications` → `/settings/notifications` → `NotificationsPage`.
+- **A documented screen that no route serves now fails the suite.** `missingDocumentedRoutes()`
+  is a pure helper in `app.routes.ts`; the router spec checks every route in the committed
+  `design/import.json` against the router table, reads `design/routes.json` **only when it
+  exists** (L6 writes it later; it is absent today and was not created), and proves the check by
+  fixture — a table without `settings/notifications` returns that path, the real table plus
+  `/settings/nowhere` returns that one. The retired list also pins `routines` and `routines/:id`
+  beside `chat`, `jobs`, `runs` and `approvals`, so no retired route can reappear.
+- **The map and the fixtures move as one fact.** `design/import.json` gains the entry and its two
+  byte-copy fixtures stay byte-identical to it; the two page fixtures gain the one childless
+  390 × 844 frame (thirteen frames, eleven mapped captions, `colours` and
+  `coloursOutsideTokens` unchanged), `images.json` gains `9:190`, and the count assertions in
+  `packages/design/src/import.test.ts` and `scripts/design/import.test.mjs` move from ten to
+  eleven. `design/routes.json`, `design/screens/**` and `design/exports/**` stay absent: they are
+  L6's output.
+
 ### Added — 2026-10-29 (Task-86, the app draws in Inter)
 
 - **Inter ships inside the bundle, not from a CDN.** `@fontsource-variable/inter@5.3.0` becomes a

@@ -1,12 +1,13 @@
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { TestBed } from '@angular/core/testing';
 import type { Route } from '@angular/router';
 import { describe, expect, it, vi } from 'vitest';
 import { restoreSession } from './app.config';
-import { SHELL_TABS, routes } from './app.routes';
+import { SHELL_TABS, missingDocumentedRoutes, routes } from './app.routes';
 import { authGuard } from './core/auth/auth.guard';
 import { AuthStore } from './core/auth/auth.store';
+import { NotificationsPage } from './features/settings/notifications.page';
 
 const EXPECTED_PATHS = [
   '',
@@ -22,6 +23,7 @@ const EXPECTED_PATHS = [
   'sessions/:id',
   'settings/devices',
   'settings/credentials',
+  'settings/notifications',
   'about',
   '**',
 ] as const;
@@ -35,7 +37,7 @@ const UNTABBED_PATHS = EXPECTED_PATHS.filter(
 );
 
 /** Panels that render inside `/settings` and have no route of their own (docs/app.md §4). */
-const PANEL_ONLY_PATHS: readonly string[] = ['/settings/providers', '/settings/notifications'];
+const PANEL_ONLY_PATHS: readonly string[] = ['/settings/providers'];
 
 function routeFor(path: string): Route {
   const route = routes.find((candidate) => candidate.path === path);
@@ -56,6 +58,14 @@ function documentedPaths(): readonly string[] {
     .split('\n')
     .map((line) => /^\| `([^`]+)` \|/.exec(line)?.[1])
     .filter((path): path is string => path !== undefined);
+}
+
+function readJson<T>(relative: string): T {
+  return JSON.parse(readFileSync(resolve(process.cwd(), relative), 'utf8')) as T;
+}
+
+function importMapFrames(): readonly { readonly route: string }[] {
+  return readJson<{ frames: { route: string }[] }>('../../design/import.json').frames;
 }
 
 describe('app routes', () => {
@@ -84,6 +94,45 @@ describe('app routes', () => {
       expect(canActivate, `route ${path} is not guarded`).toHaveLength(1);
       expect(canActivate?.[0], `route ${path} uses a different guard`).toBe(authGuard);
     }
+  });
+
+  it('loads the notifications page behind the one guard', async () => {
+    const route = routeFor('settings/notifications');
+
+    expect(route.canActivate).toHaveLength(1);
+    expect(route.canActivate?.[0]).toBe(authGuard);
+    await expect(route.loadComponent?.()).resolves.toBe(NotificationsPage);
+    expect(route.data?.['tab']).toBeUndefined();
+  });
+
+  it('serves every route the design import map documents', () => {
+    const frames = importMapFrames();
+
+    expect(frames).toHaveLength(11);
+    expect(
+      missingDocumentedRoutes(
+        routes,
+        frames.map((frame) => ({ path: frame.route })),
+      ),
+    ).toEqual([]);
+
+    const generatedPath = resolve(process.cwd(), '../../design/routes.json');
+    if (!existsSync(generatedPath)) return;
+    const generated = JSON.parse(readFileSync(generatedPath, 'utf8')) as {
+      routes: { path: string }[];
+    };
+    expect(missingDocumentedRoutes(routes, generated.routes)).toEqual([]);
+  });
+
+  it('reports a documented route the router does not serve', () => {
+    const withoutNotifications = routes.filter((route) => route.path !== 'settings/notifications');
+
+    expect(
+      missingDocumentedRoutes(withoutNotifications, [{ path: '/settings/notifications' }]),
+    ).toEqual(['/settings/notifications']);
+    expect(missingDocumentedRoutes(routes, [{ path: '/settings/nowhere' }])).toEqual([
+      '/settings/nowhere',
+    ]);
   });
 
   it('derives the three tab roots from SHELL_TABS', () => {
@@ -126,8 +175,18 @@ describe('app routes', () => {
     }
   });
 
-  it('retires the chat, jobs, runs and approvals routes', () => {
-    const retired = ['chat', 'schedules', 'jobs', 'jobs/:id', 'runs', 'runs/:id', 'approvals'];
+  it('retires the chat, routines, jobs, runs and approvals routes', () => {
+    const retired = [
+      'chat',
+      'schedules',
+      'jobs',
+      'jobs/:id',
+      'runs',
+      'runs/:id',
+      'approvals',
+      'routines',
+      'routines/:id',
+    ];
     const paths = routes.map((route) => route.path);
     for (const path of retired) expect(paths, path).not.toContain(path);
     expect(SHELL_TABS).toHaveLength(3);

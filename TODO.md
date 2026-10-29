@@ -1529,7 +1529,7 @@ and Task-87 holds `apps/app/src/app/app.routes.ts`. No task touches a Batch 21 p
       `font.mono`; `[unit]` every hex literal under `apps/app/src/**` is still a token value;
       `[live]` a capture of `/pair` at 390 px matches the metrics of `01 · Pairing — mobile dark`.
 
-- [ ] **[Task-87]** The notifications route, and the map against the router. Mount
+- [x] **[Task-87]** The notifications route, and the map against the router. Mount
       `/settings/notifications` over the page that already exists, add `17 · Settings /
       Notifications` to `design/import.json`, restore its row in `design/README.md` §1, and close
       the gap the batch left open: a test that every route in `design/import.json` and in
