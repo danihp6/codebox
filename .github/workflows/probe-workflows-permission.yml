@@ -1,12 +1,17 @@
 name: probe / workflows permission
 
-# One-shot measurement for issue #11: can the credential the cycle pushes with write a file
-# under `.github/workflows/**`? It creates a throwaway branch carrying one workflow file,
-# pushes it with the same secret `agent-cycle` uses, and deletes it. No inference, no merge,
-# nothing left behind. Green means Task-26 and Task-29 can create their workflow files.
+# Measurement for issue #11: which credential can write what. Four pushes, each from a clean
+# `origin/main`, to throwaway branches deleted in the same step. Nothing is merged.
 #
-# The other door is the App installation the daemon uses at runtime; that one is measured by
-# the first run that pushes such a branch, not by this probe.
+#   A. CB_AGENT_TOKEN, plain file      → Contents: write on the PAT
+#   B. CB_AGENT_TOKEN, workflow file   → Workflows: write on the PAT
+#   C. github.token,   plain file      → the job's own token (permissions: contents: write)
+#   D. github.token,   workflow file   → impossible by design: `permissions:` has no
+#                                        `workflows` key, so the Actions app can never write one
+#
+# Reading: C green with D red means the cycle is pushing with github.token, and no secret
+# fixes that — the push needs a PAT carrying Contents **and** Workflows read and write.
+# A and B green means CB_AGENT_TOKEN already can, and issue #11 can be closed.
 
 on:
   workflow_dispatch:
@@ -23,19 +28,103 @@ jobs:
           token: ${{ secrets.CB_AGENT_TOKEN }}
           fetch-depth: 0
 
-      - name: Push a workflow file to a throwaway branch, then delete it
+      - name: Configure git identity
         env:
-          BRANCH: probe/workflows-permission
+          PAT: ${{ secrets.CB_AGENT_TOKEN }}
         run: |
-          set -euo pipefail
           git config user.name codebox-bot
           git config user.email codebox-bot@users.noreply.github.com
-          git switch -c "$BRANCH"
+          echo "CB_AGENT_TOKEN length: ${#PAT} (0 = the secret is unset)"
+          echo "checkout extraheader bytes: $(git config --get-all http.https://github.com/.extraheader | wc -c)"
+
+      - name: A. CB_AGENT_TOKEN, plain file
+        id: a
+        continue-on-error: true
+        env:
+          BRANCH: probe/a-contents
+        run: |
+          set -euo pipefail
+          git reset --hard origin/main && git clean -fd
+          git switch --force-create "$BRANCH"
+          printf 'probe\n' > probe.txt
+          git add probe.txt && git commit -m "probe: A contents with the PAT"
+          git push --force origin "$BRANCH"
+          git push origin --delete "$BRANCH"
+
+      - name: B. CB_AGENT_TOKEN, workflow file
+        id: b
+        continue-on-error: true
+        env:
+          BRANCH: probe/b-workflows
+        run: |
+          set -euo pipefail
+          git reset --hard origin/main && git clean -fd
+          git switch --force-create "$BRANCH"
           mkdir -p .github/workflows
           printf 'name: probe\non: workflow_dispatch\njobs:\n  noop:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo probe\n' > .github/workflows/probe.yml
-          git add .github/workflows/probe.yml
-          git commit -m "probe: can this credential write a workflow file"
+          git add .github/workflows/probe.yml && git commit -m "probe: B workflows with the PAT"
           git push --force origin "$BRANCH"
-          echo "::notice::pushed $BRANCH with a workflow file: the credential can write .github/workflows/**"
           git push origin --delete "$BRANCH"
-          echo "::notice::branch deleted; nothing was merged"
+
+      - name: C. github.token, plain file
+        id: c
+        continue-on-error: true
+        env:
+          BRANCH: probe/c-contents
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config --local --unset-all http.https://github.com/.extraheader || true
+          git reset --hard origin/main && git clean -fd
+          git switch --force-create "$BRANCH"
+          printf 'probe\n' > probe-token.txt
+          git add probe-token.txt && git commit -m "probe: C contents with github.token"
+          git push --force "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BRANCH"
+          git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" --delete "$BRANCH"
+
+      - name: D. github.token, workflow file
+        id: d
+        continue-on-error: true
+        env:
+          BRANCH: probe/d-workflows
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git reset --hard origin/main && git clean -fd
+          git switch --force-create "$BRANCH"
+          mkdir -p .github/workflows
+          printf 'name: probe\non: workflow_dispatch\njobs:\n  noop:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo probe\n' > .github/workflows/probe.yml
+          git add .github/workflows/probe.yml && git commit -m "probe: D workflows with github.token"
+          git push --force "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "$BRANCH"
+          git push "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" --delete "$BRANCH"
+
+      - name: Verdict
+        if: always()
+        env:
+          A: ${{ steps.a.outcome }}
+          B: ${{ steps.b.outcome }}
+          C: ${{ steps.c.outcome }}
+          D: ${{ steps.d.outcome }}
+        run: |
+          {
+            echo "| push | credential | outcome |"
+            echo "| --- | --- | --- |"
+            echo "| A. plain file | CB_AGENT_TOKEN | $A |"
+            echo "| B. workflow file | CB_AGENT_TOKEN | $B |"
+            echo "| C. plain file | github.token | $C |"
+            echo "| D. workflow file | github.token | $D |"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$B" = success ]; then
+            echo "RESULT: CB_AGENT_TOKEN writes workflow files; #11 is closed for the cycle."
+            exit 0
+          fi
+          if [ "$A" != success ] && [ "$C" = success ]; then
+            echo "RESULT: CB_AGENT_TOKEN cannot write contents; the cycle is pushing with github.token, which can never write a workflow file. Fix the PAT: Contents read and write + Workflows read and write."
+            exit 1
+          fi
+          if [ "$C" != success ] && [ "$A" != success ]; then
+            echo "RESULT: neither credential writes; check the repository rulesets before #11."
+            exit 1
+          fi
+          echo "RESULT: contents work, workflow files do not; the credential needs Workflows read and write."
+          exit 1
