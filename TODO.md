@@ -57,6 +57,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 17 | One task per screen | 55–57, 59–67 | 4 |
 | 18 | Documentation and legal | 68–69 | 1 |
 | 20 | Repo views: workers factory, backlog deps, design preview | 77–80 | 4 |
+| 21 | Figma → `design/` import (D52) | 81–84 | 3, then 1 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -250,6 +251,31 @@ component is built from `backlogSchema`, no route is added, and the pinned path 
 the reduced-motion block; `tokens.ts` is not touched) and adds `workers.motion.ts`/
 `workers.motion.spec.ts` for the phase rule. Both app tasks claim `apps/app/README.md`, the
 line-block split above.
+
+**Cut — cycle after the Batch 20 wave 2 (three of four slots used).** Batch 21 was first cut
+before the Figma file had been read; the REST read of `3HMV2UN6QviuNXe2T3Htsr` (28 Oct 2026)
+corrected two assumptions — there is no `caption` text layer and no style layer at all — so the cut
+now opens with **wave 1**: Task-81 (the importer's pure core), Task-83 (the gate that stops
+skipping) and Task-84 (the colour token document), in parallel. Their paths are disjoint —
+`packages/design/**` against `packages/core/src/**` + `apps/daemon/src/{gate,run}/**` +
+`docs/decisions.md`, and `design/tokens.json` + `docs/app.md` §9 — and none needs a file another
+produces. **Wave 2** is Task-82 (the command), after Task-81 alone: it imports the mappers Task-81
+exports and reads the fixtures it writes. `design/import.json` is committed before the batch and is
+a read-only input to 81 and 82, never a deliverable. The one empty slot has no legal candidate:
+Task-30 and Task-31 wait on Task-29 and Task-26, `[!]` on issue #11, Task-32 waits on Task-31, and
+every other open item is one of these four. **None of 81, 82, 83 or 84 depends on Task-26 or
+Task-29, and none adds a workflow file, so issue #11 blocks nothing here.**
+**Hot-file holders in this cut:** Task-83 holds `docs/decisions.md` (D57) and nothing else does.
+No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`,
+`apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`, `opencode.json`, `TODO.md` or
+`CHANGELOG.md`; `packages/design/src/index.ts` is Task-81's alone. Docs and data are claimed by
+section or file: Task-81 holds `packages/design/README.md` (the package map), Task-82 holds
+`design/README.md` (the whole file) and `docs/providers.md` §13.1, Task-83 holds `docs/jobs.md` §5
+and its decision record, Task-84 holds `docs/app.md` §9. The root `package.json`,
+`scripts/README.md`, `.gitignore`, `apps/daemon/bin/cb.mjs`, `scripts/dev-local.mjs` and
+`scripts/dev-local.test.mjs` are the operator's uncommitted work: no task touches any of them, and
+the new command is invoked as `node scripts/design/import.mjs`.
 
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
@@ -1304,6 +1330,111 @@ serial `packages/contracts` slice: `design.ts`, `index.ts`, `openapi.ts`). **Wav
 
 ---
 
+## Batch 21 — Figma → `design/` import (D52)
+
+`design/` held only `README.md`, so the design check had nothing to read: `scanDesign` returned
+`skipped: true`, `gating()` never called it (issue #75), and the app could drift from the prototype
+with nothing to catch it. The file has since been read over the REST API — file
+`3HMV2UN6QviuNXe2T3Htsr`, one page `Page 1` with 136 top-level children of which 83 are FRAME, and
+**0 styles**: every colour is a literal fill. So the batch imports the routes, the screen specs and
+the exports, authors the tokens from the palette the app already uses, and turns the check on.
+
+**Wave 1 (parallel):** Task-81 (the pure mappers), Task-83 (the gate call and its policy) and
+Task-84 (the token document). Disjoint paths, no dependency between them. **Wave 2:** Task-82 (the
+command), after Task-81, because it imports those mappers and reads its fixtures.
+`design/import.json` is committed before the batch and is an input to 81 and 82, never a
+deliverable. None of the four depends on Batch 7's blocked Task-26/Task-29 and none adds a workflow
+file, so issue #11 blocks nothing here.
+
+- [ ] **[Task-81]** Design importer core. `packages/design/src/import.ts` maps a narrow
+      `FigmaFileSnapshot` — one page of frames with `id`, `caption` (the frame name exactly as
+      drawn), `width`, `height` and the frame's distinct fills — plus an `ImportMap` (the committed
+      `design/import.json`: `fileKey`, `page`, one entry per routed screen with `caption`,
+      `screen`, `route`, `component`, the three state values and `snapshot`) to `DesignRoute[]`,
+      `ScreenSpec[]` and the distinct `colours` across the mapped frames. A frame in the map that no
+      longer exists is fatal (`frame_missing`, naming the caption); a frame on the page that is not
+      in the map is **not** an error — the page also holds the Design System, sheets, motion and
+      twin frames — and is counted by the command, never reported per frame. Pure: no fetch, no fs,
+      no clock, no token derivation. *Paths:* `packages/design/src/import.ts`,
+      `packages/design/src/import.test.ts`, `packages/design/src/fixtures/figma/file.json`,
+      `packages/design/src/fixtures/figma/file-missing.json`,
+      `packages/design/src/fixtures/figma/import.json`,
+      `packages/design/src/fixtures/figma/export-dashboard.png`, `packages/design/src/index.ts`,
+      `packages/design/README.md`. *Dependencies:* none; `design/import.json` is a read-only input.
+      *Acceptance:* `[unit]` a page with frames outside the map imports and its `colours` hold only
+      mapped fills; `[unit]` a mapped caption with no frame throws `frame_missing` with the
+      caption; `[unit]` an entry whose `states` omits `empty` is rejected while `empty: null`
+      imports; `[unit]` `snapshotSha256` equals the package's `snapshotHash` over the fixture PNG;
+      `[unit]` the shipped `design/import.json` parses to ten entries, all `snapshot: true`;
+      `[unit]` the output re-parses through `parseRoutes` and `parseScreenSpec` and yields no
+      `route_without_component`.
+
+- [ ] **[Task-82]** The import command. `node scripts/design/import.mjs --file <key>` reads
+      `FIGMA_TOKEN` and `FIGMA_FILE_KEY`, reads the committed `design/import.json`, calls the Figma
+      REST API with `fetch` (`GET /v1/files/:key?depth=6`,
+      `GET /v1/images/:key?ids=…&format=png&scale=2`, then the pre-signed PNG URLs), projects the
+      page into `FigmaFileSnapshot`, calls Task-81's `parseImportMap` and `importDesign`, and writes
+      `design/routes.json`, `design/screens/<slug>.json` and `design/exports/<slug>.png`, printing
+      one status line per artifact. The summary reports `frames`, `mapped`, `unmapped`, `colours`,
+      `coloursOutsideTokens`, `routes`, `screens`, `exports`; `coloursOutsideTokens` measures the
+      literal fills against Task-84's token values and never fails the import (the factory
+      illustration keeps its own palette). `--check` writes nothing and exits 1 on drift. No
+      `/styles` call and no token derivation: the file has 0 styles, so `design/tokens.json` is
+      authored by Task-84, not imported. No new dependency; no commit, push or PR. *Paths:*
+      `scripts/design/import.mjs`, `scripts/design/import.test.mjs`,
+      `scripts/design/fixtures/file.json`, `scripts/design/fixtures/import.json`,
+      `scripts/design/fixtures/images.json`, `scripts/design/fixtures/export-frame.png`,
+      `design/README.md` (the whole file), `docs/providers.md` (§13.1). *Dependencies:* Task-81
+      (the mappers, the map parser and the fixtures). *Acceptance:* `[unit]` an injected `fetch`
+      over the fixture responses and the fixture map writes the three artifact families under a
+      temp root and each JSON re-parses through the package; `[unit]` `--check` writes
+      nothing and returns 1 when one byte differs, 0 when it does not; `[unit]` a missing
+      `FIGMA_TOKEN` stops before the first request, names the key and exits 2; `[unit]` a missing
+      map fails with `map_missing` and the default path is `design/import.json`; `[unit]` the two
+      API calls carry `X-Figma-Token` and the PNG URL requests do not; `[unit]` a page name absent
+      from the file fails naming the page and the pages present, and writes nothing.
+
+- [ ] **[Task-83]** The design check stops skipping (issue #75). Call `scanDesign` from `gating()`
+      after the secret scan, on every run, and append its findings to the gate tail as
+      `<file>:<line> <rule>`. **Enforce** `colour_outside_tokens`, `route_without_component` and
+      `snapshot_hash_mismatch`; **report** `screen_state_missing` as a `(report-only)` tail line
+      that does not fail the run until L5 draws the missing frames. Task-84 lands
+      `design/tokens.json` in the same wave, so this repository stops skipping at that merge:
+      `checkPatch` enforces the colour rule on every diff while L6 has not yet written the specs,
+      and `checkDocuments` starts reporting the screens' null states once it has. A repository with
+      no `design/tokens.json` still skips. A design git failure is `design_scan: git_failed` and
+      fails closed, like the secret scan. The classification is one pure rule in `packages/core`,
+      fail-closed for an unknown rule. **Gate and security change:** `docs/jobs.md` §5, a decision
+      record (D57, amending D52) and the tests land in the same task. *Paths:*
+      `apps/daemon/src/run/engine.ts`, `apps/daemon/src/run/engine.test.ts`,
+      `apps/daemon/src/gate/design-check.ts`, `apps/daemon/src/gate/design-check.test.ts`,
+      `packages/core/src/design-gate.ts`, `packages/core/src/design-gate.test.ts`,
+      `packages/core/src/index.ts`, `packages/core/README.md`, `docs/jobs.md` (§5),
+      `docs/decisions.md` (D57). *Dependencies:* none — the step, the package and the engine are
+      on `main`. *Acceptance:* `[unit]` only `screen_state_missing` is report-only and an unknown
+      rule is enforced; `[unit]` in a worktree carrying this repository's own `design/tokens.json`
+      a diff line with `#0b0f14` passes and one with `#0b1120` fails; `[unit]` a run whose screen
+      declares `#ffffff` ends `failed` with `gate_failed`, the tail line and no PR; `[unit]` a
+      `null` state leaves the run `succeeded` with a `(report-only)` line and one
+      `design_scan_reported` log; `[unit]` a worktree without `design/tokens.json` is skipped and
+      the run is unchanged; `[unit]` `design_scan: git_failed` fails the run; `[unit]` a diff that
+      trips the secret scan reports the secret alone.
+
+- [ ] **[Task-84]** The colour token document. Author `design/tokens.json` — DTCG, colour only —
+      from the palette the app already uses: `#0b0f14`, `#121821`, `#e6edf3`, `#8b98a5`,
+      `#22c55e`, `#f59e0b`, `#ef4444`, `#5b6772`, `#f7f9fb`, `#ffffff`, plus the two light accents
+      `design/README.md` §5 promises (`#15803d`, `#b45309`). Twelve leaves under
+      `color.surface.*`, `color.ink.*`, `color.brand.*`, `color.waiting.*` and `color.danger.*`,
+      each `{ "$value": "#…", "$type": "color" }`. This is the document the design check reads:
+      once it lands, `scanDesign` stops skipping in this repository and `checkPatch` enforces the
+      colour rule on every diff, so the set has to cover the current tree exactly. *Paths:*
+      `design/tokens.json`, `docs/app.md` (§9). *Dependencies:* none. *Acceptance:* `[unit]` every
+      hex literal under `apps/app/src/**` appears in the token values, lowercased; `[unit]` the
+      file re-parses through `parseTokens` and `tokenValues` returns exactly those twelve values;
+      `[unit]` `docs/app.md` §9 names the same twelve keys.
+
+---
+
 ## Local / human (never picked by the driver)
 
 The driver only counts `- [ ] **[Task-NN]**`; these `L<n>` items are outside the queue by
@@ -1316,7 +1447,10 @@ construction. They need a local key, an external tool or a store account.
       `docs/app.md` §9; export PNGs and a screen-to-route map in `design/`. **Superseded by
       D51-D54 (2026-10-28):** the file holds 40 frames drawn against the retired chat model, so
       the frames are renamed, retired and re-cut against `Repo · backlog` and `Work`, and
-      `design/README.md` carries the new map. The export step stays manual. *Dependencies:* none.
+      `design/README.md` carries the new map. The export step is the Batch 21 importer
+      (`node scripts/design/import.mjs`) run by the operator at L6; the token document is authored
+      in the repository by Task-84, never imported; neither ever becomes a driver task.
+      *Dependencies:* none.
 - [ ] **L5 — Design completeness.** Close what the prototype still lacks, in this order: desktop
       for the eight routed screens that have none (only Chat and Dashboard exist), 320 for the
       seven that were never squeezed, **interaction states** (hover, focus-visible, pressed,
@@ -1328,6 +1462,17 @@ construction. They need a local key, an external tool or a store account.
       *Acceptance:* `[unit]` every row of `design/README.md` §1 has a desktop and a 320 frame;
       `[unit]` the Design System shows focus-visible, hover and disabled for a button and a row;
       `[live]` both flows run end to end in Figma's present mode.
+- [ ] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
+      3HMV2UN6QviuNXe2T3Htsr` with the real `FIGMA_TOKEN`, review the diff, and commit
+      `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The map is already
+      committed and `design/tokens.json` is Task-84's, so the map and the tokens are not authored
+      here; the review checks that ten screens and ten exports landed and that no frame caption in
+      the map drifted. Record the summary and the resulting finding count in the commit message.
+      *Dependencies:* Task-81, Task-82, Task-83, Task-84. *Acceptance:* `[unit]` the three artifact
+      families are committed and `npm test` is green; `[live]` the next run whose diff touches
+      `design/` reports zero enforced findings and N report-only `screen_state_missing` tail lines,
+      with N — and the `frames` / `mapped` / `unmapped` / `colours` / `coloursOutsideTokens`
+      summary — written in the commit message and visible in that run's gate tail in the app.
 - [ ] **L3 — AWS account guardrails.** A dedicated IAM user with MFA (never root), the region
       pinned, the access keys rotated and a budget alarm above the spot cost; `terraform` deploys
       with a named profile and no key in the repository. *Dependencies:* Task-42.
