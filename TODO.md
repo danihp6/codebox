@@ -1434,7 +1434,7 @@ implement does not exist yet; a screen task that names no spec is not ready to l
       From this merge on a green-gate run issues two identical `git diff` calls (`scanDesign` reads
       the diff before it looks for the token document); the exact-call assertion was updated here.
 
-- [ ] **[Task-84]** The colour token document. Author `design/tokens.json` — DTCG, colour only —
+- [x] **[Task-84]** The colour token document. Author `design/tokens.json` — DTCG, colour only —
       from the palette the app already uses: `#0b0f14`, `#121821`, `#e6edf3`, `#8b98a5`,
       `#22c55e`, `#f59e0b`, `#ef4444`, `#5b6772`, `#f7f9fb`, `#ffffff`, plus the two light accents
       `design/README.md` §5 promises (`#15803d`, `#b45309`). Twelve leaves under

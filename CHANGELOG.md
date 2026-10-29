@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-84, the colour token document)
+
+- **`design/tokens.json` lands as the design source: twelve DTCG colour leaves, twelve distinct
+  values.** `color.surface.{bg,raised,bg-light,raised-light}`, `color.ink.{text,muted,muted-light}`,
+  `color.brand.{green,bright}`, `color.waiting.{amber,bright}` and `color.danger.red`, each
+  `{ "$value": "#…", "$type": "color" }`, from the palette the app already uses plus the two light
+  accents `design/README.md` §5 promised. The set is a bijection on purpose (`tokenValues`
+  deduplicates): the light theme's text is the dark theme's background literal, so it is one leaf,
+  not a second one.
+- **The document the gate reads.** Every hex literal under `apps/app/src/**` (24 occurrences,
+  7 files, 10 distinct) is one of the twelve values, so once Task-83's step is wired the run stops
+  skipping and `checkPatch` enforces the colour rule on every diff. `docs/app.md` §9 names the same
+  twelve keys with their values and roles, and says the file is the source while
+  `apps/app/src/theme/` mirrors it for the stylesheet.
+
 ### Added — 2026-10-29 (Task-83, the design check is the gate's second step)
 
 - **A green gate is no longer green until the run's own `design/` is checked.** `gating()` runs
