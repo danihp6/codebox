@@ -21,11 +21,11 @@ function mount(): HTMLElement {
 
 describe('REPO_TABS', () => {
   it('declares exactly the four tabs of a repository, in order', () => {
-    expect(REPO_TABS.map((tab) => tab.id)).toEqual(['backlog', 'works', 'schedule', 'design']);
+    expect(REPO_TABS.map((tab) => tab.id)).toEqual(['backlog', 'workers', 'schedule', 'design']);
     expect(Object.isFrozen(REPO_TABS)).toBe(true);
     expect(REPO_TABS.map((tab) => tab.labelKey)).toEqual([
       'repoTabs.backlog',
-      'repoTabs.works',
+      'repoTabs.workers',
       'repoTabs.schedule',
       'repoTabs.design',
     ]);
@@ -34,7 +34,7 @@ describe('REPO_TABS', () => {
   it('builds each link from the repository id and the tab path', () => {
     expect(REPO_TABS.map((tab) => tab.link(REPO_ID))).toEqual([
       ['/repos', REPO_ID],
-      ['/repos', REPO_ID, 'works'],
+      ['/repos', REPO_ID, 'workers'],
       ['/repos', REPO_ID, 'schedule'],
       ['/repos', REPO_ID, 'design'],
     ]);

@@ -6,6 +6,25 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-77, the repository's workers floor)
+
+- **The repository's second tab is a factory, not a list (D44).** `/repos/:id/workers` renders
+  the four role rooms `ORQ · ARC · DEV · QA`, the road in and the belt out, one face and one
+  `Task-NN` chip per work, and the four states `queued`, `running`, `needs you`, `asleep`. The
+  projection is one pure module, `features/works/workers.model.ts`, total over the seven
+  `WorkState` values: `queued` waits on the road, `running` sits in `DEV`, `review` in `QA`,
+  `needs_decision` is the orchestrator's `needs you` badge, and `merged`/`failed`/`abandoned`
+  leave on the belt. `ARC` is drawn and always empty — the contract has no work phase or agent
+  role to attribute, so the room reports the gap instead of inventing one.
+- **`/works/:id` survives unchanged** as the agent's log a face opens; the flat
+  `repo-works.page.*` is deleted and `repo-tabs.ts` renames its second tab to `Workers` in both
+  locales. The shell still has three tabs: `Dashboard · Repos · Settings`.
+- **No per-agent button.** Every face is a link to its own log; the only handler on the floor is
+  the retry.
+- **Two deviations, recorded:** the `ARC` room is empty for want of a phase in `workSchema`, and
+  the two `[live]` criteria (a face opens the log; 320 px with four builders) are unmeasured on a
+  headless runner — issue #81 carries both measurements.
+
 ### Removed — 2026-10-29 (Task-76, chat, routines and reminders retire end to end)
 
 - **The chat and routine surface is gone from the daemon.** `apps/daemon/src/chat/**` (routes,

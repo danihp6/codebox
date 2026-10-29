@@ -3,14 +3,14 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { translate } from './repo-chrome.i18n';
 
-export type RepoTabId = 'backlog' | 'works' | 'schedule' | 'design';
+export type RepoTabId = 'backlog' | 'workers' | 'schedule' | 'design';
 
 export interface RepoTab {
   readonly id: RepoTabId;
   readonly link: (repoId: string) => readonly string[];
   readonly labelKey:
     | 'repoTabs.backlog'
-    | 'repoTabs.works'
+    | 'repoTabs.workers'
     | 'repoTabs.schedule'
     | 'repoTabs.design';
 }
@@ -23,9 +23,9 @@ export const REPO_TABS: readonly RepoTab[] = Object.freeze([
     labelKey: 'repoTabs.backlog',
   },
   {
-    id: 'works',
-    link: (repoId) => ['/repos', repoId, 'works'],
-    labelKey: 'repoTabs.works',
+    id: 'workers',
+    link: (repoId) => ['/repos', repoId, 'workers'],
+    labelKey: 'repoTabs.workers',
   },
   {
     id: 'schedule',

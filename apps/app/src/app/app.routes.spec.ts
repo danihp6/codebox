@@ -14,7 +14,7 @@ const EXPECTED_PATHS = [
   'dashboard',
   'repos',
   'settings',
-  'repos/:id/works',
+  'repos/:id/workers',
   'repos/:id/schedule',
   'repos/:id/design',
   'repos/:id',

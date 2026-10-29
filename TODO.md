@@ -1238,7 +1238,7 @@ serial `packages/contracts` slice: `design.ts`, `index.ts`, `openapi.ts`). **Wav
 `apps/daemon/src/backlog/**`; it also needs `Task-71` and `Task-72`) and `80` (after `77`, same
 `features/works` path). `apps/app/README.md` gets a single owner per wave.
 
-- [ ] **[Task-77]** Workers view: the repository's `Workers` tab. Replace the work-level run page
+- [x] **[Task-77]** Workers view: the repository's `Workers` tab. Replace the work-level run page
   with the repo-level factory: four role rooms (`ORQ`, `ARC`, `DEV`, `QA`), one face and one task
   chip per subagent, the road in and the belt out, and the four states `queued`, `running`,
   `needs you`, `asleep`. `needs you` is a badge over the worker whose task is blocked; the
