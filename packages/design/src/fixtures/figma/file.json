@@ -85,6 +85,13 @@
       "width": 1280,
       "height": 800,
       "fills": ["#121821", "#abcdef"]
+    },
+    {
+      "id": "9:190",
+      "caption": "17 · Settings / Notifications",
+      "width": 390,
+      "height": 844,
+      "fills": ["#0b0f14"]
     }
   ]
 }

@@ -94,6 +94,12 @@ export const routes: Routes = [
       import('./features/credentials/credentials.page').then((module) => module.CredentialsPage),
   },
   {
+    path: 'settings/notifications',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/settings/notifications.page').then((module) => module.NotificationsPage),
+  },
+  {
     path: 'about',
     canActivate: [authGuard],
     loadComponent: () => import('./features/about/about.page').then((module) => module.AboutPage),
@@ -104,3 +110,29 @@ export const routes: Routes = [
     loadComponent: () => import('./features/about/about.page').then((module) => module.AboutPage),
   },
 ];
+
+export interface DocumentedRoute {
+  readonly path: string;
+  readonly screen?: string;
+  readonly component?: string;
+}
+
+/**
+ * The documented paths no route serves. A path compares exactly after one leading `/` is
+ * stripped; the result keeps the documented order, without duplicates.
+ */
+export function missingDocumentedRoutes(
+  table: readonly Route[],
+  documented: readonly DocumentedRoute[],
+): readonly string[] {
+  const served = new Set(table.map((route) => route.path));
+  const missing: string[] = [];
+  const seen = new Set<string>();
+  for (const entry of documented) {
+    const path = entry.path.replace(/^\//, '');
+    if (served.has(path) || seen.has(path)) continue;
+    seen.add(path);
+    missing.push(entry.path);
+  }
+  return missing;
+}

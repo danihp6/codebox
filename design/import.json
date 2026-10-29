@@ -111,6 +111,18 @@
       "snapshot": true
     },
     {
+      "caption": "17 · Settings / Notifications",
+      "screen": "Notifications",
+      "route": "/settings/notifications",
+      "component": "NotificationsPage",
+      "states": {
+        "loading": null,
+        "empty": null,
+        "error": null
+      },
+      "snapshot": true
+    },
+    {
       "caption": "07 · About — mobile dark",
       "screen": "About",
       "route": "/about",

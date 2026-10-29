@@ -30,6 +30,7 @@ const SLUGS = [
   'settings',
   'devices',
   'credentials',
+  'notifications',
   'about',
 ];
 const IDS = [
@@ -42,11 +43,12 @@ const IDS = [
   '7:160',
   '8:170',
   '9:180',
+  '9:190',
   '10:190',
 ];
 const OUTSIDE = 'rgba(51, 102, 153, 0.25)';
 const SUMMARY =
-  '{"frames":12,"mapped":10,"unmapped":2,"colours":8,"coloursOutsideTokens":1,"routes":10,"screens":10,"exports":10}';
+  '{"frames":13,"mapped":11,"unmapped":2,"colours":8,"coloursOutsideTokens":1,"routes":11,"screens":11,"exports":11}';
 const USAGE = `usage: node scripts/design/import.mjs --file <key> [--check] [--map <path>] [--root <dir>]
 
   --file <key>    the Figma file key (default: FIGMA_FILE_KEY)
@@ -253,7 +255,7 @@ describe('projectPage', () => {
     const snapshot = projectPage(jsonFixture('file.json'), 'Page 1', KEY);
     expect(snapshot.fileKey).toBe(KEY);
     expect(snapshot.page).toBe('Page 1');
-    expect(snapshot.frames).toHaveLength(12);
+    expect(snapshot.frames).toHaveLength(13);
     expect(snapshot.frames.map((frame) => frame.caption)).not.toContain('Cover frame');
     expect(snapshot.frames.map((frame) => frame.caption)).not.toContain('Annotation');
   });
@@ -269,6 +271,7 @@ describe('projectPage', () => {
       '7:160': ['#0b0f14', '#8b98a5'],
       '8:170': ['#0b0f14'],
       '9:180': ['#0b0f14'],
+      '9:190': ['#0b0f14'],
       '10:190': ['#0b0f14', '#5b6772'],
       '11:900': ['#0b0f14', '#ff00ff'],
       '12:910': ['#121821', '#abcdef'],
@@ -331,19 +334,19 @@ describe('main — write', () => {
     expect(PNG.readUInt32BE(20)).toBe(1);
   });
 
-  it('writes 21 status lines and then the frozen summary', async () => {
+  it('writes 23 status lines and then the frozen summary', async () => {
     const root = makeRoot();
     const run = await runMain(root);
     expect(run.code).toBe(0);
-    expect(run.lines).toHaveLength(22);
-    expect(run.lines[0]).toBe('wrote design/routes.json (10 routes)');
-    expect(run.lines.slice(1, 11)).toEqual(
+    expect(run.lines).toHaveLength(24);
+    expect(run.lines[0]).toBe('wrote design/routes.json (11 routes)');
+    expect(run.lines.slice(1, 12)).toEqual(
       SLUGS.map((slug) => `wrote design/screens/${slug}.json`),
     );
-    expect(run.lines.slice(11, 21)).toEqual(
+    expect(run.lines.slice(12, 23)).toEqual(
       SLUGS.map((slug) => `wrote design/exports/${slug}.png (${PNG.length} bytes)`),
     );
-    expect(run.lines[21]).toBe(SUMMARY);
+    expect(run.lines[23]).toBe(SUMMARY);
   });
 
   it('writes the three artifact families the package parses back', async () => {
@@ -354,7 +357,7 @@ describe('main — write', () => {
     const routes = design.parseRoutes(
       JSON.parse(readFileSync(join(root, 'design/routes.json'), 'utf8')),
     );
-    expect(routes).toHaveLength(10);
+    expect(routes).toHaveLength(11);
     expect(routes[2]).toEqual({
       path: '/repos/:id',
       screen: 'Repo · backlog',
@@ -397,7 +400,7 @@ describe('main — write', () => {
     const root = makeRoot();
     const run = await runMain(root);
     expect(run.code).toBe(0);
-    expect(run.calls).toHaveLength(12);
+    expect(run.calls).toHaveLength(13);
 
     const api = run.calls.slice(0, 2);
     expect(api.map((call) => call.url)).toEqual([
@@ -407,7 +410,7 @@ describe('main — write', () => {
     for (const call of api) expect(call.init.headers['X-Figma-Token']).toBe(TOKEN);
 
     const png = run.calls.slice(2);
-    expect(png).toHaveLength(10);
+    expect(png).toHaveLength(11);
     for (const call of png) expect(call.init).toBeUndefined();
     for (const id of IDS) {
       expect(
@@ -421,7 +424,7 @@ describe('main — write', () => {
     const root = makeRoot();
     const run = await runMain(root);
     expect(run.code).toBe(0);
-    expect(run.lines[21]).toBe(SUMMARY);
+    expect(run.lines[23]).toBe(SUMMARY);
     expect(run.err).toContain(`colour outside tokens: ${OUTSIDE}`);
     expect(run.err.match(/colour outside tokens:/g)).toHaveLength(1);
   });
@@ -432,8 +435,8 @@ describe('main — write', () => {
     const root = makeRoot({ tokens: `${JSON.stringify(tokens, null, 2)}\n` });
     const run = await runMain(root);
     expect(run.code).toBe(0);
-    expect(run.lines[21]).toBe(
-      '{"frames":12,"mapped":10,"unmapped":2,"colours":8,"coloursOutsideTokens":2,"routes":10,"screens":10,"exports":10}',
+    expect(run.lines[23]).toBe(
+      '{"frames":13,"mapped":11,"unmapped":2,"colours":8,"coloursOutsideTokens":2,"routes":11,"screens":11,"exports":11}',
     );
     expect(run.err).toContain('colour outside tokens: #5b6772');
     expect(run.err).toContain(`colour outside tokens: ${OUTSIDE}`);
@@ -444,8 +447,8 @@ describe('main — write', () => {
     const run = await runMain(root);
     expect(run.code).toBe(0);
     expect(run.err).toContain('tokens_unavailable: design/tokens.json');
-    expect(run.lines[21]).toBe(
-      '{"frames":12,"mapped":10,"unmapped":2,"colours":8,"coloursOutsideTokens":null,"routes":10,"screens":10,"exports":10}',
+    expect(run.lines[23]).toBe(
+      '{"frames":13,"mapped":11,"unmapped":2,"colours":8,"coloursOutsideTokens":null,"routes":11,"screens":11,"exports":11}',
     );
     expect(readdirSync(join(root, 'design')).sort()).toEqual([
       'exports',

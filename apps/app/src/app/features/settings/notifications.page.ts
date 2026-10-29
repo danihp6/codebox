@@ -208,3 +208,12 @@ export class NotificationsPanel {
     this.closed.emit();
   }
 }
+
+@Component({
+  selector: 'app-notifications-page',
+  standalone: true,
+  imports: [NotificationsPanel],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  template: `<app-notifications-panel />`,
+})
+export class NotificationsPage {}
