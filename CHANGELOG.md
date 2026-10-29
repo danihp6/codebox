@@ -6,6 +6,28 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-86, the app draws in Inter)
+
+- **Inter ships inside the bundle, not from a CDN.** `@fontsource-variable/inter@5.3.0` becomes a
+  dependency of `@codebox/app` — the batch's only new package, pinned exactly, no install script
+  — imported once as the first statement of `apps/app/src/theme/variables.css`, with
+  `--ion-font-family`, the new `--cb-font-sans` and `THEME_TOKENS.fontSans` all naming
+  `Inter Variable`. The variable `wght` axis covers the prototype's 400/500/600 at 11–30 px, and
+  `ng build` emits seven `woff2` files with no network URL in the built CSS.
+- **`design/tokens.json` gains the typography group.** The twelve DTCG colour leaves stay byte for
+  byte; the document now has fourteen leaves, adding exactly `font.sans` (`Inter Variable`) and
+  `font.mono` (the stack `--cb-font-mono` and `THEME_TOKENS.fontMono` already carry) as
+  `$type: "fontFamily"`. `tokenValues()` returns fourteen strings and the two additions are inert
+  in the gate's colour matching; the invariant that stays at twelve is the number of **colour**
+  leaves, asserted by the new `apps/app/src/theme/tokens.spec.ts`.
+- **The About licences move with it.** The legal-notice gate regenerates `NOTICE` and
+  `apps/app/src/app/features/about/notice.ts`; both gained the one
+  `@fontsource-variable/inter@5.3.0 — OFL-1.1` line. That is a deterministic regeneration
+  (`scripts/legal/notice.mjs --check` passes, a rerun is a no-op), not a hand edit.
+- **One `[live]` line is not measured here:** `/pair` at 390 px against
+  `01 · Pairing — mobile dark`. This runner has no browser and no VM; issue #90 carries the
+  measurement and the merge is not blocked while the `[unit]` criteria are green.
+
 ### Added — 2026-10-29 (Task-85, a screen spec carries its measured layout)
 
 - **`ScreenSpec` gains an optional `layout`.** The frame's `box`, `layoutMode`, padding and item

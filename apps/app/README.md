@@ -30,6 +30,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/assets/i18n/es.json` — the shared Spanish dictionary (default locale), same key set.
 - `src/theme/variables.css` — the `--cb-*` tokens, the light override and the workers motion with its reduced-motion block.
 - `src/theme/tokens.ts` — the same tokens for TypeScript consumers.
+- `src/theme/tokens.spec.ts` — the fourteen leaves of `design/tokens.json`, the twelve colours and the one font import.
 - `src/app/app.component.ts` — `ion-app`, router outlet, tab bar, offline banner and stream-state hook.
 - `src/app/app.component.spec.ts` — the banner reaches the shell and drops out when fresh.
 - `src/app/app.config.ts` — zoneless, Ionic, router, HTTP, service-worker providers.

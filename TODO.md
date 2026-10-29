@@ -1516,7 +1516,7 @@ and Task-87 holds `apps/app/src/app/app.routes.ts`. No task touches a Batch 21 p
       frames; `[unit]` a spec whose `layout` names a colour outside `design/tokens.json` throws with
       the key; `[unit]` `--check` on the committed tree still writes nothing and exits 0.
 
-- [ ] **[Task-86]** Inter. Bundle the typeface the prototype draws — Inter 400/500/600 at 11–30 px —
+- [x] **[Task-86]** Inter. Bundle the typeface the prototype draws — Inter 400/500/600 at 11–30 px —
       and make it the app's sans: `@fontsource-variable/inter` as a dependency of `apps/app`,
       imported once from the theme, with `--ion-font-family` and `font.sans` pointing at it. A
       variable font is the one thing a few lines cannot reproduce, hence the dependency, and it is

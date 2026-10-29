@@ -201,8 +201,9 @@ sticks to the bottom only when the user is already at the bottom.
   only for failed. No gradients, no glass, no decorative illustration. On light, `#22c55e` on
   white is 2.1:1, so **text and strokes use the ink variants** `color.brand.green` (`#15803d`)
   and `color.waiting.amber` (`#b45309`) while the signal colour stays for fills and dots.
-- **Monospace** (system mono stack) for logs, diffs, branch names and ids; the UI face is the
-  platform default.
+- **Monospace** (system mono stack) for logs, diffs, branch names and ids; the UI face is Inter,
+  bundled through `@fontsource-variable/inter` (400/500/600, 11–30 px, no CDN, no network at
+  first paint).
 - **Density**: a backlog row is three lines — `Task-NN · title`, the section, and a flow of
   `state · runs · cost` — never three fixed positions, so the same row survives at 320 px.
 - **Two facts, never one**: the checkbox is the plan (what should exist) and the chip is the
@@ -244,6 +245,8 @@ variables). The table below is the list read, never a second source (D52).
 | `color.waiting.amber` | `#b45309` | Waiting amber for text and strokes in light. |
 | `color.waiting.bright` | `#f59e0b` | Waiting; the fill and the dot in dark. |
 | `color.danger.red` | `#ef4444` | Failure only. |
+| `font.sans` | `Inter Variable` | The bundled UI face; the origin of `--ion-font-family`. |
+| `font.mono` | `ui-monospace, sfmono-regular, menlo, consolas, 'Liberation Mono', monospace` | Logs, diffs, branch names, ids. |
 
 ## 10. Offline and failure
 
