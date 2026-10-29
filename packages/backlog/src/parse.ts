@@ -1,4 +1,5 @@
 import type { BacklogRef } from '@codebox/contracts';
+import { needsOf } from './dependencies.js';
 import type { BacklogEntry, BacklogEntryState, ParsedBacklog } from './types.js';
 
 /** The ref grammar, byte-identical to `backlogRefSchema` in `@codebox/contracts`. */
@@ -89,6 +90,7 @@ export function parseBacklog(markdown: string): ParsedBacklog {
       ref: item.ref,
       title,
       body,
+      needs: needsOf(body, item.ref),
       state: item.state,
       checked: item.state === 'done',
       line: index + 1,

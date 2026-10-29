@@ -10,6 +10,8 @@ export interface BacklogEntry {
   readonly title: string;
   /** `title` followed by the item's continuation lines, trimmed, joined with `"\n"`. */
   readonly body: string;
+  /** The refs on this item's `*Dependencies:*` sentence, in file order, self excluded. */
+  readonly needs: readonly BacklogRef[];
   readonly state: BacklogEntryState;
   /** `state === 'done'`. Convenience for `backlogItemSchema.checked`. */
   readonly checked: boolean;

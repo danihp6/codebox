@@ -95,6 +95,28 @@ describe('parseBacklog', () => {
     expect(at('Task-03').body).toBe('In progress.');
   });
 
+  it('attaches the refs of the dependency sentence to the entry', () => {
+    const parsed = parseBacklog(
+      [
+        '## Batch',
+        '',
+        '- [ ] **[Task-01]** Root.',
+        '      *Dependencies:* none.',
+        '- [ ] **[Task-02]** Child.',
+        '      *Dependencies:* Task-01.',
+        '- [ ] **[Task-03]** Branch.',
+        '      *Dependencies:* Task-01 to Task-02.',
+      ].join('\n'),
+    );
+
+    expect(parsed.items.map((item) => item.needs)).toEqual([
+      [],
+      ['Task-01'],
+      ['Task-01', 'Task-02'],
+    ]);
+    expect(at('Task-01').needs).toEqual([]);
+  });
+
   it('ignores prose, plain bullets, design bullets and the document title', () => {
     const parsed = parseBacklog(FIXTURE);
 

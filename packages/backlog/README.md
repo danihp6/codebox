@@ -15,11 +15,13 @@ the `works` rows arrive as plain objects, imported type-only from `@codebox/cont
 ## `src/`
 
 - `index.ts` — public entry point; re-exports the surface once.
-- `types.ts` — `BacklogEntry`, `ParsedBacklog`, `TickOutcome` and the selection shapes.
-- `parse.ts` — `parseBacklog`, the ref pattern and the item/section grammar.
+- `types.ts` — `BacklogEntry` (with its `needs`), `ParsedBacklog`, `TickOutcome` and the selection shapes.
+- `parse.ts` — `parseBacklog`, the ref pattern, the item/section grammar and the dependency attachment.
+- `dependencies.ts` — `needsOf`, the frozen `*Dependencies:*` grammar: the first marker, `none`, ranges and self removal.
 - `tick.ts` — `applyTick`, the one-checkbox rewrite that leaves every other byte alone.
 - `select.ts` — `selectNextItem`, the §16 refusal order and its result.
-- `parse.test.ts` — the fixture in file order, sections, bodies, duplicate refs and the grammar.
+- `parse.test.ts` — the fixture in file order, sections, bodies, needs, duplicate refs and the grammar.
+- `dependencies.test.ts` — the grammar, the `none` forms, duplicates, self and the padded ranges.
 - `tick.test.ts` — one differing line, `already_done`, `missing`, `ambiguous` and CRLF.
 - `select.test.ts` — every selection case and every refusal reason.
 - `live-todo.test.ts` — the repository's own `TODO.md`, structural invariants only.

@@ -170,6 +170,7 @@ export function createBacklogService(options: CreateBacklogServiceOptions): Back
         title: item.title,
         checked: item.checked,
         line: item.line,
+        needs: [...item.needs],
         work: projectWork(repo.id, item.ref),
       })),
     }));

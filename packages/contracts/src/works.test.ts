@@ -125,9 +125,17 @@ describe('backlog', () => {
             title: 'Routine engine',
             checked: false,
             line: 512,
+            needs: ['Task-34'],
             work: { id: WORK_ID, state: 'merged', runs: 2 },
           },
-          { ref: 'Task-36', title: 'Session replay', checked: false, line: 520, work: null },
+          {
+            ref: 'Task-36',
+            title: 'Session replay',
+            checked: false,
+            line: 520,
+            needs: [],
+            work: null,
+          },
         ],
       },
     ],
@@ -138,6 +146,93 @@ describe('backlog', () => {
     expect(backlogSchema.safeParse(backlog).success).toBe(true);
     const first = backlogSchema.parse(backlog).sections[0]?.items[0];
     expect(first?.work?.runs).toBe(2);
+    expect(first?.needs).toEqual(['Task-34']);
+  });
+
+  it('defaults a payload without needs to an empty list and accepts a Task-NN', () => {
+    const legacy = {
+      repoId: REPO_ID,
+      revision: '9f1c2ab',
+      path: 'TODO.md',
+      sections: [
+        {
+          title: 'Batch 15',
+          items: [{ ref: 'Task-35', title: 'Routine engine', checked: false, line: 512, work: null }],
+        },
+      ],
+    };
+    const withNeeds = {
+      ...legacy,
+      sections: [
+        {
+          title: 'Batch 15',
+          items: [
+            {
+              ref: 'Task-35',
+              title: 'Routine engine',
+              checked: false,
+              line: 512,
+              needs: ['Task-34', 'Task-38'],
+              work: null,
+            },
+          ],
+        },
+      ],
+    };
+
+    expect(backlogSchema.parse(legacy).sections[0]?.items[0]?.needs).toEqual([]);
+    expect(backlogSchema.parse(withNeeds).sections[0]?.items[0]?.needs).toEqual([
+      'Task-34',
+      'Task-38',
+    ]);
+  });
+
+  it('refuses a null, a string, a bad ref and an unknown key on needs', () => {
+    const withNeeds = (needs: unknown): unknown => ({
+      repoId: REPO_ID,
+      revision: '9f1c2ab',
+      path: 'TODO.md',
+      sections: [
+        {
+          title: 'Batch 15',
+          items: [
+            { ref: 'Task-35', title: 'Routine engine', checked: false, line: 512, needs, work: null },
+          ],
+        },
+      ],
+    });
+
+    expect(refusal(withNeeds(['Task-34']), backlogSchema)).toBe(true);
+    expect(refusal(withNeeds(null), backlogSchema)).toBe(false);
+    expect(refusal(withNeeds('Task-34'), backlogSchema)).toBe(false);
+    expect(refusal(withNeeds(['task-34']), backlogSchema)).toBe(false);
+    expect(refusal(withNeeds([{ ref: 'Task-34' }]), backlogSchema)).toBe(false);
+    expect(
+      refusal(
+        {
+          repoId: REPO_ID,
+          revision: '9f1c2ab',
+          path: 'TODO.md',
+          sections: [
+            {
+              title: 'Batch 15',
+              items: [
+                {
+                  ref: 'Task-35',
+                  title: 'Routine engine',
+                  checked: false,
+                  line: 512,
+                  needs: [],
+                  dependencies: ['Task-34'],
+                  work: null,
+                },
+              ],
+            },
+          ],
+        },
+        backlogSchema,
+      ),
+    ).toBe(false);
   });
 
   it('refuses an unknown key, a bad ref and a non-positive line', () => {
