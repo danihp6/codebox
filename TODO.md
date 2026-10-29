@@ -1282,7 +1282,7 @@ serial `packages/contracts` slice: `design.ts`, `index.ts`, `openapi.ts`). **Wav
   *Acceptance:* `[unit]` each of the four states renders from a fixture; `[unit]` a blocked task
   shows the dev on a different task; `[unit]` no per-agent button exists in the tree; `[live]`
   tapping a face opens the agent's log; `[live]` 320 px with four workers in `DEV`.
-- [ ] **[Task-78]** Backlog with dependencies. The ordered list gains a dependency rail: the
+- [x] **[Task-78]** Backlog with dependencies. The ordered list gains a dependency rail: the
   chain, the branch and the external prerequisite, with `needs` on the row and a detail panel on
   desktop. *Paths:* `apps/app/src/app/features/backlog/**`, `packages/backlog/**`,
   `packages/contracts/src/**`. *Dependencies:* Task-75. *Acceptance:* `[unit]` the rail draws one

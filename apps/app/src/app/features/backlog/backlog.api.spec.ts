@@ -17,7 +17,7 @@ const BACKLOG: Backlog = {
     {
       title: 'Batch 15',
       items: [
-        { ref: 'Task-77', title: 'Workers view', checked: false, line: 1, work: null },
+        { ref: 'Task-77', title: 'Workers view', checked: false, line: 1, needs: [], work: null },
       ],
     },
   ],

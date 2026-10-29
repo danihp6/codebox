@@ -1,6 +1,7 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  computed,
   effect,
   inject,
   input,
@@ -9,12 +10,14 @@ import {
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
-import type { BacklogItem, Session, WorkState } from '@codebox/contracts';
+import type { BacklogItem, BacklogRef, Session, WorkState } from '@codebox/contracts';
 import { SseService } from '../../core/events/sse.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { RepoStore } from '../repos/repo.store';
 import { RepoTabs } from '../repos/repo-tabs';
 import { BacklogStore } from './backlog.store';
+import { railEdges, unmetNeeds } from './dependency-rail';
+import type { RailEdge } from './dependency-rail';
 import { translate } from './i18n';
 import { NewSessionSheet } from './new-session.sheet';
 
@@ -76,6 +79,76 @@ const STATE_KEYS: Readonly<Record<BacklogRowState, string>> = Object.freeze({
         border-block-end: 1px solid var(--cb-surface);
         padding-block: calc(var(--cb-space) * 2);
         overflow-wrap: anywhere;
+      }
+      .cb-backlog-row-select {
+        display: flex;
+        flex: 1 1 12rem;
+        flex-wrap: wrap;
+        gap: calc(var(--cb-space) * 2);
+        align-items: baseline;
+        min-block-size: 44px;
+        min-inline-size: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-align: start;
+        cursor: pointer;
+        overflow-wrap: anywhere;
+      }
+      .cb-backlog-row-select[aria-pressed='true'] {
+        outline: 2px solid var(--cb-accent);
+        outline-offset: 2px;
+      }
+      .cb-backlog-needs,
+      .cb-backlog-unmet {
+        flex: 0 0 100%;
+        font-size: 0.85rem;
+        overflow-wrap: anywhere;
+      }
+      .cb-backlog-unmet {
+        color: var(--cb-warn);
+      }
+      .cb-backlog-body {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--cb-space) * 4);
+        min-inline-size: 0;
+      }
+      .cb-backlog-main,
+      .cb-backlog-side {
+        min-inline-size: 0;
+      }
+      .cb-backlog-side {
+        display: flex;
+        flex-direction: column;
+        gap: calc(var(--cb-space) * 3);
+      }
+      .cb-backlog-side h3 {
+        font-size: 0.85rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
+      }
+      .cb-backlog-rail-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--cb-space);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .cb-backlog-rail-edge {
+        overflow-wrap: anywhere;
+      }
+      @media (min-width: 900px) {
+        .cb-backlog-body {
+          display: grid;
+          grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+          align-items: start;
+        }
       }
       .cb-backlog-ref {
         font-family: var(--cb-font-mono);
@@ -165,56 +238,135 @@ const STATE_KEYS: Readonly<Record<BacklogRowState, string>> = Object.freeze({
           </div>
         }
 
-        @if (backlog.backlog(); as parsed) {
-          @if (parsed.sections.length === 0) {
-            <p data-testid="backlog-empty">{{ t('backlog.empty') }}</p>
-          }
-          @for (section of parsed.sections; track section.title) {
-            <section class="cb-backlog-section">
-              <h3>{{ section.title }}</h3>
-              <ul class="cb-backlog-list">
-                @for (item of section.items; track item.ref) {
-                  <li
-                    class="cb-backlog-row"
-                    data-testid="backlog-row"
-                    [attr.data-ref]="item.ref"
-                    [attr.data-checked]="item.checked"
-                    [attr.data-state]="stateOf(item)"
-                  >
-                    <span class="cb-backlog-ref" data-testid="backlog-row-ref">{{ item.ref }}</span>
-                    <span class="cb-backlog-title" data-testid="backlog-row-title">
-                      {{ item.title }}
-                    </span>
-                    <span
-                      class="cb-backlog-state"
-                      data-testid="backlog-row-state"
-                      [attr.data-state]="stateOf(item)"
-                    >
-                      {{ stateLabel(item) }}
-                    </span>
-                    <span class="cb-backlog-runs" data-testid="backlog-row-runs">
-                      {{ item.work?.runs ?? 0 }} {{ t('backlog.runs') }}
-                    </span>
-                    @if (canRun(item)) {
-                      <button
-                        type="button"
-                        [attr.data-testid]="'backlog-run-' + item.ref"
-                        [disabled]="backlog.busyRef() !== null"
-                        (click)="run(item)"
+        <div class="cb-backlog-body">
+          <div class="cb-backlog-main">
+            @if (backlog.backlog(); as parsed) {
+              @if (parsed.sections.length === 0) {
+                <p data-testid="backlog-empty">{{ t('backlog.empty') }}</p>
+              }
+              @for (section of parsed.sections; track section.title) {
+                <section class="cb-backlog-section">
+                  <h3>{{ section.title }}</h3>
+                  <ul class="cb-backlog-list">
+                    @for (item of section.items; track item.ref) {
+                      <li
+                        class="cb-backlog-row"
+                        data-testid="backlog-row"
+                        [attr.data-ref]="item.ref"
+                        [attr.data-checked]="item.checked"
+                        [attr.data-state]="stateOf(item)"
+                        [attr.data-needs]="item.needs.join(' ')"
+                        [attr.data-unmet-needs]="unmetOf(item).join(' ')"
                       >
-                        {{
-                          backlog.busyRef() === item.ref
-                            ? t('backlog.run.busy')
-                            : t('backlog.run')
-                        }}
-                      </button>
+                        <button
+                          type="button"
+                          class="cb-backlog-row-select"
+                          data-testid="backlog-row-select"
+                          [attr.aria-pressed]="selectedRef() === item.ref"
+                          (click)="select(item)"
+                        >
+                          <span class="cb-backlog-ref" data-testid="backlog-row-ref">
+                            {{ item.ref }}
+                          </span>
+                          <span class="cb-backlog-title" data-testid="backlog-row-title">
+                            {{ item.title }}
+                          </span>
+                        </button>
+                        <span
+                          class="cb-backlog-state"
+                          data-testid="backlog-row-state"
+                          [attr.data-state]="stateOf(item)"
+                        >
+                          {{ stateLabel(item) }}
+                        </span>
+                        <span class="cb-backlog-runs" data-testid="backlog-row-runs">
+                          {{ item.work?.runs ?? 0 }} {{ t('backlog.runs') }}
+                        </span>
+                        @if (item.needs.length > 0) {
+                          <span class="cb-backlog-needs" data-testid="backlog-row-needs">
+                            {{ t('backlog.needs') }}: {{ item.needs.join(', ') }}
+                          </span>
+                        }
+                        @if (unmetOf(item).length > 0) {
+                          <span class="cb-backlog-unmet" data-testid="backlog-row-unmet-needs">
+                            {{ t('backlog.unmet') }}: {{ unmetOf(item).join(', ') }}
+                          </span>
+                        }
+                        @if (canRun(item)) {
+                          <button
+                            type="button"
+                            [attr.data-testid]="'backlog-run-' + item.ref"
+                            [disabled]="backlog.busyRef() !== null"
+                            (click)="run(item)"
+                          >
+                            {{
+                              backlog.busyRef() === item.ref
+                                ? t('backlog.run.busy')
+                                : t('backlog.run')
+                            }}
+                          </button>
+                        }
+                      </li>
                     }
+                  </ul>
+                </section>
+              }
+            }
+          </div>
+
+          <div class="cb-backlog-side">
+            <section
+              class="cb-backlog-rail"
+              data-testid="backlog-rail"
+              [attr.data-edges]="rail().length"
+            >
+              <h3>{{ t('backlog.rail') }}</h3>
+              @if (rail().length === 0) {
+                <p class="cb-muted" data-testid="backlog-rail-empty">{{ t('backlog.rail.empty') }}</p>
+              }
+              <ul class="cb-backlog-rail-list">
+                @for (edge of rail(); track $index) {
+                  <li
+                    class="cb-backlog-rail-edge"
+                    data-testid="backlog-rail-edge"
+                    [attr.data-from]="edge.from"
+                    [attr.data-to]="edge.to"
+                    [attr.data-kind]="edge.kind"
+                  >
+                    {{ edge.from }} → {{ edge.to }} · {{ t('backlog.rail.' + edge.kind) }}
                   </li>
                 }
               </ul>
             </section>
-          }
-        }
+
+            <section class="cb-backlog-detail" data-testid="backlog-detail">
+              <h3>{{ t('backlog.detail') }}</h3>
+              @if (selected(); as item) {
+                <p class="cb-backlog-ref" data-testid="backlog-detail-ref">{{ item.ref }}</p>
+                <p data-testid="backlog-detail-title">{{ item.title }}</p>
+                <p data-testid="backlog-detail-needs">
+                  {{ item.needs.length === 0 ? t('backlog.detail.none') : item.needs.join(', ') }}
+                </p>
+                <p data-testid="backlog-detail-unmet">
+                  {{
+                    unmetOf(item).length === 0
+                      ? t('backlog.detail.none')
+                      : unmetOf(item).join(', ')
+                  }}
+                </p>
+                @if (item.work; as work) {
+                  <a data-testid="backlog-detail-work" [routerLink]="['/works', work.id]">
+                    {{ t('backlog.detail.open') }}
+                  </a>
+                }
+              } @else {
+                <p class="cb-muted" data-testid="backlog-detail-empty">
+                  {{ t('backlog.detail.empty') }}
+                </p>
+              }
+            </section>
+          </div>
+        </div>
       </div>
     </ion-content>
   `,
@@ -225,6 +377,17 @@ export class RepoBacklogPage {
   readonly backlog = inject(BacklogStore);
 
   readonly sheetOpen = signal(false);
+
+  readonly rows = computed<readonly BacklogItem[]>(
+    () => this.backlog.backlog()?.sections.flatMap((section) => section.items) ?? [],
+  );
+  readonly selectedRef = signal<BacklogRef | null>(null);
+  readonly selected = computed<BacklogItem | null>(() => {
+    const ref = this.selectedRef();
+    if (ref === null) return null;
+    return this.rows().find((item) => item.ref === ref) ?? null;
+  });
+  readonly rail = computed<readonly RailEdge[]>(() => railEdges(this.rows()));
 
   private readonly sse = inject(SseService);
   private readonly router = inject(Router);
@@ -269,6 +432,14 @@ export class RepoBacklogPage {
   run(item: BacklogItem): void {
     if (!this.canRun(item)) return;
     this.backlog.run(this.id(), item.ref);
+  }
+
+  select(item: BacklogItem): void {
+    this.selectedRef.set(item.ref);
+  }
+
+  unmetOf(item: BacklogItem): readonly BacklogRef[] {
+    return unmetNeeds(item, this.rows());
   }
 
   openSheet(): void {

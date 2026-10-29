@@ -23,6 +23,7 @@ const REVISION = '9f1c2ab';
 const MARKDOWN = `## Batch 1 — Alpha
 
 - [ ] **[Task-02]** Open item.
+      *Dependencies:* Task-01.
 `;
 
 const REPO: Repo = {
@@ -134,6 +135,7 @@ describe('GET /v1/repos/{id}/backlog', () => {
     expect(backlog.repoId).toBe(REPO.id);
     expect(backlog.revision).toBe(REVISION);
     expect(backlog.sections[0]?.items[0]?.ref).toBe('Task-02');
+    expect(backlog.sections[0]?.items[0]?.needs).toEqual(['Task-01']);
     expect(test.store.works.list({ limit: 10, cursor: null }).data).toEqual([]);
   });
 

@@ -99,6 +99,23 @@ describe('project', () => {
     expect(first?.line).toBeGreaterThan(0);
   });
 
+  it('projects the dependency sentence of each item, and a root carries none', async () => {
+    const markdown = [
+      '## Batch',
+      '',
+      '- [x] **[Task-01]** Root.',
+      '      *Dependencies:* none.',
+      '- [ ] **[Task-02]** Child.',
+      '      *Dependencies:* Task-01.',
+    ].join('\n');
+    const { service } = harness(markdown);
+
+    const project = await service.project(REPO);
+    const items = project?.sections.flatMap((section) => section.items) ?? [];
+    expect(items.find((item) => item.ref === 'Task-02')?.needs).toEqual(['Task-01']);
+    expect(items.find((item) => item.ref === 'Task-01')?.needs).toEqual([]);
+  });
+
   it('joins a work and its run count onto the item it came from', async () => {
     const { service, store } = harness(FIXTURE);
     const at = NOW;

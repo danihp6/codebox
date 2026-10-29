@@ -75,11 +75,13 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/backlog/backlog.api.spec.ts` — every backlog URL and method, the empty attempt body and the boundary parse failure.
 - `src/app/features/backlog/backlog.store.ts` — the backlog read, the `Run` flow and the live-work conflict.
 - `src/app/features/backlog/backlog.store.spec.ts` — one work then one attempt in order, the navigation, the live work and the screen error.
-- `src/app/features/backlog/i18n.ts` — the backlog row states and the new-session sheet dictionary in `en` and `es`.
+- `src/app/features/backlog/dependency-rail.ts` — the pure drawing rule: `railEdges` and `unmetNeeds` over the wire items.
+- `src/app/features/backlog/dependency-rail.spec.ts` — one edge per need, the three kinds, a root with none and every unmet id.
+- `src/app/features/backlog/i18n.ts` — the backlog row states, the dependency rail and detail copy and the new-session sheet dictionary in `en` and `es`.
 - `src/app/features/backlog/new-session.sheet.ts` — the four targets, the read-only `repo` entry, the busy guard and one create per tap.
 - `src/app/features/backlog/new-session.sheet.spec.ts` — no request on render, the four buttons, the body without a work id, the 409 and the read-only create.
-- `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog: the header chat button, the four tabs, the rows with plan and state apart, the run action and the live-work block.
-- `src/app/features/backlog/repo-backlog.page.spec.ts` — the row hooks, every work state label, the run visibility, the live work, the error/retry and the sheet.
+- `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog: the header chat button, the four tabs, the rows with plan and state apart, the select button with its needs, the dependency rail, the detail panel, the run action and the live-work block.
+- `src/app/features/backlog/repo-backlog.page.spec.ts` — the row hooks, every work state label, the needs and unmet ids, the rail edges, the detail panel, the dictionaries, the run visibility, the live work, the error/retry and the sheet.
 - `src/app/features/credentials/add-credential.sheet.ts` — the two-step add-credential sheet: name, kind, expose, the env warning, the confirmation tail and the save.
 - `src/app/features/credentials/add-credential.sheet.spec.ts` — the review step, the four-character tail, the env warning/blocked states and the cleared value.
 - `src/app/features/credentials/connect-service.sheet.ts` — the GitHub App manifest form and the generic integration form.

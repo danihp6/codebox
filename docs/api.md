@@ -560,6 +560,7 @@ The backlog object:
           "title": "Routine engine",
           "checked": true,
           "line": 512,
+          "needs": ["Task-34"],
           "work": { "id": "wrk_01J...", "state": "merged", "runs": 2 }
         }
       ]
@@ -567,6 +568,12 @@ The backlog object:
   ]
 }
 ```
+
+- `needs` — the `Task-NN` refs named by the item's `*Dependencies:*` sentence, in file order,
+  deduplicated and with the item's own ref removed; `[]` when the sentence says `none`, is
+  absent, or names no task. A `Task-A to Task-B` range expands inclusively. The daemon derives
+  it from the file on every read (D51) and never stores it. A ref is **unmet** when the same
+  payload has no item for it or that item is `checked: false`.
 
 The daemon never writes the file here: the tick happens in the run's branch (§6 of
 [`docs/jobs.md`](jobs.md)) and reaches `main` through the merge.

@@ -6,6 +6,23 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-78, the backlog carries its dependency rail)
+
+- **Every backlog row carries `needs`: the `Task-NN` refs named by its `*Dependencies:*`
+  sentence.** `backlogItemSchema` gains `needs: BacklogRef[]`, defaulting to `[]` so a payload
+  produced before the key existed still parses; the daemon projects it from the parsed file on
+  every read (`apps/daemon/src/backlog/**`) and stores nothing (D51). `Task-A to Task-B` expands
+  inclusively, a self-ref is removed, duplicates collapse in file order. No route is added: the
+  OpenAPI document stays at 63 paths and `packages/contracts/src/index.ts` is untouched.
+- **The repository backlog draws the rail and the detail panel.** One pure module,
+  `features/backlog/dependency-rail.ts` (`railEdges`, `unmetNeeds`), classifies an edge as
+  `chain`, `branch` or `external`, a root contributes none, and a row states every unmet id, not
+  only the first. The selected row opens a detail panel with its needs, its unmet ids and its
+  work link; at 900 px the page is a two-column grid, below it the rail stacks after the list.
+- **One deviation, recorded:** the `[live]` criterion (8 rows at 320 px with no horizontal
+  scroll and 44 x 44 hit targets) is unmeasured on a headless runner; issue #83 carries its
+  measurement.
+
 ### Added — 2026-10-29 (Task-79, the design preview is the repository's own spec)
 
 - **`GET /v1/repos/{id}/design?revision=<sha>` serves the repository's `design/` at a commit**

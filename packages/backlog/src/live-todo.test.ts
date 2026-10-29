@@ -38,6 +38,17 @@ describe('the repository backlog', () => {
     }
   });
 
+  it('gives every item a needs array and never a self dependency', () => {
+    for (const item of parsed.items) {
+      expect(Array.isArray(item.needs)).toBe(true);
+      expect(item.needs).not.toContain(item.ref);
+    }
+  });
+
+  it('declares at least one dependency', () => {
+    expect(parsed.items.some((item) => item.needs.length > 0)).toBe(true);
+  });
+
   it('points every item line at a line of the file for the same ref', () => {
     for (const item of parsed.items) {
       expect(refAt(lines[item.line - 1] ?? '')).toBe(item.ref);

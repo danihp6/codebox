@@ -40,6 +40,7 @@ export const backlogItemSchema = z.strictObject({
   title: z.string().min(1),
   checked: z.boolean(),
   line: z.number().int().positive(),
+  needs: z.array(backlogRefSchema).default([]),
   work: backlogWorkRefSchema.nullable(),
 });
 export type BacklogItem = z.infer<typeof backlogItemSchema>;
