@@ -199,8 +199,8 @@ sticks to the bottom only when the user is already at the bottom.
 - **Dark by default**, light theme available and following the system by default on iOS.
 - **One accent**: signal green for healthy and merged; amber for waiting on a human; red
   only for failed. No gradients, no glass, no decorative illustration. On light, `#22c55e` on
-  white is 2.1:1, so **text and strokes use the ink variants** (`#15803d`, `#b45309`) while the
-  signal colour stays for fills and dots.
+  white is 2.1:1, so **text and strokes use the ink variants** `color.brand.green` (`#15803d`)
+  and `color.waiting.amber` (`#b45309`) while the signal colour stays for fills and dots.
 - **Monospace** (system mono stack) for logs, diffs, branch names and ids; the UI face is the
   platform default.
 - **Density**: a backlog row is three lines — `Task-NN · title`, the section, and a flow of
@@ -221,6 +221,29 @@ sticks to the bottom only when the user is already at the bottom.
   the feature module — the shared file stays untouched. Features are written in parallel and
   the shared dictionaries are a hot file, so a feature never edits them: it adds a key to its
   own module in both languages in the same change.
+
+### Design tokens
+
+`design/tokens.json` is the source: a DTCG colour document with exactly one leaf per value. The
+design gate enforces it — a hex literal in a patch that is not one of those twelve values is a
+finding, and `codebox-design: allow` marks a deliberate exception — while
+`apps/app/src/theme/` mirrors the document for the stylesheet (`THEME_TOKENS` and the `--cb-*`
+variables). The table below is the list read, never a second source (D52).
+
+| Token | Value | Role |
+| --- | --- | --- |
+| `color.surface.bg` | `#0b0f14` | Dark background; also the light theme's text. |
+| `color.surface.raised` | `#121821` | Dark card and row surface. |
+| `color.surface.bg-light` | `#f7f9fb` | Light background. |
+| `color.surface.raised-light` | `#ffffff` | Light card and row surface. |
+| `color.ink.text` | `#e6edf3` | Dark theme text. |
+| `color.ink.muted` | `#8b98a5` | Dark theme muted text. |
+| `color.ink.muted-light` | `#5b6772` | Light theme muted text. |
+| `color.brand.green` | `#15803d` | Brand green for text and strokes in light. |
+| `color.brand.bright` | `#22c55e` | Signal green; fills and dots only (2.1:1 on white). |
+| `color.waiting.amber` | `#b45309` | Waiting amber for text and strokes in light. |
+| `color.waiting.bright` | `#f59e0b` | Waiting; the fill and the dot in dark. |
+| `color.danger.red` | `#ef4444` | Failure only. |
 
 ## 10. Offline and failure
 
