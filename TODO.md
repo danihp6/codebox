@@ -1346,6 +1346,14 @@ command), after Task-81, because it imports those mappers and reads its fixtures
 deliverable. None of the four depends on Batch 7's blocked Task-26/Task-29 and none adds a workflow
 file, so issue #11 blocks nothing here.
 
+**The batch that follows is cut one task per screen, after L6 writes the specs.** Each of those
+tasks names its own file and nothing else: `design/screens/pairing.json`, `repo-list.json`,
+`repo-backlog.json`, `repo-workers.json`, `design-session.json`, `dashboard.json`, `settings.json`,
+`devices.json`, `credentials.json`, `about.json`, plus the matching `design/exports/<slug>.png` and
+the frame caption from `design/README.md` §1. They cannot be cut before L6 because the file they
+implement does not exist yet; a screen task that names no spec is not ready to launch
+(`AGENTS.md`, Workflow).
+
 - [ ] **[Task-81]** Design importer core. `packages/design/src/import.ts` maps a narrow
       `FigmaFileSnapshot` — one page of frames with `id`, `caption` (the frame name exactly as
       drawn), `width`, `height` and the frame's distinct fills — plus an `ImportMap` (the committed
