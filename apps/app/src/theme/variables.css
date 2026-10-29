@@ -28,3 +28,130 @@
     --cb-muted: #5b6772;
   }
 }
+
+/* The factory's motion: CSS keyframes over the workers signals, decorative and pointer
+   transparent so no face loses its tap. The reduced-motion block is the last rule of the file. */
+.cb-workers-truck,
+.cb-workers-package,
+.cb-workers-token {
+  display: block;
+  inline-size: 2.5rem;
+  block-size: 0.75rem;
+  border-radius: calc(var(--cb-radius) / 4);
+  background: var(--cb-accent);
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.cb-workers-truck {
+  animation: cb-truck-in 5s ease-in-out infinite;
+}
+
+.cb-workers-package {
+  animation: cb-package-belt 4s linear infinite;
+}
+
+.cb-workers-token {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  align-self: center;
+  animation: cb-token-cross 3.2s ease-in-out infinite;
+}
+
+@keyframes cb-truck-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-150%);
+  }
+  20% {
+    opacity: 0.6;
+    transform: translateX(0);
+  }
+  75% {
+    opacity: 0.6;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(150%);
+  }
+}
+
+@keyframes cb-package-belt {
+  0% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+  15% {
+    opacity: 0.6;
+  }
+  85% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(9rem);
+  }
+}
+
+@keyframes cb-token-cross {
+  0% {
+    opacity: 0;
+    transform: translateX(0) scale(0.8);
+  }
+  30% {
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(4rem) scale(0.8);
+  }
+}
+
+.cb-worker-face {
+  animation: cb-face-blink 4s steps(1, end) infinite;
+}
+
+.cb-worker-face[data-blink-phase='0'] {
+  animation-delay: 0ms;
+}
+
+.cb-worker-face[data-blink-phase='1'] {
+  animation-delay: 1000ms;
+}
+
+.cb-worker-face[data-blink-phase='2'] {
+  animation-delay: 2000ms;
+}
+
+.cb-worker-face[data-blink-phase='3'] {
+  animation-delay: 3000ms;
+}
+
+@keyframes cb-face-blink {
+  0% {
+    opacity: 1;
+  }
+  2% {
+    opacity: 0.25;
+  }
+  4% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cb-worker-face,
+  .cb-workers-truck,
+  .cb-workers-package,
+  .cb-workers-token {
+    animation: none;
+  }
+}

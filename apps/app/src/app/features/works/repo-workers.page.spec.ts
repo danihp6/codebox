@@ -100,6 +100,28 @@ function faceFor(element: HTMLElement, workId: string): HTMLElement | null {
   );
 }
 
+function decoration(element: HTMLElement, id: string): HTMLElement | null {
+  return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+}
+
+function must<T>(value: T | null): T {
+  if (value === null) throw new Error('missing element');
+  return value;
+}
+
+const MOTION_DECORATIONS = ['workers-truck', 'workers-package', 'workers-token'] as const;
+
+function factorySequence(element: HTMLElement): string[] {
+  const container = must(element.querySelector<HTMLElement>('.cb-workers'));
+  const motion = new Set(['workers-road-in', 'workers-belt-out', ...MOTION_DECORATIONS]);
+  return [...container.children].flatMap((child) => {
+    const testId = child.getAttribute('data-testid');
+    if (testId === 'worker-room') return [`room:${child.getAttribute('data-room') ?? ''}`];
+    if (testId !== null && motion.has(testId)) return [testId];
+    return [];
+  });
+}
+
 describe('RepoWorkersPage', () => {
   afterEach(() => {
     TestBed.resetTestingModule();
@@ -186,6 +208,58 @@ describe('RepoWorkersPage', () => {
     expect(beltOut?.getAttribute('data-testid')).toBe('workers-belt-out');
   });
 
+  it('assigns the four blink phases in board order and wraps every four faces', async () => {
+    const { element } = await mount(FIXTURE);
+
+    const all = faces(element);
+    expect(all).toHaveLength(5);
+    const phases = all.map((face) => face.getAttribute('data-blink-phase'));
+    for (const phase of phases) {
+      expect(['0', '1', '2', '3']).toContain(phase);
+    }
+    expect(new Set(phases.slice(0, 4)).size).toBe(4);
+
+    const phaseOf = (workId: string): string | null =>
+      faceFor(element, workId)?.getAttribute('data-blink-phase') ?? null;
+    expect(phaseOf(QUEUED.id)).toBe('0');
+    expect(phaseOf(BLOCKED.id)).toBe('1');
+    expect(phaseOf(RUNNING.id)).toBe('2');
+    expect(phaseOf(REVIEW.id)).toBe('3');
+    expect(phaseOf(MERGED.id)).toBe('0');
+  });
+
+  it('runs the truck, the package and the token without covering a face', async () => {
+    const { element } = await mount(FIXTURE);
+
+    for (const id of MOTION_DECORATIONS) {
+      const node = must(decoration(element, id));
+      expect(node.tagName).toBe('SPAN');
+      expect(node.getAttribute('aria-hidden')).toBe('true');
+      expect(node.textContent?.trim()).toBe('');
+      expect(node.hasAttribute('role')).toBe(false);
+      expect(node.querySelector('[data-testid="worker-face"]')).toBeNull();
+    }
+
+    expect(
+      must(hook(element, 'workers-road-in')).contains(must(decoration(element, 'workers-truck'))),
+    ).toBe(true);
+    expect(
+      must(hook(element, 'workers-belt-out')).contains(
+        must(decoration(element, 'workers-package')),
+      ),
+    ).toBe(true);
+    expect(decoration(element, 'workers-token')?.closest('[data-testid="worker-room"]')).toBeNull();
+    expect(factorySequence(element)).toEqual([
+      'workers-road-in',
+      'room:ORQ',
+      'room:ARC',
+      'room:DEV',
+      'workers-token',
+      'room:QA',
+      'workers-belt-out',
+    ]);
+  });
+
   it('keeps the factory shape on a repository with no work', async () => {
     const { element } = await mount([]);
 
@@ -195,6 +269,9 @@ describe('RepoWorkersPage', () => {
     expect(element.querySelectorAll('[data-testid="worker-room-empty"]')).toHaveLength(4);
     expect(hook(element, 'workers-road-in')?.getAttribute('data-count')).toBe('0');
     expect(hook(element, 'workers-belt-out')?.getAttribute('data-count')).toBe('0');
+    for (const id of MOTION_DECORATIONS) {
+      expect(decoration(element, id)).toBeNull();
+    }
     expect(element.querySelectorAll('button, [role="button"]')).toHaveLength(0);
   });
 

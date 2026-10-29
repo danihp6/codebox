@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-29 (Task-80, the workers factory moves)
+
+- **The factory animates from CSS, not from JavaScript.** Three decorations the board draws only
+  when it has a card — the truck on the road in, the package on the belt out, the token that
+  crosses between `DEV` and `QA` — and a four-phase blink on the faces, each `aria-hidden`,
+  `pointer-events: none` and out of the face's way. `features/works/workers.motion.ts` holds the
+  pure phase rule (`blinkPhase`, `assignBlinkPhases`) and the phases land on the existing faces
+  as `data-blink-phase`; the keyframes live in `src/theme/variables.css`.
+- **The loop stops under `prefers-reduced-motion: reduce`.** The media block is the last rule in
+  the file and sets `animation: none` on the four animated selectors, not a paused animation;
+  the lanes and rooms clip their decorations so nothing overflows at 320 px. No new dependency,
+  no route, no per-agent button: a face still opens its own log.
+- **One deviation, recorded:** both `[live]` criteria (four distinct 1 s delays and a tap during
+  the blink) are unmeasured on a headless runner; issue #84 carries their measurement.
+
 ### Added — 2026-10-29 (Task-78, the backlog carries its dependency rail)
 
 - **Every backlog row carries `needs`: the `Task-NN` refs named by its `*Dependencies:*`

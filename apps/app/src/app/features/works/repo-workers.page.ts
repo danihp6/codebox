@@ -20,6 +20,7 @@ import { RepoTabs } from '../repos/repo-tabs';
 import { translate } from './i18n';
 import type { WorkerRoom, WorkerState, WorkersBoard } from './workers.model';
 import { projectWorkers } from './workers.model';
+import { assignBlinkPhases } from './workers.motion';
 import { WorksApi } from './works.api';
 
 /** The repository's factory: four role rooms, the road in on top and the belt out below. */
@@ -34,6 +35,7 @@ import { WorksApi } from './works.api';
         display: flex;
         flex-direction: column;
         gap: calc(var(--cb-space) * 3);
+        overflow: hidden;
       }
       .cb-workers-lane,
       .cb-worker-room {
@@ -43,6 +45,7 @@ import { WorksApi } from './works.api';
         border: 1px solid var(--cb-surface);
         border-radius: var(--cb-radius);
         padding: calc(var(--cb-space) * 2);
+        overflow: hidden;
       }
       .cb-workers-lane h2,
       .cb-worker-room h2 {
@@ -133,6 +136,9 @@ import { WorksApi } from './works.api';
           [attr.data-count]="board().roadIn.length"
         >
           <h2>{{ t('workers.roadIn') }}</h2>
+          @if (works().length > 0) {
+            <span class="cb-workers-truck" data-testid="workers-truck" aria-hidden="true"></span>
+          }
           @for (card of board().roadIn; track card.workId) {
             <a
               class="cb-worker-face"
@@ -140,6 +146,7 @@ import { WorksApi } from './works.api';
               [attr.data-work-id]="card.workId"
               [attr.data-room]="'road-in'"
               [attr.data-state]="card.state"
+              [attr.data-blink-phase]="blinkPhaseOf(card.workId)"
               [routerLink]="['/works', card.workId]"
               [attr.aria-label]="t('workers.open') + ' ' + card.ref"
             >
@@ -169,6 +176,7 @@ import { WorksApi } from './works.api';
                 [attr.data-work-id]="card.workId"
                 [attr.data-room]="room.room"
                 [attr.data-state]="card.state"
+                [attr.data-blink-phase]="blinkPhaseOf(card.workId)"
                 [routerLink]="['/works', card.workId]"
                 [attr.aria-label]="t('workers.open') + ' ' + card.ref"
               >
@@ -196,6 +204,9 @@ import { WorksApi } from './works.api';
               </p>
             }
           </section>
+          @if (works().length > 0 && room.room === 'DEV') {
+            <span class="cb-workers-token" data-testid="workers-token" aria-hidden="true"></span>
+          }
         }
 
         <section
@@ -204,6 +215,13 @@ import { WorksApi } from './works.api';
           [attr.data-count]="board().beltOut.length"
         >
           <h2>{{ t('workers.beltOut') }}</h2>
+          @if (works().length > 0) {
+            <span
+              class="cb-workers-package"
+              data-testid="workers-package"
+              aria-hidden="true"
+            ></span>
+          }
           @for (card of board().beltOut; track card.workId) {
             <a
               class="cb-worker-face"
@@ -211,6 +229,7 @@ import { WorksApi } from './works.api';
               [attr.data-work-id]="card.workId"
               [attr.data-room]="'belt-out'"
               [attr.data-state]="card.state"
+              [attr.data-blink-phase]="blinkPhaseOf(card.workId)"
               [routerLink]="['/works', card.workId]"
               [attr.aria-label]="t('workers.open') + ' ' + card.ref"
             >
@@ -239,6 +258,13 @@ export class RepoWorkersPage {
   readonly loading = signal(true);
   readonly error = signal<ApiError | null>(null);
   readonly board = computed<WorkersBoard>(() => projectWorkers(this.works()));
+  readonly blinkPhases = computed<ReadonlyMap<string, number>>(() =>
+    assignBlinkPhases([
+      ...this.board().roadIn,
+      ...this.board().rooms.flatMap((room) => room.cards),
+      ...this.board().beltOut,
+    ]),
+  );
 
   private readonly api = inject(WorksApi);
   private readonly destroy = inject(DestroyRef);
@@ -255,6 +281,10 @@ export class RepoWorkersPage {
 
   reload(): void {
     this.load(this.id());
+  }
+
+  blinkPhaseOf(workId: string): number {
+    return this.blinkPhases().get(workId) ?? 0;
   }
 
   stateLabel(state: WorkerState): string {

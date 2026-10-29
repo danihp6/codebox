@@ -1295,7 +1295,7 @@ serial `packages/contracts` slice: `design.ts`, `index.ts`, `openapi.ts`). **Wav
   `apps/app/src/app/features/sessions/**`, `packages/design/**`, `design/README.md`.
   *Dependencies:* Task-75. *Acceptance:* `[unit]` the card renders a commit and a state list from
   `design/`; `[unit]` a pending change is visible; `[live]` a chat edit moves the preview.
-- [ ] **[Task-80]** Workers motion. The factory animates: the truck pulls in, the package runs the
+- [x] **[Task-80]** Workers motion. The factory animates: the truck pulls in, the package runs the
   belt, a token crosses the doors on a hand-off and the faces blink on offset cycles. All of it
   honours `prefers-reduced-motion` and never blocks the tap targets. *Paths:*
   `apps/app/src/app/features/works/**`, `apps/app/src/theme/**`. *Dependencies:* Task-77.
