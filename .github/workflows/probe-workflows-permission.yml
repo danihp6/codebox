@@ -1,12 +1,12 @@
 name: probe / workflows permission
 
-# One-shot measurement for issue #11: can the credential the cycle pushes with write a file
-# under `.github/workflows/**`? It creates a throwaway branch carrying one workflow file,
-# pushes it with the same secret `agent-cycle` uses, and deletes it. No inference, no merge,
-# nothing left behind. Green means Task-26 and Task-29 can create their workflow files.
-#
-# The other door is the App installation the daemon uses at runtime; that one is measured by
-# the first run that pushes such a branch, not by this probe.
+# Measurement for issue #11, in two steps so the log says which permission is missing:
+#   A. push a branch with a plain file  → Contents: write
+#   B. push a branch with a file under .github/workflows/** → Workflows: write
+# Both use the same secret `agent-cycle` checks out with. The branches are deleted at the
+# end; nothing is merged. A run where A passes and B fails is the #11 condition exactly, and
+# the fix is on the credential (a fine-grained PAT needs `Workflows: read and write`), not on
+# the App installation.
 
 on:
   workflow_dispatch:
@@ -23,19 +23,61 @@ jobs:
           token: ${{ secrets.CB_AGENT_TOKEN }}
           fetch-depth: 0
 
-      - name: Push a workflow file to a throwaway branch, then delete it
-        env:
-          BRANCH: probe/workflows-permission
+      - name: Configure git identity
         run: |
-          set -euo pipefail
           git config user.name codebox-bot
           git config user.email codebox-bot@users.noreply.github.com
+
+      - name: A. push a plain file
+        id: contents
+        continue-on-error: true
+        env:
+          BRANCH: probe/contents
+        run: |
+          set -euo pipefail
+          git switch -c "$BRANCH"
+          printf 'probe\n' > probe.txt
+          git add probe.txt
+          git commit -m "probe: contents write"
+          git push --force origin "$BRANCH"
+          echo "::notice::A passed: the credential can write repository contents"
+          git push origin --delete "$BRANCH"
+          rm -f probe.txt
+          git switch main
+
+      - name: B. push a workflow file
+        id: workflows
+        continue-on-error: true
+        env:
+          BRANCH: probe/workflows
+        run: |
+          set -euo pipefail
           git switch -c "$BRANCH"
           mkdir -p .github/workflows
           printf 'name: probe\non: workflow_dispatch\njobs:\n  noop:\n    runs-on: ubuntu-24.04\n    steps:\n      - run: echo probe\n' > .github/workflows/probe.yml
           git add .github/workflows/probe.yml
-          git commit -m "probe: can this credential write a workflow file"
+          git commit -m "probe: workflows write"
           git push --force origin "$BRANCH"
-          echo "::notice::pushed $BRANCH with a workflow file: the credential can write .github/workflows/**"
+          echo "::notice::B passed: the credential can write .github/workflows/**"
           git push origin --delete "$BRANCH"
-          echo "::notice::branch deleted; nothing was merged"
+
+      - name: Verdict
+        if: always()
+        env:
+          CONTENTS: ${{ steps.contents.outcome }}
+          WORKFLOWS: ${{ steps.workflows.outcome }}
+        run: |
+          echo "| step | outcome |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| --- | --- |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| A. contents | $CONTENTS |" >> "$GITHUB_STEP_SUMMARY"
+          echo "| B. workflows | $WORKFLOWS |" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$CONTENTS" = success ] && [ "$WORKFLOWS" = success ]; then
+            echo "RESULT: both writes succeed; issue #11 is closed and Task-26/29 can create their files."
+            exit 0
+          fi
+          if [ "$CONTENTS" != success ]; then
+            echo "RESULT: the credential cannot write contents at all; fix the PAT before #11."
+            exit 1
+          fi
+          echo "RESULT: contents pass, workflows fail — the PAT needs 'Workflows: read and write'."
+          exit 1
