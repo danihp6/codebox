@@ -37,15 +37,6 @@ export interface ScheduleFirePort {
     /** The schedule's per-fire budget; the fire itself never spends it. */
     readonly costCapUsd?: number | null;
   }): Promise<{ readonly runId: string }>;
-  /**
-   * The legacy repo-less chat fire. D56 retired it: a schedule without a repository no longer
-   * exists, so the port refuses with `repo_required` instead of opening a chat. Task-76 removes
-   * the branch in `schedules/service.ts`.
-   */
-  startChat(input: {
-    readonly schedule: Schedule;
-    readonly scheduledFor: string;
-  }): Promise<{ readonly chatId: string; readonly messageId: string }>;
 }
 
 export interface CreateScheduleFirePortOptions {
@@ -159,10 +150,5 @@ export function createScheduleFirePort(options: CreateScheduleFirePortOptions): 
     return { runId: run.id };
   }
 
-  return {
-    startRun,
-    async startChat(): Promise<{ readonly chatId: string; readonly messageId: string }> {
-      throw new ScheduleFireError('repo_required');
-    },
-  };
+  return { startRun };
 }

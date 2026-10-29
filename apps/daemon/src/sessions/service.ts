@@ -352,7 +352,7 @@ export function createSessionsService(options: CreateSessionsServiceOptions): Se
   ): Promise<void> {
     const decision = decidePermission({
       tool: raw.tool,
-      mode: 'chat',
+      mode: 'run',
       path: permissionPath(raw.input),
       worktree: directory,
     });

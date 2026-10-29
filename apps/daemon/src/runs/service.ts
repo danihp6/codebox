@@ -53,12 +53,6 @@ export interface RunsService {
     readonly deviceId: string;
     readonly idempotencyKey: string;
   }): Run;
-  promote(input: {
-    readonly chatId: string;
-    readonly title?: string;
-    readonly deviceId: string;
-    readonly idempotencyKey: string;
-  }): Run;
   cancel(runId: string, reason?: 'operator'): Promise<Run>;
   revert(input: {
     readonly runId: string;
@@ -325,45 +319,6 @@ export function createRunsService(options: CreateRunsServiceOptions): RunsServic
             agent: input.agent ?? config.CB_DEFAULT_AGENT,
             model: input.model === undefined ? config.CB_DEFAULT_MODEL : input.model,
             ...(input.baseRef === undefined ? {} : { baseRef: input.baseRef }),
-          });
-        },
-      });
-    },
-
-    promote(input): Run {
-      return idempotentRun({
-        store: idempotency,
-        deviceId: input.deviceId,
-        key: input.idempotencyKey,
-        body: { chatId: input.chatId, title: input.title ?? null },
-        now: clock(),
-        start: (): Run => {
-          const session = store.chats.getSession(input.chatId);
-          if (session === null) throw new RunApiError('not_found', 404, { path: 'chat.id' });
-          if (session.status === 'archived') {
-            throw new RunApiError('conflict', 409, { reason: 'chat_archived' });
-          }
-          if ((session.kind ?? 'repo') !== 'repo' || session.repoId === null) {
-            throw new RunApiError('conflict', 409, { reason: 'chat_not_repo' });
-          }
-          const last = store.chats.lastMessage(input.chatId);
-          if (last === null || last.role !== 'assistant' || last.text.trim() === '') {
-            throw new RunApiError('validation_failed', 422, { path: 'chat.messages' });
-          }
-          const repo = requireRepo(context, session.repoId, 'chat.repoId');
-          const runEngine = engineForRun(service, logger);
-          return queueRun({
-            context,
-            engine: runEngine,
-            now: clock,
-            repo,
-            jobId: null,
-            trigger: 'promote',
-            title: input.title ?? session.title,
-            prompt: last.text,
-            agent: config.CB_DEFAULT_AGENT,
-            model: config.CB_DEFAULT_MODEL,
-            baseRef: repo.defaultBranch,
           });
         },
       });

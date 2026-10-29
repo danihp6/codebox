@@ -37,7 +37,6 @@ function contextFor(store: Store, now: Date): DaemonContext {
 
 interface FakePort extends ScheduleFirePort {
   readonly runs: { scheduleId: string; scheduledFor: string; costCapUsd: number | null }[];
-  readonly chats: { scheduleId: string; scheduledFor: string }[];
   failure: ScheduleFireError | null;
 }
 
@@ -79,7 +78,6 @@ function fakePort(store: Store): FakePort {
   let counter = 0;
   const port: FakePort = {
     runs: [],
-    chats: [],
     failure: null,
     startRun(input): { readonly runId: string } {
       if (port.failure !== null) throw port.failure;
@@ -92,12 +90,6 @@ function fakePort(store: Store): FakePort {
       const runId = `run_sched${String(counter).padStart(4, '0')}`;
       queuedRun(store, runId);
       return { runId };
-    },
-    startChat(input): { readonly chatId: string; readonly messageId: string } {
-      if (port.failure !== null) throw port.failure;
-      counter += 1;
-      port.chats.push({ scheduleId: input.schedule.id, scheduledFor: input.scheduledFor });
-      return { chatId: 'chat_000001', messageId: `msg_00000${String(counter)}` };
     },
   };
   return port;
@@ -518,9 +510,10 @@ describe('tick', () => {
     expect(h.store.schedules.get(created.id)?.firesCount).toBe(1);
   });
 
-  it('fires a chat schedule through the chat port', async () => {
+  it('fails a repo-less schedule with repo_required', async () => {
     const h = harness();
-    const chat = h.store.chats.createSession(
+    // The legacy chat row is what the FK on `schedules.chat_session_id` still points at.
+    h.store.chats.createSession(
       {
         id: 'chat_000001',
         repoId: REPO_ID,
@@ -536,7 +529,7 @@ describe('tick', () => {
       fixture({
         id: 'sch_000901',
         repoId: null,
-        chatSessionId: chat.id,
+        chatSessionId: 'chat_000001',
         firePolicy: 'continue',
         mode: 'every',
         cron: '0 10 * * *',
@@ -547,12 +540,13 @@ describe('tick', () => {
     );
     expect(await h.service.tick()).toEqual({ due: 1, fired: 1, skipped: 0, lost: 0 });
     await h.drain();
-    expect(h.port.chats).toEqual([
-      { scheduleId: created.id, scheduledFor: '2026-10-25T10:00:00Z' },
-    ]);
+    expect(h.port.runs).toEqual([]);
     const fires = h.store.scheduleFires.listBySchedule(created.id, 10);
-    expect(fires[0]?.outcome).toBe('fired');
-    expect(fires[0]?.chatId).toBe('chat_000001');
+    expect(fires[0]).toMatchObject({
+      outcome: 'failed',
+      detail: 'repo_required',
+      chatId: null,
+    });
   });
 
   it('does nothing when no schedule is due', async () => {

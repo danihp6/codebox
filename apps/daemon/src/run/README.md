@@ -15,7 +15,7 @@ The run engine: one run from `queued` to `succeeded`, `failed`, `cancelled` or a
 - `engine.test.ts` — the happy path, the parked cases, cancel, timeout, cost cap, retries and the
   secret-scan gate step.
 - `approvals-retired.test.ts` — the objective guard that no daemon source creates an approval row
-  and that the chat service has no approval table and no timer.
+  and that no `chat` or `routines` directory survives to carry an approval table.
 - `commit.test.ts` — a real temporary repository plus a runner that reports a clean index.
 - `pr-body.test.ts` — every section, the guardrail boxes and the absent secrets.
 - `modules.test.ts` — `run` and `gate` stay absent subsystems and the daemon still boots.

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import type { Approval, ChatSession, Repo, Run } from '@codebox/contracts';
+import type { Approval, Repo, Run } from '@codebox/contracts';
 import { openInMemoryStore } from '@codebox/store';
 import type { Store } from '@codebox/store';
 import type { WorkspaceManager, WorkspaceStatus, Worktree } from '@codebox/workspaces';
@@ -169,41 +169,6 @@ function createRun(harness: Harness, prompt = 'Fix the lockfile'): Run {
   });
 }
 
-function seedChat(store: Store, clock: () => Date, status: ChatSession['status'] = 'idle'): string {
-  const at = clock().toISOString();
-  store.chats.createSession(
-    {
-      id: 'chat_test01',
-      repoId: 'repo_test01',
-      title: 'Nightly chat',
-      status,
-      createdAt: at,
-      updatedAt: at,
-      lastMessage: null,
-    },
-    { opencodeSessionId: null, worktree: null },
-  );
-  return 'chat_test01';
-}
-
-function appendMessage(
-  store: Store,
-  clock: () => Date,
-  role: 'user' | 'assistant',
-  text: string,
-): void {
-  store.chats.appendMessage(
-    {
-      id: `msg_${role}0001`,
-      chatId: 'chat_test01',
-      role,
-      text,
-      createdAt: clock().toISOString(),
-    },
-    { origin: role },
-  );
-}
-
 function seedApproval(store: Store, clock: () => Date, runId: string | null): Approval {
   const at = clock();
   return store.approvals.create({
@@ -341,80 +306,6 @@ describe('event replay', () => {
     const error = refusal(() => test.service.events('run_zzzzzzzzzzzzzz', 0, 10));
     expect(error.status).toBe(404);
     expect(error.details).toEqual({ path: 'run.id' });
-  });
-});
-
-describe('promote', () => {
-  it('turns the last assistant message into a promote run', () => {
-    const test = harness();
-    seedChat(test.store, test.now);
-    appendMessage(test.store, test.now, 'user', 'please fix it');
-    test.advance(1);
-    appendMessage(test.store, test.now, 'assistant', 'I fixed the lockfile.');
-
-    const run = test.service.promote({
-      chatId: 'chat_test01',
-      deviceId: DEVICE,
-      idempotencyKey: 'promote-1',
-    });
-    expect(run.trigger).toBe('promote');
-    expect(run.jobId).toBeNull();
-    expect(run.baseRef).toBe('main');
-    expect(test.engine.starts[0]?.prompt).toBe('I fixed the lockfile.');
-    expect(test.engine.starts[0]?.title).toBe('Nightly chat');
-  });
-
-  it('refuses a session without an assistant message', () => {
-    const test = harness();
-    seedChat(test.store, test.now);
-    appendMessage(test.store, test.now, 'user', 'hello');
-    const error = refusal(() =>
-      test.service.promote({ chatId: 'chat_test01', deviceId: DEVICE, idempotencyKey: 'p1' }),
-    );
-    expect(error.status).toBe(422);
-    expect(error.details).toEqual({ path: 'chat.messages' });
-  });
-
-  it('refuses a session that is not bound to a repository', () => {
-    const test = harness();
-    const at = test.now().toISOString();
-    test.store.chats.createSession(
-      {
-        id: 'chat_free01',
-        repoId: null,
-        kind: 'free',
-        title: 'Free chat',
-        status: 'idle',
-        createdAt: at,
-        updatedAt: at,
-        lastMessage: null,
-      },
-      { opencodeSessionId: null, worktree: null },
-    );
-
-    // The kind guard precedes the message check: a free chat is refused before it is read.
-    const error = refusal(() =>
-      test.service.promote({ chatId: 'chat_free01', deviceId: DEVICE, idempotencyKey: 'p-free' }),
-    );
-    expect(error.status).toBe(409);
-    expect(error.details).toEqual({ reason: 'chat_not_repo' });
-    expect(test.engine.starts).toHaveLength(0);
-  });
-
-  it('refuses an archived session and an unknown one', () => {
-    const test = harness();
-    seedChat(test.store, test.now, 'archived');
-    appendMessage(test.store, test.now, 'assistant', 'done');
-    const archived = refusal(() =>
-      test.service.promote({ chatId: 'chat_test01', deviceId: DEVICE, idempotencyKey: 'p1' }),
-    );
-    expect(archived.status).toBe(409);
-    expect(archived.details).toEqual({ reason: 'chat_archived' });
-    const unknown = refusal(() =>
-      test.service.promote({ chatId: 'chat_zzzzzz', deviceId: DEVICE, idempotencyKey: 'p2' }),
-    );
-    expect(unknown.status).toBe(404);
-    expect(unknown.details).toEqual({ path: 'chat.id' });
   });
 });
 

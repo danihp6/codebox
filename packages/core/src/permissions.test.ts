@@ -5,30 +5,23 @@ import {
   decidePermission,
   isInsideWorktree,
 } from './permissions.js';
-import type { PermissionDecision, PermissionMode, PermissionTool } from './permissions.js';
+import type { PermissionTool } from './permissions.js';
 
 const WORKTREE = '/srv/codebox/worktrees/run_01J';
 
 describe('permission policy', () => {
-  it('carries the docs/agent-runtime.md §6 matrix', () => {
+  it('carries the docs/agent-runtime.md §6 matrix with a single mode', () => {
     expect(PERMISSION_MATRIX).toEqual({
-      chat: {
-        read: 'allow',
-        edit: 'ask',
-        bash: 'ask',
-        webfetch: 'deny',
-        routine: 'allow',
-        other: 'deny',
-      },
       run: {
         read: 'allow',
         edit: 'allow',
         bash: 'allow',
         webfetch: 'deny',
-        routine: 'deny',
         other: 'deny',
       },
     });
+    expect(Object.keys(PERMISSION_MATRIX)).toEqual(['run']);
+    expect(Object.values(PERMISSION_MATRIX.run)).not.toContain('ask');
   });
 
   it('classifies tool names case-insensitively', () => {
@@ -51,12 +44,10 @@ describe('permission policy', () => {
       ['fetch', 'webfetch'],
       ['BASH', 'bash'],
       [' Apply_Patch ', 'edit'],
-      ['routine.create', 'routine'],
-      ['routine.list', 'routine'],
-      ['routine.pause', 'routine'],
-      [' Routine.Pause ', 'routine'],
-      ['routine.evil', 'other'],
-      ['routine.', 'other'],
+      ['routine.create', 'other'],
+      ['routine.list', 'other'],
+      ['routine.pause', 'other'],
+      [' Routine.Pause ', 'other'],
       ['routine', 'other'],
       ['mcp__evil', 'other'],
       ['', 'other'],
@@ -79,41 +70,48 @@ describe('permission policy', () => {
   });
 
   it('the permission policy fails closed', () => {
-    const modes: readonly PermissionMode[] = ['chat', 'run'];
-    const expected: Readonly<
-      Record<Exclude<PermissionTool, 'routine'>, readonly [PermissionDecision, PermissionDecision]>
-    > = {
-      read: ['allow', 'allow'],
-      edit: ['ask', 'allow'],
-      bash: ['ask', 'allow'],
-      webfetch: ['deny', 'deny'],
-      other: ['deny', 'deny'],
+    const expected: Readonly<Record<PermissionTool, 'allow' | 'deny'>> = {
+      read: 'allow',
+      edit: 'allow',
+      bash: 'allow',
+      webfetch: 'deny',
+      other: 'deny',
     };
-    for (const mode of modes) {
-      for (const [tool, decisions] of Object.entries(expected)) {
-        const decision = decidePermission({
+    for (const [tool, decision] of Object.entries(expected)) {
+      expect(decidePermission({ tool, mode: 'run', path: null, worktree: WORKTREE })).toBe(
+        decision,
+      );
+      expect(
+        decidePermission({
           tool,
-          mode,
-          path: null,
-          worktree: WORKTREE,
-        });
-        expect(decision).toBe(decisions[mode === 'chat' ? 0 : 1]);
-        const inside = decidePermission({
-          tool,
-          mode,
+          mode: 'run',
           path: `${WORKTREE}/src/index.ts`,
           worktree: WORKTREE,
-        });
-        expect(inside).toBe(decision);
-      }
+        }),
+      ).toBe(decision);
     }
+
+    expect(
+      decidePermission({ tool: 'edit', mode: 'run', path: `${WORKTREE}/a.ts`, worktree: WORKTREE }),
+    ).toBe('allow');
+    expect(
+      decidePermission({ tool: 'bash', mode: 'run', path: `${WORKTREE}/a.ts`, worktree: WORKTREE }),
+    ).toBe('allow');
+    expect(
+      decidePermission({ tool: 'webfetch', mode: 'run', path: null, worktree: WORKTREE }),
+    ).toBe('deny');
+    expect(
+      decidePermission({ tool: 'edit', mode: 'run', path: '/etc/passwd', worktree: WORKTREE }),
+    ).toBe('deny');
+    expect(
+      decidePermission({ tool: 'routine.create', mode: 'run', path: null, worktree: WORKTREE }),
+    ).toBe('deny');
 
     for (const tool of ['webfetch', 'websearch', 'fetch', 'routine.evil', 'mcp__evil']) {
       expect(decidePermission({ tool, mode: 'run', path: null, worktree: WORKTREE })).toBe('deny');
       expect(
-        decidePermission({ tool, mode: 'chat', path: `${WORKTREE}/a.ts`, worktree: WORKTREE }),
+        decidePermission({ tool, mode: 'run', path: `${WORKTREE}/a.ts`, worktree: WORKTREE }),
       ).toBe('deny');
-      expect(decidePermission({ tool, mode: 'chat', path: null, worktree: WORKTREE })).toBe('deny');
     }
 
     for (const tool of ['read', 'edit', 'bash', 'list', 'apply_patch']) {
@@ -137,29 +135,20 @@ describe('permission policy', () => {
         }),
       ).toBe('deny');
     }
-
-    expect(decidePermission({ tool: 'edit', mode: 'chat', path: null, worktree: WORKTREE })).toBe(
-      'ask',
-    );
-    expect(decidePermission({ tool: 'edit', mode: 'run', path: null, worktree: WORKTREE })).toBe(
-      'allow',
-    );
   });
 
-  it('allows the routine tools in chat and denies them in a run', () => {
-    for (const tool of ['routine.create', 'routine.list', 'routine.pause']) {
-      expect(decidePermission({ tool, mode: 'chat', path: null, worktree: WORKTREE })).toBe(
-        'allow',
-      );
+  it('denies the retired routine tools', () => {
+    for (const tool of ['routine.create', 'routine.list', 'routine.pause', ' Routine.Pause ']) {
+      expect(classifyTool(tool)).toBe('other');
       expect(decidePermission({ tool, mode: 'run', path: null, worktree: WORKTREE })).toBe('deny');
+      expect(
+        decidePermission({
+          tool,
+          mode: 'run',
+          path: `${WORKTREE}/.codebox/schedule.yml`,
+          worktree: WORKTREE,
+        }),
+      ).toBe('deny');
     }
-    expect(
-      decidePermission({
-        tool: 'routine.create',
-        mode: 'chat',
-        path: '/etc/passwd',
-        worktree: WORKTREE,
-      }),
-    ).toBe('deny');
   });
 });

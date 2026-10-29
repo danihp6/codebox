@@ -9,7 +9,7 @@ import { createApp } from '../app.js';
 import { createModule as createAuthModule } from '../auth/index.js';
 import { loadConfig, readBuildInfo, resolvePaths } from '../config.js';
 import { createLogger } from '../logger.js';
-import { createShutdownRegistry } from '../modules.js';
+import { DEFAULT_SUBSYSTEM_FLAGS, createShutdownRegistry } from '../modules.js';
 import type { DaemonApp, DaemonContext } from '../modules.js';
 import { createModule as createEventsModule } from './index.js';
 
@@ -57,19 +57,7 @@ function harness(): Harness {
     store,
     logger,
     clock: () => new Date(TS),
-    flags: {
-      auth: true,
-      chat: true,
-      events: true,
-      run: true,
-      gate: true,
-      jobs: true,
-      runs: true,
-      push: true,
-      routines: true,
-      telemetry: true,
-      cli: true,
-    },
+    flags: DEFAULT_SUBSYSTEM_FLAGS,
     build: readBuildInfo(config),
     paths: resolvePaths(config),
     appDir,

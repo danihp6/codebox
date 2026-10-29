@@ -54,14 +54,12 @@ function makeApp(): DaemonApp {
 function only(name: SubsystemName): SubsystemFlags {
   const flags: Record<SubsystemName, boolean> = {
     auth: false,
-    chat: false,
     events: false,
     run: false,
     gate: false,
     jobs: false,
     runs: false,
     push: false,
-    routines: false,
     schedules: false,
     credentials: false,
     providers: false,
@@ -88,17 +86,15 @@ function moduleNotFound(name: SubsystemName): Error {
 }
 
 describe('subsystems', () => {
-  it('lists the seventeen subsystems in order, append-only', () => {
+  it('lists the fifteen subsystems in order, append-only', () => {
     expect([...SUBSYSTEMS]).toEqual([
       'auth',
-      'chat',
       'events',
       'run',
       'gate',
       'jobs',
       'runs',
       'push',
-      'routines',
       'schedules',
       'credentials',
       'providers',
@@ -110,10 +106,10 @@ describe('subsystems', () => {
     ]);
   });
 
-  it('keeps the fourteen bootstrapped names at their indices', () => {
-    expect(SUBSYSTEMS.slice(0, 2)).toEqual(['auth', 'chat']);
-    expect(SUBSYSTEMS.indexOf('cli')).toBe(13);
-    expect(SUBSYSTEMS.slice(14)).toEqual(['works', 'backlog', 'sessions']);
+  it('keeps the bootstrapped names at their indices', () => {
+    expect(SUBSYSTEMS[0]).toBe('auth');
+    expect(SUBSYSTEMS.indexOf('cli')).toBe(11);
+    expect(SUBSYSTEMS.slice(12)).toEqual(['works', 'backlog', 'sessions']);
   });
 
   it('enables every subsystem by default', () => {
@@ -176,7 +172,7 @@ describe('isMissingSubsystem', () => {
   });
 
   it('rejects a different subsystem', () => {
-    expect(isMissingSubsystem(withCode(message, 'ERR_MODULE_NOT_FOUND'), 'chat')).toBe(false);
+    expect(isMissingSubsystem(withCode(message, 'ERR_MODULE_NOT_FOUND'), 'events')).toBe(false);
   });
 
   it('rejects a missing dependency inside an existing module', () => {
@@ -198,19 +194,20 @@ describe('loadModules', () => {
   it('imports nothing when every flag is off', async () => {
     const context = makeContext({
       auth: false,
-      chat: false,
       events: false,
       run: false,
       gate: false,
       jobs: false,
       runs: false,
       push: false,
-      routines: false,
       schedules: false,
       credentials: false,
       providers: false,
       telemetry: false,
       cli: false,
+      works: false,
+      backlog: false,
+      sessions: false,
     });
     const imported: string[] = [];
     const report = await loadModules({
@@ -274,7 +271,7 @@ describe('loadModules', () => {
   });
 
   it('reports a throwing register as failed and keeps walking', async () => {
-    const context = makeContext({ ...only('auth'), chat: true });
+    const context = makeContext({ ...only('auth'), events: true });
     const report = await loadModules({
       app: makeApp(),
       context,
@@ -290,7 +287,7 @@ describe('loadModules', () => {
         };
       },
     });
-    expect(report.loaded).toEqual(['chat']);
+    expect(report.loaded).toEqual(['events']);
     expect(report.failed).toEqual([{ name: 'auth', error: 'auth exploded' }]);
   });
 

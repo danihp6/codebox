@@ -1,13 +1,6 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type {
-  ChatSession,
-  Health,
-  Run,
-  RunState,
-  SseStreamEvent,
-  Telemetry,
-} from '@codebox/contracts';
+import type { Health, Run, RunState, SseStreamEvent, Telemetry } from '@codebox/contracts';
 import { finalize } from 'rxjs';
 import { ApiClient } from '../../core/api/api-client';
 import type { ApiError } from '../../core/api/api-client';
@@ -29,35 +22,6 @@ export const WORKING_STATES: readonly RunState[] = Object.freeze([
 /** Delivered work waiting for the operator: an open pull request. */
 export const REVIEW_STATE: RunState = 'pr_open';
 
-export interface NeedsYouCounts {
-  readonly awaitingAnswer: number;
-  readonly unreviewedChats: number;
-  readonly total: number;
-}
-
-export function isAwaitingAnswer(session: ChatSession): boolean {
-  return session.status !== 'archived' && session.lastMessage?.role === 'user';
-}
-
-export function isUnreviewedChat(session: ChatSession): boolean {
-  return (
-    session.status !== 'archived' &&
-    (session.kind ?? 'repo') !== 'free' &&
-    (session.reviewedAt === null || session.reviewedAt === undefined) &&
-    session.lastMessage?.role === 'assistant'
-  );
-}
-
-export function countNeedsYou(sessions: readonly ChatSession[]): NeedsYouCounts {
-  let awaitingAnswer = 0;
-  let unreviewedChats = 0;
-  for (const session of sessions) {
-    if (isAwaitingAnswer(session)) awaitingAnswer += 1;
-    if (isUnreviewedChat(session)) unreviewedChats += 1;
-  }
-  return { awaitingAnswer, unreviewedChats, total: awaitingAnswer + unreviewedChats };
-}
-
 @Injectable()
 export class DashboardStore {
   private readonly api = inject(ApiClient);
@@ -67,7 +31,6 @@ export class DashboardStore {
 
   readonly health = signal<Health | null>(null);
   readonly telemetry = signal<Telemetry | null>(null);
-  readonly needsYou = signal<NeedsYouCounts>({ awaitingAnswer: 0, unreviewedChats: 0, total: 0 });
   readonly working = signal<readonly Run[]>([]);
   readonly ready = signal<readonly Run[]>([]);
   readonly recentRuns = signal<readonly Run[]>([]);
@@ -103,7 +66,6 @@ export class DashboardStore {
   private readAll(fromReload: boolean): void {
     this.fetchHealth(fromReload);
     this.fetchTelemetry(fromReload);
-    this.fetchSessions(fromReload);
     this.fetchRuns(fromReload);
     this.fetchRepos(fromReload);
   }
@@ -131,22 +93,6 @@ export class DashboardStore {
       .subscribe({
         next: (telemetry) => this.telemetry.set(telemetry),
         error: (error: ApiError) => this.fail(error, fromReload, this.telemetry() !== null),
-      });
-  }
-
-  private fetchSessions(fromReload: boolean): void {
-    this.dashboardApi
-      .sessions(PAGE_LIMIT)
-      .pipe(
-        takeUntilDestroyed(this.destroy),
-        finalize(() => this.loading.set(false)),
-      )
-      .subscribe({
-        next: (page) => {
-          this.hasPages.set(true);
-          this.needsYou.set(countNeedsYou(page.data));
-        },
-        error: (error: ApiError) => this.fail(error, fromReload, this.hasPages()),
       });
   }
 

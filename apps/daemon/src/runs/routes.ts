@@ -17,15 +17,7 @@ import {
 } from '@codebox/contracts';
 import { API_PREFIX } from '../app.js';
 import type { DaemonApp } from '../modules.js';
-import {
-  RunApiError,
-  handle,
-  json,
-  queryInput,
-  readJson,
-  readJsonOrEmpty,
-  requireScope,
-} from './errors.js';
+import { RunApiError, handle, json, queryInput, readJson, requireScope } from './errors.js';
 import type { AppContext } from './errors.js';
 import { requireIdempotencyKey } from './idempotency.js';
 import { runsServiceInternals } from './service.js';
@@ -55,8 +47,6 @@ const runEventsQuerySchema = z.strictObject({
   after: z.coerce.number().int().min(0).default(0),
   limit: z.coerce.number().int().min(1).max(200).default(EVENTS_DEFAULT_LIMIT),
 });
-
-const promoteSchema = z.strictObject({ title: z.string().min(1).max(120).optional() });
 
 /** The contract has no event-page schema yet; this is the strict local shape of §5.4. */
 const eventPageSchema = z.strictObject({
@@ -153,21 +143,6 @@ export function registerRunsRoutes(app: DaemonApp, runs: RunsService): void {
     handle(c, 'runs', async () => {
       const diff = await runs.diff(c.req.param('id'));
       return json(c, parseRunDiff(diff), 200);
-    }),
-  );
-
-  app.post(`${API_PREFIX}/chat/sessions/:id/promote`, (c) =>
-    handle(c, 'chat', async () => {
-      const device = requireScope(c, 'runs');
-      const body = parseOrThrow(promoteSchema, await readJsonOrEmpty(c), 'chat.promote');
-      const key = idempotencyHeader(c);
-      const run = runs.promote({
-        chatId: c.req.param('id'),
-        deviceId: device.id,
-        idempotencyKey: key,
-        ...(body.title === undefined ? {} : { title: body.title }),
-      });
-      return json(c, parseRun(run), 202);
     }),
   );
 }

@@ -12,7 +12,6 @@ import {
   parseRun,
   parseRunDiff,
   runDiffSchema,
-  runSchema,
 } from '@codebox/contracts';
 import type { Repo, Scope } from '@codebox/contracts';
 import { mintAccessToken, sha256Hex } from '@codebox/security';
@@ -220,39 +219,27 @@ function seedRepo(store: Store, clock: () => Date): Repo {
   });
 }
 
-function seedChat(test: Harness): string {
-  const at = test.now().toISOString();
-  test.store.chats.createSession(
-    {
-      id: 'chat_test01',
-      repoId: 'repo_test01',
-      title: 'Nightly chat',
-      status: 'idle',
-      createdAt: at,
-      updatedAt: at,
-      lastMessage: null,
-    },
-    { opencodeSessionId: null, worktree: null },
-  );
-  test.store.chats.appendMessage(
-    {
-      id: 'msg_assistant001',
-      chatId: 'chat_test01',
-      role: 'assistant',
-      text: 'Done.',
-      createdAt: at,
-    },
-    { origin: 'assistant' },
-  );
-  return 'chat_test01';
-}
-
 let approvals = 0;
 
 function seedApproval(test: Harness, runId: string | null): string {
   approvals += 1;
   const id = `apv_routes000${approvals}`;
   const at = test.now();
+  // `approvals` CHECKs one parent and FKs both, so a run-less approval carries its chat row.
+  if (runId === null) {
+    test.store.chats.createSession(
+      {
+        id: 'chat_test01',
+        repoId: 'repo_test01',
+        title: 'Legacy inbox partner',
+        status: 'idle',
+        createdAt: at.toISOString(),
+        updatedAt: at.toISOString(),
+        lastMessage: null,
+      },
+      { opencodeSessionId: null, worktree: null },
+    );
+  }
   test.store.approvals.create({
     id,
     state: 'pending',
@@ -316,16 +303,6 @@ describe('the runs routes contract', () => {
     expect(diff.status).toBe(200);
     const diffBody = parseRunDiff(await diff.json());
     expect(diffBody).toEqual(runDiffSchema.parse(diffBody));
-
-    const chatId = seedChat(test);
-    const promoted = await test.call('POST', `/v1/chat/sessions/${chatId}/promote`, {
-      token,
-      body: {},
-      headers: { 'idempotency-key': 'contract-promote' },
-    });
-    expect(promoted.status).toBe(202);
-    const promotedRun = parseRun(await promoted.json());
-    expect(promotedRun.trigger).toBe('promote');
 
     const jobs = await test.call('POST', '/v1/jobs', {
       token,
@@ -661,65 +638,10 @@ describe('the runs approvals inbox', () => {
   });
 });
 
-describe('the runs promote route', () => {
-  it('promotes the last assistant message and refuses the rest', async () => {
-    const test = harness();
-    const token = test.device();
-    const chatId = seedChat(test);
-    const promoted = await test.call('POST', `/v1/chat/sessions/${chatId}/promote`, {
-      token,
-      body: { title: 'Promoted work' },
-      headers: { 'idempotency-key': 'promote-1' },
-    });
-    expect(promoted.status).toBe(202);
-    const run = parseRun(await promoted.json());
-    expect(run.trigger).toBe('promote');
-    expect(test.engine.starts.at(-1)?.prompt).toBe('Done.');
-
-    const noAssistant = await test.call('POST', '/v1/chat/sessions/chat_unknown01/promote', {
-      token,
-      body: {},
-      headers: { 'idempotency-key': 'promote-2' },
-    });
-    expect(noAssistant.status).toBe(404);
-    expect(errorOf(await body(noAssistant))).toMatchObject({
-      code: 'not_found',
-      details: { path: 'chat.id' },
-    });
-
-    test.store.chats.updateSession(chatId, { status: 'archived', updatedAt: NOW });
-    const archived = await test.call('POST', `/v1/chat/sessions/${chatId}/promote`, {
-      token,
-      body: {},
-      headers: { 'idempotency-key': 'promote-3' },
-    });
-    expect(archived.status).toBe(409);
-    expect(errorOf(await body(archived))).toMatchObject({
-      code: 'conflict',
-      details: { reason: 'chat_archived' },
-    });
-  });
-
-  it('promotes without a body and rejects a missing key', async () => {
-    const test = harness();
-    const token = test.device();
-    const chatId = seedChat(test);
-    const noKey = await test.call('POST', `/v1/chat/sessions/${chatId}/promote`, { token });
-    expect(noKey.status).toBe(400);
-    const promoted = await test.call('POST', `/v1/chat/sessions/${chatId}/promote`, {
-      token,
-      headers: { 'idempotency-key': 'promote-empty' },
-    });
-    expect(promoted.status).toBe(202);
-    expect(runSchema.safeParse(await promoted.json()).success).toBe(true);
-  });
-});
-
 describe('the runs route scope', () => {
   it('refuses every mutating route to a read-only device', async () => {
     const test = harness();
     const reader = test.device(['read']);
-    const chatId = seedChat(test);
     const approvalId = seedApproval(test, null);
 
     const attempts: [string, string, unknown][] = [
@@ -736,7 +658,6 @@ describe('the runs route scope', () => {
         },
       ],
       ['POST', `/v1/approvals/${approvalId}/reply`, { decision: 'allow', scope: 'once' }],
-      ['POST', `/v1/chat/sessions/${chatId}/promote`, {}],
     ];
 
     for (const [method, path, payload] of attempts) {

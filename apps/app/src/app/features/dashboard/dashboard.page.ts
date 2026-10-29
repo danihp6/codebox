@@ -131,35 +131,10 @@ export function formatUsd(usd: number): string {
               <a data-testid="dashboard-start-repos" routerLink="/repos">
                 {{ t('dashboard.start.repos') }}
               </a>
-              <a data-testid="dashboard-start-chat" routerLink="/repos">
-                {{ t('dashboard.start.chat') }}
-              </a>
             </div>
           </section>
         } @else {
           <section class="cb-cards">
-            <article
-              class="cb-card"
-              data-testid="dashboard-needs-you"
-              [attr.data-total]="store.needsYou().total"
-              [attr.data-awaiting]="store.needsYou().awaitingAnswer"
-              [attr.data-unreviewed]="store.needsYou().unreviewedChats"
-            >
-              <h2>{{ t('dashboard.section.needs-you') }}</h2>
-              <p class="cb-count">{{ store.needsYou().total }}</p>
-              <p>
-                {{ t('dashboard.needs-you.awaiting') }}:
-                <span class="cb-mono">{{ store.needsYou().awaitingAnswer }}</span>
-              </p>
-              <p>
-                {{ t('dashboard.needs-you.unreviewed') }}:
-                <span class="cb-mono">{{ store.needsYou().unreviewedChats }}</span>
-              </p>
-              <a data-testid="dashboard-needs-you-chat" routerLink="/repos">
-                {{ t('dashboard.needs-you.open-chat') }}
-              </a>
-            </article>
-
             <article
               class="cb-card"
               data-testid="dashboard-working"
@@ -177,7 +152,7 @@ export function formatUsd(usd: number): string {
                         data-testid="dashboard-working-run"
                         [attr.data-run-id]="run.id"
                         [attr.data-state]="run.state"
-                        [routerLink]="['/runs', run.id]"
+                        [routerLink]="['/repos', run.repoId]"
                       >
                         <span class="cb-mono">{{ run.id }}</span>
                         <span>{{ stateLabel(run.state) }}</span>
@@ -205,7 +180,7 @@ export function formatUsd(usd: number): string {
                         data-testid="dashboard-ready-run"
                         [attr.data-run-id]="run.id"
                         [attr.data-pr]="run.pr?.number ?? ''"
-                        [routerLink]="['/runs', run.id]"
+                        [routerLink]="['/repos', run.repoId]"
                       >
                         <span class="cb-mono">{{ run.id }}</span>
                         <span>{{ t('dashboard.ready.pr') }} {{ run.pr?.number ?? '' }}</span>
@@ -287,7 +262,7 @@ export function formatUsd(usd: number): string {
                       [attr.data-run-id]="run.id"
                       [attr.data-state]="run.state"
                       [attr.data-created-at]="run.createdAt"
-                      [routerLink]="['/runs', run.id]"
+                      [routerLink]="['/repos', run.repoId]"
                     >
                       <span class="cb-mono">{{ run.id }}</span>
                       <span>{{ stateLabel(run.state) }}</span>

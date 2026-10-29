@@ -106,7 +106,7 @@ export function requestHash(body: unknown): string {
   return sha256Hex(canonicalJson(body));
 }
 
-/** §4 requires the header on `POST /v1/runs`, `POST /v1/jobs/{id}/run` and `promote`. */
+/** §4 requires the header on `POST /v1/runs` and `POST /v1/jobs/{id}/run`. */
 export function requireIdempotencyKey(header: string | undefined): string {
   if (header === undefined || header === '') {
     throw new RunApiError('bad_request', 400, { reason: 'idempotency_key_required' });

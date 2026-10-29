@@ -59,10 +59,7 @@ apps/app/src/
       repos/
       backlog/
       works/
-      runs-list/
-      run-detail/
       providers/
-      approvals/
       settings/
     shared/                   # cards, chips, empty states, log viewer, diff stat
     theme/                    # tokens, dark/light, Ionic variables
@@ -81,7 +78,7 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | Route | Screen | What it must do |
 | --- | --- | --- |
 | `/pair` | Pairing | Enter the ten-character code and a device name, submit, see one inline reason when the code is used, expired or unknown, and land on the dashboard; the same screen after a 401. |
-| `/dashboard` | Dashboard | *Needs you*, running, unreviewed, today's spend, health, and **one block per repository**; the start card on a fresh box. |
+| `/dashboard` | Dashboard | **Running** and **ready** (an open PR), today's spend, health, and **one block per repository**; the start card on a fresh box. |
 | `/repos` | Repos list | The repository list with a **search field and no filters**: name, clone/gate state, `pending · running · merged` counts, and **one amber dot** when something needs the operator (an unreviewed PR or a red run); **add** connects one from the GitHub App installation, showing `connected` / `cloning` / `unavailable` per row. |
 | `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; **the chat button** opens a session with four targets (backlog, design, schedule, rework) or `repo` for a read-only chat; tabs **Backlog · Works · Schedule · Design**. |
 | `/repos/:id/works` | Repo · works | Every work of the repository, flat, newest activity first, including ad-hoc ones and orphans. |
@@ -102,10 +99,6 @@ filter; Settings owns the cross-repository lists. Detail screens push onto the s
 
 A repository carries exactly four tabs — **Backlog · Works · Schedule · Design** — and the tab
 strip is one component, so a tab can never exist on one screen and not another.
-
-**Legacy, retired by Task-76:** `/jobs`, `/jobs/:id`, `/runs`, `/runs/:id` and `/approvals`
-are still routed and still guarded while the daemon answers their endpoints; no screen above
-targets them and the next task removes them.
 
 **The repository is the spine.** A work exists only inside one repository, one per backlog item,
 and never changes (D44). There is no free chat, no scope chip and no promote: the backlog item

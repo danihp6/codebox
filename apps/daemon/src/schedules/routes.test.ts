@@ -55,7 +55,6 @@ interface Harness {
 
 const record: ScheduleFirePort = {
   startRun: () => ({ runId: 'run_routes00001' }),
-  startChat: () => ({ chatId: 'chat_000001', messageId: 'msg_000001' }),
 };
 
 function harness(): Harness {
