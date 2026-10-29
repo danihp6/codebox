@@ -1,3 +1,5 @@
+@import '@fontsource-variable/inter';
+
 :root {
   --cb-bg: #0b0f14;
   --cb-surface: #121821;
@@ -9,6 +11,7 @@
   --cb-radius: 12px;
   --cb-space: 4px;
   --cb-font-mono: ui-monospace, sfmono-regular, menlo, consolas, 'Liberation Mono', monospace;
+  --cb-font-sans: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', roboto, sans-serif;
 
   --ion-background-color: var(--cb-bg);
   --ion-background-color-rgb: 11, 15, 20;
@@ -17,7 +20,7 @@
   --ion-color-primary: var(--cb-accent);
   --ion-color-warning: var(--cb-warn);
   --ion-color-danger: var(--cb-danger);
-  --ion-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', roboto, sans-serif;
+  --ion-font-family: 'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', roboto, sans-serif;
 }
 
 @media (prefers-color-scheme: light) {

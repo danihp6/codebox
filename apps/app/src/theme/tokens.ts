@@ -9,6 +9,7 @@ export const THEME_TOKENS = Object.freeze({
   radius: '12px',
   space: '4px',
   fontMono: "ui-monospace, sfmono-regular, menlo, consolas, 'Liberation Mono', monospace",
+  fontSans: "'Inter Variable', -apple-system, BlinkMacSystemFont, 'Segoe UI', roboto, sans-serif",
 });
 
 export type ThemeToken = keyof typeof THEME_TOKENS;
