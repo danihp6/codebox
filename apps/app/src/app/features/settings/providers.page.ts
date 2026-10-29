@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, output } from '@angular/core';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { formatFire } from '../jobs/time-format';
+import { formatFire } from '../../core/util/time-format';
 import { translate } from './i18n';
 import { ProvidersStore } from './providers.store';
 

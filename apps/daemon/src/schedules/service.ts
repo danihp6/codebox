@@ -283,10 +283,8 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
   }
 
   async function runFire(schedule: Schedule, scheduledFor: string): Promise<FireOutcome> {
-    if (schedule.repoId === null) {
-      const started = await fire.startChat({ schedule, scheduledFor });
-      return { runId: null, chatId: started.chatId, costUsd: 0, code: null };
-    }
+    // D56: a schedule without a repository no longer exists; a legacy row fails its fire closed.
+    if (schedule.repoId === null) throw new ScheduleFireError('repo_required');
     const started = await fire.startRun({
       schedule,
       scheduledFor,

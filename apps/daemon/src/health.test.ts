@@ -12,7 +12,7 @@ import { loadConfig, readBuildInfo, resolvePaths } from './config.js';
 import { createLogger } from './logger.js';
 import { DISK_UNKNOWN, aggregateStatus, collectHealth, createProbes, diskState } from './health.js';
 import type { HealthProbes } from './health.js';
-import { createShutdownRegistry } from './modules.js';
+import { DEFAULT_SUBSYSTEM_FLAGS, createShutdownRegistry } from './modules.js';
 import type { DaemonContext } from './modules.js';
 
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
@@ -104,19 +104,7 @@ function harness(overrides: Partial<CodeboxConfig> = {}): Harness {
       store,
       logger,
       clock: () => new Date('2026-10-25T00:00:00.000Z'),
-      flags: {
-        auth: true,
-        chat: true,
-        events: true,
-        run: true,
-        gate: true,
-        jobs: true,
-        runs: true,
-        push: true,
-        routines: true,
-        telemetry: true,
-        cli: true,
-      },
+      flags: DEFAULT_SUBSYSTEM_FLAGS,
       build: readBuildInfo(config),
       paths: resolvePaths(config),
       appDir: join(directory, 'app'),

@@ -20,11 +20,6 @@ const EXPECTED_PATHS = [
   'repos/:id',
   'works/:id',
   'sessions/:id',
-  'jobs',
-  'jobs/:id',
-  'runs',
-  'runs/:id',
-  'approvals',
   'settings/devices',
   'settings/credentials',
   'about',
@@ -60,16 +55,6 @@ function documentedPaths(): readonly string[] {
   return screensSection()
     .split('\n')
     .map((line) => /^\| `([^`]+)` \|/.exec(line)?.[1])
-    .filter((path): path is string => path !== undefined);
-}
-
-function legacyPaths(): readonly string[] {
-  const line = screensSection()
-    .split('\n')
-    .find((candidate) => candidate.startsWith('**Legacy'));
-  if (line === undefined) throw new Error('docs/app.md §4 has no legacy list');
-  return [...line.matchAll(/`([^`]+)`/g)]
-    .map((match) => match[1])
     .filter((path): path is string => path !== undefined);
 }
 
@@ -127,7 +112,6 @@ describe('app routes', () => {
 
   it('agrees with docs/app.md §4 in both directions', () => {
     const table = documentedPaths();
-    const legacy = legacyPaths();
     const routerPaths = routes.map((route) => route.path);
 
     for (const path of table) {
@@ -138,10 +122,15 @@ describe('app routes', () => {
     for (const path of routerPaths) {
       if (path === '' || path === '**') continue;
       const documented = table.includes(`/${path}`);
-      expect(documented || legacy.includes(`/${path}`), `route ${path} is undocumented`).toBe(true);
+      expect(documented, `route ${path} is undocumented`).toBe(true);
     }
+  });
 
-    expect(legacy).toEqual(['/jobs', '/jobs/:id', '/runs', '/runs/:id', '/approvals']);
+  it('retires the chat, jobs, runs and approvals routes', () => {
+    const retired = ['chat', 'schedules', 'jobs', 'jobs/:id', 'runs', 'runs/:id', 'approvals'];
+    const paths = routes.map((route) => route.path);
+    for (const path of retired) expect(paths, path).not.toContain(path);
+    expect(SHELL_TABS).toHaveLength(3);
   });
 });
 

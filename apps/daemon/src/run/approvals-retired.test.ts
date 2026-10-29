@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
@@ -28,10 +28,8 @@ describe('the approval inbox is retired from the agent paths', () => {
     expect(writers).toEqual([]);
   });
 
-  it('leaves the chat service with no approval table and no timer', () => {
-    const text = readFileSync(path.join(sourceDir, 'chat', 'service.ts'), 'utf8');
-
-    expect(text).not.toContain('approvals');
-    expect(text).not.toContain('setInterval');
+  it('leaves no chat subsystem to carry an approval table', () => {
+    expect(existsSync(path.join(sourceDir, 'chat'))).toBe(false);
+    expect(existsSync(path.join(sourceDir, 'routines'))).toBe(false);
   });
 });

@@ -2,7 +2,7 @@
 
 The SSE subsystem: the single `GET /v1/events` stream of `docs/api.md` §6, backed by
 `store.events`. Replay is exact within the retention window, a pruned range becomes one `gap`,
-and one in-process notifier wakes every open stream as soon as a chat append commits.
+and one in-process notifier wakes every open stream as soon as an event append commits.
 
 ## Files
 

@@ -12,14 +12,12 @@ export type DaemonApp = Hono<{ Variables: AppVariables }>;
 
 export type SubsystemName =
   | 'auth'
-  | 'chat'
   | 'events'
   | 'run'
   | 'gate'
   | 'jobs'
   | 'runs'
   | 'push'
-  | 'routines'
   | 'schedules'
   | 'credentials'
   | 'providers'
@@ -31,14 +29,12 @@ export type SubsystemName =
 
 export const SUBSYSTEMS: readonly SubsystemName[] = Object.freeze([
   'auth',
-  'chat',
   'events',
   'run',
   'gate',
   'jobs',
   'runs',
   'push',
-  'routines',
   'schedules',
   'credentials',
   'providers',
@@ -53,14 +49,12 @@ export type SubsystemFlags = Readonly<Record<SubsystemName, boolean>>;
 
 export const DEFAULT_SUBSYSTEM_FLAGS: SubsystemFlags = Object.freeze({
   auth: true,
-  chat: true,
   events: true,
   run: true,
   gate: true,
   jobs: true,
   runs: true,
   push: true,
-  routines: true,
   schedules: true,
   credentials: true,
   providers: true,

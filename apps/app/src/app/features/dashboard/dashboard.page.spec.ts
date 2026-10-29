@@ -3,16 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import type { ComponentFixture } from '@angular/core/testing';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type {
-  ChatMessage,
-  ChatSession,
-  Health,
-  Repo,
-  Run,
-  RunState,
-  SseStreamEvent,
-  Telemetry,
-} from '@codebox/contracts';
+import type { Health, Repo, Run, RunState, SseStreamEvent, Telemetry } from '@codebox/contracts';
 import { provideIonicAngular } from '@ionic/angular';
 import { signal } from '@angular/core';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -23,7 +14,6 @@ import { DashboardPage, formatUsd } from './dashboard.page';
 import { STRINGS, translate } from './i18n';
 
 const TS = '2026-10-24T18:04:02Z';
-const REVIEWED_AT = '2026-10-27T08:30:00Z';
 const REPO_ID = 'repo_01JABCDEFGHJKMNPQRSV';
 
 const HEALTH: Health = {
@@ -66,46 +56,6 @@ const REPO: Repo = {
 
 const PR = { number: 42, url: 'https://github.com/dani/example/pull/42', mergeable: true };
 
-function messageAt(index: number, chatId: string, role: ChatMessage['role']): ChatMessage {
-  return {
-    id: `msg_01JABCDEFGHJKMNPQR${String(index).padStart(2, '0')}`,
-    chatId,
-    role,
-    text: 'hi',
-    createdAt: TS,
-  };
-}
-
-interface SessionOptions {
-  readonly role: ChatMessage['role'];
-  readonly kind?: ChatSession['kind'];
-  readonly reviewedAt?: string | null;
-  readonly status?: ChatSession['status'];
-}
-
-function sessionAt(index: number, options: SessionOptions): ChatSession {
-  const id = `chat_01JABCDEFGHJKMNPQR${String(index).padStart(2, '0')}`;
-  return {
-    id,
-    repoId: REPO_ID,
-    kind: options.kind ?? 'repo',
-    title: `Chat ${index}`,
-    status: options.status ?? 'idle',
-    reviewedAt: options.reviewedAt ?? null,
-    createdAt: TS,
-    updatedAt: TS,
-    lastMessage: messageAt(index, id, options.role),
-  };
-}
-
-const NEEDS_YOU_SESSIONS: readonly ChatSession[] = [
-  sessionAt(1, { role: 'assistant' }),
-  sessionAt(2, { role: 'user' }),
-  sessionAt(3, { role: 'assistant', kind: 'free' }),
-  sessionAt(4, { role: 'assistant', reviewedAt: REVIEWED_AT }),
-  sessionAt(5, { role: 'assistant', status: 'archived' }),
-];
-
 function runAt(index: number, state: RunState, pr: Run['pr'] = null): Run {
   return {
     id: `run_01JABCDEFGHJKMNPQR${String(index).padStart(2, '0')}`,
@@ -134,7 +84,6 @@ const RUNS = [RUNNING, PR_OPEN, FAILED, SUCCEEDED];
 
 const HEALTH_URL = '/v1/health';
 const TELEMETRY_URL = '/v1/telemetry?range=24h';
-const SESSIONS_URL = '/v1/chat/sessions?limit=50';
 const RUNS_URL = '/v1/runs?limit=50';
 const REPOS_URL = '/v1/repos?limit=1';
 
@@ -142,24 +91,18 @@ const USED_KEYS: readonly string[] = [
   'common.loading',
   'common.error',
   'dashboard.title',
-  'dashboard.section.needs-you',
   'dashboard.section.working',
   'dashboard.section.ready',
   'dashboard.section.health',
   'dashboard.section.queue',
   'dashboard.section.spend',
   'dashboard.section.recent',
-  'dashboard.needs-you.awaiting',
-  'dashboard.needs-you.unreviewed',
-  'dashboard.needs-you.unit',
-  'dashboard.needs-you.open-chat',
   'dashboard.working.empty',
   'dashboard.ready.empty',
   'dashboard.ready.pr',
   'dashboard.start.title',
   'dashboard.start.body',
   'dashboard.start.repos',
-  'dashboard.start.chat',
   'dashboard.vm.db',
   'dashboard.vm.opencode',
   'dashboard.vm.disk',
@@ -183,7 +126,6 @@ const USED_KEYS: readonly string[] = [
 interface Reads {
   readonly health?: Health;
   readonly telemetry?: Telemetry;
-  readonly sessions?: readonly ChatSession[];
   readonly runs?: readonly Run[];
   readonly repos?: readonly Repo[];
 }
@@ -244,7 +186,6 @@ async function mount(): Promise<Mounted> {
 function flushAll(http: HttpTestingController, reads: Reads = {}): void {
   http.expectOne(HEALTH_URL).flush(reads.health ?? HEALTH);
   http.expectOne(TELEMETRY_URL).flush(reads.telemetry ?? ZERO_TELEMETRY);
-  http.expectOne(SESSIONS_URL).flush({ data: [...(reads.sessions ?? [])], nextCursor: null });
   http.expectOne(RUNS_URL).flush({ data: [...(reads.runs ?? [])], nextCursor: null });
   http.expectOne(REPOS_URL).flush({ data: [...(reads.repos ?? [REPO])], nextCursor: null });
 }
@@ -265,9 +206,6 @@ describe('DashboardPage', () => {
 
     expect(hook(element, 'dashboard-loading')).toBeNull();
     expect(hook(element, 'dashboard-start')).toBeNull();
-    expect(hook(element, 'dashboard-needs-you')?.getAttribute('data-total')).toBe('0');
-    expect(hook(element, 'dashboard-needs-you')?.getAttribute('data-awaiting')).toBe('0');
-    expect(hook(element, 'dashboard-needs-you')?.getAttribute('data-unreviewed')).toBe('0');
     expect(hook(element, 'dashboard-working')?.getAttribute('data-count')).toBe('0');
     expect(hook(element, 'dashboard-ready')?.getAttribute('data-count')).toBe('0');
     expect(hook(element, 'dashboard-working-empty')).not.toBeNull();
@@ -295,7 +233,6 @@ describe('DashboardPage', () => {
     expect(start).not.toBeNull();
     expect(start?.getAttribute('data-repos')).toBe('0');
     expect(hook(element, 'dashboard-start-repos')?.getAttribute('href')).toBe('/repos');
-    expect(hook(element, 'dashboard-start-chat')?.getAttribute('href')).toBe('/repos');
     expect(hook(element, 'dashboard-needs-you')).toBeNull();
     expect(hook(element, 'dashboard-working')).toBeNull();
     expect(hook(element, 'dashboard-ready')).toBeNull();
@@ -319,7 +256,7 @@ describe('DashboardPage', () => {
     expect(workingRows).toHaveLength(1);
     expect(workingRows[0]?.getAttribute('data-run-id')).toBe(RUNNING.id);
     expect(workingRows[0]?.getAttribute('data-state')).toBe('running');
-    expect(workingRows[0]?.getAttribute('href')).toBe(`/runs/${RUNNING.id}`);
+    expect(workingRows[0]?.getAttribute('href')).toBe(`/repos/${REPO_ID}`);
 
     const ready = hook(element, 'dashboard-ready');
     expect(ready?.getAttribute('data-count')).toBe('1');
@@ -327,6 +264,7 @@ describe('DashboardPage', () => {
     expect(readyRows).toHaveLength(1);
     expect(readyRows[0]?.getAttribute('data-run-id')).toBe(PR_OPEN.id);
     expect(readyRows[0]?.getAttribute('data-pr')).toBe('42');
+    expect(readyRows[0]?.getAttribute('href')).toBe(`/repos/${REPO_ID}`);
 
     const recent = [...element.querySelectorAll<HTMLElement>('[data-testid="recent-run"]')];
     expect(recent).toHaveLength(4);
@@ -336,20 +274,6 @@ describe('DashboardPage', () => {
     expect(working?.querySelector('[data-state="succeeded"]')).toBeNull();
     expect(ready?.querySelector('[data-state="failed"]')).toBeNull();
     expect(ready?.querySelector('[data-state="succeeded"]')).toBeNull();
-  });
-
-  it('reads the needs-you counts from the chat page', async () => {
-    const { fixture, element, http } = await mount();
-
-    flushAll(http, { sessions: NEEDS_YOU_SESSIONS });
-    await fixture.whenStable();
-
-    const block = hook(element, 'dashboard-needs-you');
-    expect(block?.getAttribute('data-total')).toBe('2');
-    expect(block?.getAttribute('data-awaiting')).toBe('1');
-    expect(block?.getAttribute('data-unreviewed')).toBe('1');
-    expect(block?.textContent).toContain('2');
-    expect(hook(element, 'dashboard-needs-you-chat')?.getAttribute('href')).toBe('/repos');
   });
 
   it('renders the empty state for an empty runs page', async () => {
@@ -370,7 +294,6 @@ describe('DashboardPage', () => {
       statusText: 'Internal Server Error',
     });
     http.expectOne(TELEMETRY_URL).flush(ZERO_TELEMETRY);
-    http.expectOne(SESSIONS_URL).flush({ data: [], nextCursor: null });
     http.expectOne(RUNS_URL).flush({ data: [...RUNS], nextCursor: null });
     http.expectOne(REPOS_URL).flush({ data: [REPO], nextCursor: null });
     await fixture.whenStable();
@@ -402,7 +325,6 @@ describe('DashboardPage', () => {
       status: 500,
       statusText: 'Internal Server Error',
     });
-    http.expectOne(SESSIONS_URL).flush({ data: [], nextCursor: null });
     http.expectOne(RUNS_URL).flush({ data: [...RUNS], nextCursor: null });
     http.expectOne(REPOS_URL).flush({ data: [REPO], nextCursor: null });
     await fixture.whenStable();

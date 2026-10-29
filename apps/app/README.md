@@ -4,7 +4,7 @@ The hybrid client: Angular 22 + Ionic 9 + Capacitor, standalone components, sign
 zoneless change detector. Task-18 scaffolds the workspace: the shell, the frozen router, the
 API client, auth, SSE, i18n, the theme tokens, the PWA manifest and the service worker.
 Tasks 19–23 and 36 replace the placeholder feature pages with the shipped dashboard, repos,
-chat, jobs/runs, run detail and settings screens.
+works, sessions and settings screens; the chat, jobs/runs and run-detail screens are retired.
 
 The shared dictionaries in `src/assets/i18n/{en,es}.json` hold the shell keys; each feature
 folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
@@ -34,7 +34,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/app.component.spec.ts` — the banner reaches the shell and drops out when fresh.
 - `src/app/app.config.ts` — zoneless, Ionic, router, HTTP, service-worker providers.
 - `src/app/app.routes.ts` — every route of `docs/app.md` §4, lazy and guarded.
-- `src/app/app.routes.spec.ts` — the frozen 20-row path table, the guard walk, the three tabs and the `docs/app.md` §4 agreement test.
+- `src/app/app.routes.spec.ts` — the frozen 15-row path table, the guard walk, the three tabs, the `docs/app.md` §4 agreement test and the retired-route guard.
 - `src/app/readme.spec.ts` — every `src/app` file appears in this map and every map entry exists.
 - `src/app/shared/offline-banner.ts` — the connectivity signals and the read-only offline banner.
 - `src/app/shared/offline-banner.i18n.ts` — the offline banner dictionary in `en` and `es`.
@@ -62,6 +62,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/core/i18n/i18n.service.ts` — signal locale, dictionary loader and `t`.
 - `src/app/core/i18n/i18n.spec.ts` — key parity and missing-key behaviour.
 - `src/app/core/settings/settings.store.ts` — locale and theme persisted in the secure store.
+- `src/app/core/util/time-format.ts` — next-fire parts and formatting in the schedule's timezone.
+- `src/app/core/util/time-format.spec.ts` — the pinned parts in two zones and both locales.
 - `src/app/features/about/about.i18n.ts` — the about dictionary in `en` and `es`.
 - `src/app/features/about/about.page.ts` — the server's build identity, its health rows and the shipped third-party licences.
 - `src/app/features/about/about.page.spec.ts` — the response values, the health rows, a null commit, the licence list and the error/retry path.
@@ -69,7 +71,6 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/about/about.store.spec.ts` — both reads landing independently, a failed half and the reload.
 - `src/app/features/about/notice.ts` — the shipped `NOTICE` copy and its pure bullet parser.
 - `src/app/features/about/notice.spec.ts` — the verbatim `NOTICE` copy, the parser rules and every licence it lists.
-- `src/app/features/approvals/approvals.page.ts` — approvals placeholder.
 - `src/app/features/backlog/backlog.api.ts` — the backlog read, the work create, the attempt start and the session create.
 - `src/app/features/backlog/backlog.api.spec.ts` — every backlog URL and method, the empty attempt body and the boundary parse failure.
 - `src/app/features/backlog/backlog.store.ts` — the backlog read, the `Run` flow and the live-work conflict.
@@ -79,8 +80,6 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/backlog/new-session.sheet.spec.ts` — no request on render, the four buttons, the body without a work id, the 409 and the read-only create.
 - `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog: the header chat button, the four tabs, the rows with plan and state apart, the run action and the live-work block.
 - `src/app/features/backlog/repo-backlog.page.spec.ts` — the row hooks, every work state label, the run visibility, the live work, the error/retry and the sheet.
-- `src/app/features/chat/chat.api.ts` — the retired `/v1/chat/sessions` client, kept for `features/schedules` until Task-76 removes the routes.
-- `src/app/features/chat/chat.api.spec.ts` — every chat URL and method, the approval reply and the boundary parse failure.
 - `src/app/features/credentials/add-credential.sheet.ts` — the two-step add-credential sheet: name, kind, expose, the env warning, the confirmation tail and the save.
 - `src/app/features/credentials/add-credential.sheet.spec.ts` — the review step, the four-character tail, the env warning/blocked states and the cleared value.
 - `src/app/features/credentials/connect-service.sheet.ts` — the GitHub App manifest form and the generic integration form.
@@ -92,37 +91,13 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/credentials/credentials.store.ts` — the two independent catalog reads, create/remove and the manifest reload.
 - `src/app/features/credentials/credentials.store.spec.ts` — load, a failed half, create, remove, the manifest start and completion.
 - `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`.
-- `src/app/features/dashboard/dashboard.page.ts` — the five blocks (needs you, working, ready, spend, health), the recent runs, the first-run start card and the loading/error/stale states.
-- `src/app/features/dashboard/dashboard.page.spec.ts` — every block from a zero fixture, the start card, the rows of the run blocks, the needs-you counts and the dictionary parity.
-- `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry`, `/v1/chat/sessions`, `/v1/runs` and `/v1/repos` reads behind the blocks.
+- `src/app/features/dashboard/dashboard.page.ts` — the four blocks (working, ready, spend, health), the recent runs, the first-run start card and the loading/error/stale states.
+- `src/app/features/dashboard/dashboard.page.spec.ts` — every block from a zero fixture, the start card, the rows of the run blocks and the dictionary parity.
+- `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry`, `/v1/runs` and `/v1/repos` reads behind the blocks.
 - `src/app/features/dashboard/dashboard.api.spec.ts` — the three new page URLs, the explicit limit, the contract failures and the envelope mapping.
-- `src/app/features/dashboard/dashboard.store.ts` — health, telemetry, the computed `Needs you` counts, the working/ready/recent run signals and the run stream refetch.
-- `src/app/features/dashboard/dashboard.store.spec.ts` — the five reads, the needs-you sum over the chat page, the zero fixture, the first-run probe and the run stream frames.
+- `src/app/features/dashboard/dashboard.store.ts` — health, telemetry, the working/ready/recent run signals and the run stream refetch.
+- `src/app/features/dashboard/dashboard.store.spec.ts` — the four reads, the working-state sets, the zero fixture, the first-run probe and the run stream frames.
 - `src/app/features/dashboard/i18n.ts` — the dashboard dictionary in `en` and `es`.
-- `src/app/features/jobs/jobs.page.ts` — the Jobs tab: list, pause/resume, run-now and create, plus the in-page Routines tab.
-- `src/app/features/jobs/jobs.page.spec.ts` — the list hooks, the create sheet and dictionary completeness.
-- `src/app/features/jobs/job.page.ts` — job detail: cron and timezone editor, enable toggle, run-now and the next-fire preview.
-- `src/app/features/jobs/job.page.spec.ts` — the editor rules, the toggle, run-now and the next-fire preview.
-- `src/app/features/jobs/jobs.api.ts` — `/v1/jobs` list, detail, create, patch, delete, pause, resume, run-now and next-fire.
-- `src/app/features/jobs/jobs.api.spec.ts` — every jobs URL and method, the idempotency key and the boundary parse failure.
-- `src/app/features/jobs/jobs.store.ts` — the list, optimistic pause/resume, run-now, create and the job stream frames.
-- `src/app/features/jobs/jobs.store.spec.ts` — load, the pause rollback, resume, run-now, create and the stream frames.
-- `src/app/features/jobs/job.store.ts` — one job: load, cron/timezone save, enable toggle, run-now and next-fire refresh.
-- `src/app/features/jobs/job.store.spec.ts` — load, the save, the toggle, run-now and the next-fire refresh.
-- `src/app/features/jobs/cron.ts` — 5-field cron validation, expression building and the `en`/`es` summary.
-- `src/app/features/jobs/cron.spec.ts` — the field table, the range failures and the pinned summaries.
-- `src/app/features/jobs/cron-picker.ts` — the cron editor with presets and the live summary.
-- `src/app/features/jobs/time-format.ts` — next-fire parts and formatting in the job's timezone.
-- `src/app/features/jobs/time-format.spec.ts` — the pinned parts and the null timestamp.
-- `src/app/features/jobs/routines.api.ts` — `/v1/routines` list, get, patch, pause, resume, run-now and delete; no create.
-- `src/app/features/jobs/routines.api.spec.ts` — every routines URL and method, the query filters, the 204 and the boundary parse failure.
-- `src/app/features/jobs/routines-format.ts` — the cron summary with the routine timezone, the next fire and the last fire.
-- `src/app/features/jobs/routines-format.spec.ts` — the pinned schedule strings and the null timestamps.
-- `src/app/features/jobs/routines-panel.ts` — the routines tab: rows with kind and cost, actions, confirm-then-delete and the editor sheet.
-- `src/app/features/jobs/routines-panel.spec.ts` — reminder and prompt rows, the three actions, the confirmed delete, the editor rules and the empty/loading/error states.
-- `src/app/features/jobs/routines.store.ts` — the routines list, the optimistic toggles, run-now, delete and the routine event refetch.
-- `src/app/features/jobs/routines.store.spec.ts` — load, the pause rollback, resume, run-now, delete and the three refetch frames.
-- `src/app/features/jobs/i18n.ts` — the jobs, job detail and routines dictionary in `en` and `es`.
 - `src/app/features/pairing/pairing.page.ts` — the pairing screen: code and device name, the inline failure and the dashboard redirect.
 - `src/app/features/pairing/pairing.page.spec.ts` — the hooks, the field rules, the four failures and the redirect.
 - `src/app/features/pairing/i18n.ts` — the pairing dictionary in `en` and `es`.
@@ -150,17 +125,6 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/repos/repo-schedule.store.spec.ts` — load, the pause rollback, resume, the empty selection, the accepted run and the create flows.
 - `src/app/features/repos/repo-schedule.page.ts` — the schedule tab: the legacy row, its caps and fires, the actions and the create form.
 - `src/app/features/repos/repo-schedule.page.spec.ts` — the mode, the window and the next fire, no unexposed field, the notice and the create.
-- `src/app/features/run-detail/run.page.ts` — run detail: timeline, gate, guardrails, blockers, diff, PR, cost, cancel and revert.
-- `src/app/features/run-detail/run.page.spec.ts` — run hooks, guardrail states, actions and dictionary completeness.
-- `src/app/features/run-detail/run-detail.store.ts` — the run projection, its two actions and the stream reducer.
-- `src/app/features/run-detail/run-detail.store.spec.ts` — loading, cancel confirmation, revert and stream handling.
-- `src/app/features/run-detail/timeline.ts` — dedupe keys and one-line details for the event timeline.
-- `src/app/features/run-detail/timeline.spec.ts` — key precedence, detail rendering and page merging.
-- `src/app/features/runs-list/runs.page.ts` — the runs list with state filters and status chips.
-- `src/app/features/runs-list/runs.page.spec.ts` — the filter, the chips, the empty state and dictionary completeness.
-- `src/app/features/runs-list/runs.store.ts` — the paged runs list, the state filter and the run stream frames.
-- `src/app/features/runs-list/runs.store.spec.ts` — load, filter, more and the stream frames.
-- `src/app/features/runs-list/i18n.ts` — the runs list dictionary in `en` and `es`.
 - `src/app/features/sessions/sessions.api.ts` — one session, its transcript, the send, the stop and the merge.
 - `src/app/features/sessions/sessions.api.spec.ts` — every session URL and method, the transcript query and the error mapping.
 - `src/app/features/sessions/session-stream.ts` — the pure thread: message merge by id, the live delta buffer, the tool cards and the event application.
@@ -172,12 +136,6 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/sessions/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/sessions/markdown.spec.ts` — fences, lists and unclosed markup.
 - `src/app/features/sessions/i18n.ts` — the session dictionary in `en` and `es`.
-- `src/app/features/schedules/schedules.api.ts` — `/v1/schedules` list, detail and create, plus the create body.
-- `src/app/features/schedules/schedule-filter.ts` — the window rule, the group order and the Schedule filter screen.
-- `src/app/features/schedules/schedule-filter.store.ts` — the schedule list, the capped detail reads and the session review reads.
-- `src/app/features/schedules/schedules.i18n.ts` — the Schedule filter dictionary in `en` and `es`.
-- `src/app/features/schedules/schedule-filter.spec.ts` — the window boundaries, the group order, the filter rendering, the unreviewed mark and the dictionary parity.
-- `src/app/features/schedules/schedule-filter.store.spec.ts` — the detail cap, the session reads, the detail failure and the list reload.
 - `src/app/features/settings/settings.page.ts` — profile, time zone, the notification panel row, providers, danger zone and about, with explicit `unavailable` blocks.
 - `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, every section, the preference toggle and dictionary completeness.
 - `src/app/features/settings/settings.api.ts` — `/v1/me`, version, settings, providers, brake, cache wipe, devices and notification preferences; a missing route is not an error.

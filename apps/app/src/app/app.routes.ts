@@ -82,33 +82,6 @@ export const routes: Routes = [
       import('./features/sessions/session.page').then((module) => module.SessionPage),
   },
   {
-    path: 'jobs',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/jobs/jobs.page').then((module) => module.JobsPage),
-  },
-  {
-    path: 'jobs/:id',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/jobs/job.page').then((module) => module.JobPage),
-  },
-  {
-    path: 'runs',
-    canActivate: [authGuard],
-    loadComponent: () => import('./features/runs-list/runs.page').then((module) => module.RunsPage),
-  },
-  {
-    path: 'runs/:id',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/run-detail/run.page').then((module) => module.RunDetailPage),
-  },
-  {
-    path: 'approvals',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/approvals/approvals.page').then((module) => module.ApprovalsPage),
-  },
-  {
     path: 'settings/devices',
     canActivate: [authGuard],
     loadComponent: () =>

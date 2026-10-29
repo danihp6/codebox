@@ -11,7 +11,7 @@ import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
 import { SCHEDULE_MODES } from '@codebox/contracts';
 import type { ScheduleMode } from '@codebox/contracts';
 import { I18nService } from '../../core/i18n/i18n.service';
-import { formatFire } from '../jobs/time-format';
+import { formatFire } from '../../core/util/time-format';
 import { RepoScheduleStore } from './repo-schedule.store';
 import { RepoTabs } from './repo-tabs';
 import { translate } from './repo-chrome.i18n';

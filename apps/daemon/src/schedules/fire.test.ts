@@ -245,19 +245,6 @@ describe('startRun', () => {
   });
 });
 
-describe('startChat', () => {
-  it('refuses the retired repo-less chat fire with repo_required', async () => {
-    const { context, backlog } = harness(BLOCKED_THEN_OPEN);
-    const port = createScheduleFirePort({ context, backlog: () => backlog });
-    await expect(
-      port.startChat({
-        schedule: scheduleOf({ repoId: null, chatSessionId: null }),
-        scheduledFor: SCHEDULED_FOR,
-      }),
-    ).rejects.toMatchObject({ code: 'repo_required' });
-  });
-});
-
 describe('the schedules service finishes the row of a fire that selected nothing', () => {
   it('ends fired with no run instead of failing the schedule', async () => {
     const { context, store, backlog } = harness(ALL_REFUSED);

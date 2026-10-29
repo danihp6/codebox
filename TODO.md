@@ -140,6 +140,28 @@ holds `apps/app/src/app/app.routes.ts`. No task holds `package.json`, `tsconfig.
 Task-29 and Task-31 on Task-26/28/30, and those roots (Task-02, Task-26, Task-29) are `[!]` on
 issue #11.
 
+**Cut — cycle after Task-75 (one of four slots used).** No task branch was alive and `main` was
+`11f11af`. The lowest open work was Batch 19's last item, Task-76 — its dependencies (Task-72,
+Task-75) are merged — so it is the batch, and the three empty slots have no legal candidate. The
+constraint is the path list: Task-76 deletes
+`apps/app/src/app/features/{jobs,runs-list,run-detail,approvals,chat,schedules}/**` and therefore
+must rewrite `apps/app/README.md` (`readme.spec.ts` fails otherwise), while every other open task
+(77, 78, 79, 80) is an app task that claims the same README — and Task-77 also claims the hot file
+`apps/app/src/app/app.routes.ts`, which Task-76 edits to drop `/jobs`, `/jobs/:id`, `/runs`,
+`/runs/:id` and `/approvals`. Task-78 depends on Task-79 and Task-80 on Task-77, both unmerged in
+this cut by construction, and Task-30/31/32 sit behind Task-29/Task-26, `[!]` on issue #11.
+**Hot-file holders in this cut:** Task-76 holds `apps/app/src/app/app.routes.ts`; no task holds
+`package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`,
+`opencode.json`, `TODO.md`, `CHANGELOG.md` or `docs/decisions.md` — `packages/contracts` is not
+touched at all. Docs are claimed by section (one task): `docs/app.md` §3–§4, `docs/security.md`
+§6, `docs/agent-runtime.md` §2. The spec also corrected the item's stale `apps/daemon/src/routes/**`
+path: each daemon subsystem owns its own `routes.ts`, and the real removals live in
+`apps/daemon/src/chat/**`, `apps/daemon/src/routines/**`, the two `modules.ts` entries, the
+`promote` route `apps/daemon/src/runs/routes.ts` still mounted, the `startChat` stub Task-72 left
+in `apps/daemon/src/schedules/**`, and the app consumers the item did not name
+(`features/schedules/**`, the dashboard's `/v1/chat/sessions` read).
+
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
@@ -1120,13 +1142,32 @@ same path; the contracts task lands first because every other task reads its typ
   legacy `Schedule` because no route projects `repoScheduleSchema` (so `selection`, `refs` and
   `maxAttempts` are unreachable), and `/repos/:id/design` is an honest unavailable block until
   Task-79 ships the preview.
-- [ ] **[Task-76]** Retire chat, routines and reminders end to end. Remove the chat routes, the
+- [x] **[Task-76]** Retire chat, routines and reminders end to end. Remove the chat routes, the
   routine tool seam, `/v1/reminders`, the legacy job screens and the `mode: chat` branch; update
   the e2e, the fixtures and the guards. *Paths:* `apps/daemon/src/routes/**`,
   `apps/daemon/src/routines/**`, `packages/core/**` (permission matrix), `docs/security.md` §6,
   `docs/agent-runtime.md`. *Dependencies:* Task-72, Task-75. *Acceptance:* `[unit]` no route
   answers under `/v1/chat` or `/v1/reminders`; `[unit]` the matrix has one mode; `[live]` a fresh
   install has no chat screen and no orphan table write.
+  LANDED AS: the retirement is complete on both halves. `SUBSYSTEMS` is **fifteen** names;
+  `apps/daemon/src/chat/**` and `apps/daemon/src/routines/**` (20 files) are gone, `startChat` left
+  `ScheduleFirePort`, the last `promote` route left `runs/routes.ts`, and the `^/v1/routines/:id/run$`
+  entry left `auth/middleware.ts`. `apps/daemon/src/route-table.test.ts` pins the mounted table:
+  none of `/v1/chat*`, `/v1/routines*`, `/v1/reminders*`, and still `/v1/jobs`, `/v1/runs`,
+  `/v1/sessions` and `/v1/works`, with both chat tables empty after load. `PERMISSION_MATRIX` has
+  one mode (`run`) and `routine.*` classifies as `other` → `deny`. The app deletes
+  `features/{jobs,runs-list,run-detail,approvals,chat,schedules}` (42 files) and routes to
+  **fifteen** entries; `features/jobs/time-format` moved to `core/util/time-format` for the two
+  surviving screens. `packages/contracts` is deliberately untouched: `openapi.ts` already carried
+  no chat or routine path, so the retired schemas are the read-only legacy projection of the
+  tables Task-70 kept. **Two deviations:** the dashboard's `Needs you` card had a single source
+  (`GET /v1/chat/sessions`), so it is removed and its run rows link to `/repos/{run.repoId}`; and
+  Task-70's landing note said the chat write-refusal triggers would land here — they did not,
+  because a refusal trigger breaks `packages/store`'s own fixtures and dropping the `title = ''`
+  sentinel needs the legacy `/v1/schedules` writer retired first, so it is a `packages/store`
+  task. The pre-existing `POST /v1/works/{id}/runs` rate-limit drift (`docs/api.md` §4 and
+  `docs/security.md` promise 10/min, `WORK_ROUTES` does not list it) was left alone on purpose.
+  The `[live]` criterion is not measured on a runner (no browser, no VM): issue #80 carries it.
 
 ---
 

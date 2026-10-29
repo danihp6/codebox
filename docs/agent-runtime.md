@@ -26,7 +26,7 @@ cbd ──HTTP+SSE──> opencode serve 127.0.0.1:4096
 
 | Codebox concept | OpenCode concept | Lifetime |
 | --- | --- | --- |
-| Session | one server session, one directory | A chat with one target (backlog, design, schedule, `work:<id>` or `repo`); archived (D55). |
+| Session | one server session, one directory | A session with one target (backlog, design, schedule, `work:<id>` or `repo`); archived (D55). |
 | Run | one server session, one worktree | One run; the session is closed at the terminal state. |
 | Event | server-sent event | Persisted with a per-run `seq`. |
 
@@ -36,7 +36,7 @@ session see `/`, the repository cache or the state directory.
 Sessions are named `cb-run-<runId>` and `cb-session-<sessionId>`, so a leaked session id in a
 log is traceable to a row without exposing a prompt.
 
-A session (chat) is not a run: it gets its own worktree and the **target is its write boundary**
+A session is not a run: it gets its own worktree and the **target is its write boundary**
 (D55). The daemon mounts it with the target path allowed and everything else read-only, and the
 gate re-checks the diff with `target_violation`. A session never starts a run.
 

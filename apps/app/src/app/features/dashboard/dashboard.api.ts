@@ -1,7 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import {
-  chatSessionSchema,
   errorCodeSchema,
   errorEnvelopeSchema,
   parsePage,
@@ -9,7 +8,7 @@ import {
   repoSchema,
   runSchema,
 } from '@codebox/contracts';
-import type { ChatSession, Page, Repo, Run, Telemetry } from '@codebox/contracts';
+import type { Page, Repo, Run, Telemetry } from '@codebox/contracts';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { ApiError } from '../../core/api/api-client';
 import { API_BASE_URL, API_PREFIX } from '../../core/api/http';
@@ -25,13 +24,6 @@ export class DashboardApi {
         map((body) => this.parse(body, parseTelemetry)),
         catchError((error: unknown) => throwError(() => toApiError(error))),
       );
-  }
-
-  /** GET /v1/chat/sessions?limit=50 */
-  sessions(limit = 50): Observable<Page<ChatSession>> {
-    return this.page('/chat/sessions', limit, (input) =>
-      parsePage(chatSessionSchema, input, 'chat.sessions'),
-    );
   }
 
   /** GET /v1/runs?limit=50 */

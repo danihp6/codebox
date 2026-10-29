@@ -16,18 +16,6 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `src/boot.ts` — boot reconciliation of orphaned runs and stale lock files.
 - `src/static.ts` — static file resolution and SPA fallback for the built app.
 - `src/app.ts` — Hono app: request id, request log, `/v1/health`, `/v1/version`, errors.
-- `src/chat/index.ts` — the chat subsystem module: builds the service, mounts the routes and
-  stops the pumps on shutdown.
-- `src/chat/service.ts` — chat sessions, the turn pump, the transcript, the approvals and their
-  replies, the ten-turn handoff and the OpenCode session of each chat.
-- `src/chat/routes.ts` — the `docs/api.md` §5.6 handlers with their body and query schemas,
-  including the free chat and the bind, compact and reviewed lifecycle routes.
-- `src/chat/ids.ts` — the only `chat_` and `msg_` id generators.
-- `src/chat/errors.ts` — `ChatError` and its reason-to-envelope mapping.
-- `src/chat/ids.test.ts` — id shapes, uniqueness and injectable randomness.
-- `src/chat/service.test.ts` — fixture replay, prepare, interrupt, permissions and replies.
-- `src/chat/routes.test.ts` — the §5.6 HTTP contract: bodies, errors, scopes, redacted logs and
-  the lifecycle routes.
 - `src/push/index.ts` — the push subsystem module: one service, the four §5.7 routes and the
   pump.
 - `src/push/service.ts` — the event-log pump, delivery, the preference and subscription APIs
@@ -57,7 +45,7 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `src/events/index.ts` — the SSE subsystem module: one bridge and one connection limiter.
 - `src/events/bridge.ts` — read-after-id replay, gap detection, filters, heartbeat, hard close.
 - `src/events/frames.ts` — the `text/event-stream` framing, pure and clock-free.
-- `src/events/notifier.ts` — the in-process wake-up shared by chat appends and open streams.
+- `src/events/notifier.ts` — the in-process wake-up shared by event appends and open streams.
 - `src/events/limits.ts` — the per-device connection limiter.
 - `src/events/routes.ts` — the `GET /v1/events` handler and its query schema.
 - `src/events/bridge.test.ts` — replay, gaps, filters, heartbeat and the terminal close.
@@ -140,6 +128,8 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `src/boot.test.ts` — orphaned run failure, event append, stale and malformed locks.
 - `src/static.test.ts` — path resolution, traversal rejection, content types, SPA fallback.
 - `src/app.test.ts` — the two public routes, request id, error envelope, static hosting.
+- `src/route-table.test.ts` — the mounted `/v1` table: no chat, routine or reminder route, and
+  the retired tables are never written.
 - `src/auth/ids.test.ts` — device id shape, uniqueness and injectable randomness.
 - `src/auth/service.test.ts` — pairing, exchange races, refresh rotation, replay, revoke.
 - `src/auth/routes.test.ts` — the HTTP contract: guarded routes, issuer gate, rate limit,

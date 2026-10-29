@@ -6,6 +6,39 @@ first release exists.
 
 ## Unreleased
 
+### Removed — 2026-10-29 (Task-76, chat, routines and reminders retire end to end)
+
+- **The chat and routine surface is gone from the daemon.** `apps/daemon/src/chat/**` (routes,
+  service, ids, errors, the loopback routine tool server) and `apps/daemon/src/routines/**`
+  (routes, service, the fire engine, the tick) are deleted; `SUBSYSTEMS` drops `chat` and
+  `routines` and is fifteen names, so `loadModules` imports neither.
+- **`/v1/chat/sessions` and `/v1/routines` answer nothing.** The last `promote` route left
+  `runs/routes.ts`, `RunsService.promote` is gone, and `apps/daemon/src/route-table.test.ts` pins
+  the mounted table in both directions: none of `/v1/chat*`, `/v1/routines*`, `/v1/reminders*`,
+  and still `/v1/jobs`, `/v1/runs`, `/v1/sessions` and `/v1/works`.
+- **A repo-less schedule fails its fire closed.** `ScheduleFirePort.startChat` is gone and a
+  legacy row without a repository settles as `failed` / `repo_required` / `chatId: null`; no chat
+  turn replaces it.
+- **The permission matrix has one mode.** `PermissionMode` is `'run'`, `routine.*` classifies as
+  `other` and is denied in every context, and no decision returns `ask`.
+- **The app loses its legacy screens.** 42 files under
+  `features/{jobs,runs-list,run-detail,approvals,chat,schedules}` are deleted and `app.routes.ts`
+  is fifteen entries: the jobs, runs, approvals and reminders screens and the chat client are
+  gone. `time-format` moved to `core/util/time-format` for the two screens that still format a
+  fire time.
+- **The dashboard stops reading chat.** Its `Needs you` card had a single source
+  (`GET /v1/chat/sessions`), so the card is removed and each run row links to `/repos/{repoId}`;
+  the screen issues four reads and no chat read.
+- **`packages/contracts` is untouched on purpose.** `openapi.ts` already carried no chat or
+  routine path (62 paths), so the retired schemas stay as the read-only legacy projection of the
+  `chats`/`routine*` tables; no migration, trigger or table drop lands here.
+- **Two deviations, recorded instead of hidden:** the write-refusal triggers Task-70 promised for
+  this task need a `packages/store` change (they break its own fixtures, and dropping the
+  `title = ''` sentinel needs the legacy `/v1/schedules` writer retired first), and the
+  pre-existing `POST /v1/works/{id}/runs` rate-limit drift between `docs/security.md` and
+  `WORK_ROUTES` is left for its own task. The `[live]` fresh-install criterion is unmeasured on a
+  runner (no browser, no VM) and issue #80 carries it.
+
 ### Added — 2026-10-29 (Task-75, the app goes to repositories, run logs and sessions)
 
 - **The bottom bar is `Dashboard · Repos · Settings` (D47).** `SHELL_TABS` is frozen at three

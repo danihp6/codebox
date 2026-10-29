@@ -1,35 +1,14 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { ChatMessage, ChatSession, Repo, Run } from '@codebox/contracts';
+import type { Repo, Run } from '@codebox/contracts';
 import { catchError, firstValueFrom, of } from 'rxjs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError } from '../../core/api/api-client';
 import { DashboardApi } from './dashboard.api';
 
 const TS = '2026-10-24T18:04:02Z';
-const CHAT = 'chat_01JABCDEFGHJKMNPQRSV';
 const REPO_ID = 'repo_01JABCDEFGHJKMNPQRSV';
-
-const MESSAGE: ChatMessage = {
-  id: 'msg_01JABCDEFGHJKMNPQRSV',
-  chatId: CHAT,
-  role: 'assistant',
-  text: 'Done.',
-  createdAt: TS,
-};
-
-const SESSION: ChatSession = {
-  id: CHAT,
-  repoId: REPO_ID,
-  kind: 'repo',
-  title: 'Chat',
-  status: 'idle',
-  reviewedAt: null,
-  createdAt: TS,
-  updatedAt: TS,
-  lastMessage: MESSAGE,
-};
 
 const RUN: Run = {
   id: 'run_01JABCDEFGHJKMNPQRSV',
@@ -60,7 +39,6 @@ const REPO: Repo = {
   createdAt: TS,
 };
 
-const SESSIONS_URL = '/v1/chat/sessions';
 const RUNS_URL = '/v1/runs';
 const REPOS_URL = '/v1/repos';
 
@@ -84,17 +62,6 @@ describe('DashboardApi', () => {
   afterEach(() => {
     http.verify();
     TestBed.resetTestingModule();
-  });
-
-  it('reads the chat sessions with the page limit', async () => {
-    const pending = firstValueFrom(api.sessions());
-
-    const request = http.expectOne((candidate) => candidate.url === SESSIONS_URL);
-    expect(request.request.method).toBe('GET');
-    expect(request.request.urlWithParams).toBe('/v1/chat/sessions?limit=50');
-    request.flush({ data: [SESSION], nextCursor: null });
-
-    await expect(pending).resolves.toEqual({ data: [SESSION], nextCursor: null });
   });
 
   it('reads the runs with the page limit', async () => {
@@ -128,9 +95,9 @@ describe('DashboardApi', () => {
   });
 
   it('maps a malformed page to a contract ApiError', async () => {
-    const pending = firstValueFrom(api.sessions().pipe(catchError((error: ApiError) => of(error))));
+    const pending = firstValueFrom(api.runs().pipe(catchError((error: ApiError) => of(error))));
 
-    http.expectOne('/v1/chat/sessions?limit=50').flush({ data: 'nope', nextCursor: null });
+    http.expectOne('/v1/runs?limit=50').flush({ data: 'nope', nextCursor: null });
 
     const failure = asApiError(await pending);
     expect(failure.code).toBe('contract');
