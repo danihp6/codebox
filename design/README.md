@@ -116,6 +116,11 @@ reserved for fills and dots.
 
 ## 6. Rules
 
+- **A task names its spec.** A task that creates or changes a routed screen lists
+  `design/screens/<slug>.json` and `design/exports/<slug>.png` as read-only inputs, with the
+  caption of the frame it implements. The slug is the one `screenSlug` derives from the screen
+  name in §1 (`Repo · backlog` → `repo-backlog`), so the spec, the export and the task cannot
+  drift apart. A screen task that names no spec is not ready to launch.
 - A new route adds one row to §1 in the same task that adds the route.
 - A frame that stops matching the code is fixed in Figma or deleted; a stale frame is worse
   than no frame.

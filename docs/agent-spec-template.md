@@ -28,6 +28,9 @@ Files this task may read, and only these, beyond `AGENTS.md`:
 
 - `docs/<doc>.md`
 - `packages/<name>/src/index.ts`
+- `design/screens/<slug>.json` and `design/exports/<slug>.png` — required for any task that
+  creates or changes a screen, with the frame caption; the slug is `screenSlug(screen)`
+  (`Repo · backlog` → `repo-backlog`). A screen task without both is not ready to launch.
 
 ## 🔒 Contract
 
@@ -75,6 +78,9 @@ else is not a criterion.
   - [ ] `[unit]` The declared tests exist and pass.
   - [ ] `[unit]` Nothing outside the exclusive paths was touched.
   - [ ] `[live]` <task-specific, objective, with its measurement>
+  - [ ] `[live]` (screen tasks only) the screen next to `design/exports/<slug>.png` at the
+        frame's width, with every visible difference written down and each one either fixed or
+        justified in the PR.
 
 ## 📣 Coordination
 

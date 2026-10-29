@@ -155,6 +155,13 @@ integrates.
 
 - Pick the lowest pending batch from `TODO.md`. The Architect writes the specs; the
   Orchestrator launches the devs.
+- **Every task names the file it builds against.** A task that creates or changes a screen
+  lists the screen's spec and its export as read-only inputs — `design/screens/<slug>.json`
+  and `design/exports/<slug>.png`, with the frame caption from `design/README.md` §1 — and
+  the slug is `screenSlug(screen)` (`Repo · backlog` → `repo-backlog`). A UI task without
+  both is not ready to launch: the spec is what the dev implements, the export is what QA
+  compares. The same holds for any other owned fact: a task names `design/tokens.json`,
+  the contract file, or the doc section it reads, never "the design".
 - Run `npm ci && npm run lint && npm test && npm run build` before declaring a task done; the
   `npm test` gate runs the app unit suite and the workspace coverage guard, on a laptop and in
   CI alike. For app tasks, add `npx playwright test` when the spec says so.
