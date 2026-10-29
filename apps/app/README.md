@@ -28,7 +28,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/manifest.webmanifest` — PWA manifest.
 - `src/assets/i18n/en.json` — the shared English dictionary: shell, pairing, common and run keys.
 - `src/assets/i18n/es.json` — the shared Spanish dictionary (default locale), same key set.
-- `src/theme/variables.css` — the `--cb-*` tokens and the light override.
+- `src/theme/variables.css` — the `--cb-*` tokens, the light override and the workers motion with its reduced-motion block.
 - `src/theme/tokens.ts` — the same tokens for TypeScript consumers.
 - `src/app/app.component.ts` — `ion-app`, router outlet, tab bar, offline banner and stream-state hook.
 - `src/app/app.component.spec.ts` — the banner reaches the shell and drops out when fresh.
@@ -168,6 +168,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/works/repo-workers.page.spec.ts` — the four states from a fixture, the blocked task off the builder's floor, the face links and the absence of a per-agent button.
 - `src/app/features/works/workers.model.ts` — the pure projection: `laneOf`, `workerStateOf` and `projectWorkers`.
 - `src/app/features/works/workers.model.spec.ts` — every `WorkState`, the order of the four rooms and the daemon order inside a lane.
+- `src/app/features/works/workers.motion.ts` — the pure blink rule: `blinkPhase` and `assignBlinkPhases` over the board's cards.
+- `src/app/features/works/workers.motion.spec.ts` — the phase wrap, the board order and the motion contract read from `variables.css`.
 - `src/app/features/works/work.page.ts` — the work run log: the header facts, one segment per run, the gate/PR cards, the tick and one action, with no composer.
 - `src/app/features/works/work.page.spec.ts` — no textarea or send hook, the header, the cards from run state, the state flip, the tick and the one action.
 - `src/app/features/works/i18n.ts` — the workers, work and run-state dictionary in `en` and `es`.
