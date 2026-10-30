@@ -42,6 +42,8 @@ Every path this task creates or modifies. **Nothing outside this list.**
 - `packages/contracts/src/resources.test.ts`
 - `packages/store/src/repos.ts` (justified addition — see Deviations)
 - `packages/store/src/repositories.test.ts` (justified addition — see Deviations)
+- `apps/daemon/src/design/routes.test.ts` (one `REPO` fixture key — accepted at the
+  pre-QA audit, see Deviations)
 - `docs/api.md` (section: §5.2 Repositories only — no other section, and **no new route table
   row**; see the Test and Validation Plan for why)
 
@@ -53,7 +55,11 @@ Every path this task creates or modifies. **Nothing outside this list.**
    service). `RepoRepository` today has no method that returns counts, so the one SQL change this
    task needs is a correlated-subquery aggregate in `repos.ts`. Nothing else in the store moves:
    the interface keeps its five methods, `mappers.ts` is untouched, `index.ts` is untouched.
-2. `counts` is **optional in `repoSchema`** (`counts: repoCountsSchema.optional()`), not
+2. `apps/daemon/src/design/routes.test.ts` is **added at the pre-QA audit**. The store now always
+   sets `counts`, so that test's `REPO` fixture must carry the key to keep the gate green. One
+   fixture line, no production file, no path shared with Task-89. Accepted by the Orchestrator
+   before QA; the dev disclosed it instead of widening silently.
+3. `counts` is **optional in `repoSchema`** (`counts: repoCountsSchema.optional()`), not
    required. Reason: roughly twenty existing fixtures in `apps/daemon/src/**`, `packages/store/src/**`
    and `apps/app/**` build a `Repo` literal and several of them push that literal through
    `parseRepo`/`parsePage`/`parseRepoDetail`/`workDetailSchema` at test time. A required key
