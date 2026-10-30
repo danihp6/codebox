@@ -59,6 +59,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 20 | Repo views: workers factory, backlog deps, design preview | 77–80 | 4 |
 | 21 | Figma → `design/` import (D52) | 81-84 | 3, then 1 |
 | 22 | Measured spec, Inter and the missing route (D58) | 85-87 | 3 |
+| 23 | Screen alignment against the prototype | 88–99 | 2, then 4, then 4, then 2 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -303,12 +304,66 @@ Task-87 holds `apps/app/src/app/app.routes.ts`. No task holds `tsconfig.base.jso
 `docs/decisions.md`. The fourth slot has no legal candidate: Task-30 waits on Task-29, Task-31 on
 Task-26/28/30 and Task-32 on Task-31, all behind the `[!]` roots on issue #11.
 
+**Priority override — 2026-10-30: the prototype runs the queue.** The operator's ruling is
+that a screen written without its frame is work paid twice, so the design track is the head of
+the backlog and the driver cuts nothing ahead of it. `L2 → L5 → L6 → L7` come first — they are
+`L` items, so the cycle waits for them instead of running beside them — **and the whole of Batch
+23 waits with it, including Task-88 and Task-89**: the operator ruled that no code is written
+while the prototype and its import are open, even the two tasks that draw no page. The four open
+driver tasks (30, 31, 32 and the `[!]` roots behind issue #11) keep their place behind the design
+track. Batch 23 opens when L6 and L7 are done, because every screen task in it names a spec and
+an export that do not exist yet. A task that adds or changes a routed screen without
+`design/screens/<slug>.json` and `design/exports/<slug>.png` is not ready to launch
+(`AGENTS.md`), and that is now the gate on the whole screen backlog, not a footnote.
+
+### Screens awaiting the prototype
+
+Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
+because the frames never reached `design/`. They fetch, validate and render the fields and the
+states, but not the drawn layout: each one is a **re-alignment** task in Batch 23, never an
+extension, and its current page spec is rewritten with it.
+
+| Screen | Route | Today | Frame | Task |
+| --- | --- | --- | --- | --- |
+| Pairing | `/pair` | bare form, inline styles | `01 · Pairing — mobile dark` | 90 |
+| Repo list | `/repos` | list + create form | `02 · Repo list — mobile dark` | 91 |
+| Repo · backlog | `/repos/:id` | backlog + rail | `22 · Repo · backlog — deps (dark)` | 92 |
+| Repo · workers | `/repos/:id/workers` | rooms + task chips | `20c · Crew · aerial — dark` | 93 |
+| Design · session | `/sessions/:id` | log + preview card | `26 · Design · preview + chat — dark` | 94 |
+| Dashboard | `/dashboard` | five cards | `05 · Dashboard — mobile dark` | 95 |
+| Settings | `/settings` | plain list | `06 · Settings — mobile dark` | 96 |
+| Devices | `/settings/devices` | plain list | `15 · Settings / Devices` | 96 |
+| Notifications | `/settings/notifications` | plain list | `17 · Settings / Notifications` | 96 |
+| Credentials | `/settings/credentials` | plain list + sheets | `16 · Settings / Credentials` | 97 |
+| About | `/about` | plain list | `07 · About — mobile dark` | 98 |
+
+**The repository keeps two tabs, and the schedule becomes a sheet.** Decided by the operator on
+2026-10-30: `Backlog` and `Workers` stay in `features/repos/repo-tabs.ts`, and `/repos/:id/schedule`
+and `/repos/:id/design` are retired. The schedule is configuration, not a page (D56), so its
+window, mode and caps open in a sheet over the backlog, where the header already carries the
+repository's actions; the design preview already lives in `/sessions/:id`, so the repository
+does not need a second door to it. `design/README.md` §2 already described this shape — the code
+was the one out of date. **L5 must draw the sheet** (the file has no frame for it) and Task-99
+removes the two routes, the tab strip's two buttons and `features/repos/repo-schedule.page.ts`,
+and adds the sheet, in the same task, because a route is a hot file and a half-retired strip is a
+dead tab.
+
+**Data still missing under the drawing.** The daemon serves no `/v1/repos` route (`GET /v1/repos`
+answers 404 against the local daemon, `docs/api.md` §5.2 documents six of them), so Repo list,
+Repo · backlog and Dashboard render their error state on a real instance. Task-88 restores that
+surface before those three are aligned; the frames are static and can be implemented without it.
+
 **Critical path:** `03 → 04/05/06 → 09 → 14 → 15 → 18 → 20 → 26 → 31`. Everything else can
 fill a slot beside it. The four hot files that serialise the tail are `docs/decisions.md`,
 `packages/contracts/src/index.ts`, `apps/app/src/app/app.routes.ts` and
 `apps/daemon/src/main.ts`. The **host track** is its own chain — `47 → 42 → 46` for Terraform
 and `40/41 → 46` for the image, with `43` and `44` feeding the measured bring-up — and it is the
 path to a deployed box, not to the beta.
+
+**The path to a product that looks like its prototype:** `L2 → L5 → L6 → L7 → 88–99`. It is the
+head of the queue and nothing runs beside it: L2 draws, L5 completes, L6 imports, L7 restructures,
+and only then does Batch 23 open — Task-88 and Task-89 included. The blueprint above is the path
+to a box that runs; this is the path to the app the operator recognises.
 
 **Serial resources:** `packages/contracts/src/index.ts` (Task-03 owns it for Batch 2; later
 contract changes are their own task), `apps/app/src/app/app.routes.ts` (Task-18 predeclares
@@ -1544,14 +1599,211 @@ and Task-87 holds `apps/app/src/app/app.routes.ts`. No task touches a Batch 21 p
 
 ---
 
+## Batch 23 — Screen alignment against the prototype
+
+**The batch waits for the design track in full.** The operator ruled on 2026-10-30 that no code
+is written while the prototype and its import are open, so Batch 23 opens when L6 and L7 are
+done — including Task-88 and Task-89, which draw no page but ship code. Every screen task names
+its `design/screens/<slug>.json`, its `design/exports/<slug>.png` and the frame caption of
+`design/README.md` §1; the pair is what the dev implements and what QA compares, so a task whose
+pair is missing is not ready to launch. This batch is the **re-alignment** of the eleven screens
+built from contracts alone: routes, guards, stores, contracts and `data-testid`s do not move
+(except Task-99's retirement, which is the one route change), and a page is rewritten against its
+export at 390 × 844 dark and again at 320 px.
+
+**Four waves.** Wave 0: Task-88 (the daemon's repository surface) and Task-89 (dark by default) —
+no frame needed, but they still wait for L7. Wave 1: Task-90 (Pairing), Task-91 (Repo list),
+Task-92 (Repo · backlog), Task-93 (Repo · workers). Wave 2: Task-94 (Design · session), Task-95
+(Dashboard), Task-96 (settings cluster), Task-97 (Credentials). Wave 3: Task-98 (About) and
+Task-99 (two tabs and the schedule sheet), which needs Task-92's page to hang the sheet on. Paths
+are disjoint inside a wave (one feature folder each); `apps/app/README.md` is claimed by line
+block, one folder per task, the way Batch 20 wave 2 did it. The settings screens share
+`features/settings/**` and its `i18n.ts`, so they are one task and not three.
+
+**Hot-file holders in this cut:** Task-99 holds `apps/app/src/app/app.routes.ts` (the two
+retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`packages/contracts/src/index.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or
+`docs/decisions.md`: the tab strip belongs to Task-99 alone and no alignment task touches it.
+
+- [ ] **[Task-88]** The repositories surface the app already calls. `docs/api.md` §5.2 documents
+      six routes and the daemon serves none of them (`GET /v1/repos` answers 404), so Repo list,
+      Repo · backlog and Dashboard open on their error state. Add the `repos` subsystem —
+      `GET /v1/repos` (`read`), `POST /v1/repos` (`write`, `{slug, defaultBranch?, gate?, policy?,
+      protectedPaths?}`), `GET`/`PATCH`/`DELETE /v1/repos/{id}` (`read`/`write`, the delete a
+      `409` while a run is live) and `POST /v1/repos/{id}/verify` (`write`, the same checks the
+      gate runs: `{ok, defaultBranch, canPush, checks}`) — over `store.repos`, whose rows and
+      schemas already exist, behind the feature flag the other subsystems use. **The list carries
+      the frame's three counts** (decided 2026-10-30): `repoSchema` gains
+      `counts: {pending, running, merged}`, computed in the same query as the list, because the
+      row of `02 · Repo list` is `pending · running · merged` and the client counting works per
+      row would be a second writer of the same fact (D51). The key is already exported through
+      `repoSchema`, so `packages/contracts/src/index.ts` is not edited. The GitHub picker
+      `GET /v1/integrations/github/repos` is **not** in scope: the frame retired it.
+      *Paths:* `apps/daemon/src/repos/**` (routes, service, index, README, tests),
+      `apps/daemon/src/modules.ts` + `modules.test.ts`, `apps/daemon/README.md`,
+      `packages/contracts/src/resources.ts` + `resources.test.ts`, `docs/api.md` §5.2.
+      *Acceptance:* `[unit]` list, create, get, patch, delete
+      and verify answer their shapes and scopes; `[unit]` the list's `counts` match the works the
+      store holds for that repository, and a repository with no works answers three zeros;
+      `[unit]` an unknown id is `404`, a delete with a
+      live run is `409`, a duplicate slug is a conflict and not a 500; `[live]` the app's `/repos`
+      lists a created repository and `verify` returns its four checks against the local daemon.
+      *Dependencies:* none.
+
+- [ ] **[Task-89]** Dark by default, and the theme preference reaches the DOM. `docs/app.md` §9
+      says dark is the default and that following the system is the iOS default, but
+      `apps/app/src/theme/variables.css` follows `prefers-color-scheme` on every platform and
+      `SettingsStore.setTheme`/`theme` are never read by anything, so the setting is dead code and
+      a light-mode laptop shows the light palette the frames do not draw. Drive `<html
+      data-theme>` from `SettingsStore.theme` (default `dark`, `prefers-color-scheme` only as the
+      initial value on iOS), replace the media query with a `:root[data-theme='light']` block over
+      the same twelve tokens, and keep the Ionic variables in step.
+      *Paths:* `apps/app/src/theme/variables.css`,
+      `apps/app/src/app/core/settings/settings.store.ts` + `.spec.ts`,
+      `apps/app/src/app/app.component.ts` + `.spec.ts`, `apps/app/README.md`.
+      *Acceptance:* `[unit]` with no stored preference `<html data-theme>` is `dark` and
+      `setTheme('light')` flips it and survives a reload; `[unit]` no rule reads
+      `prefers-color-scheme` outside the iOS initial value; `[live]` on a light-mode desktop the
+      app paints dark at first paint, before the daemon answers. *Dependencies:* none.
+
+- [ ] **[Task-90]** Pairing, frame `01 · Pairing — mobile dark`, error state `14 · Unpaired — 401`.
+      Rewrite `features/pairing` from `design/screens/pairing.json`: header, the form column's box
+      and gap, the type scale of label/hint/button, the disabled and submitting states and the
+      alert, from the spec's `layout` instead of the inline block the page carries today. The
+      validation (`pairingProblem`), `AuthStore.pair` and the failure mapping stay as they are.
+      *Paths:* `apps/app/src/app/features/pairing/**`, `apps/app/README.md`.
+      *Acceptance:* `[unit]` the page spec still proves the three fields, the three API failures
+      and the navigate-to-`/dashboard` path; `[unit]` the design gate reports zero findings on the
+      diff; `[live]` the export sits beside the screen at 390 × 844 and the regions match
+      (header, form column, two fields with their hints, button, alert), and nothing scrolls
+      sideways at 320 px. *Dependencies:* L6, L7.
+
+- [ ] **[Task-91]** Repo list, frame `02 · Repo list — mobile dark`. Rewrite `features/repos`'
+      list half against `design/screens/repo-list.json`: the row is the frame's counted row
+      (`pending · running · merged`, one amber dot for the only thing that needs a person,
+      `docs/app.md` §9), and the header's action opens the create form the page already owns. The
+      three numbers come from `Repo.counts`, which Task-88 puts on the contract — the page never
+      counts works itself (decided 2026-10-30). The form's fields, `validateRepoForm` and
+      `ReposStore` do not change; what changes is the drawing.
+      *Paths:* `apps/app/src/app/features/repos/{repos.page.ts,repos.page.spec.ts,i18n.ts}`,
+      `apps/app/README.md`. *Acceptance:* `[unit]` the page spec still proves load, empty, error,
+      retry and create; `[unit]` the design gate reports zero findings; `[live]` the export sits
+      beside the screen at 390 × 844 dark, the rows align to its grid and the counts read as three
+      numbers. *Dependencies:* L6, L7, Task-88.
+
+- [ ] **[Task-92]** Repo · backlog, frame `22 · Repo · backlog — deps (dark)`. Rewrite
+      `features/backlog` against `design/screens/repo-backlog.json`: the three-line row
+      (`Task-NN · title`, the section, the `state · runs · cost` flow), the dependency rail from
+      `dependency-rail.ts` and the chat button in the header (never a `+`, `design/README.md` §6).
+      The parser, the store and the work joins do not move.
+      *Paths:* `apps/app/src/app/features/backlog/**`, `apps/app/README.md`.
+      *Acceptance:* `[unit]` the page and rail specs still prove the parsed rows, the needs and
+      the session sheet; `[unit]` the design gate reports zero findings; `[live]` the export sits
+      beside the screen and the three-line row survives at 320 px without a horizontal scroll.
+      *Dependencies:* L6, L7, Task-88.
+
+- [ ] **[Task-93]** Repo · workers, frames `20c · Crew · aerial — dark` (running) with
+      `20i` (queued), `20f` (needs you) and `20e` (asleep). Rewrite `features/works`' board
+      against `design/screens/repo-workers.json`: four role rooms, one face and one task chip per
+      subagent, the road in on the left, the belt out on the right, the two chips `▤` and `🔔` as
+      the only controls and `needs you` as a badge over the worker, never a room fill. `workers.model.ts`
+      and `workers.motion.ts` keep their rules; the drawing follows the spec's regions.
+      *Paths:* `apps/app/src/app/features/works/**`, `apps/app/src/theme/variables.css` (the
+      motion block only, and only after Task-89 lands its rewrite), `apps/app/README.md`.
+      *Acceptance:* `[unit]` the four states render from the model and the motion honours
+      `prefers-reduced-motion`; `[unit]` the design gate reports zero findings; `[live]` each of
+      the four exports sits beside its state at 390 × 844 and the rooms, the belt and the two
+      chips match region by region. *Dependencies:* L6, L7, Task-88, Task-89.
+
+- [ ] **[Task-94]** Design · session, frame `26 · Design · preview + chat — dark`. Rewrite
+      `features/sessions` against `design/screens/design-session.json`: the preview card that
+      shows the repository's `design/` at a revision (tokens, routes, declared states, what is
+      pending) and the one-target editor under it (D55). The stream, the markdown renderer and the
+      API do not change.
+      *Paths:* `apps/app/src/app/features/sessions/**`, `apps/app/README.md`.
+      *Acceptance:* `[unit]` the stream and the preview specs keep proving the events, the
+      `present: false` and the revision-unknown state; `[unit]` the design gate reports zero
+      findings; `[live]` the export sits beside the screen at 390 × 844 and the card's header,
+      body and states block match the frame. *Dependencies:* L6, L7.
+
+- [ ] **[Task-95]** Dashboard, frame `05 · Dashboard — mobile dark`, empty state
+      `12 · First run — after pairing`. Rewrite `features/dashboard` against
+      `design/screens/dashboard.json`: the inbox order (`needs you`, running, unreviewed, today's
+      spend, health), the card boxes and the type scale from the spec. The per-repository blocks
+      have **no frame** (`design/README.md` §1) — they keep today's shape and the spec records
+      them as pending L5, so nothing is invented in their place.
+      *Paths:* `apps/app/src/app/features/dashboard/**`, `apps/app/README.md`.
+      *Acceptance:* `[unit]` the store and page specs keep proving the five reads, the error and
+      the empty dashboard; `[unit]` the design gate reports zero findings; `[live]` the export
+      sits beside the screen at 390 × 844 and `12` beside the first-run state. *Dependencies:*
+      L6, L7, Task-88.
+
+- [ ] **[Task-96]** Settings cluster: `/settings` (`06 · Settings — mobile dark`),
+      `/settings/devices` (`15 · Settings / Devices`) and `/settings/notifications` (`17 ·
+      Settings / Notifications`). Rewrite the three pages in `features/settings` against their
+      three specs, with the theme control Task-89 makes real (`settings.theme`, dark/light) and the
+      device rows the store already loads. One task because the folder, its `i18n.ts` and its
+      README block are shared.
+      *Paths:* `apps/app/src/app/features/settings/{settings.page.ts,settings.page.spec.ts,
+      devices.page.ts,devices.page.spec.ts,notifications.page.ts,notifications.page.spec.ts,
+      i18n.ts,notifications.i18n.ts}`, `apps/app/README.md`.
+      *Acceptance:* `[unit]` the three page specs keep proving their reads, empty and error
+      states and the theme write; `[unit]` the design gate reports zero findings; `[live]` the
+      three exports sit beside their screens at 390 × 844 and the three list shapes match.
+      *Dependencies:* L6, L7, Task-89.
+
+- [ ] **[Task-97]** Credentials, frame `16 · Settings / Credentials`, sheets
+      `18 · Connect a service` and `19 · Add credential`. Rewrite `features/credentials` against
+      `design/screens/credentials.json`: the list, the write-only badges and the two sheets, with
+      the frames' boxes and type. The write-only rule of D50 is visible in the drawing (the value
+      is never rendered) and stays enforced by the store.
+      *Paths:* `apps/app/src/app/features/credentials/**`, `apps/app/README.md`.
+      *Acceptance:* `[unit]` the page and both sheet specs keep proving create, rotate and delete,
+      and that no secret string reaches the DOM; `[unit]` the design gate reports zero findings;
+      `[live]` the export sits beside the screen, and `18`/`19` beside their sheets at 390 × 844.
+      *Dependencies:* L6, L7.
+
+- [ ] **[Task-98]** About, frame `07 · About — mobile dark`. Rewrite `features/about` against
+      `design/screens/about.json`: version, commit, build time and the instance's identity in the
+      frame's blocks. The `about.store` reads do not change.
+      *Paths:* `apps/app/src/app/features/about/**`, `apps/app/README.md`.
+      *Acceptance:* `[unit]` the store and page specs keep proving the build identity and the
+      offline notice; `[unit]` the design gate reports zero findings; `[live]` the export sits
+      beside the screen at 390 × 844 and matches region by region. *Dependencies:* L6, L7.
+
+- [ ] **[Task-99]** Two tabs and the schedule sheet. Retire `/repos/:id/schedule` and
+      `/repos/:id/design` — the repository has `Backlog` and `Workers` (§2 of `design/README.md`)
+      — and move the schedule, which is configuration and not a screen (D56), into a sheet over
+      the backlog: window, mode, caps and the manual *Run next*, reading and writing the same
+      `/v1/schedules` routes the retired page called. The sheet's frame is L5's; this task
+      implements it and deletes `features/repos/repo-schedule.page.ts` with its spec, its two
+      tabs in `repo-tabs.ts` and its two routes, in one change, because a route is a hot file and
+      a half-retired strip is a dead tab. Nothing moves in the daemon: `/v1/schedules` already
+      answers.
+      *Paths:* `apps/app/src/app/app.routes.ts` (+ `app.routes.spec.ts`),
+      `apps/app/src/app/features/repos/{repo-tabs.ts,repo-tabs.spec.ts,repo-schedule.page.ts,
+      repo-schedule.page.spec.ts,repo-schedule.store.ts,repo-schedule.store.spec.ts,
+      repo-schedule.api.ts,repo-schedule.api.spec.ts,repo-chrome.i18n.ts}`,
+      `apps/app/src/app/features/backlog/**`, `apps/app/README.md`, `design/README.md` §6.
+      *Acceptance:* `[unit]` the router table no longer serves the two paths and the frozen
+      route test proves it; `[unit]` the sheet opens from the backlog header, reads a schedule,
+      saves one and fires *Run next* through the same API the page used; `[unit]` the tab strip
+      renders exactly two tabs; `[live]` the sheet sits beside L5's frame at 390 × 844.
+      *Dependencies:* L5 (the sheet's frame), L6, L7, Task-92.
+
+---
+
 ## Local / human (never picked by the driver)
 
 The driver only counts `- [ ] **[Task-NN]**`; these `L<n>` items are outside the queue by
 construction. They need a local key, an external tool or a store account.
 
-- [ ] **L1 — Release signing.** Keep the Android keystore and the Apple certificate off the
-      repository and off Actions; Task-29 builds unsigned artifacts and checksums; the operator
-      signs and distributes. *Dependencies:* Q1 (distribution) and Task-29.
+**The design track is the head of the queue, in this order:** L2 draws and re-cuts, L5
+completes the missing widths, states and interaction, L6 imports the measured specs and the
+exports, L7 restructures the file the importer reads. **Nothing is cut while they are open** —
+not even Task-88 or Task-89 — and none of the three later items (L1, L3, L4) runs ahead of them.
+
 - [ ] **L2 — Visual prototype.** A Figma file with the routed screens and the tokens in
       `docs/app.md` §9; export PNGs and a screen-to-route map in `design/`. **Superseded by
       D51-D54 (2026-10-28):** the file holds 40 frames drawn against the retired chat model, so
@@ -1560,22 +1812,40 @@ construction. They need a local key, an external tool or a store account.
       (`node scripts/design/import.mjs`) run by the operator at L6; the token document is authored
       in the repository by Task-84, never imported; neither ever becomes a driver task.
       *Dependencies:* none.
-- [ ] **L5 — Design completeness.** Close what the prototype still lacks, in this order: desktop
-      for the eight routed screens that have none (only Chat and Dashboard exist), 320 for the
-      seven that were never squeezed, **interaction states** (hover, focus-visible, pressed,
-      disabled) in the Design System — `docs/app.md` §12 requires accessible targets and the
-      file has no focus ring — and the empty/error state of every screen, not just first-run
-      and offline. Then wire the prototype so the two flows are clickable:
-      `⋯ → Connect a repository → 09 → 11 → 03` and
-      `New chat → Schedule a task → 08b → 08c → 03b`. *Dependencies:* none.
-      *Acceptance:* `[unit]` every row of `design/README.md` §1 has a desktop and a 320 frame;
+- [ ] **L5 — Design completeness.** Close what the prototype still lacks, in this order: 320 for
+      the ten routed screens that were never squeezed (only `S3` exists, `design/README.md` §1),
+      **interaction states** (hover, focus-visible, pressed, disabled) in the Design System —
+      `docs/app.md` §12 requires accessible targets and the file has no focus ring — and the
+      empty/error state of every screen, not just first-run and offline. **Desktop is out of v1**
+      (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
+      the beta, and `D2`/`D4`, `D5`–`D8` and `D9` stay as the reference they already are. Then
+      wire the prototype so **these two flows** are clickable (decided 2026-10-30):
+      **A — pairing to first work:** `01 · Pairing → 12 · First run → 02 · Repo list`;
+      **B — backlog to merge:** `22 · Repo · backlog → 03a · New session (target: backlog) →
+      04b · Session sheet → the proposed diff, its merge and the ticked item`.
+      The pair this item carried (`⋯ → Connect a repository → 09 → 11 → 03` and
+      `New chat → Schedule a task → 08b → 08c → 03b`) is retired with the picker and the free-chat
+      menu of `design/README.md` §2 and forms no part of either flow. *Dependencies:* none.
+      *Acceptance:* `[unit]` every row of `design/README.md` §1 has a 320 frame (desktop is a
+      post-beta item, not a criterion);
       `[unit]` the Design System shows focus-visible, hover and disabled for a button and a row;
-      `[live]` both flows run end to end in Figma's present mode.
+      `[live]` flow A and flow B run end to end in Figma's present mode, from the frame named
+      first to the frame named last.
+      **And draws the schedule sheet**, the one screen the 2026-10-30 ruling created:
+      `/repos/:id/schedule` is retired and the repository's window, mode, caps and *Run next*
+      live in a sheet over the backlog, so L5 owes that sheet a frame — dark, light, 320 and the
+      two states — or Task-99 has no export to compare. The two orphan routes themselves are no
+      longer open: the operator decided two tabs and a sheet.
 - [ ] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
       3HMV2UN6QviuNXe2T3Htsr` with the real `FIGMA_TOKEN`, review the diff, and commit
-      `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The map is already
+      `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The token is never
+      committed: on the operator's Windows box it is `$env:FIGMA_TOKEN = '<token>'` in the shell
+      that runs the command, because the command reads the environment and never `.env`; in CI it
+      is a secret. The operator confirmed on 2026-10-30 that the token exists (scope
+      `file_read`). The map is already
       committed and `design/tokens.json` is Task-84's, so the map and the tokens are not authored
-      here; the review checks that ten screens and ten exports landed and that no frame caption in
+      here; the review checks that eleven screens and eleven exports landed (the map's eleven
+      frames, `design/import.json`) and that no frame caption in
       the map drifted. Record the summary and the resulting finding count in the commit message.
       *Dependencies:* Task-81, Task-82, Task-83, Task-84, Task-85 (the specs must carry `layout`).
       *Acceptance:* `[unit]` the three artifact
@@ -1585,15 +1855,19 @@ construction. They need a local key, an external tool or a store account.
       summary — written in the commit message and visible in that run's gate tail in the app.
 - [ ] **L7 — Restructure the prototype (D58).** Before the alignment batch, turn the file into the
       shape the importer can read *semantically*: a **colour style per palette value** (the twelve
-      of `design/tokens.json`), **autolayout** on the main column of the ten routed frames with real
-      padding and gap, and **components/variants** where a row, a chip or a header repeats. Keep
-      every frame caption byte-identical — `design/import.json` matches on the exact name — and do
-      not convert a routed frame into a component until Task-85 is merged, because only from then is
-      a `COMPONENT` child accepted. **No Variables**: the REST endpoint answers 403 outside
-      Enterprise, so styles are the source. *Dependencies:* L6 and Task-85. *Acceptance:* `[unit]` a
-      re-import reports `styles` > 0 and `layoutMode` present on the ten routed frames, with the ten
-      captions still resolving; `[live]` `GET /v1/files/:key/styles` lists the palette names and
-      every routed frame reports `VERTICAL` or `HORIZONTAL`.
+      of `design/tokens.json`), **autolayout** on the main column of the eleven routed frames with
+      real padding and gap, and **components/variants** where a row, a chip or a header repeats.
+      Keep every frame caption byte-identical — `design/import.json` matches on the exact name —
+      and do not convert a routed frame into a component until Task-85 is merged, because only
+      from then is a `COMPONENT` child accepted. **No Variables**: the REST endpoint answers 403
+      outside Enterprise, so styles are the source. *Dependencies:* L6 and Task-85.
+      *Acceptance:* `[unit]` a re-import reports `styles` > 0 and `layoutMode` present on the
+      eleven routed frames, with the eleven captions still resolving; `[live]`
+      `GET /v1/files/:key/styles` lists the palette names and every routed frame reports
+      `VERTICAL` or `HORIZONTAL`.
+- [ ] **L1 — Release signing.** Keep the Android keystore and the Apple certificate off the
+      repository and off Actions; Task-29 builds unsigned artifacts and checksums; the operator
+      signs and distributes. *Dependencies:* Q1 (distribution) and Task-29.
 - [ ] **L3 — AWS account guardrails.** A dedicated IAM user with MFA (never root), the region
       pinned, the access keys rotated and a budget alarm above the spot cost; `terraform` deploys
       with a named profile and no key in the repository. *Dependencies:* Task-42.
