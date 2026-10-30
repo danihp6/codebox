@@ -294,6 +294,12 @@ npx cap open ios | android         # only when a native change needs Xcode/Gradl
 
 - The web build is the artifact the daemon serves; the native shells are built in CI when a
   release is cut (Task-29).
+- **Critical CSS inlining stays off** (`optimization.styles.inlineCritical: false` in
+  `apps/app/angular.json`). The inline that Beasties emits is a `<script>` that rewrites the
+  global stylesheet's `media`, and the daemon's CSP (`script-src 'self'`, `apps/daemon/src/app.ts`)
+  blocks it: the global sheet — Ionic's `.ion-page`, the tab bar, typography — would never
+  activate and every routed page would stack unstyled instead of the outlet hiding the previous
+  one.
 - Version, commit and build time are injected at build time and shown in `/about`.
 - The PWA manifest ships name, short name, theme colour, maskable icon and the app's
   `start_url`; the service worker caches the shell only, never API responses with tokens.
