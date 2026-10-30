@@ -304,6 +304,23 @@ Task-87 holds `apps/app/src/app/app.routes.ts`. No task holds `tsconfig.base.jso
 `docs/decisions.md`. The fourth slot has no legal candidate: Task-30 waits on Task-29, Task-31 on
 Task-26/28/30 and Task-32 on Task-31, all behind the `[!]` roots on issue #11.
 
+**Cut — cycle after Task-89 (two of four slots used).** No task branch was alive and `main` was
+`51005de`. The 2026-10-30 priority override makes the design track the head of the screen backlog,
+and this cut is the wave 0 it freed: Task-88 (the daemon's repository surface) and Task-89 (dark by
+default), neither of which draws a page or touches anything under `design/`. Their paths are
+disjoint — daemon, contract and store against the app theme, the settings store and the shell — and
+neither claims a hot file. The two empty slots have no legal candidate: Tasks 90–99 wait for L6 and
+L7, whose screens and exports do not exist yet, and Task-26, Task-29, Task-30, Task-31 and Task-32
+keep their place behind the design track by the same override; Task-26 additionally needs the
+`/v1/repos` surface Task-88 shipped here. **Deviations, recorded:** Task-88 added
+`packages/store/src/repos.ts` and its test (the counts are SQL, and SQL belongs to `packages/store`)
+and, at the pre-QA audit, one fixture line in `apps/daemon/src/design/routes.test.ts` (the store now
+always sets `counts`); `counts` is optional in `repoSchema` so the app's existing fixtures keep
+parsing, while the store and the daemon always set it. Task-89 created
+`apps/app/src/app/core/settings/settings.store.spec.ts` (it did not exist) and reads
+`variables.css` from it because the item's path list has no theme spec. Both `[live]` criteria are
+unmeasured on this runner (no browser, no VM): issues #97 and #98 carry them.
+
 **Priority override — 2026-10-30: the prototype runs the screen queue.** The operator's ruling is
 that a screen written without its frame is work paid twice, so the design track is the head of the
 **screen** backlog and the driver cuts no screen task ahead of it. `L2 → L5 → L6 → L7` come first —
@@ -1658,7 +1675,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       *Dependencies:* none. **Freed 2026-10-30:** cut ahead of the design track, beside it; it
       reads no frame and edits nothing under `design/`.
 
-- [ ] **[Task-89]** Dark by default, and the theme preference reaches the DOM. `docs/app.md` §9
+- [x] **[Task-89]** Dark by default, and the theme preference reaches the DOM. `docs/app.md` §9
       says dark is the default and that following the system is the iOS default, but
       `apps/app/src/theme/variables.css` follows `prefers-color-scheme` on every platform and
       `SettingsStore.setTheme`/`theme` are never read by anything, so the setting is dead code and

@@ -6,6 +6,29 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-30 (Task-89, dark by default and a theme that reaches the DOM)
+
+- **The app is dark on every platform at first paint.** `apps/app/src/theme/variables.css` drops the
+  `@media (prefers-color-scheme: light)` block; the dark `:root` stays the one source and a
+  `:root[data-theme='light']` block carries the six light declarations built from the same twelve
+  leaves of `design/tokens.json` (`#f7f9fb`, `#ffffff`, `#0b0f14`, `#5b6772` and the two Ionic rgb
+  triplets). Two ink variables join the dark block — `--cb-ink-accent: #15803d` and
+  `--cb-ink-warn: #b45309` — while `--cb-accent`/`--cb-warn` stay the signal fills and dots.
+- **`SettingsStore.theme` is no longer dead code.** The shell writes `<html data-theme="dark|light">`
+  from the store on boot and on every change, and calls the idempotent `load()`. Two pure helpers
+  freeze the rule: `initialTheme({ stored, platform, prefersLight })` (stored wins, iOS follows the
+  system once, every other platform is dark) and `systemPrefersLight(platform)` (reads
+  `matchMedia` only on iOS). Following the system is the iOS initial value only and is never
+  persisted on its own; the secure store under `cb.settings` keeps the explicit choice.
+- **Tests move with the rule:** a new `settings.store.spec.ts` covers the pure tables, the reload
+  over the same secure store and the CSS contract (no `prefers-color-scheme`, the light block's six
+  declarations, the reduced-motion block still last), and `app.component.spec.ts` proves the
+  attribute on boot, after `setTheme('light')` and on a second mount. `tokens.spec.ts` and
+  `workers.motion.spec.ts` stay untouched and green.
+- The `[live]` criterion (a light-mode desktop painting `rgb(11, 15, 20)` at first paint, before the
+  daemon answers) is unmeasured on this runner — no browser — and issue #98 carries the
+  measurement.
+
 ### Added — 2026-10-30 (Task-88, the repositories surface the app already calls)
 
 - **`/v1/repos` answers.** A `repos` subsystem, appended last to `SUBSYSTEMS` (seventeenth) and

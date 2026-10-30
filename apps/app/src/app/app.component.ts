@@ -6,6 +6,7 @@ import { filter, map } from 'rxjs';
 import { AuthStore } from './core/auth/auth.store';
 import { SseService } from './core/events/sse.service';
 import { I18nService } from './core/i18n/i18n.service';
+import { SettingsStore } from './core/settings/settings.store';
 import { OfflineBanner } from './shared/offline-banner';
 import { TabsPage } from './shell/tabs.page';
 
@@ -34,6 +35,7 @@ export class AppComponent {
   private readonly router = inject(Router);
   private readonly auth = inject(AuthStore);
   private readonly sse = inject(SseService);
+  private readonly settings = inject(SettingsStore);
   private readonly url = toSignal(
     this.router.events.pipe(
       filter((event): event is NavigationEnd => event instanceof NavigationEnd),
@@ -47,6 +49,10 @@ export class AppComponent {
 
   constructor() {
     inject(I18nService);
+    void this.settings.load();
+    effect(() => {
+      document.documentElement.setAttribute('data-theme', this.settings.theme());
+    });
     effect(() => {
       if (this.auth.signedIn()) this.sse.start();
       else this.sse.stop();
