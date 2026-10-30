@@ -1,8 +1,28 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { SECURE_STORE } from '../auth/secure-store';
 
 export type Theme = 'dark' | 'light';
 export type LocaleCode = 'en' | 'es';
+
+export interface InitialThemeInput {
+  readonly stored: Theme | null;
+  readonly platform: string;
+  readonly prefersLight: boolean;
+}
+
+/** The one rule: stored wins, iOS follows the system once, everything else is dark. */
+export function initialTheme(input: InitialThemeInput): Theme {
+  if (input.stored !== null) return input.stored;
+  if (input.platform === 'ios') return input.prefersLight ? 'light' : 'dark';
+  return 'dark';
+}
+
+/** Reads the media query only on iOS; every other platform answers false without reading it. */
+export function systemPrefersLight(platform: string): boolean {
+  if (platform !== 'ios') return false;
+  return globalThis.matchMedia?.('(prefers-color-scheme: light)')?.matches === true;
+}
 
 interface StoredSettings {
   readonly theme?: Theme;
@@ -36,9 +56,15 @@ export class SettingsStore {
 
   private async read(): Promise<void> {
     const stored = await this.secure.get(SETTINGS_KEY);
-    if (stored === null) return;
-    const parsed = parseStoredSettings(stored);
-    if (parsed.theme !== undefined) this.theme.set(parsed.theme);
+    const parsed = stored === null ? {} : parseStoredSettings(stored);
+    const platform = Capacitor.getPlatform();
+    this.theme.set(
+      initialTheme({
+        stored: parsed.theme ?? null,
+        platform,
+        prefersLight: systemPrefersLight(platform),
+      }),
+    );
     if (parsed.locale !== undefined) this.locale.set(parsed.locale);
   }
 

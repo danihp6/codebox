@@ -28,11 +28,11 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/manifest.webmanifest` — PWA manifest.
 - `src/assets/i18n/en.json` — the shared English dictionary: shell, pairing, common and run keys.
 - `src/assets/i18n/es.json` — the shared Spanish dictionary (default locale), same key set.
-- `src/theme/variables.css` — the `--cb-*` tokens, the light override and the workers motion with its reduced-motion block.
+- `src/theme/variables.css` — the `--cb-*` tokens, the `data-theme='light'` override, the two ink variants and the workers motion with its reduced-motion block.
 - `src/theme/tokens.ts` — the same tokens for TypeScript consumers.
 - `src/theme/tokens.spec.ts` — the fourteen leaves of `design/tokens.json`, the twelve colours and the one font import.
-- `src/app/app.component.ts` — `ion-app`, router outlet, tab bar, offline banner and stream-state hook.
-- `src/app/app.component.spec.ts` — the banner reaches the shell and drops out when fresh.
+- `src/app/app.component.ts` — `ion-app`, router outlet, tab bar, offline banner, stream-state hook and the `<html data-theme>` writer.
+- `src/app/app.component.spec.ts` — the banner reaches the shell and drops out when fresh; the theme attribute is dark, flips to light and survives a remount.
 - `src/app/app.config.ts` — zoneless, Ionic, router, HTTP, service-worker providers.
 - `src/app/app.routes.ts` — every route of `docs/app.md` §4, lazy and guarded.
 - `src/app/app.routes.spec.ts` — the frozen 15-row path table, the guard walk, the three tabs, the `docs/app.md` §4 agreement test and the retired-route guard.
@@ -62,7 +62,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/core/events/events.ts` — untrusted frame to typed stream event.
 - `src/app/core/i18n/i18n.service.ts` — signal locale, dictionary loader and `t`.
 - `src/app/core/i18n/i18n.spec.ts` — key parity and missing-key behaviour.
-- `src/app/core/settings/settings.store.ts` — locale and theme persisted in the secure store.
+- `src/app/core/settings/settings.store.ts` — the dark-by-default theme rule, the iOS initial value, and locale and theme persisted in the secure store.
+- `src/app/core/settings/settings.store.spec.ts` — the theme tables, the single load, the reload, the malformed payload and the `variables.css` theme blocks.
 - `src/app/core/util/time-format.ts` — next-fire parts and formatting in the schedule's timezone.
 - `src/app/core/util/time-format.spec.ts` — the pinned parts in two zones and both locales.
 - `src/app/features/about/about.i18n.ts` — the about dictionary in `en` and `es`.
