@@ -90,6 +90,13 @@ export const providersSchema = z.strictObject({
 export const brakeSchema = z.strictObject({ enabled: z.boolean() });
 
 // §5.2 Repositories
+// D59: the three counts belong to the row that loads the repository, so no client ever counts.
+const repoCountsSchema = z.strictObject({
+  pending: z.number().int().nonnegative(),
+  running: z.number().int().nonnegative(),
+  merged: z.number().int().nonnegative(),
+});
+
 export const repoSchema = z.strictObject({
   id: RepoId,
   slug: slugSchema,
@@ -99,6 +106,8 @@ export const repoSchema = z.strictObject({
   protectedPaths: z.array(globSchema),
   enabled: z.boolean(),
   createdAt: timestampSchema,
+  // Optional only so fixtures that predate D59 keep parsing; the daemon always sets it.
+  counts: repoCountsSchema.optional(),
 });
 
 export const repoVerifySchema = z.strictObject({

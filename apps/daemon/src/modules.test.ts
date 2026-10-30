@@ -69,6 +69,7 @@ function only(name: SubsystemName): SubsystemFlags {
     backlog: false,
     sessions: false,
     design: false,
+    repos: false,
   };
   flags[name] = true;
   return flags;
@@ -87,7 +88,7 @@ function moduleNotFound(name: SubsystemName): Error {
 }
 
 describe('subsystems', () => {
-  it('lists the sixteen subsystems in order, append-only', () => {
+  it('lists the seventeen subsystems in order, append-only', () => {
     expect([...SUBSYSTEMS]).toEqual([
       'auth',
       'events',
@@ -105,13 +106,15 @@ describe('subsystems', () => {
       'backlog',
       'sessions',
       'design',
+      'repos',
     ]);
   });
 
   it('keeps the bootstrapped names at their indices', () => {
     expect(SUBSYSTEMS[0]).toBe('auth');
     expect(SUBSYSTEMS.indexOf('cli')).toBe(11);
-    expect(SUBSYSTEMS.slice(12)).toEqual(['works', 'backlog', 'sessions', 'design']);
+    expect(SUBSYSTEMS.slice(12)).toEqual(['works', 'backlog', 'sessions', 'design', 'repos']);
+    expect(SUBSYSTEMS.indexOf('repos')).toBe(16);
   });
 
   it('enables every subsystem by default', () => {
@@ -211,6 +214,7 @@ describe('loadModules', () => {
       backlog: false,
       sessions: false,
       design: false,
+      repos: false,
     });
     const imported: string[] = [];
     const report = await loadModules({
