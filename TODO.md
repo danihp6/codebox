@@ -304,17 +304,19 @@ Task-87 holds `apps/app/src/app/app.routes.ts`. No task holds `tsconfig.base.jso
 `docs/decisions.md`. The fourth slot has no legal candidate: Task-30 waits on Task-29, Task-31 on
 Task-26/28/30 and Task-32 on Task-31, all behind the `[!]` roots on issue #11.
 
-**Priority override — 2026-10-30: the prototype runs the queue.** The operator's ruling is
-that a screen written without its frame is work paid twice, so the design track is the head of
-the backlog and the driver cuts nothing ahead of it. `L2 → L5 → L6 → L7` come first — they are
-`L` items, so the cycle waits for them instead of running beside them — **and the whole of Batch
-23 waits with it, including Task-88 and Task-89**: the operator ruled that no code is written
-while the prototype and its import are open, even the two tasks that draw no page. The four open
-driver tasks (30, 31, 32 and the `[!]` roots behind issue #11) keep their place behind the design
-track. Batch 23 opens when L6 and L7 are done, because every screen task in it names a spec and
-an export that do not exist yet. A task that adds or changes a routed screen without
-`design/screens/<slug>.json` and `design/exports/<slug>.png` is not ready to launch
-(`AGENTS.md`), and that is now the gate on the whole screen backlog, not a footnote.
+**Priority override — 2026-10-30: the prototype runs the screen queue.** The operator's ruling is
+that a screen written without its frame is work paid twice, so the design track is the head of the
+**screen** backlog and the driver cuts no screen task ahead of it. `L2 → L5 → L6 → L7` come first —
+they are `L` items, so the cycle waits for them instead of running beside them — and every task of
+Batch 23 that draws a page waits with them. **Amended the same day:** the operator freed the two
+tasks that draw no page, Task-88 and Task-89, because a frame cannot improve a daemon route or a
+`data-theme` attribute; they are wave 0 of Batch 23, they are cut now beside the design track, and
+they touch no file under `design/`. The four open driver tasks (30, 31, 32 and the `[!]` roots
+behind issue #11) keep their place behind the design track. The screen waves of Batch 23 open when
+L6 and L7 are done, because every screen task in them names a spec and an export that do not exist
+yet. A task that adds or changes a routed screen without `design/screens/<slug>.json` and
+`design/exports/<slug>.png` is not ready to launch (`AGENTS.md`), and that is the gate on the
+screen backlog, not a footnote.
 
 ### Screens awaiting the prototype
 
@@ -360,10 +362,12 @@ fill a slot beside it. The four hot files that serialise the tail are `docs/deci
 and `40/41 → 46` for the image, with `43` and `44` feeding the measured bring-up — and it is the
 path to a deployed box, not to the beta.
 
-**The path to a product that looks like its prototype:** `L2 → L5 → L6 → L7 → 88–99`. It is the
-head of the queue and nothing runs beside it: L2 draws, L5 completes, L6 imports, L7 restructures,
-and only then does Batch 23 open — Task-88 and Task-89 included. The blueprint above is the path
-to a box that runs; this is the path to the app the operator recognises.
+**The path to a product that looks like its prototype:** `L2 → L5 → L6 → L7 → 90–99`, with
+`88/89` running beside it from 2026-10-30 (the operator's amendment). L2 draws, L5 completes, L6
+imports, L7 restructures, and only then do the screen waves of Batch 23 open; Task-88 and Task-89
+draw no page and read no frame, so they were freed to cut ahead of the design track, not behind it.
+The blueprint above is the path to a box that runs; this is the path to the app the operator
+recognises.
 
 **Serial resources:** `packages/contracts/src/index.ts` (Task-03 owns it for Batch 2; later
 contract changes are their own task), `apps/app/src/app/app.routes.ts` (Task-18 predeclares
@@ -1599,11 +1603,12 @@ and Task-87 holds `apps/app/src/app/app.routes.ts`. No task touches a Batch 21 p
 
 ---
 
-## Batch 23 — Screen alignment against the prototype
+## Batch 23 — Screen alignment against the prototype, plus two code-only tasks
 
-**The batch waits for the design track in full.** The operator ruled on 2026-10-30 that no code
-is written while the prototype and its import are open, so Batch 23 opens when L6 and L7 are
-done — including Task-88 and Task-89, which draw no page but ship code. Every screen task names
+**Only the screen waves wait for the design track.** The operator ruled on 2026-10-30 that no
+screen is written while the prototype and its import are open, and amended it the same day: the
+two tasks that draw no page, Task-88 and Task-89, are cut **now**, beside the design track, and the
+rest of the batch opens when L6 and L7 are done. Every screen task names
 its `design/screens/<slug>.json`, its `design/exports/<slug>.png` and the frame caption of
 `design/README.md` §1; the pair is what the dev implements and what QA compares, so a task whose
 pair is missing is not ready to launch. This batch is the **re-alignment** of the eleven screens
@@ -1611,14 +1616,15 @@ built from contracts alone: routes, guards, stores, contracts and `data-testid`s
 (except Task-99's retirement, which is the one route change), and a page is rewritten against its
 export at 390 × 844 dark and again at 320 px.
 
-**Four waves.** Wave 0: Task-88 (the daemon's repository surface) and Task-89 (dark by default) —
-no frame needed, but they still wait for L7. Wave 1: Task-90 (Pairing), Task-91 (Repo list),
-Task-92 (Repo · backlog), Task-93 (Repo · workers). Wave 2: Task-94 (Design · session), Task-95
-(Dashboard), Task-96 (settings cluster), Task-97 (Credentials). Wave 3: Task-98 (About) and
-Task-99 (two tabs and the schedule sheet), which needs Task-92's page to hang the sheet on. Paths
-are disjoint inside a wave (one feature folder each); `apps/app/README.md` is claimed by line
-block, one folder per task, the way Batch 20 wave 2 did it. The settings screens share
-`features/settings/**` and its `i18n.ts`, so they are one task and not three.
+**Four waves.** Wave 0 is **already cut** (2026-10-30): Task-88 (the daemon's repository surface)
+and Task-89 (dark by default). They read no frame, touch nothing under `design/`, and the works
+they add are the ones Task-91, Task-92, Task-95 and Task-96 read later. Wave 1: Task-90 (Pairing),
+Task-91 (Repo list), Task-92 (Repo · backlog), Task-93 (Repo · workers). Wave 2: Task-94
+(Design · session), Task-95 (Dashboard), Task-96 (settings cluster), Task-97 (Credentials). Wave 3:
+Task-98 (About) and Task-99 (two tabs and the schedule sheet), which needs Task-92's page to hang
+the sheet on. Paths are disjoint inside a wave (one feature folder each); `apps/app/README.md` is
+claimed by line block, one folder per task, the way Batch 20 wave 2 did it. The settings screens
+share `features/settings/**` and its `i18n.ts`, so they are one task and not three.
 
 **Hot-file holders in this cut:** Task-99 holds `apps/app/src/app/app.routes.ts` (the two
 retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
@@ -1649,7 +1655,8 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       `[unit]` an unknown id is `404`, a delete with a
       live run is `409`, a duplicate slug is a conflict and not a 500; `[live]` the app's `/repos`
       lists a created repository and `verify` returns its four checks against the local daemon.
-      *Dependencies:* none.
+      *Dependencies:* none. **Freed 2026-10-30:** cut ahead of the design track, beside it; it
+      reads no frame and edits nothing under `design/`.
 
 - [ ] **[Task-89]** Dark by default, and the theme preference reaches the DOM. `docs/app.md` §9
       says dark is the default and that following the system is the iOS default, but
@@ -1665,7 +1672,9 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       *Acceptance:* `[unit]` with no stored preference `<html data-theme>` is `dark` and
       `setTheme('light')` flips it and survives a reload; `[unit]` no rule reads
       `prefers-color-scheme` outside the iOS initial value; `[live]` on a light-mode desktop the
-      app paints dark at first paint, before the daemon answers. *Dependencies:* none.
+      app paints dark at first paint, before the daemon answers. *Dependencies:* none. **Freed
+      2026-10-30:** cut ahead of the design track, beside it; it reads no frame and edits nothing
+      under `design/`.
 
 - [ ] **[Task-90]** Pairing, frame `01 · Pairing — mobile dark`, error state `14 · Unpaired — 401`.
       Rewrite `features/pairing` from `design/screens/pairing.json`: header, the form column's box
@@ -1799,10 +1808,12 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
 The driver only counts `- [ ] **[Task-NN]**`; these `L<n>` items are outside the queue by
 construction. They need a local key, an external tool or a store account.
 
-**The design track is the head of the queue, in this order:** L2 draws and re-cuts, L5
+**The design track is the head of the screen queue, in this order:** L2 draws and re-cuts, L5
 completes the missing widths, states and interaction, L6 imports the measured specs and the
-exports, L7 restructures the file the importer reads. **Nothing is cut while they are open** —
-not even Task-88 or Task-89 — and none of the three later items (L1, L3, L4) runs ahead of them.
+exports, L7 restructures the file the importer reads. **No screen task is cut while they are
+open** — the two tasks that draw no page, Task-88 and Task-89, were freed by the operator on
+2026-10-30 and run beside this track — and none of the three later items (L1, L3, L4) runs ahead
+of them.
 
 - [ ] **L2 — Visual prototype.** A Figma file with the routed screens and the tokens in
       `docs/app.md` §9; export PNGs and a screen-to-route map in `design/`. **Superseded by
@@ -1842,7 +1853,10 @@ not even Task-88 or Task-89 — and none of the three later items (L1, L3, L4) r
       committed: on the operator's Windows box it is `$env:FIGMA_TOKEN = '<token>'` in the shell
       that runs the command, because the command reads the environment and never `.env`; in CI it
       is a secret. The operator confirmed on 2026-10-30 that the token exists (scope
-      `file_read`). The map is already
+      `file_read`). **The file's read quota is spent:** `GET /v1/files/:key` answers `429` with
+      `retry-after: 338264` (about 94 h), so the file cannot be read again before
+      `2026-11-03T09:42Z` (10:42 local). Retrying inside that window only risks extending it: no
+      cycle polls it, and the next attempt is a human one after that instant. The map is already
       committed and `design/tokens.json` is Task-84's, so the map and the tokens are not authored
       here; the review checks that eleven screens and eleven exports landed (the map's eleven
       frames, `design/import.json`) and that no frame caption in
