@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Fixed — 2026-10-30 (the global stylesheet never applied under the CSP)
+
+- **Every routed page stayed stacked on the previous one.** The production build rewrote the global
+  stylesheet to `media="print"` and restored it from an inline `<script>`; the daemon serves the
+  app with `script-src 'self'` (`apps/daemon/src/app.ts`), which blocks inline scripts, so the
+  sheet with Ionic's `.ion-page` rules never activated. The pairing screen survived the login, the
+  tab bar rendered unpositioned at the top and a navigation changed the URL without replacing the
+  view. `optimization.styles.inlineCritical: false` in `apps/app/angular.json` leaves the sheet in
+  a plain `<link>`; the reason is recorded in `docs/app.md` §13 so it is not re-enabled by
+  accident. Verified in a browser against a local daemon: `.ion-page` computes
+  `display: flex; position: absolute`, the leaving page gets `display: none`, and pairing →
+  dashboard → tabs swap without a reload.
+
 ### Added — 2026-10-29 (Task-87, the notifications route and a map that cannot drift)
 
 - **`/settings/notifications` is a real route.** `NotificationsPage` (the existing panel plus a
