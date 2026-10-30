@@ -736,16 +736,16 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
 
 ## Batch 7 — Hardening, e2e, observability, release
 
-- [!] **[Task-26]** End-to-end happy path. Playwright against the built app with a fake
+- [ ] **[Task-26]** End-to-end happy path. Playwright against the built app with a fake
       OpenCode and a fake GitHub: pair → add repo → run → gate → PR → merge → push. *Paths:*
       `e2e/**`, `.github/workflows/e2e.yml`. *Dependencies:* Task-20, Task-22, Task-14,
       Task-15. *Acceptance:* `[unit]` the suite is deterministic with a fixed clock and seed;
       `[live]` the full flow passes twice in a row on CI with no network access; `[live]` a
       forwarded push is observed by a service worker.
-      BLOCKED: its branch has to create `.github/workflows/e2e.yml`, and the runner's
-      installation token has no `workflows` permission (issue #11 — the same block as
-      Task-29), so the branch cannot be pushed. Grant the App `Workflows: read and write`, or
-      publish that one file manually and drop it from scope, then free this task.
+      **Freed 2026-10-30:** `CB_AGENT_TOKEN` writes workflow files again — the probe
+      (`probe / workflows permission`, run 41104152609) pushed `.github/workflows/probe.yml`
+      green, so issue #11 no longer blocks this branch. The App's `Workflows: read and write`
+      governs the daemon's installation token, not the cycle; the cycle pushes with the PAT.
 
 - [x] **[Task-27]** Observability and cost. Telemetry endpoint, usage ledger, daily cost
       aggregation, disk/queue metrics, retention job, `cb doctor` checks. *Paths:*
@@ -764,16 +764,16 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       token; `[live]` `systemd-analyze security` reports the documented hardening score;
       `[live]` an oversized request is rejected before parsing.
 
-- [!] **[Task-29]** Release pipeline. Versioning, signed daemon/app artifacts, image tag
+- [ ] **[Task-29]** Release pipeline. Versioning, signed daemon/app artifacts, image tag
       scheme, changelog generation, rollback, and the upgrade path from N-1. *Paths:*
       `.github/workflows/release.yml`, `scripts/release/**`, `docs/operations.md` (release
       section). *Dependencies:* Task-25. *Acceptance:* `[unit]` a dry release produces the
       documented artifact names and checksums; `[unit]` the upgrade script refuses a
       checksum mismatch; `[live]` an N-1 instance upgrades and answers health with the new
       version.
-      BLOCKED: the runner's installation token has no `workflows` permission, so a branch
-      touching `.github/workflows/release.yml` cannot be pushed (issue #11). Grant the App
-      `Workflows: read and write`, or publish that one file manually and drop it from scope.
+      **Freed 2026-10-30:** the same probe (run 41104152609) shows `CB_AGENT_TOKEN` writing
+      `.github/workflows/*`, so the branch that creates `release.yml` pushes. Issue #11 is
+      closed by measurement, not by hope.
 
 - [ ] **[Task-30]** Docs and ADR pass. Reconcile every doc with the shipped code, add the
       runbook for the five most likely incidents, and amend the decisions that moved. *Paths:*
