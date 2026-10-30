@@ -1,4 +1,12 @@
-import type { Approval, ChatMessage, ChatSession, Device, Job, Repo } from '@codebox/contracts';
+import type {
+  Approval,
+  ChatMessage,
+  ChatSession,
+  Device,
+  Job,
+  Repo,
+  Work,
+} from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { StoreError } from './errors.js';
 import { toChatSession } from './chats.js';
@@ -15,6 +23,7 @@ const REPO: Repo = {
   protectedPaths: ['.github/**', 'ops/**'],
   enabled: true,
   createdAt: '2026-01-01T00:00:00.000Z',
+  counts: { pending: 0, running: 0, merged: 0 },
 };
 
 const OTHER_REPO: Repo = {
@@ -146,6 +155,27 @@ function storeErrorCode(run: () => unknown): string {
   return 'no-error';
 }
 
+function work(id: string, repoId: string, backlogRef: string, state: Work['state']): Work {
+  return {
+    id,
+    repoId,
+    backlogRef,
+    title: `Work ${backlogRef}`,
+    prompt: `Do ${backlogRef}`,
+    specSha: '9f1c2ab',
+    state,
+    origin: 'backlog',
+    attempts: 0,
+    maxAttempts: 2,
+    usage: { usd: 0, tokensIn: 0, tokensOut: 0 },
+    contextTokens: 0,
+    contextEpoch: 1,
+    reviewedAt: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  };
+}
+
 let store: Store;
 
 beforeEach(() => {
@@ -208,6 +238,44 @@ describe('repos', () => {
     expect(storeErrorCode(() => store.repos.create({ ...OTHER_REPO, id: 'repo_000003' }))).toBe(
       'unique_violation',
     );
+  });
+
+  it('reads the three work counts in the row query, per repository', () => {
+    expect(store.repos.get(REPO.id)).toEqual(REPO);
+    expect(store.repos.get(OTHER_REPO.id)).toEqual(OTHER_REPO);
+
+    const states: Work['state'][] = ['queued', 'running', 'merged', 'needs_decision', 'failed'];
+    states.forEach((state, index) => {
+      store.works.create(work(`wrk_000000${index + 1}`, REPO.id, `Task-0${index + 1}`, state));
+    });
+
+    const counts = { pending: 1, running: 1, merged: 1 };
+    expect(store.repos.get(REPO.id)?.counts).toEqual(counts);
+    expect(store.repos.getBySlug(REPO.slug)?.counts).toEqual(counts);
+    expect(store.repos.update(REPO.id, { gate: 'npm run gate' }).counts).toEqual(counts);
+    expect(store.repos.get(OTHER_REPO.id)?.counts).toEqual({
+      pending: 0,
+      running: 0,
+      merged: 0,
+    });
+
+    const created = store.repos.create({
+      ...OTHER_REPO,
+      id: 'repo_000004',
+      slug: 'octo/fourth',
+      counts: { pending: 0, running: 0, merged: 0 },
+    });
+    expect(created.counts).toEqual({ pending: 0, running: 0, merged: 0 });
+    expect(store.repos.list().map((repo) => repo.id)).toEqual([
+      'repo_000004',
+      OTHER_REPO.id,
+      REPO.id,
+    ]);
+    expect(store.repos.list().map((repo) => repo.counts)).toEqual([
+      { pending: 0, running: 0, merged: 0 },
+      { pending: 0, running: 0, merged: 0 },
+      counts,
+    ]);
   });
 });
 

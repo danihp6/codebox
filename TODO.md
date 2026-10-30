@@ -1632,7 +1632,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
 `packages/contracts/src/index.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or
 `docs/decisions.md`: the tab strip belongs to Task-99 alone and no alignment task touches it.
 
-- [ ] **[Task-88]** The repositories surface the app already calls. `docs/api.md` §5.2 documents
+- [x] **[Task-88]** The repositories surface the app already calls. `docs/api.md` §5.2 documents
       six routes and the daemon serves none of them (`GET /v1/repos` answers 404), so Repo list,
       Repo · backlog and Dashboard open on their error state. Add the `repos` subsystem —
       `GET /v1/repos` (`read`), `POST /v1/repos` (`write`, `{slug, defaultBranch?, gate?, policy?,

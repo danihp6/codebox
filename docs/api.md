@@ -197,9 +197,33 @@ disabled; or no active provider account: nothing runs).
   "policy": "auto",
   "protectedPaths": [".github/**", "ops/**", "infra/**", "**/*.env"],
   "enabled": true,
-  "createdAt": "2026-10-24T18:03:11Z"
+  "createdAt": "2026-10-24T18:03:11Z",
+  "counts": { "pending": 2, "running": 1, "merged": 8 }
 }
 ```
+
+`counts` is the repository's backlog in three integers — `pending`, `running` and `merged` — and
+the daemon computes it inside the statement that loads the row, from `works` rows whose `state`
+is `queued`, `running` or `merged`. `review`, `needs_decision`, `failed` and `abandoned` are
+deliberately outside the three: the row shows three numbers and a fourth would be a new fact. A
+repository with no works answers `{ "pending": 0, "running": 0, "merged": 0 }`, and the client
+never counts works itself (D59). `GET /v1/repos` answers a §4 `Page<Repo>` — `limit` 1–200,
+default 50, plus `cursor` — and `GET /v1/repos/{id}` answers `RepoDetail`: the same object plus
+`lastRun`, the repository's newest run or `null`.
+
+`POST /v1/repos/{id}/verify` asks the git provider and answers four checks in this order: `repo`
+is `ok` once the provider answered; `branch` is `ok` when the provider's default branch equals
+the registered one and `mismatch` otherwise; `push` is `ok` when the installation may push and
+`forbidden` otherwise; `gate` is `ok` when the repository carries a gate command and `missing`
+otherwise. `ok` is true only when all four are `ok`; `defaultBranch` and `canPush` are the
+provider's answer, not the stored values. An unknown id is `404` with
+`details.path = "repo.id"`, and a provider that cannot answer is `503 provider_unavailable` with
+`details.reason = "provider_unreachable"`. The route writes nothing and emits no event.
+
+`DELETE /v1/repos/{id}` answers `204` and removes the row; it refuses with `409 conflict` while
+the repository has a live run (`details.reason = "repo_has_live_run"`) or when run history still
+references it (`details.reason = "repo_has_history"`). A duplicate slug on `POST /v1/repos` is
+also `409 conflict`, with `details.reason = "unique_violation"`.
 
 `GET /v1/repos/{id}/design` reads the repository's `design/` at `revision`, or at the default
 branch head when the query is absent. `present` is false when `design/tokens.json` is not at

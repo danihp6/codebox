@@ -126,6 +126,12 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `src/design/preview.test.ts` — `present: false`, the three sortings, the findings order and each document that does not parse.
 - `src/design/service.test.ts` — the revision resolution, the absent rule for `show` and `ls-tree` and the two error classes.
 - `src/design/routes.test.ts` — the §5.2 HTTP contract: the projection, the refusals, the missing token and the redacted warnings.
+- `src/repos/index.ts` — the `repos` subsystem module: one shared service, the six §5.2 routes and no timer.
+- `src/repos/service.ts` — the cursor list, the detail with its last run, the create defaults, the four-key patch, the two delete refusals and the verify composition.
+- `src/repos/routes.ts` — the §5.2 repository handlers, their body and query schemas and their scopes.
+- `src/repos/ids.ts` — the only `repo_` id generator.
+- `src/repos/service.test.ts` — the defaults, the id shape, the 404s, the delete refusals, the paging and the verify checks.
+- `src/repos/routes.test.ts` — the §5.2 HTTP contract: statuses, counts, scopes, envelopes and the verify 503.
 - `src/integrations/service.test.ts` — allowlist refusal before `fetch`, header injection,
   truncation and the manifest flow.
 - `src/config.test.ts` — config loading, failure naming, bind parsing, paths, build info.

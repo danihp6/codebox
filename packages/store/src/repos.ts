@@ -2,7 +2,14 @@ import type { Repo } from '@codebox/contracts';
 import type { DatabaseSync } from 'node:sqlite';
 import { isForeignKeyViolation, isUniqueViolation } from './db.js';
 import { StoreError } from './errors.js';
-import { LIVE_RUN_STATES_SQL, booleanToInteger, jsonText, repoFromRow, row } from './mappers.js';
+import {
+  LIVE_RUN_STATES_SQL,
+  booleanToInteger,
+  integerColumn,
+  jsonText,
+  repoFromRow,
+  row,
+} from './mappers.js';
 
 export interface RepoPatch {
   readonly slug?: string;
@@ -22,7 +29,25 @@ export interface RepoRepository {
   delete(id: string): void;
 }
 
-const COLUMNS = 'id, slug, default_branch, gate, policy, protected_paths, enabled, created_at';
+// D59: the three counts are read in the same statement that loads the row, so the daemon never
+// assembles a repository from two queries and no client ever counts works.
+const COUNTS_SQL = `(SELECT COUNT(*) FROM works w WHERE w.repo_id = repos.id AND w.state = 'queued') AS pending_count,
+  (SELECT COUNT(*) FROM works w WHERE w.repo_id = repos.id AND w.state = 'running') AS running_count,
+  (SELECT COUNT(*) FROM works w WHERE w.repo_id = repos.id AND w.state = 'merged') AS merged_count`;
+
+const COLUMNS = `id, slug, default_branch, gate, policy, protected_paths, enabled, created_at, ${COUNTS_SQL}`;
+
+function repoOf(value: Parameters<typeof row>[0]): Repo {
+  const record = row(value);
+  return {
+    ...repoFromRow(record),
+    counts: {
+      pending: integerColumn(record, 'pending_count'),
+      running: integerColumn(record, 'running_count'),
+      merged: integerColumn(record, 'merged_count'),
+    },
+  };
+}
 
 export function createRepoRepository(db: DatabaseSync): RepoRepository {
   const selectById = db.prepare(`SELECT ${COLUMNS} FROM repos WHERE id = ?`);
@@ -39,7 +64,7 @@ export function createRepoRepository(db: DatabaseSync): RepoRepository {
 
   function findById(id: string): Repo | null {
     const value = selectById.get(id);
-    return value === undefined ? null : repoFromRow(row(value));
+    return value === undefined ? null : repoOf(value);
   }
 
   return {
@@ -49,11 +74,11 @@ export function createRepoRepository(db: DatabaseSync): RepoRepository {
 
     getBySlug(slug: string): Repo | null {
       const value = selectBySlug.get(slug);
-      return value === undefined ? null : repoFromRow(row(value));
+      return value === undefined ? null : repoOf(value);
     },
 
     list(): Repo[] {
-      return selectAll.all().map((value) => repoFromRow(row(value)));
+      return selectAll.all().map((value) => repoOf(value));
     },
 
     create(repo: Repo): Repo {

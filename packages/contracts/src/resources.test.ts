@@ -51,6 +51,7 @@ const repo = {
   protectedPaths: ['.github/**', 'ops/**', 'infra/**', '**/*.env'],
   enabled: true,
   createdAt: ts,
+  counts: { pending: 2, running: 1, merged: 8 },
 };
 
 const job = {
@@ -482,6 +483,41 @@ describe('resources', () => {
     expect(repoSchema.safeParse(repo).success).toBe(true);
     expect(chatMessageSchema.safeParse({ ...chatMessage, role: 'tool' }).success).toBe(false);
     expect(jobSchema.safeParse({ ...job, model: 42 }).success).toBe(false);
+  });
+
+  it('carries the three work counts on a repository and on its detail', () => {
+    expect(parseRepo(repo).counts).toEqual({ pending: 2, running: 1, merged: 8 });
+    expect(parseRepoDetail({ ...repo, lastRun: null }).counts).toEqual(repo.counts);
+    expect(parseRepo({ ...repo, counts: { pending: 0, running: 0, merged: 0 } }).counts).toEqual({
+      pending: 0,
+      running: 0,
+      merged: 0,
+    });
+
+    const negative = parseError(() =>
+      parseRepo({ ...repo, counts: { pending: -1, running: 0, merged: 0 } }),
+    );
+    expect(negative).toBeInstanceOf(ContractParseError);
+    expect(negative instanceof ContractParseError ? negative.first.path : null).toBe(
+      'repo.counts.pending',
+    );
+
+    const extra = parseError(() =>
+      parseRepo({ ...repo, counts: { pending: 0, running: 0, merged: 0, review: 4 } }),
+    );
+    expect(extra).toBeInstanceOf(ContractParseError);
+    expect(extra instanceof ContractParseError ? extra.first.path : null).toBe(
+      'repo.counts.review',
+    );
+  });
+
+  it('parses a repository that predates the counts key', () => {
+    const legacy: Record<string, unknown> = { ...repo };
+    delete legacy['counts'];
+    const parsed = parseRepo(legacy);
+    expect(parsed.counts).toBeUndefined();
+    expect(Object.keys(parsed)).not.toContain('counts');
+    expect(repoSchema.safeParse(legacy).success).toBe(true);
   });
 
   it('accepts a free chat with a null repoId and demands the key', () => {

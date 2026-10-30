@@ -6,6 +6,31 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-30 (Task-88, the repositories surface the app already calls)
+
+- **`/v1/repos` answers.** A `repos` subsystem, appended last to `SUBSYSTEMS` (seventeenth) and
+  behind the same flags as the rest, serves the six routes `docs/api.md` §5.2 already documented:
+  `GET /v1/repos` (`read`, a `Page<Repo>` with `limit`/`cursor`), `POST /v1/repos` (`write`, with
+  the defaults `main`, `npm ci && npm test && npm run build`, `auto`, `[]`, `enabled`),
+  `GET`/`PATCH`/`DELETE /v1/repos/{id}` and `POST /v1/repos/{id}/verify` (the four checks
+  `repo`, `branch`, `push`, `gate`, `ok` only when all four are). A delete is `409` while a run is
+  live (`repo_has_live_run`) or when run history exists (`repo_has_history`), a duplicate slug is
+  `409 unique_violation`, and an unreachable provider is `503 provider_unavailable`
+  (`provider_unreachable`). The OpenAPI path count stays 63, `packages/contracts/src/index.ts`
+  does not move and `apps/daemon/src/main.ts` does not either.
+- **Every repository row carries its three counts.** `repoSchema` gains
+  `counts: { pending, running, merged }`, computed by the row's own query in
+  `packages/store/src/repos.ts` (correlated subqueries over `works`) so no client counts works
+  itself (D59). `review`, `needs_decision`, `failed` and `abandoned` stay outside the three, and a
+  repository with no works answers three zeros. The key is optional in the schema so the app's
+  existing fixtures keep parsing; the store and the daemon always set it.
+- **Deviations, recorded:** the store's `repos.ts` and its test were added to the task's paths
+  (the counts need SQL, and SQL belongs to `packages/store`), and the Orchestrator accepted one
+  fixture line in `apps/daemon/src/design/routes.test.ts` at the pre-QA audit because the store
+  now always sets the key. The `[live]` criterion (a created repository listed by the app's
+  `/repos`, and `verify` answering its four checks against a local daemon) is unmeasured on this
+  runner — no browser, no VM — and issue #97 carries the measurement.
+
 ### Fixed — 2026-10-30 (the global stylesheet never applied under the CSP)
 
 - **Every routed page stayed stacked on the previous one.** The production build rewrote the global

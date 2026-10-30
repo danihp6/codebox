@@ -37,6 +37,7 @@ const REPO: Repo = {
   protectedPaths: [],
   enabled: true,
   createdAt: '2026-01-01T00:00:00.000Z',
+  counts: { pending: 0, running: 0, merged: 0 },
 };
 
 type Mode = 'ok' | 'absent' | 'unknown-revision' | 'read-failure' | 'invalid-document';
