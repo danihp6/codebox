@@ -204,7 +204,7 @@ explicit API call; a job cannot point at an arbitrary URL.
 | `CB_RETENTION_RUNS_DAYS` | `90` | Run rows and summaries. |
 | `CB_RETENTION_EVENTS_DAYS` | `14` | `run_events` rows. |
 | `CB_RETENTION_LOGS_DAYS` | `30` | Gate and agent log files. |
-| `CB_RETENTION_WORK_MESSAGES_DAYS` | `90` | Work/session messages. |
+| `CB_RETENTION_CHAT_DAYS` | `90` | Session messages (a work's chat). |
 | `CB_RETENTION_APPROVALS_DAYS` | `7` | Resolved approvals. |
 
 ## 10. Notifications
@@ -240,11 +240,11 @@ These are not read by the daemon. They belong to the provisioning workflow (D22)
 
 | Key | Where | Meaning |
 | --- | --- | --- |
-| `OCI_CLI_USER` | repo variable | OCI API user OCID (`cb-ci`). |
-| `OCI_CLI_FINGERPRINT` | repo variable | API key fingerprint. |
-| `OCI_CLI_TENANCY` | repo variable | Tenancy OCID. |
-| `OCI_CLI_REGION` | repo variable | e.g. `eu-madrid-1`. |
-| `OCI_CLI_KEY_CONTENT` | repo secret | Private API key PEM. |
+| `CB_OCI_CLI_USER` | repo variable | OCI API user OCID (`cb-ci`), exported as `OCI_CLI_USER`; empty fails `launch.sh` with exit 2 naming it. |
+| `CB_OCI_CLI_FINGERPRINT` | repo variable | API key fingerprint, exported as `OCI_CLI_FINGERPRINT`; empty fails `launch.sh` with exit 2 naming it. |
+| `CB_OCI_CLI_TENANCY` | repo variable | Tenancy OCID, exported as `OCI_CLI_TENANCY`; empty fails `launch.sh` with exit 2 naming it. |
+| `CB_OCI_CLI_REGION` | repo variable | e.g. `eu-madrid-1`, exported as `OCI_CLI_REGION`; empty fails `launch.sh` with exit 2 naming it. |
+| `CB_OCI_CLI_KEY_CONTENT` | repo secret | Private API key PEM, exported as `OCI_CLI_KEY_CONTENT`; an empty secret fails `launch.sh` with exit 2 naming it. |
 | `CB_OCI_COMPARTMENT_ID` | repo variable | Compartment for the instance and network. |
 | `CB_OCI_SUBNET_ID` | repo variable | `cb-subnet` OCID. |
 | `CB_OCI_IMAGE_ID` | repo variable | The Packer-built `cb` image OCID. |
@@ -277,6 +277,10 @@ are read by the workflows in `.github/workflows/` and by `scripts/agent/vm/`, ne
 | `CB_AGENT_TOKEN` | Actions secret | Fine-grained PAT with `Variables: read and write`, for the window workflow only. |
 | `CB_AGENT_GIT_TOKEN` | `/etc/codebox/cb-agent.env` | PAT with `contents: write` + `issues: write` on this repository; the VM host's push credential. |
 | `CB_AGENT_STATE` | VM | State directory, default `/var/lib/cb-agent`. |
+| `CB_AGENT_REPO` | VM | The pipeline's clone of this repository, default `/srv/cb-agent/codebox`; a missing clone stops `run-cycle.sh` at `git fetch`. |
+| `CB_AGENT_ENV` | VM | The env file the scripts source, default `/etc/codebox/cb-agent.env`; unreadable with `CB_AGENT_MODEL` unset stops `run-driver.sh` with `no readable env file`. |
+| `CB_AGENT_MERGE` | VM | `true` (default) authorises the cycle's merges; `false` puts `false` on the prompt's `Merge authorised for this run:` line, so every merge is parked. |
+| `CB_AGENT_AUTOPILOT_STATE` | workflow env | The summary step's internal copy of `vars.CB_AGENT_AUTOPILOT` in `agent-autopilot.yml`; never set by the operator. |
 
 The inference key keeps the name OpenCode documents (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
 `OPENROUTER_API_KEY`); only the one `CB_AGENT_MODEL` names is set. **`CB_*` and `CB_AGENT_*`

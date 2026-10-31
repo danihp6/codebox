@@ -211,7 +211,7 @@ own rule keep `main` for merges.
 | Data | At rest | Retention |
 | --- | --- | --- |
 | SQLite | On the host's encrypted boot volume (`cb-boot` on OCI, the 100 GB `gp3` volume on AWS); file mode `0600` | Runs 90 d, events 14 d, work messages 90 d (D28) |
-| Worktrees | Disk; removed after 168 h | Branch stays on GitHub |
+| Worktrees | Disk; the engine removes one when its run ends, unless the failure is inspectable | Branch stays on GitHub |
 | Backups | age-encrypted in the host's object store (`cb-backups` on OCI, `s3://cb-codebox-backups` on AWS), 30 daily copies | 30 d |
 | Logs | journald + `logs/`, redacted | 30 d |
 | Prompts | Stored with the run; truncated tool output | 90 d with the run |
@@ -254,8 +254,10 @@ A change touching any of these needs a security review in the same task:
 
 ## 12. Incident response
 
-1. **Brake first.** `cb brake on` (or `CB_AUTOMERGE=off`) stops merges at the next boundary;
-   it never cuts a merge in half.
+1. **Brake first.** Set `CB_AUTOMERGE=off` in `/etc/codebox/instance.env` and restart
+   `codebox.service`; it stops merges at the next guardrail evaluation and never cuts a merge in
+   half (`cb brake on` answers `unsupported` until the daemon mounts the route,
+   [`operations.md`](operations.md) §6).
 2. **Contain.** Revoke the device (`DELETE /v1/devices/{id}`) or rotate the credential that
    leaked.
 3. **Preserve.** Copy the run's events and logs before retention or cleanup.

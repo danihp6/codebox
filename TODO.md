@@ -354,6 +354,26 @@ driver never picks. Every `[live]` criterion in this cut is unmeasured on this r
 no VM) and is handed to an `agent-review` issue: the e2e flow twice on CI with no network and a
 service-worker push for Task-26, the N-1 upgrade on the box for Task-29.
 
+**Cut — cycle after Task-26/Task-29 (one of four slots used).** No task branch was alive and
+`main` was `7b24e00`. Task-26 and Task-29 are merged, which frees the last Batch 7 item:
+**Task-30** (the docs and ADR pass) is the lowest open driver task and its only dependency is
+merged, so it is the batch. The three empty slots have no legal candidate: Task-31 waits on
+Task-26/28/30 and Task-32 on Task-31 (and Task-30 is this batch); the Batch 23 screen tasks
+90–99 each need `design/screens/<slug>.json` and `design/exports/<slug>.png`, and neither
+directory exists while L6 is parked by the Figma read quota until 2026-11-03; every other open
+item is an `L<n>` the driver never picks. **Hot-file holders in this cut:** Task-30 holds
+`docs/decisions.md` (one dated amendment to D2, no new decision, no ID moved); no task holds
+`package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`packages/contracts/src/index.ts`, `opencode.json`, `TODO.md` or `CHANGELOG.md` — the last two
+stayed with the Orchestrator. `docs/**` is this task's alone because no other task is in the
+batch. The `[live]` criterion — a new operator restores a backup in a scratch VM — is
+unmeasured on this runner (no VM) and is handed to an `agent-review` issue. Two deviations the
+pass recorded are also handed there: `cb brake`, `cb prune` and the housekeeping route have no
+daemon mount (`/v1/settings`, `/v1/admin/brake`, `/v1/admin/cache/wipe` answer 404 and the CLI
+degrades to `unsupported`/exit 5), and a 95 % disk reports `disk: down` while the overall
+health stays `degraded` because only a down database yields `503`.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -811,7 +831,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       `.github/workflows/*`, so the branch that creates `release.yml` pushes. Issue #11 is
       closed by measurement, not by hope.
 
-- [ ] **[Task-30]** Docs and ADR pass. Reconcile every doc with the shipped code, add the
+- [x] **[Task-30]** Docs and ADR pass. Reconcile every doc with the shipped code, add the
       runbook for the five most likely incidents, and amend the decisions that moved. *Paths:*
       `docs/**` (all, disjoint sections per task), `README.md`, `AGENTS.md`. *Dependencies:*
       Task-29. *Acceptance:* `[unit]` every internal link resolves; `[unit]` every

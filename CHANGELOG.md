@@ -6,6 +6,36 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-10-31 (Task-30, a doc set that matches the shipped tree)
+
+- **Every doc claim now points at something the tree has.** `docs/api.md` §11 is rebuilt from
+  `apps/app/src/app/app.routes.ts` and each page's API: the four unserved rows
+  (`/settings/providers`, `/runs`, `/runs/:id`, `/approvals`) are gone and the three missing ones
+  (`/repos/:id/workers`, `/repos/:id/design`, `/settings/notifications`) are in. `docs/app.md` §4
+  states the four shipped repository tabs and carries one dated line naming the 2026-10-30 ruling
+  and Task-99, which retires two of them.
+- **The configuration surface is documented both ways.** `docs/providers.md` renames
+  `CB_RETENTION_WORK_MESSAGES_DAYS` to the key the schema actually reads
+  (`CB_RETENTION_CHAT_DAYS`, default 90) and adds the ten keys the tree reads and the doc did not:
+  the four pipeline keys (`CB_AGENT_ENV`, `CB_AGENT_REPO`, `CB_AGENT_AUTOPILOT_STATE`,
+  `CB_AGENT_MERGE`, §13) and the five OCI CLI keys (§12).
+- **`docs/operations.md` stops promising routes the daemon does not mount.** §6 states the shipped
+  brake — `CB_AUTOMERGE=off` at boot, the repo `policy`, the `do-not-merge` label — and says
+  `cb brake` answers `unsupported`/exit 5 until `/v1/settings` and `/v1/admin/brake` exist; the
+  prune and housekeeping instructions are replaced by the manual path; §9's disk table states the
+  doctor's 70/85 thresholds and the daemon's 85 `degraded` / 95 `down` (which still answers 200,
+  because only a down database yields 503); §11's cost cap, egress, retention and `cb update`
+  claims are corrected against `packages/core/src/limits.ts`, the telemetry service and
+  `upgrade.sh`. The five incident runbooks in §10 are verified step by step against the CLI.
+- **`docs/decisions.md` gains one amendment, not a new decision:** D2 ("documentation only")
+  carries a dated clause, the ID and the original rule text stay, and the file still holds 59
+  decisions. `README.md`'s `## Next` and `docs/README.md`'s convention no longer say the
+  repository is design-only until Batch 1.
+- The `[live]` criterion — a new operator restores a backup in a scratch VM — is unmeasured on
+  this runner (no VM); an `agent-review` issue carries the measurement, and a second one records
+  the two deviations the pass found (the unmounted brake/housekeeping routes and the disk `down`
+  that never reaches 503).
+
 ### Added — 2026-10-31 (Task-29, a release that builds, names and checksums its artifacts)
 
 - **One tag builds the release.** `scripts/release/stage.mjs` copies the built daemon, the packages

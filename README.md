@@ -128,4 +128,6 @@ used by agent tooling in 2026).
 
 ## Next
 
-Batch 1 in [`TODO.md`](TODO.md) bootstraps the repository. Everything before it is design.
+The tree is bootstrapped (the status above is the state of `main`): the daemon, the app, the
+agent pipeline, the image and both Terraform stacks are merged. The open work is the OCI A1
+capacity wait and the batches after it, tracked in [`TODO.md`](TODO.md).

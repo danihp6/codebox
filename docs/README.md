@@ -39,5 +39,5 @@ Read in this order. `README.md` and `AGENTS.md` are the entry points; the rest i
 - **`[unit]` / `[live]`** are acceptance tags: a headless check versus a measurement in the
   running system.
 - **Mermaid** diagrams render on GitHub; keep them small enough to read on a phone.
-- Code blocks are illustrative unless a file path is named. This repository is design-only
-  until Batch 1.
+- Code blocks are illustrative unless a file path is named. The tree is bootstrapped: these
+  docs describe what `main` ships, and a claim about an open task says so.

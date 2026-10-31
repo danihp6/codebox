@@ -72,8 +72,9 @@ One feature folder owns its routes, components and store. A shared component mov
 
 ## 4. Screens
 
-The target set after D43-D50. `design/README.md` maps each of these to a Figma frame; a route
-here without a frame, or a frame without a route, is a bug in one of the two.
+The target set after D43-D50. `design/README.md` §1 holds the frame map and its "Missing and
+known" note lists what is still owed; a route here without a frame, or a frame without a route,
+is a bug in one of the two.
 
 | Route | Screen | What it must do |
 | --- | --- | --- |
@@ -87,7 +88,6 @@ here without a frame, or a frame without a route, is a bug in one of the two.
 | `/works/:id` | Work · run log | Runs, gate and PR cards, context header, cost, and **one action when blocked**: *Resolve doubt*; a merged work offers **Rework**, which opens a session whose proposal is a new run. No composer (D55). |
 | `/sessions/:id` | Session | A chat with one target: thread, the target document, and the **pending proposal** with its files and *Merge*. With no target it is read-only: no proposal panel, just the thread and the repo's context. |
 | `/settings` | Settings | Repository viewers, credentials, provider accounts, devices, notifications, appearance, danger zone. The providers panel renders inside this route and has no route of its own; the notifications panel renders here and at `/settings/notifications`, which mounts the same page. |
-| `/settings/providers` | Provider accounts | Accounts per provider in failover order, each with state (`active` / `exhausted` / `invalid`), reset instant, spend today, and add by OAuth or token; never a value beyond the last four characters (D54). |
 | `/settings/credentials` | Credentials | Connected services (GitHub App by manifest, integrations) and open credentials, write-only; the add sheet has the three `expose` modes, `env` is limited to the model key and shows its warning, saving passes a confirm step, and a value is only ever shown as its last four characters. |
 | `/settings/devices` | Devices | Scopes per device, revoke, last seen; this device cannot revoke itself. |
 | `/settings/notifications` | Notifications | Five toggleable events plus the non-toggleable credential alert, and quiet hours. |
@@ -99,6 +99,10 @@ filter; Settings owns the cross-repository lists. Detail screens push onto the s
 
 A repository carries exactly four tabs — **Backlog · Workers · Schedule · Design** — and the tab
 strip is one component, so a tab can never exist on one screen and not another.
+
+Amended 2026-10-31: D59 moves a repository to two tabs (`Backlog · Workers`), the schedule into a
+sheet over the backlog and the design preview into its session; Task-99 (Two tabs and the
+schedule sheet) ships it.
 
 **The repository is the spine.** A work exists only inside one repository, one per backlog item,
 and never changes (D44). There is no free chat, no scope chip and no promote: the backlog item
