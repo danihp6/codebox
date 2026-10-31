@@ -62,9 +62,14 @@ used code never works twice.
 ## 4. Upgrade and rollback
 
 ```bash
-cb update --to 0.2.0            # downloads, verifies, restarts, health-checks
 cb update --rollback            # swaps current and previous
+/usr/local/lib/codebox/upgrade.sh --artifact codebox-0.2.0.tar.gz \
+  --version 0.2.0 --sha256 <hex>   # verifies, unpacks, restarts, health-checks
 ```
+
+`cb update --to <version>` is broken: the CLI passes `--to` to `upgrade.sh`, which accepts only
+`--artifact`/`--version`/`--sha256` and exits 2, so the direct call above is the forward path
+(§12).
 
 - `cb update` is a thin wrapper over `/usr/local/lib/codebox/upgrade.sh`, which hands the
   artifact to `install.sh`: checksum, unpack under `/opt/codebox/releases/<version>`, the
@@ -179,16 +184,18 @@ exists.
 
 ## 9. Disk
 
-| Threshold | Behaviour |
+| Threshold | Shipped behaviour |
 | --- | --- |
-| 70 % | `telemetry` warn; worktrees older than 24 h are pruned. |
-| 85 % | New runs refused with `disk_low`; the app shows a blocking banner. |
-| 95 % | The daemon stops claiming schedule fires; only cancel and cleanup work. |
+| 70 % | `cb doctor` reports `disk warn`; nothing else changes. |
+| 85 % | `/v1/health` reports `disk: degraded` and `status: degraded`; `cb doctor` reports `disk fail` and exits `1`. |
+| 95 % | `/v1/health` reports `disk: down`; the overall `status` stays `degraded` and the route answers `200`, because `503` needs `status: down` and only a down database produces that. |
 
-There is no prune command: the daemon mounts no admin route, so `POST /v1/admin/cache/wipe`
-answers `404`. The run engine removes a worktree when its run ends unless the failure is
-inspectable; those stay under `CB_WORKSPACE_ROOT` and are removed by hand. The bare clones are
-never touched.
+Nothing prunes by age, refuses a run or stops claiming fires at any of these readings: the run
+engine removes a worktree when its run ends unless the failure is inspectable, and those stay
+under `CB_WORKSPACE_ROOT` until they are removed by hand. The dashboard and About show the
+percentage; there is no blocking banner. `POST /v1/admin/cache/wipe` answers `404` because no
+admin route is mounted, and the bare clones are never touched. To stop a repository's schedule,
+`POST /v1/schedules/{id}/pause`.
 
 ## 10. Incidents
 
@@ -236,7 +243,7 @@ records the failure class, not the upstream body (the daemon logs only the error
    `run_not_cancellable`.
 3. If the daemon itself is stuck, restart `codebox.service`; boot reconciliation marks the run
    `failed` with `daemon restarted while this run was live` and removes the stale lock.
-4. The worktree is kept; inspect it before pruning.
+4. The worktree is kept; inspect it before removing it by hand (§9).
 
 ### 10.4 A bad merge landed
 
@@ -280,17 +287,19 @@ file means the timer did not fire — a stopped instance runs no timers — so r
 
 - `cb doctor` prints the 24-hour spend in its `cost` line; `GET /v1/telemetry?range=…` answers
   the four windows and §11.1 defines each field.
-- The daily cap (`CB_DAILY_COST_USD`) cancels the current run and pauses the queue until the
-  next UTC day; it is a brake, not a throttle.
-- The OCI shape is Always Free; the billable surfaces are model tokens and egress. Both are
-  visible in the dashboard and in `GET /v1/telemetry`.
+- The daily cap (`CB_DAILY_COST_USD`, `0` disables it) cancels a run as soon as its recorded
+  usage reaches the cap, with `cost_cap_reached`; nothing refuses a new run or pauses the queue,
+  so the cap is enforced after each usage record, not at admission.
+- The OCI shape is Always Free; the billable surfaces are model tokens and egress. Model spend is
+  `spendUsd` in `GET /v1/telemetry` and on the dashboard; egress is the provider's bill and is not
+  a telemetry field.
 
 ### 11.1 Telemetry
 
 `GET /v1/telemetry?range=1h|24h|7d|30d` (default `24h`, scope `read`) answers the `Telemetry`
 resource of `docs/api.md` §5.1: `range`, `since`, `spendUsd`, `runs`, `disk` and `queueDepth`.
-It is the only source the app and `cb doctor`'s `cost` check read; nothing recomputes spend
-elsewhere.
+It is the only source the app and `cb doctor`'s `cost` check read; no daemon code recomputes
+spend, and the query below is an operator cross-check.
 
 - `spendUsd` is the sum of `usage.cost_usd` for the rows whose `created_at` falls in the
   window, rounded to six decimals. A run that outlived the window contributes only the rows it
@@ -304,13 +313,14 @@ elsewhere.
   `validation_failed` with `details.path` starting `telemetry.`. A failing read is a `500`
   `internal` whose `requestId` names the log line.
 
-Retention runs on the same timer table as `docs/security.md` §8 — runs 90 d, events 14 d, work
-messages 90 d, approvals 7 d, log directories 30 d, all from the `CB_RETENTION_*_DAYS` values — six
-hours apart, one minute after boot. It deletes whole rows and whole `logs/run-run_*/`
-directories, logs one `retention_done` line with the counts, and never touches a `usage` row:
-the ledger is the record of spend. Short windows go first, so a 14-day event is not kept until
-its 90-day run ages out. To reclaim disk sooner, remove the finished worktrees under
-`CB_WORKSPACE_ROOT` by hand (§9); the bare clones stay.
+Retention runs from the telemetry service with the values in `docs/security.md` §8 — runs 90 d,
+events 14 d, archived sessions and their messages 90 d, resolved approvals 7 d, log directories
+30 d, all from the `CB_RETENTION_*_DAYS` values — every six hours, one minute after boot. It
+deletes whole rows and whole `logs/run-run_*/` directories, logs one `retention_done` line with
+the counts, and keeps every `usage` row (its `run_id` becomes null when the run goes): the ledger
+is the record of spend. Short windows go first, so a 14-day event is not kept until its 90-day run
+ages out. To reclaim disk sooner, remove the finished worktrees under `CB_WORKSPACE_ROOT` by hand
+(§9); the bare clones stay.
 
 ```bash
 curl -s -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8787/v1/telemetry?range=24h'
@@ -332,7 +342,7 @@ means a row is outside the day list the query walks.
 | `cb jobs [--pause <id>] [--resume <id>]` | List, pause or resume legacy jobs. |
 | `cb logs <runId>` / `cb events <runId>` | The persisted event timeline of one run. |
 | `cb brake on\|off\|status` | `unsupported` and exit `5`: no brake route is mounted; use `CB_AUTOMERGE` (§6). |
-| `cb update [--to <version>\|--rollback]` | Release management through `upgrade.sh`. |
+| `cb update [--rollback]` | `upgrade.sh --rollback`; a forward upgrade is the script directly (note below). |
 | `cb backup [--verify]` | `backup.sh` on the box. |
 | `cb revert <runId> [--job <jobId>]` | Revert a merge through a run. |
 | `cb help` / `cb version` | Usage and the CLI version. |
@@ -342,14 +352,20 @@ The CLI is the surface above and nothing else: work and run reads go through `/v
 cannot drift from the API. The local admin path is **loopback HTTP** (`POST /v1/pair/code` from
 `127.0.0.1`), not a unix socket.
 
+`cb update --to <version>` and a bare `cb update` do not work today: the CLI passes `--to` (or
+nothing) to `upgrade.sh`, which accepts only `--artifact FILE --version V --sha256 HEX` and exits
+`2`. A forward upgrade is the script directly:
+`/usr/local/lib/codebox/upgrade.sh --artifact codebox-<version>.tar.gz --version <version> --sha256 <hex>`;
+`cb update --rollback` works.
+
 - **Environment.** `CODEBOX_URL` (default `http://127.0.0.1:8787`), `CODEBOX_TOKEN` (no
   default) and `CODEBOX_STATE_DIR` (default `/var/lib/codebox`, where `cli.token` is read when
   no flag or variable supplies a token). `--url` and `--token` override them for one command.
   These are the CLI's own variables: the daemon's `CB_*` table is unchanged.
 - **Exit codes.** `0` success; `1` a `cb doctor` check failed; `2` usage (unknown command or
   flag, missing positional, invalid value); `3` the daemon is unreachable, timed out or answered
-  with a non-JSON body; `4` `401`/`403` (missing, expired or weak token); `5` any other non-2xx
-  answer; `cb update` and `cb backup` pass the script's exit code through.
+  with a non-JSON body; `4` `401`/`403` (no token, or one the daemon rejects); `5` any other
+  non-2xx answer; `cb update` and `cb backup` pass the script's exit code through.
 - **Pairing.** `cb pair --name "Dani iPhone"` prints the code, its expiry and a
   `codebox://pair?url=<base>&code=<code>` deep link. A terminal QR renderer is deferred: v1 adds
   no QR dependency, so the operator types or copies the code.

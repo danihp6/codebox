@@ -211,7 +211,7 @@ own rule keep `main` for merges.
 | Data | At rest | Retention |
 | --- | --- | --- |
 | SQLite | On the host's encrypted boot volume (`cb-boot` on OCI, the 100 GB `gp3` volume on AWS); file mode `0600` | Runs 90 d, events 14 d, work messages 90 d (D28) |
-| Worktrees | Disk; removed after 168 h | Branch stays on GitHub |
+| Worktrees | Disk; the engine removes one when its run ends, unless the failure is inspectable | Branch stays on GitHub |
 | Backups | age-encrypted in the host's object store (`cb-backups` on OCI, `s3://cb-codebox-backups` on AWS), 30 daily copies | 30 d |
 | Logs | journald + `logs/`, redacted | 30 d |
 | Prompts | Stored with the run; truncated tool output | 90 d with the run |
