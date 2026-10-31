@@ -335,6 +335,25 @@ yet. A task that adds or changes a routed screen without `design/screens/<slug>.
 `design/exports/<slug>.png` is not ready to launch (`AGENTS.md`), and that is the gate on the
 screen backlog, not a footnote.
 
+**Cut — cycle after Task-89 (two of four slots used).** No task branch was alive and `main` was
+`bde2e78`. The measured closure of issue #11 (`probe / workflows permission`, run 41104152609,
+`CB_AGENT_TOKEN` writing `.github/workflows/probe.yml` green) frees the two Batch 7 roots that
+were parked behind it: **Task-26** (`e2e/**`, `.github/workflows/e2e.yml`) and **Task-29**
+(`.github/workflows/release.yml`, `scripts/release/**`, `docs/operations.md` §4 and §13). Their
+paths are disjoint and neither needs a file the other produces. **Hot-file holders in this cut:**
+Task-26 holds `package.json` and `package-lock.json` — the batch's only new dependency,
+`@playwright/test@1.64.1`, pinned to the Chromium the image bakes (`ops/image/scripts/45-browser.sh`),
+no install script, and the e2e suites stay out of `npm test`; **Task-29 holds none** and reads the
+version instead of writing it. Docs are claimed by section: Task-29 owns `docs/operations.md` §4
+and §13 only, and Task-29 also appends the `## scripts/release` block to `scripts/README.md`, the
+folder's file map. The two empty slots have no legal candidate: Task-30 waits on Task-29, Task-31
+on Task-26/28/30 and Task-32 on Task-31; the Batch 23 screen tasks 90–99 each need
+`design/screens/<slug>.json` and `design/exports/<slug>.png`, and neither directory exists while
+L6 is parked by the Figma read quota until 2026-11-03; every other open item is an `L<n>` the
+driver never picks. Every `[live]` criterion in this cut is unmeasured on this runner (no browser,
+no VM) and is handed to an `agent-review` issue: the e2e flow twice on CI with no network and a
+service-worker push for Task-26, the N-1 upgrade on the box for Task-29.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
