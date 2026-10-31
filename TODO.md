@@ -772,7 +772,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
 
 ## Batch 7 — Hardening, e2e, observability, release
 
-- [ ] **[Task-26]** End-to-end happy path. Playwright against the built app with a fake
+- [x] **[Task-26]** End-to-end happy path. Playwright against the built app with a fake
       OpenCode and a fake GitHub: pair → add repo → run → gate → PR → merge → push. *Paths:*
       `e2e/**`, `.github/workflows/e2e.yml`. *Dependencies:* Task-20, Task-22, Task-14,
       Task-15. *Acceptance:* `[unit]` the suite is deterministic with a fixed clock and seed;

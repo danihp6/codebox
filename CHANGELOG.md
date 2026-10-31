@@ -6,6 +6,23 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-31 (Task-26, an end-to-end harness and the flow it drives)
+
+- **One command boots the product and runs it twice.** `e2e/harness/environment.mjs` starts the
+  real daemon on an ephemeral loopback port with a temporary `CB_STATE_DIR`, a fake OpenCode that
+  edits the worktree, a fake GitHub whose pull requests report the seed commit as their base, and
+  a bare local remote reached through `url.*.insteadOf` — no real credential and nothing outside
+  `127.0.0.1`. `npm run e2e:unit` pairs a device, creates the repository and the work, runs it, and
+  asserts the gate, the ordered events, the pushed branch and the file body twice, with a fixed
+  clock and a fixed seed.
+- **`e2e/tests/happy-path.spec.mjs` drives the built app** through `/pair` → `/repos` → the backlog
+  → the work log, and `.github/workflows/e2e.yml` runs it twice inside `unshare -rn` so the
+  no-network criterion has a measurement. `@playwright/test@1.64.1` matches the Chromium the image
+  bakes (`ops/image/scripts/45-browser.sh`), and neither e2e suite joins `npm test`.
+- The two `[live]` criteria — the flow passing twice on CI with no network, and a forwarded push
+  observed by a service worker — are unmeasured on this runner (no network namespace, no
+  notification path in the app yet); issues #102 and #101 carry the measurements.
+
 ### Added — 2026-10-30 (Task-89, dark by default and a theme that reaches the DOM)
 
 - **The app is dark on every platform at first paint.** `apps/app/src/theme/variables.css` drops the
