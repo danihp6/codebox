@@ -52,12 +52,12 @@ The measured AWS bring-up, from `terraform apply` to `destroy`, is
 ## 3. Pair the first device
 
 ```bash
-cb pair --name "Dani iPhone"     # prints a QR and a code, TTL 300 s
+cb pair --name "Dani iPhone"     # prints the code, its expiry and a deep link, TTL 300 s
 ```
 
-Pairing is reachable only over SSH or a loopback admin socket. The app scans the code, stores
-the refresh token in the OS keystore and opens the dashboard. If the code expires, run the
-command again; a used code never works twice.
+Pairing is reachable only over SSH or loopback HTTP. The app enters the code, stores the refresh
+token in the OS keystore and opens the dashboard. If the code expires, run the command again; a
+used code never works twice.
 
 ## 4. Upgrade and rollback
 
@@ -102,21 +102,29 @@ cb update --rollback            # swaps current and previous
 
 ## 5. Backup and restore
 
-Nightly, 03:20 local:
+The nightly unit, `codebox-backup.timer` at 03:20, runs `backup.sh --upload`. `cb backup` takes
+the same snapshot on demand and leaves it on the box:
 
 ```bash
-cb backup                       # sqlite .backup + config + manifest, age-encrypted
-cb backup --verify              # decrypt, open the db, count rows
+CB_BACKUP_AGE_RECIPIENT=age1… cb backup   # sqlite .backup + config + manifest, age-encrypted
+cb backup --verify                        # decrypt, open the db, count rows
 ```
 
+Expected: `archive /var/lib/codebox/backups/cb-backup-<stamp>.age`, then `verify ok runs=<n>
+jobs=<n> routines=<n>`. `cb backup` needs `CB_BACKUP_AGE_RECIPIENT`; `--verify` needs
+`CB_BACKUP_AGE_IDENTITY`, which the box does not hold by design — copy the archive to the
+workstation and verify it there.
+
 - Target `cb-backups` (OCI Object Storage), path `db/<YYYY>/<MM>/<DD>.age`, 30 daily copies
-  (D33).
+  (D33); `CB_BACKUP_S3_URI` and `CB_BACKUP_AGE_RECIPIENT` live in the unit's drop-in, never in
+  `instance.env` (§14.6).
 - The archive contains `state.db` (consistent snapshot, not a raw copy), the instance env
   **without** secrets, the tunnel config and a manifest with versions and sizes. The age
   private key never lives on the VM.
 - **Restore drill** (beta exit): launch a scratch instance from the image, stop the daemon,
-  `cb restore --from <object>`, start, pair, compare jobs and the last ten runs. Target RTO
-  45 minutes.
+  restore the newest archive — `/usr/local/lib/codebox/restore.sh --latest --identity <age.key>
+  --force` from `cb-backups`, or the same script with `--from <archive>` for a copy taken with
+  `cb backup` — then start, pair, compare jobs and the last ten runs. Target RTO 45 minutes.
 
 A backup that was never restored is a hope, not a backup. The drill is recorded with its
 duration.
@@ -129,36 +137,37 @@ Auto-merge has three independent stops:
 | --- | --- | --- |
 | Global switch | Every repository | `cb brake on` → `CB_AUTOMERGE=off` |
 | Repo policy | One repository | `PATCH /v1/repos/{id} { "policy": "manual" }` |
-| Repository policy | One repository | `PATCH /v1/repos/{id} { "policy": "manual" }` |
+| PR label | One pull request | Add `do-not-merge` on the PR (G7). |
 
 The switch takes effect at the next guardrail evaluation, so a merge already in `merging`
-finishes. `cb brake status` shows the switch, the policies and the runs currently past
-`gating`.
+finishes. `cb brake status` prints the switch (`brake on` or `brake off`); the per-repository
+policy is `GET /v1/repos/{id}` and `cb status` lists the running runs.
 
 ## 7. `cb doctor`
 
-One line per check, exit non-zero if any is red:
+One line per check, exit non-zero if any is `fail`:
 
 ```
-db            ok    wal, 412 MB, last migration 0007
-opencode      ok    1.2.3 on 127.0.0.1:4096
-tunnel        ok    https://cb.example.com → 200 in 84 ms
-github        ok    app installation 123456, 3 repos, token 41 min left
-vault         ok    read at 03:20, 6 keys
-disk          warn  78% used, worktrees 41 GB
-queue         ok    0 running, 2 queued, oldest 4 min
-cost          ok    $1.84 today of $10
-backup        warn  last success 31 h ago
+db           ok     health.db = ok
+opencode     ok     health.opencode = ok
+tunnel       ok     reached http://127.0.0.1:8787, health.status = ok
+github       ok     configured (app)
+disk         ok     41% used
+queue        ok     0/3 running, 2 pending
+cost         ok     $1.84 in 24h
+backup       skip   missing_route
 ```
 
-`--json` is the machine form used by CI; `--fix` only performs safe actions (prune worktrees,
-vacuum the WAL) and never rotates a credential.
+`--json` is the machine form used by CI. Housekeeping is `POST /v1/admin/cache/wipe`, which
+never rotates a credential. `backup` reports `skip` until a backup-status route exists.
 
 ## 8. Logs and events
 
 - `journalctl -u codebox -f` — process log, JSON lines, redacted.
-- `cb logs <runId>` — the gate and agent transcript of a run.
-- `cb events <runId>` — the persisted timeline, in order.
+- `cb events <runId>` — the persisted timeline of one run, in order
+  (`GET /v1/runs/{id}/events`).
+- `cb logs <runId>` — the same call under the older name; the gate's own transcript is
+  `/var/lib/codebox/logs/run-<runId>/gate.log`.
 - `state.db` is the record; a log is an aid. Retention is D28.
 - A `requestId` in an API error is in the log with the same value.
 
@@ -170,46 +179,85 @@ vacuum the WAL) and never rotates a credential.
 | 85 % | New runs refused with `disk_low`; the app shows a blocking banner. |
 | 95 % | The daemon stops claiming schedule fires; only cancel and cleanup work. |
 
-`cb prune --worktrees --older-than 24h` is safe at any time; it never touches the bare clones
-or a live run.
+`POST /v1/admin/cache/wipe` removes finished worktrees at any time; it keeps the bare clones
+and never touches a live run.
 
 ## 10. Incidents
 
 ### 10.1 The app cannot connect
 
-1. `cb doctor` on the VM: is the daemon up, is the tunnel up, does the public URL answer?
-2. `systemctl status cloudflared`; `journalctl -u cloudflared -n 100`. A rotated tunnel token
-   is the usual cause.
-3. If the tunnel is healthy but the app 401s, revoke and re-pair the device.
+1. `cb doctor` on the VM. Expected: `db ok health.db = ok` and `tunnel ok reached
+   http://127.0.0.1:8787, health.status = ok` — the daemon answers on loopback. The doctor's
+   `tunnel` line probes the URL the CLI is pointed at, not the public hostname, so the tunnel
+   itself is step 2. A `db fail` is the daemon: `systemctl restart codebox.service` and read
+   `journalctl -u codebox -n 100`.
+2. `curl -sS -o /dev/null -w '%{http_code}\n' https://cb.<domain>/v1/health`. Expected `200`.
+   A `502`, a `530` or a timeout is the tunnel: `systemctl status cloudflared --no-pager` and
+   `journalctl -u cloudflared -n 100`; `Active: active (running)` plus `Registered tunnel
+   connection` lines are healthy, while `Unauthorized` or `failed to connect` means the token
+   rotated — write the new `CB_TUNNEL_TOKEN` into `/etc/codebox/instance.env`,
+   `systemctl restart cloudflared`, then repeat this step.
+3. If the tunnel answers `200` and the app still 401s, the device's refresh token is gone:
+   revoke it in the app (`Settings → Devices`) or with
+   `curl -sS -X DELETE -H "Authorization: Bearer $CODEBOX_TOKEN" http://127.0.0.1:8787/v1/devices/<id>`,
+   then pair again with `cb pair --name "<device>"`.
 4. Runs continue while the tunnel is down; nothing is lost.
 
 ### 10.2 Every run fails at `preparing`
 
-Usually git: an expired installation token, a rename of the repository, or a full disk.
-`cb doctor` names the provider; the log has the exact git error. Rotate the App key, refresh
-the installation, or prune.
+Usually git: an expired installation token, a rename of the repository, or a full disk. The run
+records the failure class, not the upstream body (the daemon logs only the error's name):
+
+1. `cb events <runId>` — the timeline carries a `run.failed` whose `code` names the class:
+   `provider_unavailable` (git), `workspace_error` (clone or worktree), `gate_failed` or
+   `internal`.
+2. `cb doctor` — expected `github ok configured (app)`; `github warn not configured (…)` means
+   the App key or installation is missing and §16's rotation is the fix. `disk fail <n>% used`
+   is the full disk.
+3. For `provider_unavailable`, confirm the installation on GitHub and rotate the App key (§16);
+   for `workspace_error`, `POST /v1/admin/cache/wipe` and run the item again from the backlog.
 
 ### 10.3 A run is stuck in `running`
 
-1. `cb runs --state running`; note the run id and the OpenCode session.
-2. `cb cancel <runId>` — it interrupts the session and stops the gate process group.
+1. `cb status` — the `running` row lists the ids. Expected `running run_<id>`; `running none`
+   means the daemon holds no live run.
+2. Cancel it through the API, because `cb` has no `cancel` command:
+   `curl -sS -X POST -H "Authorization: Bearer $CODEBOX_TOKEN" http://127.0.0.1:8787/v1/runs/<runId>/cancel`
+   — expected `202` with the run, which ends `cancelled`; a run past the gate answers `409`
+   `run_not_cancellable`.
 3. If the daemon itself is stuck, restart `codebox.service`; boot reconciliation marks the run
-   `failed` with `instance_restarted` and removes the stale lock.
+   `failed` with `daemon restarted while this run was live` and removes the stale lock.
 4. The worktree is kept; inspect it before pruning.
 
 ### 10.4 A bad merge landed
 
-1. `cb brake on` if more merges are in flight.
+1. `cb brake on` if more merges are in flight. Expected `brake on`; `unsupported` and exit `5`
+   mean the daemon does not serve `POST /v1/admin/brake`.
 2. `cb revert <runId>` — a new run with the revert prompt, the same gate and the same
-   guardrails.
+   guardrails. Expected `run  <newRunId>`.
 3. If the revert cannot merge, revert by hand on GitHub and record why in the run.
 4. Add the missing guardrail test before re-enabling auto-merge for that repo.
 
 ### 10.5 The instance vanished
 
 OCI Always Free compute can be reclaimed after a week of idleness. Launch from the image
-(`ops/oci/launch.sh`), restore the last backup, re-point the tunnel, pair the device. The
-repositories are on GitHub; the state is in the backup. Target RTO 45 minutes.
+(`ops/oci/launch.sh`, [`oci.md`](oci.md) §4), restore the last backup, re-point the tunnel, pair
+the device. The repositories are on GitHub; the state is in the backup. Target RTO 45 minutes.
+
+```bash
+sudo systemctl stop codebox.service
+sudo env CB_BACKUP_S3_URI="s3://<bucket>" CB_BACKUP_AGE_IDENTITY=/root/age.key \
+  /usr/local/lib/codebox/restore.sh --latest --identity /root/age.key --force
+sudo systemctl start codebox.service
+cb doctor
+```
+
+Expected: `restored /var/lib/codebox/state.db runs=<n> jobs=<n> routines=<n>` and `cb doctor`
+exiting `0` with `db ok` and `tunnel ok`. Exit `6` means the `_latest` object is missing or the
+archive is bad: restore the newest `--remote db/<YYYY>/<MM>/<DD>.age` instead, or accept that the
+state is lost and rebuild from the repositories. Exit `2` naming `CB_BACKUP_S3_URI` or
+`CB_BACKUP_AGE_IDENTITY` is the missing input; `--force` is required because first boot already
+created `state.db`.
 
 `codebox-keepalive.timer` is the early warning: after seven days the log holds 28 lines (four
 samples a day), so `wc -l /var/lib/codebox/logs/keepalive.jsonl` answers 28 and
@@ -219,7 +267,8 @@ file means the timer did not fire — a stopped instance runs no timers — so r
 
 ## 11. Cost
 
-- `cb cost` prints today, the last seven days and the top jobs by spend.
+- `cb doctor` prints the 24-hour spend in its `cost` line; `GET /v1/telemetry?range=…` answers
+  the four windows and §11.1 defines each field.
 - The daily cap (`CB_DAILY_COST_USD`) cancels the current run and pauses the queue until the
   next UTC day; it is a brake, not a throttle.
 - The OCI shape is Always Free; the billable surfaces are model tokens and egress. Both are
@@ -249,8 +298,8 @@ messages 90 d, approvals 7 d, log directories 30 d, all from the `CB_RETENTION_*
 hours apart, one minute after boot. It deletes whole rows and whole `logs/run-run_*/`
 directories, logs one `retention_done` line with the counts, and never touches a `usage` row:
 the ledger is the record of spend. Short windows go first, so a 14-day event is not kept until
-its 90-day run ages out. To reclaim disk sooner, use `cb prune`, which owns the worktrees and
-the bare clones.
+its 90-day run ages out. To reclaim disk sooner, use `POST /v1/admin/cache/wipe`, which owns
+the finished worktrees; the bare clones stay.
 
 ```bash
 curl -s -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8787/v1/telemetry?range=24h'
@@ -265,22 +314,22 @@ means a row is outside the day list the query walks.
 
 | Command | Purpose |
 | --- | --- |
-| `cb pair` | Mint a pairing code (loopback HTTP). |
-| `cb status` | Health, queue, current runs, brake. |
-| `cb doctor` | Every dependency, one line each. |
-| `cb run <workId>` | Manual trigger. |
-| `cb works` | List, cancel. |
-| `cb logs <runId>` | Gate and agent output. |
-| `cb events <runId>` | Persisted timeline. |
-| `cb brake on\|off\|status` | Auto-merge switch. |
-| `cb update [--to X\|--rollback]` | Release management. |
-| `cb backup [--verify]` / `cb restore` | Backup and restore. |
-| `cb revert <runId>` | Revert a merge through a run. |
-| `cb prune` | Worktrees and WAL housekeeping. |
+| `cb pair --name <name> [--ttl <seconds>]` | Mint a one-time pairing code (loopback HTTP). |
+| `cb status` | Health, queue, running runs, brake. |
+| `cb doctor [--json]` | Every dependency, one line each. |
+| `cb run <jobId>` | Trigger a legacy job now (`POST /v1/jobs/{id}/run`). |
+| `cb jobs [--pause <id>] [--resume <id>]` | List, pause or resume legacy jobs. |
+| `cb logs <runId>` / `cb events <runId>` | The persisted event timeline of one run. |
+| `cb brake on\|off\|status` | The global auto-merge switch. |
+| `cb update [--to <version>\|--rollback]` | Release management through `upgrade.sh`. |
+| `cb backup [--verify]` | `backup.sh` on the box. |
+| `cb revert <runId> [--job <jobId>]` | Revert a merge through a run. |
+| `cb help` / `cb version` | Usage and the CLI version. |
 
-The CLI is a thin client over `/v1`; it never reads SQLite directly, so it cannot drift from
-the API. The local admin path is **loopback HTTP** (`POST /v1/pair/code` from `127.0.0.1`),
-not a unix socket.
+The CLI is the surface above and nothing else: work and run reads go through `/v1`, restore is
+`restore.sh` (§5) and housekeeping is `POST /v1/admin/cache/wipe` (§9). It never reads SQLite
+directly, so it cannot drift from the API. The local admin path is **loopback HTTP**
+(`POST /v1/pair/code` from `127.0.0.1`), not a unix socket.
 
 - **Environment.** `CODEBOX_URL` (default `http://127.0.0.1:8787`), `CODEBOX_TOKEN` (no
   default) and `CODEBOX_STATE_DIR` (default `/var/lib/codebox`, where `cli.token` is read when
@@ -535,7 +584,7 @@ stty -echo; read -r AGEKEY; stty echo                 # paste base64 of the age 
 printf '%s' "$AGEKEY" | base64 -d | sudo tee /root/age.key >/dev/null
 unset AGEKEY; sudo chmod 600 /root/age.key
 sudo env CB_BACKUP_S3_URI="s3://<bucket>" CB_BACKUP_AGE_IDENTITY=/root/age.key \
-  /usr/local/lib/codebox/restore.sh --latest --identity /root/age.key
+  /usr/local/lib/codebox/restore.sh --latest --identity /root/age.key --force
 sudo shred -u /root/age.key
 sudo systemctl start codebox.service
 sudo sqlite3 /var/lib/codebox/state.db "SELECT (SELECT COUNT(*) FROM works)||'/'||(SELECT COUNT(*) FROM session_messages);"
@@ -635,5 +684,5 @@ so none of these is measured by CI:
 | --- | --- | --- | --- | --- |
 | boot to `/v1/health` | `T0`/`T1` around `cloud-init.sh`, then `curl … /v1/health` | `T1-T0 ≤ 300` s | `first-boot.jsonl` last line | operator-run; not measured by CI |
 | three runs, Playwright green, no OOM | `cb status`, `free -m`, `journalctl -k` | 3 running, `MemAvailable ≥ 1024` MiB, 0 OOM | the runs' gates and `journalctl` | operator-run; not measured by CI |
-| rebuilt box restores the newest dump | `restore.sh --latest`, then the `works/session_messages` counts | equal counts, same `cb works` | the restore output | operator-run; not measured by CI |
+| rebuilt box restores the newest dump | `restore.sh --latest`, then the `works/session_messages` counts | equal counts, the same `GET /v1/works` page | the restore output | operator-run; not measured by CI |
 | monthly spot cost | `describe-spot-price-history` × 730 | `≤ budget_limit_usd` | `docs/aws.md` §10.1 | operator-run; not measured by CI |

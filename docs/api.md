@@ -1011,18 +1011,17 @@ still renders, and the routes it calls are retained.
 | Route | API |
 | --- | --- |
 | `/pair` | `POST /v1/pair`, `POST /v1/auth/refresh` |
-| `/dashboard` | `GET /v1/health`, `GET /v1/telemetry`, `GET /v1/runs`, `GET /v1/schedules` |
-| `/repos` | `GET /v1/repos`, `POST /v1/repos`, `GET /v1/integrations/github/repos` |
-| `/repos/:id` | `GET /v1/repos/{id}`, `GET /v1/repos/{id}/backlog`, `GET /v1/works?repoId=` |
-| `/repos/:id/schedule` | `GET /v1/schedules?repoId=`, `POST /v1/schedules`, `PATCH /v1/schedules/{id}`, `POST /v1/schedules/{id}/pause`, `POST /v1/schedules/{id}/resume`, `POST /v1/repos/{id}/run-next` |
-| `/works/:id` | `GET /v1/works/{id}`, `POST /v1/works/{id}/runs`, `POST /v1/works/{id}/decision`, `POST /v1/works/{id}/interrupt` |
-| `/sessions/:id` | `GET /v1/sessions/{id}`, `GET /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/merge`, `POST /v1/sessions/{id}/interrupt`, `POST /v1/sessions/{id}/compact` |
-| `/settings` | `GET /v1/settings`, `GET /v1/me` |
-| `/settings/providers` | `GET /v1/providers`, `POST /v1/providers/{id}/accounts`, `POST /v1/providers/{id}/oauth/start`, `POST /v1/providers/{id}/oauth/complete`, `PATCH /v1/provider-accounts/{id}`, `POST /v1/provider-accounts/{id}/test` |
+| `/dashboard` | `GET /v1/health`, `GET /v1/telemetry`, `GET /v1/runs`, `GET /v1/repos` |
+| `/repos` | `GET /v1/repos`, `POST /v1/repos`, `POST /v1/repos/{id}/verify` |
+| `/repos/:id` | `GET /v1/repos/{id}`, `GET /v1/repos/{id}/backlog`, `POST /v1/works`, `POST /v1/works/{id}/runs`, `POST /v1/sessions` |
+| `/repos/:id/workers` | `GET /v1/works?repoId=` |
+| `/repos/:id/schedule` | `GET /v1/schedules?repoId=`, `POST /v1/schedules`, `POST /v1/schedules/{id}/pause`, `POST /v1/schedules/{id}/resume`, `POST /v1/repos/{id}/run-next` |
+| `/repos/:id/design` | `POST /v1/sessions` |
+| `/works/:id` | `GET /v1/works/{id}`, `POST /v1/works/{id}/decision`, `POST /v1/works/{id}/runs` |
+| `/sessions/:id` | `GET /v1/sessions/{id}`, `GET /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/interrupt`, `POST /v1/sessions/{id}/merge`, `GET /v1/repos/{id}/design` |
+| `/settings` | `GET /v1/me`, `GET /v1/version`, `GET /v1/settings`, `PATCH /v1/settings`, `GET /v1/providers`, `GET /v1/notifications/preferences`, `PATCH /v1/notifications/preferences`, `POST /v1/admin/brake`, `POST /v1/admin/cache/wipe` |
 | `/settings/schedules` | Retired: the schedule belongs to a repository (D56). |
-| `/runs` | `GET /v1/runs` |
-| `/runs/:id` | `GET /v1/runs/{id}`, `GET /v1/runs/{id}/events`, `GET /v1/runs/{id}/diff`, `POST /v1/runs/{id}/cancel`, `POST /v1/runs/{id}/revert` |
-| `/approvals` | `GET /v1/approvals`, `POST /v1/approvals/{id}/reply` |
-| `/settings/devices` | `GET /v1/devices`, `DELETE /v1/devices/{id}` |
-| `/settings/credentials` | `GET /v1/credentials`, `POST /v1/credentials`, `GET /v1/integrations`, `POST /v1/integrations/github/manifest`, `POST /v1/integrations/github/complete` |
+| `/settings/devices` | `GET /v1/me`, `GET /v1/devices`, `DELETE /v1/devices/{id}` |
+| `/settings/credentials` | `GET /v1/credentials`, `POST /v1/credentials`, `DELETE /v1/credentials/{id}`, `GET /v1/integrations`, `POST /v1/integrations`, `POST /v1/integrations/github/manifest`, `POST /v1/integrations/github/complete` |
+| `/settings/notifications` | `GET /v1/notifications/preferences`, `PATCH /v1/notifications/preferences`, `PATCH /v1/settings` |
 | `/about` | `GET /v1/version`, `GET /v1/health` |
