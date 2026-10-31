@@ -374,6 +374,18 @@ daemon mount (`/v1/settings`, `/v1/admin/brake`, `/v1/admin/cache/wipe` answer 4
 degrades to `unsupported`/exit 5), and a 95 % disk reports `disk: down` while the overall
 health stays `degraded` because only a down database yields `503`.
 
+**Cut — cycle after Task-30 (zero of four slots used).** No task branch was alive and `main`
+was `19cd632`. The lowest, and only eligible, open item was **Task-31** (its dependencies
+Task-26, Task-28 and Task-30 are merged), and writing its spec surfaced a contradiction no
+spec can paper over: the daemon hardcodes `consecutiveGreenRuns: 0`
+(`apps/daemon/src/runs/engine.ts:79`), so `CB_PROBATION_RUNS > 0` fails G8a forever and a
+repository in probation never merges — the opposite of what the item and `docs/jobs.md` §11
+promise — while every acceptance line of the item is a live ten-run measurement no runner can
+take. Task-31 is marked `[!]` (issue #105), which frees no slot: Task-32 depends on it and
+Tasks 90–99 wait for `design/screens/**` and `design/exports/**`, which do not exist until L6
+runs after the Figma read quota reopens on 2026-11-03T09:42Z. This cut ships no code; the four
+empty slots have no legal candidate in any later batch.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -842,12 +854,17 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
 
 ## Batch 8 — Beta, onboarding, migration
 
-- [ ] **[Task-31]** First repositories and probation. Onboard the chosen repos (see
+- [!] **[Task-31]** First repositories and probation. Onboard the chosen repos (see
       `docs/open-questions.md`), run the first ten jobs with auto-merge in probation (merge
       only after N green runs), record the outcomes. *Paths:* none in this repo except
       `docs/operations.md` (onboarding section). *Dependencies:* Task-26, Task-28, Task-30.
       *Acceptance:* `[live]` ten real runs, zero red gates merged, one deliberate revert
       exercised, and the measured latency/cost targets in `docs/product.md` met or explained.
+      BLOCKED: probation cannot be met — `consecutiveGreenRuns` is hardcoded to `0` in
+      `apps/daemon/src/runs/engine.ts:79`, so any `CB_PROBATION_RUNS > 0` fails G8a forever and
+      parks every run at `pr_open`; the whole acceptance is also a live ten-run measurement
+      this runner cannot take. Issue #105. Do not free it before the count is wired and a box
+      can run the ten jobs.
 - [ ] **[Task-32]** Retire the OCI copy in `pkm-randomlike`. The chain was braked
       (`OCI_RETRY=off`) and its network deleted on 2026-10-24; the game repository still holds
       the workflow and the stale OCI variables. Delete the duplicate workflow and the
