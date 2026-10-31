@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-10-31 (Task-29, a release that builds, names and checksums its artifacts)
+
+- **One tag builds the release.** `scripts/release/stage.mjs` copies the built daemon, the packages
+  and the SPA into the archive layout (`apps/daemon/dist/main.js`, `apps/daemon/bin/cb.mjs`,
+  `app/index.html`, `release.json`); `build.mjs` cuts a reproducible
+  `codebox-<version>.tar.gz` plus its `sha256sum` file, deterministically (sorted entries, fixed
+  mtime, `gzip -n`) and refuses a version that disagrees with `package.json`; `notes.mjs` lifts the
+  matching `## Unreleased` body into `RELEASE-NOTES.md`.
+- **`.github/workflows/release.yml`** runs on `v<major>.<minor>.<patch>` (and as a dry-run
+  dispatch), builds, uploads the two artifacts and creates the GitHub release — unsigned, because
+  L1 keeps signing and distribution with the operator. `docs/operations.md` §4 and §13 document the
+  names, the layout, `CB_INSTALL_DIR=/opt/codebox/current`, `cb-image-<version>-<sha>`, the
+  rollback and the release procedure.
+- The `[live]` criterion — an N-1 instance upgrades and answers health with the new version — is
+  unmeasured on this runner (no VM); issue #100 carries the measurement.
+
 ### Added — 2026-10-31 (Task-26, an end-to-end harness and the flow it drives)
 
 - **One command boots the product and runs it twice.** `e2e/harness/environment.mjs` starts the

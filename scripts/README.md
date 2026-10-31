@@ -41,3 +41,19 @@ protocol they implement is `docs/agent-pipeline.md`.
 | `layout.test.mjs` | The measured layout: autolayout padding and gap, reading order, a `COMPONENT` child, a traversed `SECTION`, the token-keyed specs and a byte-stable `--check`. |
 | `fixtures/file-layout.json` | A `/v1/files` body with an autolayout frame, an inferred frame, a `COMPONENT`, a `SECTION` and the TEXT nodes the type scale needs. |
 | `fixtures/import-layout.json` | The two-entry map that projects the component and the section frame of `file-layout.json`. |
+
+## scripts/release
+
+The release build: one staged payload, one reproducible archive and the notes, with no
+credential, no network and no signing step.
+
+| File | What it is |
+| --- | --- |
+| `stage.mjs` | Copies the built tree into a release payload: the daemon `dist` and `bin`, every package's `dist` and `package.json`, the SPA at `app/`, the production `node_modules` and the root `package.json` (`--out`, `--root`). |
+| `build.mjs` | Cuts `codebox-<version>.tar.gz` reproducibly (sorted entries, fixed mtime and owner, `gzip -n -9`), writes the `sha256sum` file and puts `release.json` inside the archive (`--stage`, `--out`, `--version`, `--built-at`, `--commit`, `--check-package-version`). |
+| `notes.mjs` | Reads one version's section from `CHANGELOG.md`, or `## Unreleased` when the tag has none, and writes the release notes (`--version`, `--changelog`, `--out`). |
+| `stage.test.mjs` | The copy plan, the optional `node_modules`, symlinks kept as symlinks and the missing build output. |
+| `build.test.mjs` | The artifact and checksum names, the manifest, the archive members, reproducibility and the version guard. |
+| `notes.test.mjs` | The version section, the `## Unreleased` fallback and the missing section. |
+| `upgrade.test.mjs` | `ops/vm/upgrade.sh` against a built artifact: a corrupted checksum keeps `current`, a good one moves it, `--rollback` returns it. |
+| `fixtures/stage/` | A committed minimal payload for the tests and the dry release: the daemon `dist` and `bin`, the contracts `dist` and the SPA, and no `node_modules`. |

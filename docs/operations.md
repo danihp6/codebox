@@ -70,6 +70,26 @@ cb update --rollback            # swaps current and previous
   artifact to `install.sh`: checksum, unpack under `/opt/codebox/releases/<version>`, the
   `current` symlink, a restart and a `/v1/health` poll. The `previous` symlink is what a
   rollback moves back to, and two rollbacks in a row return to the release that was abandoned.
+- A release is two files: `codebox-<version>.tar.gz` and `codebox-<version>.tar.gz.sha256`.
+  The checksum file is in `sha256sum` format, so `sha256sum -c codebox-<version>.tar.gz.sha256`
+  verifies a download, and the archive is installed with
+  `upgrade.sh --artifact codebox-<version>.tar.gz --version <version> --sha256 <hex>`, the hex
+  being the one in that file.
+- The archive layout is the installer's contract: `apps/daemon/dist/main.js` (refused, exit 6,
+  when absent), `apps/daemon/bin/cb.mjs`, the SPA at `app/index.html`, every package's `dist`
+  and `package.json`, the production `node_modules`, and `release.json` at the root —
+  `{"version","commit","builtAt"}`, the version, the commit and the time the archive was cut.
+- The archive is deterministic: the same tree, version, commit time and commit produce the same
+  sha256, so the checksum names the artifact and not the job that built it.
+- The host points the daemon at the release with `CB_INSTALL_DIR=/opt/codebox/current`.
+  `docs/providers.md` documents the `/opt/codebox` prefix; the `current` segment is what makes
+  an upgrade a symlink swap rather than an edit.
+- The artifacts are **unsigned**: the workflow publishes the archive and its checksum and
+  nothing else, and the operator signs and distributes them (Q1, L1). A checksum is integrity,
+  not identity — it proves the bytes, never who built them.
+- The image is not part of that release: `ops/image` builds it with Packer under the name
+  `cb-image-<version>-<sha>`, and an OS or runtime change is a new image and a relaunch, never
+  an upgrade.
 - Migrations run in the daemon at boot, so they are forward-only; a rollback across a
   destructive migration is refused with the migration id, and the recovery is a restore.
 - `upgrade.sh --prune` keeps the two newest directories under `/opt/codebox/releases/` and
@@ -77,8 +97,8 @@ cb update --rollback            # swaps current and previous
 - The upgrade path from N-1 is tested before a release (Task-29); an N-2 upgrade is a fresh
   install plus a restore.
 - `cb doctor` after the upgrade reports the version, the schema and each provider.
-- The release is a signed artifact with a published checksum; the installer refuses a
-  mismatch (exit 3) and an archive without the daemon entry point (exit 6).
+- The installer refuses a checksum mismatch (exit 3) and an archive without the daemon entry
+  point (exit 6).
 
 ## 5. Backup and restore
 
@@ -277,6 +297,15 @@ not a unix socket.
 ## 13. Change management
 
 - A release is a task, a changelog entry and an artifact; never a hand edit on the box.
+- The release procedure is four steps. Bump the root `package.json` version in a pull request
+  and merge it. Push the tag `v<version>`. The `Release` workflow checks the tag against
+  `package.json`, builds, and publishes `codebox-<version>.tar.gz` and
+  `codebox-<version>.tar.gz.sha256` with the notes taken from that version's `CHANGELOG.md`
+  section (or `## Unreleased` when the tag has none). Then verify the two names and
+  `sha256sum -c`, and the operator signs and distributes the archive.
+- The tag and the file must agree: a tag that does not match `package.json` fails the job
+  before it builds. A dispatch of the same workflow is a dry run — it builds and uploads the
+  artifacts and creates no release.
 - A configuration change is an env edit plus a restart; `cb doctor` proves it.
 - A migration is numbered, forward-only and tested against a copy of production data.
 - A runbook change ships with the incident that motivated it (Task-30 reconciles the docs).

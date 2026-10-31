@@ -800,7 +800,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       token; `[live]` `systemd-analyze security` reports the documented hardening score;
       `[live]` an oversized request is rejected before parsing.
 
-- [ ] **[Task-29]** Release pipeline. Versioning, signed daemon/app artifacts, image tag
+- [x] **[Task-29]** Release pipeline. Versioning, signed daemon/app artifacts, image tag
       scheme, changelog generation, rollback, and the upgrade path from N-1. *Paths:*
       `.github/workflows/release.yml`, `scripts/release/**`, `docs/operations.md` (release
       section). *Dependencies:* Task-25. *Acceptance:* `[unit]` a dry release produces the
