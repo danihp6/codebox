@@ -135,13 +135,19 @@ Auto-merge has three independent stops:
 
 | Stop | Scope | Command |
 | --- | --- | --- |
-| Global switch | Every repository | `cb brake on` → `CB_AUTOMERGE=off` |
+| Global switch | Every repository | `CB_AUTOMERGE=off` in `/etc/codebox/instance.env`, then `systemctl restart codebox.service` |
 | Repo policy | One repository | `PATCH /v1/repos/{id} { "policy": "manual" }` |
 | PR label | One pull request | Add `do-not-merge` on the PR (G7). |
 
-The switch takes effect at the next guardrail evaluation, so a merge already in `merging`
-finishes. `cb brake status` prints the switch (`brake on` or `brake off`); the per-repository
-policy is `GET /v1/repos/{id}` and `cb status` lists the running runs.
+`CB_AUTOMERGE` is parsed at boot and the run engine snapshots it when it is first built, so the
+edit needs a `codebox.service` restart; from the first guardrail evaluation after it, every
+evaluation fails G8b with `automerger_off`. The repo policy is served and honoured
+(`PATCH /v1/repos/{id}`, guardrail G8a `policy_manual`). Neither stop cuts a merge already in
+`merging`: it finishes.
+
+Amended 2026-10-31: `cb brake on|off|status` answers `unsupported` and exit `5` because the daemon
+mounts neither `/v1/settings` nor `/v1/admin/brake`; no open task in `TODO.md` owns those routes.
+The env switch, the repo policy and the label are the stops that ship.
 
 ## 7. `cb doctor`
 
@@ -158,8 +164,8 @@ cost         ok     $1.84 in 24h
 backup       skip   missing_route
 ```
 
-`--json` is the machine form used by CI. Housekeeping is `POST /v1/admin/cache/wipe`, which
-never rotates a credential. `backup` reports `skip` until a backup-status route exists.
+`--json` is the machine form used by CI. `backup` reports `skip` until a backup-status route
+exists.
 
 ## 8. Logs and events
 
@@ -179,8 +185,10 @@ never rotates a credential. `backup` reports `skip` until a backup-status route 
 | 85 % | New runs refused with `disk_low`; the app shows a blocking banner. |
 | 95 % | The daemon stops claiming schedule fires; only cancel and cleanup work. |
 
-`POST /v1/admin/cache/wipe` removes finished worktrees at any time; it keeps the bare clones
-and never touches a live run.
+There is no prune command: the daemon mounts no admin route, so `POST /v1/admin/cache/wipe`
+answers `404`. The run engine removes a worktree when its run ends unless the failure is
+inspectable; those stay under `CB_WORKSPACE_ROOT` and are removed by hand. The bare clones are
+never touched.
 
 ## 10. Incidents
 
@@ -215,7 +223,8 @@ records the failure class, not the upstream body (the daemon logs only the error
    the App key or installation is missing and §16's rotation is the fix. `disk fail <n>% used`
    is the full disk.
 3. For `provider_unavailable`, confirm the installation on GitHub and rotate the App key (§16);
-   for `workspace_error`, `POST /v1/admin/cache/wipe` and run the item again from the backlog.
+   for `workspace_error`, inspect the worktree under `CB_WORKSPACE_ROOT` and run the item again
+   from the backlog.
 
 ### 10.3 A run is stuck in `running`
 
@@ -231,12 +240,14 @@ records the failure class, not the upstream body (the daemon logs only the error
 
 ### 10.4 A bad merge landed
 
-1. `cb brake on` if more merges are in flight. Expected `brake on`; `unsupported` and exit `5`
-   mean the daemon does not serve `POST /v1/admin/brake`.
+1. Turn the global switch off if more merges are in flight: set `CB_AUTOMERGE=off` in
+   `/etc/codebox/instance.env` and `systemctl restart codebox.service`. `cb brake on` answers
+   `unsupported` and exit `5` because the daemon mounts no brake route; the env switch is the
+   stop that ships, and it applies from the next guardrail evaluation after the restart.
 2. `cb revert <runId>` — a new run with the revert prompt, the same gate and the same
    guardrails. Expected `run  <newRunId>`.
 3. If the revert cannot merge, revert by hand on GitHub and record why in the run.
-4. Add the missing guardrail test before re-enabling auto-merge for that repo.
+4. Add the missing guardrail test, then set `CB_AUTOMERGE=on` again and restart.
 
 ### 10.5 The instance vanished
 
@@ -298,8 +309,8 @@ messages 90 d, approvals 7 d, log directories 30 d, all from the `CB_RETENTION_*
 hours apart, one minute after boot. It deletes whole rows and whole `logs/run-run_*/`
 directories, logs one `retention_done` line with the counts, and never touches a `usage` row:
 the ledger is the record of spend. Short windows go first, so a 14-day event is not kept until
-its 90-day run ages out. To reclaim disk sooner, use `POST /v1/admin/cache/wipe`, which owns
-the finished worktrees; the bare clones stay.
+its 90-day run ages out. To reclaim disk sooner, remove the finished worktrees under
+`CB_WORKSPACE_ROOT` by hand (§9); the bare clones stay.
 
 ```bash
 curl -s -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:8787/v1/telemetry?range=24h'
@@ -315,21 +326,21 @@ means a row is outside the day list the query walks.
 | Command | Purpose |
 | --- | --- |
 | `cb pair --name <name> [--ttl <seconds>]` | Mint a one-time pairing code (loopback HTTP). |
-| `cb status` | Health, queue, running runs, brake. |
+| `cb status` | Health, queue and running runs; no brake line while `/v1/settings` is unmounted. |
 | `cb doctor [--json]` | Every dependency, one line each. |
 | `cb run <jobId>` | Trigger a legacy job now (`POST /v1/jobs/{id}/run`). |
 | `cb jobs [--pause <id>] [--resume <id>]` | List, pause or resume legacy jobs. |
 | `cb logs <runId>` / `cb events <runId>` | The persisted event timeline of one run. |
-| `cb brake on\|off\|status` | The global auto-merge switch. |
+| `cb brake on\|off\|status` | `unsupported` and exit `5`: no brake route is mounted; use `CB_AUTOMERGE` (§6). |
 | `cb update [--to <version>\|--rollback]` | Release management through `upgrade.sh`. |
 | `cb backup [--verify]` | `backup.sh` on the box. |
 | `cb revert <runId> [--job <jobId>]` | Revert a merge through a run. |
 | `cb help` / `cb version` | Usage and the CLI version. |
 
 The CLI is the surface above and nothing else: work and run reads go through `/v1`, restore is
-`restore.sh` (§5) and housekeeping is `POST /v1/admin/cache/wipe` (§9). It never reads SQLite
-directly, so it cannot drift from the API. The local admin path is **loopback HTTP**
-(`POST /v1/pair/code` from `127.0.0.1`), not a unix socket.
+`restore.sh` (§5) and there is no prune command (§9). It never reads SQLite directly, so it
+cannot drift from the API. The local admin path is **loopback HTTP** (`POST /v1/pair/code` from
+`127.0.0.1`), not a unix socket.
 
 - **Environment.** `CODEBOX_URL` (default `http://127.0.0.1:8787`), `CODEBOX_TOKEN` (no
   default) and `CODEBOX_STATE_DIR` (default `/var/lib/codebox`, where `cli.token` is read when

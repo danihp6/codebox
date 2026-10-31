@@ -172,6 +172,11 @@ retained for 24 h.
 | `POST` | `/v1/admin/brake` | `admin` | `{ enabled }` — the global auto-merge brake. |
 | `POST` | `/v1/admin/cache/wipe` | `admin` | Removes finished worktrees; keeps the bare clones. |
 
+`/v1/settings` (§5.7) and the two `admin` routes above are not mounted yet: the daemon has no
+settings or admin subsystem, so each answers `404` and the app renders the control unavailable
+([`operations.md`](operations.md) §6, §9). The paths and payloads are frozen here and in
+`packages/contracts/src/openapi.ts`; no open task in `TODO.md` owns the mount.
+
 `health.status` is `ok`, `degraded` or `down`. `degraded` means one dependency is missing
 (for example no GitHub credential: the backlog and works are readable, git writes are
 disabled; or no active provider account: nothing runs).
@@ -712,6 +717,8 @@ agent_unavailable` after the user message is stored. An archived session refuses
 | `POST` | `/v1/push/subscriptions` | `write` | `{ kind: "web" \| "fcm" \| "apns", endpoint, keys }`. |
 | `DELETE` | `/v1/push/subscriptions/{id}` | `write` | Unsubscribe. |
 
+`GET`/`PATCH /v1/settings` are not mounted yet either; see the note in §5.1.
+
 ### 5.8 Reminders (retired)
 
 Retired by D56. A recurring object without a repository no longer exists: every schedule belongs
@@ -1025,3 +1032,7 @@ still renders, and the routes it calls are retained.
 | `/settings/credentials` | `GET /v1/credentials`, `POST /v1/credentials`, `DELETE /v1/credentials/{id}`, `GET /v1/integrations`, `POST /v1/integrations`, `POST /v1/integrations/github/manifest`, `POST /v1/integrations/github/complete` |
 | `/settings/notifications` | `GET /v1/notifications/preferences`, `PATCH /v1/notifications/preferences`, `PATCH /v1/settings` |
 | `/about` | `GET /v1/version`, `GET /v1/health` |
+
+The `/settings` and `/settings/notifications` pages also call `PATCH /v1/settings`, and
+`/settings` calls the two `admin` routes; none of the three is mounted today, so the page shows
+those controls unavailable (the note in §5.1).
