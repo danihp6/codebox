@@ -20,7 +20,6 @@ export interface RunSettings {
   readonly diffMaxFiles: number;
   readonly diffMaxLines: number;
   readonly probationRuns: number;
-  readonly consecutiveGreenRuns: number;
   readonly approvalTtlSeconds: number;
   readonly logsDir: string;
   readonly author: { readonly name: string; readonly email: string };

@@ -386,6 +386,14 @@ Tasks 90–99 wait for `design/screens/**` and `design/exports/**`, which do not
 runs after the Figma read quota reopens on 2026-11-03T09:42Z. This cut ships no code; the four
 empty slots have no legal candidate in any later batch.
 
+**Cut — operator-ordered cycle after Task-30 (one of one slot used).** On 2026-11-01 the
+operator asked for two things in parallel: sweep the dead worktrees and branches, and build
+Task-31's counter half. Task-100 was freed for the second and is the batch of one; twelve
+worktrees, twenty local branches and four merged remote branches were swept with it. No hot
+file moved except the two the Orchestrator owns (`TODO.md`, `CHANGELOG.md`). Task-31 stays
+`[!]`, narrowed to the live ten-run measurement, and Tasks 90–99 still wait for L6 and L7 — the
+Figma read quota reopens on 2026-11-03T09:42Z.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -854,17 +862,32 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
 
 ## Batch 8 — Beta, onboarding, migration
 
+- [x] **[Task-100]** Wire the probation counter to the repository's run history. G8a can never
+      pass while `createDaemonSettings` hardcodes `consecutiveGreenRuns: 0`
+      (`apps/daemon/src/runs/engine.ts:79`), so any `CB_PROBATION_RUNS > 0` parks every run at
+      `pr_open` forever. `store.runs` gains `consecutiveGreenRuns(repoId, excludeRunId)`: the
+      leading `succeeded` runs of that repository, newest first, that are not a `revert`, ending
+      at the first `failed`, `cancelled`, `pr_open` or revert run; the run under evaluation is
+      excluded and live states are ignored. The run engine reads it per run instead of taking a
+      constant from the settings, and the guardrail rule in `packages/core` does not move.
+      *Paths:* `packages/store/src/runs.ts` + `runs.test.ts`,
+      `apps/daemon/src/run/{ports.ts,engine.ts}` + `engine.test.ts`,
+      `apps/daemon/src/runs/engine.ts` + `engine.test.ts`, `docs/jobs.md` §11.
+      *Acceptance:* `[unit]` the counter matches the documented definition over a seeded history;
+      `[unit]` a repository with two of three greens still blocks G8a and three greens merge;
+      `[unit]` the run under evaluation and a live sibling do not count. *Dependencies:* none.
+      **Freed 2026-11-01 by the operator:** it is the code half of Task-31's blocker; Task-31
+      keeps the ten-run measurement.
 - [!] **[Task-31]** First repositories and probation. Onboard the chosen repos (see
       `docs/open-questions.md`), run the first ten jobs with auto-merge in probation (merge
       only after N green runs), record the outcomes. *Paths:* none in this repo except
       `docs/operations.md` (onboarding section). *Dependencies:* Task-26, Task-28, Task-30.
       *Acceptance:* `[live]` ten real runs, zero red gates merged, one deliberate revert
       exercised, and the measured latency/cost targets in `docs/product.md` met or explained.
-      BLOCKED: probation cannot be met — `consecutiveGreenRuns` is hardcoded to `0` in
-      `apps/daemon/src/runs/engine.ts:79`, so any `CB_PROBATION_RUNS > 0` fails G8a forever and
-      parks every run at `pr_open`; the whole acceptance is also a live ten-run measurement
-      this runner cannot take. Issue #105. Do not free it before the count is wired and a box
-      can run the ten jobs.
+      BLOCKED: the acceptance is a live ten-run measurement this runner cannot take. The
+      counter half closed with Task-100 (`store.runs.consecutiveGreenRuns` now feeds G8a), so
+      probation is earnable; what is missing is a box that runs the ten jobs. Issue #105. Do
+      not free it before that box exists.
 - [ ] **[Task-32]** Retire the OCI copy in `pkm-randomlike`. The chain was braked
       (`OCI_RETRY=off`) and its network deleted on 2026-10-24; the game repository still holds
       the workflow and the stale OCI variables. Delete the duplicate workflow and the

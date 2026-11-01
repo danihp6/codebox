@@ -82,6 +82,12 @@ export interface RunRepository {
   update(id: string, patch: RunPatch): RunRecord;
   claimScheduledRun(input: ClaimScheduledRunInput): RunRecord | null;
   countLive(repoId?: string): number;
+  /**
+   * The repository's probation streak: the leading `succeeded` runs, newest first, whose
+   * `trigger` is not `revert`, ending at the first `failed`, `cancelled` or `pr_open` run.
+   * Live runs are ignored, and `excludeRunId` (the run being evaluated) is skipped.
+   */
+  consecutiveGreenRuns(repoId: string, excludeRunId: string | null): number;
   listByJob(jobId: string, limit: number): Run[];
   /** Counts runs whose `created_at` is in [since, until], by state; every key is present. */
   countByState(filter: {
@@ -104,6 +110,16 @@ const RUN_STATES: readonly RunState[] = Object.freeze([
   'succeeded',
   'failed',
   'cancelled',
+]);
+
+// `pr_open` is a live state in `LIVE_RUN_STATES_SQL` but it is not pending: a parked run has
+// an outcome (it waits for a tap) and ends the streak, so it is deliberately left out here.
+const PENDING_RUN_STATES: readonly RunState[] = Object.freeze([
+  'queued',
+  'preparing',
+  'running',
+  'gating',
+  'merging',
 ]);
 
 const COLUMNS = [
@@ -223,6 +239,16 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
   const deleteFinishedBefore = db.prepare(
     'DELETE FROM runs WHERE finished_at IS NOT NULL AND finished_at < ?',
   );
+  // The streak breaks on a parked `pr_open` run (its merge was a tap, not the guardrail's
+  // decision) and on a `revert` run (docs/jobs.md §11's reset); only the states with no
+  // outcome yet are skipped, which is why `LIVE_RUN_STATES_SQL` cannot be the filter here.
+  // 500 is a safety cap, not a policy: probation's documented values are single digits.
+  // `id IS NOT ?` is null-safe, so a null `excludeRunId` skips no run at all.
+  const selectStreak = db.prepare(`
+    SELECT state, "trigger" FROM runs
+    WHERE repo_id = ? AND id IS NOT ?
+    ORDER BY created_at DESC, id DESC LIMIT 500
+  `);
 
   const scalarColumns: readonly [ScalarPatchKey, string][] = [
     ['baseSha', 'base_sha'],
@@ -484,6 +510,19 @@ export function createRunRepository(db: DatabaseSync): RunRepository {
       const result = repoId === undefined ? countAllLive.get() : countRepoLive.get(repoId);
       const value = result?.['live'];
       return value === null || value === undefined ? 0 : Number(value);
+    },
+
+    consecutiveGreenRuns(repoId: string, excludeRunId: string | null): number {
+      let streak = 0;
+      for (const value of selectStreak.all(repoId, excludeRunId)) {
+        const rowValue = row(value);
+        const state = enumColumn<RunState>(rowValue, 'state', RUN_STATES);
+        if (PENDING_RUN_STATES.includes(state)) continue;
+        if (state !== 'succeeded') break;
+        if (textColumn(rowValue, 'trigger') === 'revert') break;
+        streak += 1;
+      }
+      return streak;
     },
 
     listByJob(jobId: string, limit: number): Run[] {

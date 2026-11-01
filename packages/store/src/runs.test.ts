@@ -470,3 +470,110 @@ describe('runs', () => {
     expect(store.runs.pruneBefore('2026-01-05T00:00:00.001Z')).toBe(1);
   });
 });
+
+const SUCCEEDED: Partial<RunRecord> = { state: 'succeeded' };
+
+function historyAt(index: number): string {
+  return new Date(Date.UTC(2026, 0, 1, 0, 0, index)).toISOString();
+}
+
+describe('the probation streak', () => {
+  it('counts the leading greens newest first and stops at the first red run', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(runRecord('run_0000001', REPO.id, historyAt(0), SUCCEEDED));
+    store.runs.create(runRecord('run_0000002', REPO.id, historyAt(1), SUCCEEDED));
+    store.runs.create(runRecord('run_0000003', REPO.id, historyAt(2), { state: 'failed' }));
+    store.runs.create(runRecord('run_0000004', REPO.id, historyAt(3), SUCCEEDED));
+
+    expect(store.runs.consecutiveGreenRuns(REPO.id, null)).toBe(1);
+    expect(store.runs.consecutiveGreenRuns(REPO.id, 'run_0000004')).toBe(0);
+    expect(store.runs.consecutiveGreenRuns(REPO.id, 'run_0000001')).toBe(1);
+  });
+
+  it('breaks ties on the id so an equal-timestamp history is deterministic', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(runRecord('run_0000001', REPO.id, historyAt(0), SUCCEEDED));
+    store.runs.create(runRecord('run_0000002', REPO.id, historyAt(0), { state: 'failed' }));
+
+    expect(store.runs.consecutiveGreenRuns(REPO.id, null)).toBe(0);
+    expect(store.runs.consecutiveGreenRuns(REPO.id, 'run_0000002')).toBe(1);
+  });
+
+  it('answers 0 for an unknown repository instead of throwing', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+
+    expect(store.runs.consecutiveGreenRuns('repo_999999', null)).toBe(0);
+  });
+
+  it('skips live rows, neither counting them nor ending the streak', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(runRecord('run_0000001', REPO.id, historyAt(0), SUCCEEDED));
+    store.runs.create(runRecord('run_0000002', REPO.id, historyAt(1), { state: 'running' }));
+    store.runs.create(runRecord('run_0000003', REPO.id, historyAt(2), SUCCEEDED));
+    store.runs.create(runRecord('run_0000004', REPO.id, historyAt(3), { state: 'gating' }));
+    store.runs.create(runRecord('run_0000005', REPO.id, historyAt(4), SUCCEEDED));
+
+    expect(store.runs.consecutiveGreenRuns(REPO.id, null)).toBe(3);
+  });
+
+  it('never counts the run being evaluated, even when its own row succeeded', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(runRecord('run_0000001', REPO.id, historyAt(0), SUCCEEDED));
+    store.runs.create(runRecord('run_0000002', REPO.id, historyAt(1), SUCCEEDED));
+    store.runs.create(runRecord('run_0000003', REPO.id, historyAt(2), SUCCEEDED));
+
+    expect(store.runs.consecutiveGreenRuns(REPO.id, 'run_0000003')).toBe(2);
+    expect(store.runs.consecutiveGreenRuns(REPO.id, 'run_0000002')).toBe(2);
+    expect(store.runs.consecutiveGreenRuns(REPO.id, null)).toBe(3);
+  });
+
+  it('caps the scan at the 500 newest rows', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    for (let index = 0; index < 501; index += 1) {
+      store.runs.create(
+        runRecord(`run_${String(index).padStart(7, '0')}`, REPO.id, historyAt(index), SUCCEEDED),
+      );
+    }
+
+    expect(store.runs.consecutiveGreenRuns(REPO.id, null)).toBe(500);
+  });
+});
+
+const INTERRUPTIONS: readonly {
+  readonly name: string;
+  readonly overrides: Partial<RunRecord>;
+}[] = [
+  { name: 'a parked pr_open run', overrides: { state: 'pr_open' } },
+  { name: 'a cancelled run', overrides: { state: 'cancelled' } },
+  { name: 'a succeeded revert run', overrides: { state: 'succeeded', trigger: 'revert' } },
+];
+
+describe.each(INTERRUPTIONS)('probation ends at $name', ({ overrides }) => {
+  it('answers 0 when it is the newest row', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(runRecord('run_0000001', REPO.id, historyAt(0), SUCCEEDED));
+    store.runs.create(runRecord('run_0000002', REPO.id, historyAt(1), SUCCEEDED));
+    store.runs.create(runRecord('run_0000003', REPO.id, historyAt(2), SUCCEEDED));
+    store.runs.create(runRecord('run_0000004', REPO.id, historyAt(3), overrides));
+
+    expect(store.runs.consecutiveGreenRuns(REPO.id, null)).toBe(0);
+  });
+
+  it('counts the greens seeded after it', () => {
+    const store = track(openInMemoryStore());
+    store.repos.create(REPO);
+    store.runs.create(runRecord('run_0000001', REPO.id, historyAt(0), overrides));
+    store.runs.create(runRecord('run_0000002', REPO.id, historyAt(1), SUCCEEDED));
+    store.runs.create(runRecord('run_0000003', REPO.id, historyAt(2), SUCCEEDED));
+    store.runs.create(runRecord('run_0000004', REPO.id, historyAt(3), SUCCEEDED));
+
+    expect(store.runs.consecutiveGreenRuns(REPO.id, null)).toBe(3);
+  });
+});

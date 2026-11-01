@@ -6,6 +6,25 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-01 (Task-100, the probation streak reads the run history)
+
+- **G8a stops reading a constant.** `createDaemonSettings` hardcoded
+  `consecutiveGreenRuns: 0`, so any `CB_PROBATION_RUNS > 0` parked every run at `pr_open`
+  forever and probation could never be earned. `store.runs.consecutiveGreenRuns(repoId,
+  excludeRunId)` now reads the repository's own history: the leading green runs, newest first
+  (`created_at DESC, id DESC`), ending at the first `failed`, `cancelled`, `pr_open` or revert
+  run; pending states are skipped, the run under evaluation is excluded and the scan stops at
+  500 rows. `RunSettings` loses the field and `mergeFacts` asks the store per run;
+  `packages/core`'s rule and its blocker text do not move.
+- **`docs/jobs.md` §11 defines the streak it used to name only**, including why a parked
+  `pr_open` run ends it (its merge was a tap, not the guardrail's decision) and why
+  `LIVE_RUN_STATES_SQL` cannot be the filter — it contains `pr_open`.
+- The task's own scope is green on Linux CI (`npm ci`, lint, test, build); on the operator's
+  Windows box `npm test` cannot execute at all (`test:guard`'s quoting), and the 23 daemon and
+  one app failures are byte-identical at `9fd9715`. The `[live]` criterion — ten real runs on a
+  deployed box — stays with Task-31 and issue #105: this task freezes the counter, not the
+  probation.
+
 ### Changed — 2026-10-31 (Task-30, a doc set that matches the shipped tree)
 
 - **Every doc claim now points at something the tree has.** `docs/api.md` §11 is rebuilt from

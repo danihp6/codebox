@@ -21,7 +21,7 @@ import type {
   RawAgentEvent,
   SessionRef,
 } from '@codebox/opencode';
-import type { EventRecord, RunPatch, Store } from '@codebox/store';
+import type { EventRecord, RunPatch, RunRecord, Store } from '@codebox/store';
 import { openInMemoryStore } from '@codebox/store';
 import type { GitRunner, RunMarker, Worktree, WorkspaceStatus } from '@codebox/workspaces';
 import { runGate } from '../gate/run-gate.js';
@@ -463,6 +463,49 @@ function runInputFor(runId: string, repoId: string, slug: string): RunStartInput
   return runInput({ runId, repo: { ...runInput().repo, id: repoId, slug } });
 }
 
+function historyTime(minutesAgo: number): string {
+  return new Date(NOW - minutesAgo * 60_000).toISOString();
+}
+
+function seedRun(
+  store: Store,
+  id: string,
+  createdAt: string,
+  overrides: Partial<RunRecord> = {},
+): void {
+  store.runs.create({
+    id,
+    repoId: REPO_ID,
+    jobId: null,
+    state: 'succeeded',
+    trigger: 'manual',
+    branch: `cb/${id}-history`,
+    baseRef: 'main',
+    pr: null,
+    gate: null,
+    guardrails: [],
+    blockers: [],
+    diff: null,
+    cost: { usd: 0, tokensIn: 0, tokensOut: 0 },
+    createdAt,
+    finishedAt: createdAt,
+    baseSha: null,
+    worktree: null,
+    sessionId: null,
+    prompt: 'an earlier run',
+    promptHash: null,
+    agent: 'build',
+    model: null,
+    gateCommand: null,
+    scheduledFor: null,
+    attempt: 1,
+    failureCode: null,
+    failureMessage: null,
+    startedAt: createdAt,
+    ...overrides,
+  });
+}
+
 interface Harness {
   readonly engine: ReturnType<typeof createRunEngine>;
   readonly store: Store;
@@ -491,6 +534,8 @@ interface HarnessOptions {
   readonly settings?: Partial<RunSettings>;
   readonly status?: Partial<WorkspaceStatus>;
   readonly git?: FakeGitRunnerOptions;
+  /** Records every probation-streak read the engine makes. */
+  readonly streakCalls?: { readonly repoId: string; readonly excludeRunId: string | null }[];
 }
 
 function harness(options: HarnessOptions = {}): Harness {
@@ -528,6 +573,20 @@ function harness(options: HarnessOptions = {}): Harness {
     },
   };
   const wrapped: Store = { ...store, runs };
+  const streakCalls = options.streakCalls;
+  const observed: Store =
+    streakCalls === undefined
+      ? wrapped
+      : {
+          ...wrapped,
+          runs: {
+            ...wrapped.runs,
+            consecutiveGreenRuns(repoId: string, excludeRunId: string | null): number {
+              streakCalls.push({ repoId, excludeRunId });
+              return wrapped.runs.consecutiveGreenRuns(repoId, excludeRunId);
+            },
+          },
+        };
 
   const emitted: EventRecord[] = [];
   const agent = new FakeAgent();
@@ -552,7 +611,6 @@ function harness(options: HarnessOptions = {}): Harness {
     diffMaxFiles: 40,
     diffMaxLines: 2_000,
     probationRuns: 0,
-    consecutiveGreenRuns: 0,
     approvalTtlSeconds: 600,
     logsDir: join(root, 'logs'),
     author: { name: 'codebox[bot]', email: 'codebox@users.noreply.github.com' },
@@ -585,7 +643,7 @@ function harness(options: HarnessOptions = {}): Harness {
     git,
     gitRunner,
     gate: recordingGate,
-    store: wrapped,
+    store: observed,
     clock: () => new Date(nowMs),
     logger: createLogger({
       level: 'info',
@@ -1193,6 +1251,74 @@ describe('run engine — failures before the merge', () => {
     expect(test.states).toContain('merging');
     expect(test.states.at(-1)).toBe('pr_open');
     expect(eventTypes(test.emitted)).not.toContain('run.merged');
+  });
+});
+
+describe('run engine — probation reads the repository history', () => {
+  it('parks on policy_manual until the repository has the probation count of greens', async () => {
+    const test = harness({ settings: { probationRuns: 3 } });
+    seedRun(test.store, 'run_hist0001', historyTime(30));
+    seedRun(test.store, 'run_hist0002', historyTime(20));
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('pr_open');
+    expect(outcome.blockers).toEqual([
+      { code: 'policy_manual', message: 'Probation is not met: 2 of 3 green runs.' },
+    ]);
+    const row = test.store.runs.getRecord(RUN_ID);
+    expect(row?.state).toBe('pr_open');
+    expect(guardrailOf(row ?? { guardrails: [] })).toEqual([...GUARDRAIL_IDS]);
+    expect(row?.guardrails).toEqual(
+      expect.arrayContaining([{ id: 'policy', state: 'fail', reason: 'policy_manual' }]),
+    );
+    expect(test.git.merges).toEqual([]);
+    expect(test.states).not.toContain('merging');
+  });
+
+  it('lets G8a pass once the history holds the probation count of greens', async () => {
+    const test = harness({ settings: { probationRuns: 3 } });
+    seedRun(test.store, 'run_hist0001', historyTime(30));
+    seedRun(test.store, 'run_hist0002', historyTime(20));
+    seedRun(test.store, 'run_hist0003', historyTime(10));
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('succeeded');
+    expect(outcome.blockers).toEqual([]);
+    expect(test.store.runs.getRecord(RUN_ID)?.guardrails).toEqual(
+      expect.arrayContaining([{ id: 'policy', state: 'pass' }]),
+    );
+    expect(test.git.merges).toHaveLength(1);
+  });
+
+  it('ignores the greens of another repository', async () => {
+    const test = harness({ settings: { probationRuns: 3 } });
+    seedRun(test.store, 'run_hist0001', historyTime(30), { repoId: SECOND_REPO_ID });
+    seedRun(test.store, 'run_hist0002', historyTime(20), { repoId: SECOND_REPO_ID });
+    seedRun(test.store, 'run_hist0003', historyTime(10), { repoId: SECOND_REPO_ID });
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(outcome.state).toBe('pr_open');
+    expect(outcome.blockers).toEqual([
+      { code: 'policy_manual', message: 'Probation is not met: 0 of 3 green runs.' },
+    ]);
+  });
+
+  it('never counts the run under evaluation in its own streak', async () => {
+    const streakCalls: { readonly repoId: string; readonly excludeRunId: string | null }[] = [];
+    const test = harness({ settings: { probationRuns: 1 }, streakCalls });
+    seedRun(test.store, 'run_hist0001', historyTime(30));
+    test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
+
+    const outcome = await test.engine.start(runInput());
+
+    expect(streakCalls).toContainEqual({ repoId: REPO_ID, excludeRunId: RUN_ID });
+    expect(outcome.state).toBe('succeeded');
   });
 });
 
