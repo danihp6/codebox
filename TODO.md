@@ -868,7 +868,7 @@ unchanged and already disjoint. Task-37 is ops-only (`ops/vm`, `ops/image/script
       `pr_open` forever. `store.runs` gains `consecutiveGreenRuns(repoId, excludeRunId)`: the
       leading `succeeded` runs of that repository, newest first, that are not a `revert`, ending
       at the first `failed`, `cancelled`, `pr_open` or revert run; the run under evaluation is
-      excluded and live states are ignored. The run engine reads it per run instead of taking a
+      excluded and pending states are skipped (`pr_open` is live but it ends the streak). The run engine reads it per run instead of taking a
       constant from the settings, and the guardrail rule in `packages/core` does not move.
       *Paths:* `packages/store/src/runs.ts` + `runs.test.ts`,
       `apps/daemon/src/run/{ports.ts,engine.ts}` + `engine.test.ts`,
