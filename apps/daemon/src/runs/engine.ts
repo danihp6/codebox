@@ -76,7 +76,6 @@ export function createDaemonSettings(context: DaemonContext): RunSettings {
     diffMaxFiles: config.CB_DIFF_MAX_FILES,
     diffMaxLines: config.CB_DIFF_MAX_LINES,
     probationRuns: config.CB_PROBATION_RUNS,
-    consecutiveGreenRuns: 0,
     approvalTtlSeconds: config.CB_APPROVAL_TTL_SECONDS,
     logsDir: join(config.CB_STATE_DIR, 'logs'),
     author: { name: config.CB_GIT_AUTHOR_NAME, email: config.CB_GIT_AUTHOR_EMAIL },

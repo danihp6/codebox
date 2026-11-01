@@ -904,7 +904,10 @@ export function createRunEngine(ports: RunPorts): RunEngine {
         job: 'auto',
         automerge: settings.automerge,
         probationRuns: settings.probationRuns,
-        consecutiveGreenRuns: settings.consecutiveGreenRuns,
+        consecutiveGreenRuns: ports.store.runs.consecutiveGreenRuns(
+          ctx.input.repo.id,
+          ctx.input.runId,
+        ),
       },
       budget: { maxFiles: settings.diffMaxFiles, maxLines: settings.diffMaxLines },
       protectedPaths: protectedPaths(ctx),

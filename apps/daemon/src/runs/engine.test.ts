@@ -105,12 +105,12 @@ describe('the daemon engine wiring', () => {
       diffMaxFiles: 7,
       diffMaxLines: 70,
       probationRuns: 3,
-      consecutiveGreenRuns: 0,
       approvalTtlSeconds: 90,
       logsDir: join(context.config.CB_STATE_DIR, 'logs'),
       author: { name: 'bot', email: 'bot@example.invalid' },
       gitTimeoutMs: 11_000,
     });
+    expect(settings).not.toHaveProperty('consecutiveGreenRuns');
   });
 
   it('builds every port from the merged packages without doing I/O', () => {

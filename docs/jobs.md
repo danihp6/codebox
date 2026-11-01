@@ -350,6 +350,20 @@ state is worse than a late one.
 waits for a tap until it has N consecutive green runs with no protected-path diff and no
 revert. Probation is per repository and resets on any red run or revert in that repo.
 
+The streak G8a compares against N is read from that repository's own `runs` rows at
+evaluation time — `runs.consecutiveGreenRuns(repoId, excludeRunId)` — never from a
+configuration value:
+
+- **Green** means `state = 'succeeded'` and `"trigger" <> 'revert'`.
+- Rows are read newest first (`created_at DESC, id DESC`) and the count is the longest leading
+  run of green rows; the first row that is not green ends it.
+- A `failed`, a `cancelled` and a parked `pr_open` run all end the streak — a `pr_open` merge
+  was a tap, not the guardrail's decision — and so does a `revert` run, which is the reset.
+- Live rows (`queued`, `preparing`, `running`, `gating`, `merging`) have no outcome yet: they
+  are skipped, neither counted nor a break.
+- The run under evaluation is skipped, so a run never counts itself.
+- The scan stops at the 500 newest rows, far above any probation value.
+
 ## 12. Revert
 
 `POST /v1/runs/{id}/revert` creates a new run whose prompt is a deterministic instruction to
