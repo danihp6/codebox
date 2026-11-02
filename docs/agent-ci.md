@@ -266,7 +266,7 @@ Workflow permissions are per job, minimal:
 | Workflow | `permissions` |
 | --- | --- |
 | `ci.yml` | `contents: read` |
-| `agent-cycle.yml` | `contents: write`, `issues: write`, `actions: write` |
+| `agent-cycle.yml` | `contents: write`, `issues: write`, `actions: write`, `id-token: write` |
 | `agent-autopilot.yml` | `actions: write`, `issues: write`, `contents: read` |
 | `agent-autopilot-window.yml` | `actions: write`, `contents: read` |
 
@@ -281,6 +281,21 @@ Pipeline keys use the `CB_AGENT_` prefix and never leak into the daemon (D19, an
 [`providers.md`](providers.md) §1). Provider keys are the exception: they keep the name
 OpenCode documents, so only the one the chosen model needs is set as a repository secret.
 
+The OpenCode key is the one exception to that rule: instead of a stored secret, the cycle
+trades the runner's OIDC identity (`id-token: write`) for a short-lived access token at
+`https://opencode.ai/console/auth/oauth/token` and exports it as `OPENCODE_API_KEY` for the
+rest of the job. The token is masked in the log, never written to the repository, and expires
+with the run, so a rotated or revoked console client costs nothing beyond the next cycle. The
+exchange needs the job's `ACTIONS_ID_TOKEN_REQUEST_URL` / `_TOKEN`, which the runner injects
+only when `id-token: write` is granted; without it the step fails and says so.
+
+The console's OAuth client id is public — it identifies the client, it does not authenticate
+anything — but it starts with `sk_`, the prefix Checkout.com's key format uses, and a literal
+one in a workflow file raises a `checkout_production_secret_key` alert. It therefore lives in
+the `OPENCODE_CLIENT_ID` repository variable, not in the tree: one real alert is worth more
+than a file that teaches a human to dismiss it. A missing variable fails the step with a
+message naming it.
+
 | Key | Kind | Default | Meaning |
 | --- | --- | --- | --- |
 | `CB_AGENT_AUTOPILOT` | variable | unset (`off`) | `on` arms the loop; anything else parks it. |
@@ -289,8 +304,9 @@ OpenCode documents, so only the one the chosen model needs is set as a repositor
 | `CB_AGENT_DAILY_CYCLES` | variable | `0` | Cycles per UTC day; `0` or unset means no cap. |
 | `CB_AGENT_MAX_DEVS` | variable | `2` | Dev slots per wave; ceiling 4. The runner has 2 cores. |
 | `CB_AGENT_MODEL` | variable | required | `provider/model` passed to `opencode run --model`. |
+| `OPENCODE_CLIENT_ID` | variable | required | Public OAuth client id of the OpenCode console, used only by the `id-token` exchange. Kept out of the tree because its `sk_` prefix trips the Checkout.com scan. |
 | `CB_AGENT_TOKEN` | secret | required | Fine-grained PAT, this repository only: `Contents: read and write`, `Workflows: read and write`, `Variables: read and write`. |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | secret | one of them | Inference key, under the name OpenCode reads. |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | secret | one of them | Inference key, under the name OpenCode reads, for a model that does not go through the console. |
 
 `CB_AGENT_*` belongs to the pipeline; `CB_*` belongs to `cbd`. A test greps both trees and
 fails if a daemon key appears in a workflow or a pipeline key appears in `apps/daemon`. The
