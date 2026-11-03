@@ -28,8 +28,9 @@ push, so a green `main` is never waiting for a workflow to agree.
 
 ## 2. One cycle
 
-The Orchestrator drives it (`opencode run --agent orchestrator --auto`, prompt file piped on
-stdin). It first reads the resume table (`.agent_specs/resume.md`, written from the refs by
+The Orchestrator drives it (`opencode run --agent orchestrator --auto`, with `prompt.md` read
+by the step, its `{{MERGE}}` placeholder substituted, and the result passed as the message
+argument). It first reads the resume table (`.agent_specs/resume.md`, written from the refs by
 `scripts/agent/recon.mjs`), adopts any task already in flight, and only then takes **the
 lowest pending batch whole**, filling free slots from later batches per
 [`agent-pipeline.md`](agent-pipeline.md) §2. It writes one spec per task, pushes each
@@ -234,7 +235,7 @@ window is the other mode:
 
 ```bash
 gh workflow run agent-autopilot-window.yml -f hours=4          # from now
-gh workflow run agent-autopilot-window.yml -f hours=6 -f start=23:00
+gh workflow run agent-autopilot-window.yml -f hours=6 -f from=23:00
 ```
 
 It writes the range into `CB_AGENT_FROM` / `CB_AGENT_UNTIL`, turns the brake on, and asks the
@@ -268,7 +269,7 @@ Workflow permissions are per job, minimal:
 | `ci.yml` | `contents: read` |
 | `agent-cycle.yml` | `contents: write`, `issues: write`, `actions: write`, `id-token: write` |
 | `agent-autopilot.yml` | `actions: write`, `issues: write`, `contents: read` |
-| `agent-autopilot-window.yml` | `actions: write`, `contents: read` |
+| `agent-autopilot-window.yml` | `actions: write` |
 
 The cycle's git credential is the fine-grained **`CB_AGENT_TOKEN`** PAT, which
 `actions/checkout` persists: `GITHUB_TOKEN` cannot write a file under `.github/workflows/**`,
@@ -302,15 +303,18 @@ message naming it.
 | `CB_AGENT_FROM` | variable | — | Start of the armed window, absolute UTC (`2026-10-24T22:00:00Z`). |
 | `CB_AGENT_UNTIL` | variable | — | End of the armed window. Present ⇒ the driver parks outside it. |
 | `CB_AGENT_DAILY_CYCLES` | variable | `0` | Cycles per UTC day; `0` or unset means no cap. |
-| `CB_AGENT_MAX_DEVS` | variable | `2` | Dev slots per wave; ceiling 4. The runner has 2 cores. |
+| `CB_AGENT_MAX_DEVS` | variable | `2` | Documented and exported by the VM scripts and read by no shipped workflow, script, prompt or role; the wave's size is the Orchestrator's judgement. |
 | `CB_AGENT_MODEL` | variable | required | `provider/model` passed to `opencode run --model`. |
 | `OPENCODE_CLIENT_ID` | variable | required | Public OAuth client id of the OpenCode console, used only by the `id-token` exchange. Kept out of the tree because its `sk_` prefix trips the Checkout.com scan. |
 | `CB_AGENT_TOKEN` | secret | required | Fine-grained PAT, this repository only: `Contents: read and write`, `Workflows: read and write`, `Variables: read and write`. |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` / `OPENROUTER_API_KEY` | secret | one of them | Inference key, under the name OpenCode reads, for a model that does not go through the console. |
 
-`CB_AGENT_*` belongs to the pipeline; `CB_*` belongs to `cbd`. A test greps both trees and
-fails if a daemon key appears in a workflow or a pipeline key appears in `apps/daemon`. The
-two namespaces exist because the box will eventually run both on the same machine.
+`CB_AGENT_*` belongs to the pipeline; `CB_*` belongs to `cbd`. Two tests hold the daemon's
+side: `packages/contracts/src/config.test.ts` pins the daemon's key list, sorted, and rejects
+any `CB_AGENT_` or `CB_OCI_` name, and `apps/daemon/src/start.test.ts` fails `loadConfig` on a
+key it does not know. Neither reads `.github/workflows`, so a daemon key appearing in a
+workflow is caught by review, not by the gate. The two namespaces exist because the box will
+eventually run both on the same machine.
 
 ## 11. Budget
 
@@ -338,8 +342,9 @@ itself), which is cheap next to the cycle it exists to stop starting.
   repository. Where it does not, the only barrier between the agent and `main` is the gate,
   the QA waves and the job's `contents: write` — which is why only `agent-cycle.yml` holds it.
 - The agent runs with `--auto`, a shell, an inference key in its environment and write access
-  to `main`. `webfetch` is denied for every pipeline role, so a poisoned document inside the
-  repository is the injection risk worth watching; protected paths are the product's answer
+  to `main`. Only the Orchestrator denies `webfetch`; the Architect allows it and the Dev and
+  QA set no rule, so a subagent can fetch a page. A poisoned document — fetched or inside the
+  repository — is the injection risk worth watching; protected paths are the product's answer
   and the pipeline has no equivalent for itself.
 - A human push to `main` while a cycle is in flight can reject the cycle's final push. The
   cycle is told to bring `origin/main` into its branch and re-gate before pushing; if it

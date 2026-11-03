@@ -162,8 +162,9 @@ states its measurement.
   Recon. A drop that already shipped is not retried; the next cycle resumes.
 - Three red cycles in a day park the loop until a human looks. `CB_AGENT_DAILY_CYCLES` caps a
   normal day when set; unset or `0` means no cap.
-- A **timed window** (`CB_AGENT_FROM`/`CB_AGENT_UNTIL`, absolute UTC) is a belt under the
-  brake: a stale `on` cannot start a cycle past its end.
+- A **timed window** is a belt under the brake: on Actions it is `CB_AGENT_FROM` /
+  `CB_AGENT_UNTIL`, on the box `$CB_AGENT_STATE/window`, and both hold absolute UTC instants,
+  so a stale `on` cannot start a cycle past its end.
 
 ## 9. No human inside a cycle
 
