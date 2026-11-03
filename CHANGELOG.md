@@ -6,6 +6,25 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-11-03 (L5, the schedule sheet)
+
+- **The repository's schedule has a sheet, in both themes and at 320.** `22b`/`L22b` draw the
+  repository that has a schedule — mode (`Once` · `Every` · `Window`), the window's days, start,
+  end and zone, the two caps (fires per day, cost per fire), the next fire, and the two actions:
+  `Save schedule` and the manual `Run next`, which starts one run and leaves the schedule alone.
+  `22c`/`L22c` draw the repository that has none — the empty card, `Manual only · nothing fires
+  on its own.` and `Create a schedule` — and `S4`/`S4b` are the 320 × 568 twins. The frames sit
+  beside `22 · Repo · backlog — deps (dark)` and reuse its sheet chrome: a scrim over the screen,
+  a panel with a grabber, the title and the close, and the home indicator at the foot.
+- **`design/README.md` §2 maps the sheet** and states its two states, so Task-99 names a frame and
+  an export instead of a description. The export lands with the first re-import after
+  2026-11-08T03:00Z; the sheet is drawn, not yet measured.
+- **The Design System's interaction states were already in the file** — `default`, `hover`,
+  `focus-visible`, `pressed` and `disabled` for a button and for a row, in dark and light, with
+  the focus ring on both — so L5's `[unit]` criterion for them is met and `TODO.md` says so. What
+  L5 still owes is the 320 column for the ten routed screens, the empty/error state of every
+  screen and the two clickable flows.
+
 ### Changed — 2026-11-03 (Task-102, the importer sees through the bands)
 
 - **A band is not an element.** `layoutOf` measured a routed frame's direct children, so the first

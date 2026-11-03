@@ -77,6 +77,15 @@ Not routes. A sheet is opened over the screen named in its row.
 | Unpaired | `/pair`, after a 401 | `features/pairing` | 14 | L20 |
 | Connect a service | sheet over `/settings/credentials` | `features/credentials` | 18 | L23 |
 | Add credential | sheet over `/settings/credentials` | `features/credentials` | 19 | L24 |
+| Schedule sheet | sheet over `/repos/:id` (backlog header) | `features/backlog` | 22b | L22b |
+
+**The schedule is a sheet, and it has two states.** `22b`/`L22b` draw a repository that has a
+schedule: mode (`Once` · `Every` · `Window`), the window's days, start, end and zone, the caps
+(fires per day, cost per fire), the next fire and the two actions — `Save schedule` and the
+manual `Run next`, which starts one run and leaves the schedule alone. `22c`/`L22c` draw the
+repository that has none: the empty card, `Manual only · nothing fires on its own.` and
+`Create a schedule`. The 320 twins are `S4` (with a schedule) and `S4b` (without). The sheet is
+drawn at 390 × 844 and 320 × 568; its 1280 layout is out of v1 with the rest of desktop.
 
 **Removed in the 2026-10-28 re-cut:** the connect-repository picker, the cloning screen and the
 free-chat `⋯` menu. Connecting a repository happens from the `+` on `/repos`, and its clone

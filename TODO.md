@@ -2120,7 +2120,11 @@ of them.
       the ten routed screens that were never squeezed (only `S3` exists, `design/README.md` §1),
       **interaction states** (hover, focus-visible, pressed, disabled) in the Design System —
       `docs/app.md` §12 requires accessible targets and the file has no focus ring — and the
-      empty/error state of every screen, not just first-run and offline. **Desktop is out of v1**
+      empty/error state of every screen, not just first-run and offline. **The interaction states
+      are drawn (2026-11-03):** the Design System's `STATES · BUTTON AND ROW` block carries
+      `default`, `hover`, `focus-visible`, `pressed` and `disabled` for a button and a row, in
+      dark and light, with the focus ring on both — so that criterion is met and only the 320
+      column, the empty/error states and the two flows are still owed. **Desktop is out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
       the beta, and `D2`/`D4`, `D5`–`D8` and `D9` stay as the reference they already are. Then
       wire the prototype so **these two flows** are clickable (decided 2026-10-30):
@@ -2139,7 +2143,11 @@ of them.
       `/repos/:id/schedule` is retired and the repository's window, mode, caps and *Run next*
       live in a sheet over the backlog, so L5 owes that sheet a frame — dark, light, 320 and the
       two states — or Task-99 has no export to compare. The two orphan routes themselves are no
-      longer open: the operator decided two tabs and a sheet.
+      longer open: the operator decided two tabs and a sheet. **Drawn 2026-11-03:**
+      `22b`/`L22b` (a schedule: mode, window, caps, next fire, `Save schedule` and `Run next`),
+      `22c`/`L22c` (none: the empty card, `Manual only`, `Create a schedule`) and the 320 twins
+      `S4`/`S4b`, mapped in `design/README.md` §2. Nothing about the sheet is still owed to
+      Task-99; its export lands with the first re-import after 2026-11-08T03:00Z.
 - [x] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
       3HMV2UN6QviuNXe2T3Htsr` with the real `FIGMA_TOKEN`, review the diff, and commit
       `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The token is never
