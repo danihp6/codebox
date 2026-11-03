@@ -239,19 +239,41 @@ function typeOf(node) {
   return rows;
 }
 
+// A child frame that paints nothing is a band, not an element: it contributes no region and its
+// children are emitted in its place. Only `FRAME` is looked through; any other node keeps one
+// region even when it paints nothing.
+function isTransparent(node, frameId) {
+  return (
+    node.type === 'FRAME' &&
+    solidColour(node, frameId) === null &&
+    strokeOf(node) === 0 &&
+    radiusOf(node) === 0
+  );
+}
+
+function collectRegions(nodes, origin, frameId, into) {
+  for (const node of nodes) {
+    if (!isRecord(node)) continue;
+    if (isTransparent(node, frameId)) {
+      collectRegions(Array.isArray(node.children) ? node.children : [], origin, frameId, into);
+      continue;
+    }
+    const region = regionOf(node, origin, frameId);
+    if (region !== null) into.push(region);
+  }
+}
+
 function layoutOf(node, frameId) {
   const own = node.absoluteBoundingBox;
   const origin = {
     x: isRecord(own) ? finiteOrZero(own.x) : 0,
     y: isRecord(own) ? finiteOrZero(own.y) : 0,
   };
-  const children = Array.isArray(node.children) ? node.children.filter(isRecord) : [];
-  const measured = [];
-  children.forEach((child, index) => {
-    const region = regionOf(child, origin, frameId);
-    if (region !== null) measured.push({ region, index });
-  });
-  if (measured.length === 0) return undefined;
+  const emitted = [];
+  collectRegions(Array.isArray(node.children) ? node.children : [], origin, frameId, emitted);
+  if (emitted.length === 0) return undefined;
+  // The sequence is the pre-order walk order: a document-order tie-break that survives a band.
+  const measured = emitted.map((region, index) => ({ region, index }));
 
   const declared = typeof node.layoutMode === 'string' ? node.layoutMode.toLowerCase() : '';
   const layoutMode = declared === 'horizontal' || declared === 'vertical' ? declared : 'none';
@@ -303,7 +325,8 @@ function collectFrameNodes(nodes, into) {
  * One page of the `/v1/files/:key?depth=6` body, projected. Walks only what the response
  * contains; the command never assumes a deeper tree than `depth=6` returned. A `SECTION` is
  * traversed for the frames it holds and never becomes a frame of its own; a frame carries a
- * `layout` only when at least one direct child has a measurable box.
+ * `layout` only when at least one element of it has a measurable box, a paint-less child frame
+ * being looked through.
  * @param {unknown} body        the parsed JSON body
  * @param {string} page         the page caption to select, from the map
  * @param {string} fileKey      the key the command asked for; becomes `snapshot.fileKey`

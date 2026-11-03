@@ -6,6 +6,30 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-03 (Task-102, the importer sees through the bands)
+
+- **A band is not an element.** `layoutOf` measured a routed frame's direct children, so the first
+  re-import after L7 would have replaced each screen's 40–60 element regions with the 3–5 band
+  boxes. A child `FRAME` that paints nothing — no visible `SOLID` fill, no stroke, no corner
+  radius, the shape L7 gave every band — now contributes no region of its own: its children are
+  projected in its place with boxes absolute to the routed frame, recursing until a node that
+  paints or a node that is not a `FRAME`. A child frame that paints stays one region whatever it
+  contains, and a `RECTANGLE`, `ELLIPSE` or `TEXT` that paints nothing keeps its region as before.
+- **The frame's own facts are untouched.** `layoutMode`, the four paddings, `itemSpacing`, the
+  corner radius, the stroke and the type scale stay the routed frame's, and the type walk still
+  visits every `TEXT` descendant, band or not. A frame with autolayout keeps document order with
+  each band expanded in place; a frame without it keeps reading order (y, then x) with the walk
+  position as the tie-break, so the order the two shapes give a screen does not drift.
+- **`design/README.md` §4 states the rule** beside the import command, so the next reader does not
+  re-derive it from the code, and the item's clock is written down: this must land before the
+  re-import on 2026-11-08T03:00Z.
+- **Measured, not assumed.** Five tests build a banded page in memory — two levels of fill-less
+  bands, a painted row, a stroke-only tabbar, a band that measures nothing and a frame with no
+  autolayout — and the L6 fixtures keep their region counts and boxes except the one `Stack` frame
+  the rule now reads through, whose inner `Title` replaces the band's box.
+  `npx vitest run scripts/design` is 47/47; the `[live]` half is the re-import itself, which needs
+  the token and the quota and stays with the operator.
+
 ### Changed — 2026-11-03 (L7, the prototype becomes a real column)
 
 - **The eleven routed frames are columns, not collages.** `01 · Pairing`, `06 · Settings` and

@@ -480,6 +480,21 @@ flows A and B, and the schedule sheet L5 owes Task-99 — so Tasks 90–99 stay 
 Task-31 stays `[!]` (the live ten-run measurement, issue #105) and Task-32 waits behind it; L1, L3
 and L4 keep their place after the design track.
 
+**Cut — cycle 2026-11-03, after L7 (one of four slots used).** No task branch was alive and the
+base was `89e37b1`, the L7 commit on `l7-prototype-restructure` (PR #121 open), so the batch was
+cut from that branch and **not** from `main`: Batch 25's item and the L7 record live there.
+**Task-102** is the only item of Batch 25 and it is eligible — Task-85 is merged and L7 is done —
+and it is a hard clock: the first re-import after the file's read quota reopens
+(2026-11-08T03:00Z) would otherwise write one region per band and lose the geometry D58 promised
+the screen tasks. The three empty slots have no legal candidate: Tasks 90–99 stay parked behind
+L5, Task-32 waits on the blocked Task-31 (#105), and L1, L3, L4 and L5 are operator items the
+driver never picks. **Hot-file holders in this cut:** none. The task claims no hot file, and
+`TODO.md`/`CHANGELOG.md` stay with the Orchestrator. **No path deviation:** the four paths the
+item lists are the four the branch touches; the banded page is built inside `layout.test.mjs` by a
+helper rather than as a new fixture file, so `scripts/design/fixtures/**` stays byte-identical.
+The `[live]` criterion — the re-import itself — is unmeasured on this runner (no `FIGMA_TOKEN` and
+the quota is spent); it stays the operator's, on or after 2026-11-08T03:00Z.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -2058,7 +2073,7 @@ screen tasks implement from lose every element position D58 promised them.
 **Hot-file holders in this batch:** none. Task-102 claims no hot file; `TODO.md` and `CHANGELOG.md`
 stay with the Orchestrator.
 
-- [ ] **[Task-102]** The importer projects one region per element, not per band. Teach
+- [x] **[Task-102]** The importer projects one region per element, not per band. Teach
       `layoutOf` in `scripts/design/import.mjs` to look through a child frame that carries no fill,
       no stroke and no corner radius — the shape L7 gave every band — and emit its children with
       boxes absolute to the routed frame, recursing to the leaf. A child frame that paints is a
