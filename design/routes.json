@@ -1,0 +1,59 @@
+{
+  "routes": [
+    {
+      "path": "/pair",
+      "screen": "Pairing",
+      "component": "PairingPage"
+    },
+    {
+      "path": "/repos",
+      "screen": "Repo list",
+      "component": "ReposPage"
+    },
+    {
+      "path": "/repos/:id",
+      "screen": "Repo · backlog",
+      "component": "RepoBacklogPage"
+    },
+    {
+      "path": "/repos/:id/workers",
+      "screen": "Repo · workers",
+      "component": "RepoWorkersPage"
+    },
+    {
+      "path": "/sessions/:id",
+      "screen": "Design · session",
+      "component": "SessionPage"
+    },
+    {
+      "path": "/dashboard",
+      "screen": "Dashboard",
+      "component": "DashboardPage"
+    },
+    {
+      "path": "/settings",
+      "screen": "Settings",
+      "component": "SettingsPage"
+    },
+    {
+      "path": "/settings/devices",
+      "screen": "Devices",
+      "component": "DevicesPage"
+    },
+    {
+      "path": "/settings/credentials",
+      "screen": "Credentials",
+      "component": "CredentialsPage"
+    },
+    {
+      "path": "/settings/notifications",
+      "screen": "Notifications",
+      "component": "NotificationsPage"
+    },
+    {
+      "path": "/about",
+      "screen": "About",
+      "component": "AboutPage"
+    }
+  ]
+}

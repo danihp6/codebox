@@ -2070,7 +2070,7 @@ of them.
       live in a sheet over the backlog, so L5 owes that sheet a frame — dark, light, 320 and the
       two states — or Task-99 has no export to compare. The two orphan routes themselves are no
       longer open: the operator decided two tabs and a sheet.
-- [ ] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
+- [x] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
       3HMV2UN6QviuNXe2T3Htsr` with the real `FIGMA_TOKEN`, review the diff, and commit
       `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The token is never
       committed: on the operator's Windows box it is `$env:FIGMA_TOKEN = '<token>'` in the shell
@@ -2090,6 +2090,15 @@ of them.
       `design/` reports zero enforced findings and N report-only `screen_state_missing` tail lines,
       with N — and the `frames` / `mapped` / `unmapped` / `colours` / `coloursOutsideTokens`
       summary — written in the commit message and visible in that run's gate tail in the app.
+      **Done — 2026-11-03:** the file answered on the first attempt after the quota reopened
+      (`09:42Z`): 83 frames on `Page 1`, 11 mapped, 72 unmapped, 42 colours and 35 outside
+      `design/tokens.json` (projected `null`, never invented as a key), 11 routes, 11 specs with
+      `layout`, 11 exports at 780 × 1688 and 58–105 kB. Every spec is `inferred: true` — no frame
+      has autolayout — and a local replay of the gate's design check reports **0 enforced findings
+      and 31 report-only `screen_state_missing`** (33 state slots minus Dashboard's `empty` and
+      Pairing's `error`). The token came from `.env` into the command's environment only and is
+      committed nowhere; `--check` was not run a second time, so the file's read budget keeps its
+      single attempt.
 - [ ] **L7 — Restructure the prototype (D58).** Before the alignment batch, turn the file into the
       shape the importer can read *semantically*: a **colour style per palette value** (the twelve
       of `design/tokens.json`), **autolayout** on the main column of the eleven routed frames with

@@ -1,0 +1,489 @@
+{
+  "screen": "Repo · workers",
+  "route": "/repos/:id/workers",
+  "states": {
+    "loading": null,
+    "empty": null,
+    "error": null
+  },
+  "snapshotSha256": "d23b9b51bc3a329edf638623a4b98f2d5b67b596b1bb1b00a780d6c26d285edb",
+  "layout": {
+    "box": {
+      "x": 480,
+      "y": 11200,
+      "width": 390,
+      "height": 844
+    },
+    "layoutMode": "none",
+    "paddingTop": 0,
+    "paddingRight": 0,
+    "paddingBottom": 0,
+    "paddingLeft": 0,
+    "itemSpacing": 0,
+    "cornerRadius": 0,
+    "strokes": 0,
+    "inferred": true,
+    "regions": [
+      {
+        "name": "ch-status-time",
+        "x": 28,
+        "y": 14,
+        "width": 27,
+        "height": 16,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "ch-status-right",
+        "x": 316,
+        "y": 14,
+        "width": 59,
+        "height": 15,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "ch-back",
+        "x": 18,
+        "y": 50,
+        "width": 8,
+        "height": 27,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "ch-overflow",
+        "x": 356,
+        "y": 54,
+        "width": 15,
+        "height": 22,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "ch-title",
+        "x": 40,
+        "y": 56,
+        "width": 107,
+        "height": 19,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "ch-ctx",
+        "x": 300,
+        "y": 79,
+        "width": 67,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "ch-sub",
+        "x": 16,
+        "y": 82,
+        "width": 101,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "plan-card",
+        "x": 16,
+        "y": 120,
+        "width": 358,
+        "height": 300,
+        "fill": null,
+        "radius": 12,
+        "stroke": 1
+      },
+      {
+        "name": "site",
+        "x": 16,
+        "y": 120,
+        "width": 358,
+        "height": 300,
+        "fill": null,
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "events-block",
+        "x": 16,
+        "y": 440,
+        "width": 324,
+        "height": 119,
+        "fill": null,
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "tabbar",
+        "x": 0,
+        "y": 780,
+        "width": 390,
+        "height": 64,
+        "fill": "color.surface.bg",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "tabbar-rule",
+        "x": 0,
+        "y": 780,
+        "width": 390,
+        "height": 1,
+        "fill": null,
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "tab-backlog-icon",
+        "x": 88,
+        "y": 790,
+        "width": 18,
+        "height": 18,
+        "fill": null,
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "tab-workers-icon",
+        "x": 283,
+        "y": 790,
+        "width": 18,
+        "height": 18,
+        "fill": null,
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "tab-backlog-label",
+        "x": 79,
+        "y": 814,
+        "width": 39,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "tab-workers-label",
+        "x": 272,
+        "y": 814,
+        "width": 41,
+        "height": 12,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "home-indicator",
+        "x": 135,
+        "y": 833,
+        "width": 120,
+        "height": 4,
+        "fill": null,
+        "radius": 2,
+        "stroke": 0
+      }
+    ],
+    "type": [
+      {
+        "role": "ch-status-time",
+        "family": "Inter",
+        "weight": 600,
+        "size": 13,
+        "lineHeight": 15.732954025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "ch-status-right",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "ch-back",
+        "family": "Inter",
+        "weight": 400,
+        "size": 22,
+        "lineHeight": 26.625,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "ch-title",
+        "family": "Inter",
+        "weight": 600,
+        "size": 16,
+        "lineHeight": 19.363636016845703,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "ch-ctx",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "ch-overflow",
+        "family": "Inter",
+        "weight": 400,
+        "size": 18,
+        "lineHeight": 21.784090042114258,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "tab-backlog-label",
+        "family": "Inter",
+        "weight": 500,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "tab-workers-label",
+        "family": "Inter",
+        "weight": 600,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "ch-sub",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "events-title",
+        "family": "Inter",
+        "weight": 500,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "ev-D1-who",
+        "family": "Inter",
+        "weight": 600,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "ev-D1-what",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "ev-D1-time",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "ev-D2-who",
+        "family": "Inter",
+        "weight": 600,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "ev-D2-what",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "ev-D2-time",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "ev-Q1-who",
+        "family": "Inter",
+        "weight": 600,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": null
+      },
+      {
+        "role": "ev-Q1-what",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "ev-Q1-time",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "ev-A-who",
+        "family": "Inter",
+        "weight": 600,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": null
+      },
+      {
+        "role": "ev-A-what",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "ev-A-time",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "ev-O-who",
+        "family": "Inter",
+        "weight": 600,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": null
+      },
+      {
+        "role": "ev-O-what",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "ev-O-time",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "task-D1-label",
+        "family": "Inter",
+        "weight": 600,
+        "size": 8,
+        "lineHeight": 9.681818008422852,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "task-D2-label",
+        "family": "Inter",
+        "weight": 600,
+        "size": 8,
+        "lineHeight": 9.681818008422852,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "task-A-label",
+        "family": "Inter",
+        "weight": 600,
+        "size": 8,
+        "lineHeight": 9.681818008422852,
+        "colour": null
+      },
+      {
+        "role": "task-Q1-label",
+        "family": "Inter",
+        "weight": 600,
+        "size": 8,
+        "lineHeight": 9.681818008422852,
+        "colour": null
+      },
+      {
+        "role": "task-O-label",
+        "family": "Inter",
+        "weight": 600,
+        "size": 8,
+        "lineHeight": 9.681818008422852,
+        "colour": null
+      },
+      {
+        "role": "zone-dev",
+        "family": "Inter",
+        "weight": 600,
+        "size": 7,
+        "lineHeight": 8.471590995788574,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "zone-arc",
+        "family": "Inter",
+        "weight": 600,
+        "size": 7,
+        "lineHeight": 8.471590995788574,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "zone-qa",
+        "family": "Inter",
+        "weight": 600,
+        "size": 7,
+        "lineHeight": 8.471590995788574,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "zone-orq",
+        "family": "Inter",
+        "weight": 600,
+        "size": 7,
+        "lineHeight": 8.471590995788574,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "in-count",
+        "family": "Inter",
+        "weight": 600,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "out-count",
+        "family": "Inter",
+        "weight": 600,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.brand.bright"
+      }
+    ]
+  }
+}

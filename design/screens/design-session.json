@@ -1,0 +1,601 @@
+{
+  "screen": "Design · session",
+  "route": "/sessions/:id",
+  "states": {
+    "loading": null,
+    "empty": null,
+    "error": null
+  },
+  "snapshotSha256": "be072f27fa14e81129ab933c0dc7136130d3dc50d6c9d440368a4b67e7869324",
+  "layout": {
+    "box": {
+      "x": 3360,
+      "y": 21000,
+      "width": 390,
+      "height": 844
+    },
+    "layoutMode": "none",
+    "paddingTop": 0,
+    "paddingRight": 0,
+    "paddingBottom": 0,
+    "paddingLeft": 0,
+    "itemSpacing": 0,
+    "cornerRadius": 0,
+    "strokes": 0,
+    "inferred": true,
+    "regions": [
+      {
+        "name": "dh-time",
+        "x": 28,
+        "y": 14,
+        "width": 27,
+        "height": 16,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dh-right",
+        "x": 316,
+        "y": 14,
+        "width": 59,
+        "height": 15,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dh-back",
+        "x": 18,
+        "y": 50,
+        "width": 8,
+        "height": 27,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dh-overflow",
+        "x": 356,
+        "y": 54,
+        "width": 15,
+        "height": 22,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dh-title",
+        "x": 40,
+        "y": 56,
+        "width": 134,
+        "height": 19,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dh-sub",
+        "x": 16,
+        "y": 82,
+        "width": 161,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "preview-card",
+        "x": 16,
+        "y": 104,
+        "width": 358,
+        "height": 332,
+        "fill": null,
+        "radius": 14,
+        "stroke": 1
+      },
+      {
+        "name": "pv-live",
+        "x": 300,
+        "y": 112,
+        "width": 58,
+        "height": 18,
+        "fill": null,
+        "radius": 9,
+        "stroke": 1
+      },
+      {
+        "name": "pv-eyebrow",
+        "x": 32,
+        "y": 116,
+        "width": 95,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "pv-live-label",
+        "x": 310,
+        "y": 116,
+        "width": 31,
+        "height": 10,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "pv-title",
+        "x": 32,
+        "y": 134,
+        "width": 106,
+        "height": 15,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "pv-mini",
+        "x": 32,
+        "y": 152,
+        "width": 326,
+        "height": 210,
+        "fill": null,
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "pv-states-h",
+        "x": 32,
+        "y": 374,
+        "width": 85,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "st-0",
+        "x": 32,
+        "y": 392,
+        "width": 74,
+        "height": 20,
+        "fill": "color.surface.raised",
+        "radius": 10,
+        "stroke": 1
+      },
+      {
+        "name": "st-1",
+        "x": 114,
+        "y": 392,
+        "width": 74,
+        "height": 20,
+        "fill": "color.surface.raised",
+        "radius": 10,
+        "stroke": 1
+      },
+      {
+        "name": "st-2",
+        "x": 196,
+        "y": 392,
+        "width": 74,
+        "height": 20,
+        "fill": "color.surface.raised",
+        "radius": 10,
+        "stroke": 1
+      },
+      {
+        "name": "st-3",
+        "x": 278,
+        "y": 392,
+        "width": 74,
+        "height": 20,
+        "fill": "color.surface.raised",
+        "radius": 10,
+        "stroke": 1
+      },
+      {
+        "name": "st-0-label",
+        "x": 42,
+        "y": 397,
+        "width": 28,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "st-1-label",
+        "x": 124,
+        "y": 397,
+        "width": 32,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "st-2-label",
+        "x": 206,
+        "y": 397,
+        "width": 45,
+        "height": 11,
+        "fill": "color.waiting.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "st-3-label",
+        "x": 288,
+        "y": 397,
+        "width": 29,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "pv-checks",
+        "x": 32,
+        "y": 414,
+        "width": 129,
+        "height": 11,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "chat-eyebrow",
+        "x": 16,
+        "y": 452,
+        "width": 76,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "msg-user",
+        "x": 106,
+        "y": 468,
+        "width": 268,
+        "height": 44,
+        "fill": "color.surface.raised",
+        "radius": 12,
+        "stroke": 1
+      },
+      {
+        "name": "msg-user-text",
+        "x": 122,
+        "y": 480,
+        "width": 174,
+        "height": 13,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "msg-agent-1",
+        "x": 24,
+        "y": 532,
+        "width": 208,
+        "height": 13,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "msg-agent-2",
+        "x": 24,
+        "y": 550,
+        "width": 183,
+        "height": 13,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "tool",
+        "x": 24,
+        "y": 574,
+        "width": 342,
+        "height": 40,
+        "fill": "color.surface.raised",
+        "radius": 10,
+        "stroke": 1
+      },
+      {
+        "name": "tool-name",
+        "x": 52,
+        "y": 584,
+        "width": 161,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "tool-dot",
+        "x": 38,
+        "y": 588,
+        "width": 6,
+        "height": 6,
+        "fill": "color.brand.bright",
+        "radius": 3,
+        "stroke": 0
+      },
+      {
+        "name": "tool-meta",
+        "x": 52,
+        "y": 598,
+        "width": 109,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "preview-status",
+        "x": 16,
+        "y": 628,
+        "width": 211,
+        "height": 12,
+        "fill": "color.waiting.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "composer-line",
+        "x": 0,
+        "y": 706,
+        "width": 390,
+        "height": 1,
+        "fill": null,
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "composer",
+        "x": 16,
+        "y": 716,
+        "width": 358,
+        "height": 56,
+        "fill": "color.surface.raised",
+        "radius": 12,
+        "stroke": 1
+      },
+      {
+        "name": "composer-plus",
+        "x": 326,
+        "y": 730,
+        "width": 12,
+        "height": 22,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "composer-text",
+        "x": 32,
+        "y": 734,
+        "width": 241,
+        "height": 15,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "home",
+        "x": 135,
+        "y": 826,
+        "width": 120,
+        "height": 4,
+        "fill": null,
+        "radius": 2,
+        "stroke": 0
+      }
+    ],
+    "type": [
+      {
+        "role": "dh-time",
+        "family": "Inter",
+        "weight": 600,
+        "size": 13,
+        "lineHeight": 15.732954025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "dh-right",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dh-back",
+        "family": "Inter",
+        "weight": 400,
+        "size": 22,
+        "lineHeight": 26.625,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "dh-title",
+        "family": "Inter",
+        "weight": 600,
+        "size": 16,
+        "lineHeight": 19.363636016845703,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "dh-sub",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dh-overflow",
+        "family": "Inter",
+        "weight": 400,
+        "size": 18,
+        "lineHeight": 21.784090042114258,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "pv-eyebrow",
+        "family": "Inter",
+        "weight": 600,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "pv-title",
+        "family": "Inter",
+        "weight": 600,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "pv-live-label",
+        "family": "Inter",
+        "weight": 500,
+        "size": 8,
+        "lineHeight": 9.681818008422852,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "Ask for a change…",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "pv-states-h",
+        "family": "Inter",
+        "weight": 600,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "st-0-label",
+        "family": "Inter",
+        "weight": 500,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "st-1-label",
+        "family": "Inter",
+        "weight": 500,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "st-2-label",
+        "family": "Inter",
+        "weight": 500,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.waiting.bright"
+      },
+      {
+        "role": "st-3-label",
+        "family": "Inter",
+        "weight": 500,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "pv-checks",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "chat-eyebrow",
+        "family": "Inter",
+        "weight": 500,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "msg-user-text",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "msg-agent-1",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "msg-agent-2",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "tool-name",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "tool-meta",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "preview-status",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.waiting.bright"
+      },
+      {
+        "role": "composer-text",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "composer-plus",
+        "family": "Inter",
+        "weight": 400,
+        "size": 18,
+        "lineHeight": 21.784090042114258,
+        "colour": "color.ink.muted"
+      }
+    ]
+  }
+}

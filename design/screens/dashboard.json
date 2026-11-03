@@ -1,0 +1,919 @@
+{
+  "screen": "Dashboard",
+  "route": "/dashboard",
+  "states": {
+    "loading": null,
+    "empty": "12 · First run — after pairing",
+    "error": null
+  },
+  "snapshotSha256": "b0d0cc869f618b68b90ff70ebdc104708b033fff1b14049b21e2a75bc982e591",
+  "layout": {
+    "box": {
+      "x": 1920,
+      "y": 0,
+      "width": 390,
+      "height": 844
+    },
+    "layoutMode": "none",
+    "paddingTop": 0,
+    "paddingRight": 0,
+    "paddingBottom": 0,
+    "paddingLeft": 0,
+    "itemSpacing": 0,
+    "cornerRadius": 0,
+    "strokes": 0,
+    "inferred": true,
+    "regions": [
+      {
+        "name": "db-status-time",
+        "x": 28,
+        "y": 14,
+        "width": 27,
+        "height": 16,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-status-right",
+        "x": 316,
+        "y": 14,
+        "width": 59,
+        "height": 15,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-title",
+        "x": 24,
+        "y": 56,
+        "width": 127,
+        "height": 29,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-clock",
+        "x": 290,
+        "y": 66,
+        "width": 58,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-needs",
+        "x": 24,
+        "y": 104,
+        "width": 342,
+        "height": 80,
+        "fill": "color.surface.raised",
+        "radius": 14,
+        "stroke": 1
+      },
+      {
+        "name": "db-needs-eyebrow",
+        "x": 40,
+        "y": 116,
+        "width": 58,
+        "height": 12,
+        "fill": "color.waiting.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-needs-cta",
+        "x": 270,
+        "y": 120,
+        "width": 80,
+        "height": 28,
+        "fill": "color.waiting.bright",
+        "radius": 8,
+        "stroke": 0
+      },
+      {
+        "name": "db-needs-cta-label",
+        "x": 282,
+        "y": 127,
+        "width": 39,
+        "height": 13,
+        "fill": "color.surface.bg",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-needs-value",
+        "x": 40,
+        "y": 134,
+        "width": 159,
+        "height": 18,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-needs-meta",
+        "x": 40,
+        "y": 158,
+        "width": 140,
+        "height": 13,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-work-eyebrow",
+        "x": 24,
+        "y": 204,
+        "width": 48,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-work-1",
+        "x": 24,
+        "y": 222,
+        "width": 342,
+        "height": 56,
+        "fill": "color.surface.raised",
+        "radius": 12,
+        "stroke": 1
+      },
+      {
+        "name": "db-work-1-a",
+        "x": 52,
+        "y": 228,
+        "width": 230,
+        "height": 13,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-work-1-time",
+        "x": 300,
+        "y": 238,
+        "width": 38,
+        "height": 13,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-work-1-dot",
+        "x": 40,
+        "y": 244,
+        "width": 6,
+        "height": 6,
+        "fill": "color.brand.bright",
+        "radius": 3,
+        "stroke": 0
+      },
+      {
+        "name": "db-work-1-b",
+        "x": 52,
+        "y": 246,
+        "width": 199,
+        "height": 15,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-work-queue",
+        "x": 24,
+        "y": 288,
+        "width": 115,
+        "height": 13,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-work-next",
+        "x": 196,
+        "y": 288,
+        "width": 202,
+        "height": 13,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-unrev-eyebrow",
+        "x": 24,
+        "y": 320,
+        "width": 130,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-unrev-0",
+        "x": 24,
+        "y": 338,
+        "width": 342,
+        "height": 44,
+        "fill": "color.surface.raised",
+        "radius": 10,
+        "stroke": 1
+      },
+      {
+        "name": "db-unrev-0-t",
+        "x": 38,
+        "y": 346,
+        "width": 136,
+        "height": 15,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-unrev-0-c",
+        "x": 312,
+        "y": 354,
+        "width": 39,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-unrev-0-m",
+        "x": 38,
+        "y": 363,
+        "width": 131,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-unrev-1",
+        "x": 24,
+        "y": 388,
+        "width": 342,
+        "height": 44,
+        "fill": "color.surface.raised",
+        "radius": 10,
+        "stroke": 1
+      },
+      {
+        "name": "db-unrev-1-t",
+        "x": 38,
+        "y": 396,
+        "width": 180,
+        "height": 15,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-unrev-1-c",
+        "x": 312,
+        "y": 404,
+        "width": 37,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-unrev-1-m",
+        "x": 38,
+        "y": 413,
+        "width": 119,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-spend-eyebrow",
+        "x": 24,
+        "y": 452,
+        "width": 203,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-spend",
+        "x": 24,
+        "y": 470,
+        "width": 342,
+        "height": 104,
+        "fill": "color.surface.raised",
+        "radius": 14,
+        "stroke": 1
+      },
+      {
+        "name": "db-spend-value",
+        "x": 40,
+        "y": 486,
+        "width": 62,
+        "height": 29,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-spend-max",
+        "x": 118,
+        "y": 496,
+        "width": 99,
+        "height": 13,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-spend-bar",
+        "x": 40,
+        "y": 520,
+        "width": 200,
+        "height": 4,
+        "fill": null,
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spend-fill",
+        "x": 40,
+        "y": 520,
+        "width": 62,
+        "height": 4,
+        "fill": "color.brand.bright",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-4",
+        "x": 292,
+        "y": 521,
+        "width": 6,
+        "height": 31,
+        "fill": "color.ink.muted",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-6",
+        "x": 312,
+        "y": 521,
+        "width": 6,
+        "height": 31,
+        "fill": "color.brand.bright",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-2",
+        "x": 272,
+        "y": 526,
+        "width": 6,
+        "height": 26,
+        "fill": "color.ink.muted",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-5",
+        "x": 302,
+        "y": 530,
+        "width": 6,
+        "height": 22,
+        "fill": "color.ink.muted",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-0",
+        "x": 252,
+        "y": 534,
+        "width": 6,
+        "height": 18,
+        "fill": "color.ink.muted",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spend-avg",
+        "x": 40,
+        "y": 540,
+        "width": 238,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-1",
+        "x": 262,
+        "y": 540,
+        "width": 6,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-3",
+        "x": 282,
+        "y": 543,
+        "width": 6,
+        "height": 9,
+        "fill": "color.ink.muted",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-eyebrow",
+        "x": 24,
+        "y": 594,
+        "width": 98,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-health",
+        "x": 24,
+        "y": 612,
+        "width": 342,
+        "height": 76,
+        "fill": "color.surface.raised",
+        "radius": 14,
+        "stroke": 1
+      },
+      {
+        "name": "db-health-db-label",
+        "x": 52,
+        "y": 629,
+        "width": 13,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-opencode-label",
+        "x": 156,
+        "y": 629,
+        "width": 48,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-disk-label",
+        "x": 260,
+        "y": 629,
+        "width": 20,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-db-dot",
+        "x": 40,
+        "y": 634,
+        "width": 6,
+        "height": 6,
+        "fill": "color.brand.bright",
+        "radius": 3,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-opencode-dot",
+        "x": 144,
+        "y": 634,
+        "width": 6,
+        "height": 6,
+        "fill": "color.brand.bright",
+        "radius": 3,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-disk-dot",
+        "x": 248,
+        "y": 634,
+        "width": 6,
+        "height": 6,
+        "fill": "color.brand.bright",
+        "radius": 3,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-db-value",
+        "x": 40,
+        "y": 648,
+        "width": 16,
+        "height": 16,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-opencode-value",
+        "x": 144,
+        "y": 648,
+        "width": 16,
+        "height": 16,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-disk-value",
+        "x": 248,
+        "y": 648,
+        "width": 26,
+        "height": 16,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-activity",
+        "x": 40,
+        "y": 670,
+        "width": 167,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-tabbar",
+        "x": 0,
+        "y": 780,
+        "width": 390,
+        "height": 64,
+        "fill": "color.surface.raised",
+        "radius": 0,
+        "stroke": 1
+      },
+      {
+        "name": "db-tab-0-icon",
+        "x": 56,
+        "y": 794,
+        "width": 18,
+        "height": 18,
+        "fill": "color.brand.bright",
+        "radius": 4,
+        "stroke": 0
+      },
+      {
+        "name": "db-tab-1-icon",
+        "x": 186,
+        "y": 794,
+        "width": 18,
+        "height": 18,
+        "fill": "color.ink.muted",
+        "radius": 4,
+        "stroke": 0
+      },
+      {
+        "name": "db-tab-2-icon",
+        "x": 316,
+        "y": 794,
+        "width": 18,
+        "height": 18,
+        "fill": "color.ink.muted",
+        "radius": 4,
+        "stroke": 0
+      },
+      {
+        "name": "db-tab-0-label",
+        "x": 38.9000244140625,
+        "y": 818,
+        "width": 53,
+        "height": 12,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-tab-1-label",
+        "x": 183.39990234375,
+        "y": 818,
+        "width": 30,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-tab-2-label",
+        "x": 301.800048828125,
+        "y": 818,
+        "width": 40,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      }
+    ],
+    "type": [
+      {
+        "role": "db-status-time",
+        "family": "Inter",
+        "weight": 600,
+        "size": 13,
+        "lineHeight": 15.732954025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-status-right",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-title",
+        "family": "Inter",
+        "weight": 600,
+        "size": 24,
+        "lineHeight": 29.045454025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-clock",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-needs-eyebrow",
+        "family": "Inter",
+        "weight": 500,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.waiting.bright"
+      },
+      {
+        "role": "db-needs-value",
+        "family": "Inter",
+        "weight": 600,
+        "size": 15,
+        "lineHeight": 18.15340805053711,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-needs-meta",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-needs-cta-label",
+        "family": "Inter",
+        "weight": 600,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.surface.bg"
+      },
+      {
+        "role": "db-work-eyebrow",
+        "family": "Inter",
+        "weight": 500,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-work-1-a",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-work-1-b",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-work-1-time",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "db-work-queue",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-work-next",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-unrev-eyebrow",
+        "family": "Inter",
+        "weight": 500,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-unrev-0-t",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-unrev-0-m",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-unrev-0-c",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-unrev-1-t",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-unrev-1-m",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-unrev-1-c",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-spend-eyebrow",
+        "family": "Inter",
+        "weight": 500,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-spend-value",
+        "family": "Inter",
+        "weight": 600,
+        "size": 24,
+        "lineHeight": 29.045454025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-spend-max",
+        "family": "Inter",
+        "weight": 400,
+        "size": 11,
+        "lineHeight": 13.3125,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-spend-avg",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-health-eyebrow",
+        "family": "Inter",
+        "weight": 500,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-health-db-label",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-health-db-value",
+        "family": "Inter",
+        "weight": 500,
+        "size": 13,
+        "lineHeight": 15.732954025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-health-opencode-label",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-health-opencode-value",
+        "family": "Inter",
+        "weight": 500,
+        "size": 13,
+        "lineHeight": 15.732954025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-health-disk-label",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-health-disk-value",
+        "family": "Inter",
+        "weight": 500,
+        "size": 13,
+        "lineHeight": 15.732954025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "db-health-activity",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-tab-0-label",
+        "family": "Inter",
+        "weight": 600,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "db-tab-1-label",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "db-tab-2-label",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      }
+    ]
+  }
+}

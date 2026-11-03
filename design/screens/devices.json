@@ -1,0 +1,377 @@
+{
+  "screen": "Devices",
+  "route": "/settings/devices",
+  "states": {
+    "loading": null,
+    "empty": null,
+    "error": null
+  },
+  "snapshotSha256": "2dc5544c0a97b8ecd8b7dcb36f42932eb11f215a4b9263280f402aa9db96e5fb",
+  "layout": {
+    "box": {
+      "x": 0,
+      "y": 2880,
+      "width": 390,
+      "height": 844
+    },
+    "layoutMode": "none",
+    "paddingTop": 0,
+    "paddingRight": 0,
+    "paddingBottom": 0,
+    "paddingLeft": 0,
+    "itemSpacing": 0,
+    "cornerRadius": 0,
+    "strokes": 0,
+    "inferred": true,
+    "regions": [
+      {
+        "name": "dv-status-time",
+        "x": 28,
+        "y": 14,
+        "width": 27,
+        "height": 16,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-status-right",
+        "x": 316,
+        "y": 14,
+        "width": 59,
+        "height": 15,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-back",
+        "x": 18,
+        "y": 50,
+        "width": 8,
+        "height": 27,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-title",
+        "x": 40,
+        "y": 56,
+        "width": 58,
+        "height": 18,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-sub",
+        "x": 40,
+        "y": 79,
+        "width": 152,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-rule",
+        "x": 0,
+        "y": 104,
+        "width": 390,
+        "height": 1,
+        "fill": null,
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-0",
+        "x": 24,
+        "y": 118,
+        "width": 342,
+        "height": 68,
+        "fill": "color.surface.raised",
+        "radius": 12,
+        "stroke": 1
+      },
+      {
+        "name": "dv-row-0-name",
+        "x": 40,
+        "y": 130,
+        "width": 81,
+        "height": 17,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-0-action",
+        "x": 292.6000061035156,
+        "y": 142,
+        "width": 52,
+        "height": 12,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-0-meta",
+        "x": 40,
+        "y": 152,
+        "width": 160,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-0-seen",
+        "x": 40,
+        "y": 168,
+        "width": 59,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-1",
+        "x": 24,
+        "y": 194,
+        "width": 342,
+        "height": 68,
+        "fill": "color.surface.raised",
+        "radius": 12,
+        "stroke": 1
+      },
+      {
+        "name": "dv-row-1-name",
+        "x": 40,
+        "y": 206,
+        "width": 97,
+        "height": 17,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-1-action",
+        "x": 319.6000061035156,
+        "y": 218,
+        "width": 35,
+        "height": 12,
+        "fill": "color.danger.red",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-1-meta",
+        "x": 40,
+        "y": 228,
+        "width": 76,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-1-seen",
+        "x": 40,
+        "y": 244,
+        "width": 73,
+        "height": 11,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-pair",
+        "x": 24,
+        "y": 278,
+        "width": 342,
+        "height": 48,
+        "fill": "color.surface.bg",
+        "radius": 12,
+        "stroke": 1
+      },
+      {
+        "name": "dv-pair-label",
+        "x": 40,
+        "y": 294,
+        "width": 129,
+        "height": 15,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-note-1",
+        "x": 24,
+        "y": 344,
+        "width": 233,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-note-2",
+        "x": 24,
+        "y": 362,
+        "width": 183,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-note-3",
+        "x": 24,
+        "y": 386,
+        "width": 294,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      }
+    ],
+    "type": [
+      {
+        "role": "dv-status-time",
+        "family": "Inter",
+        "weight": 600,
+        "size": 13,
+        "lineHeight": 15.732954025268555,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "dv-status-right",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dv-back",
+        "family": "Inter",
+        "weight": 400,
+        "size": 22,
+        "lineHeight": 26.625,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "dv-title",
+        "family": "Inter",
+        "weight": 600,
+        "size": 15,
+        "lineHeight": 18.15340805053711,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "dv-sub",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dv-row-0-name",
+        "family": "Inter",
+        "weight": 600,
+        "size": 14,
+        "lineHeight": 16.94318199157715,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "dv-row-0-meta",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dv-row-0-seen",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dv-row-0-action",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "dv-row-1-name",
+        "family": "Inter",
+        "weight": 600,
+        "size": 14,
+        "lineHeight": 16.94318199157715,
+        "colour": "color.ink.text"
+      },
+      {
+        "role": "dv-row-1-meta",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dv-row-1-seen",
+        "family": "Inter",
+        "weight": 400,
+        "size": 9,
+        "lineHeight": 10.892045021057129,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dv-row-1-action",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.danger.red"
+      },
+      {
+        "role": "dv-pair-label",
+        "family": "Inter",
+        "weight": 400,
+        "size": 12,
+        "lineHeight": 14.522727012634277,
+        "colour": "color.brand.bright"
+      },
+      {
+        "role": "dv-note-1",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dv-note-2",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      },
+      {
+        "role": "dv-note-3",
+        "family": "Inter",
+        "weight": 400,
+        "size": 10,
+        "lineHeight": 12.102272033691406,
+        "colour": "color.ink.muted"
+      }
+    ]
+  }
+}
