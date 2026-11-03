@@ -6,6 +6,44 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-03 (L7, the prototype becomes a real column)
+
+- **The eleven routed frames are columns, not collages.** `01 · Pairing`, `06 · Settings` and
+  `07 · About` already had a body column (`pair-body`, `st-body`, `ab-body`); the other eight —
+  `02 · Repo list`, `22 · Repo · backlog`, `20c · Crew · aerial`, `26 · Design · preview + chat`,
+  `05 · Dashboard`, `15 · Settings / Devices`, `16 · Settings / Credentials` and
+  `17 · Settings / Notifications` — were flat frames with every child absolutely placed. Each was
+  restructured into contiguous bands (`<prefix>-band-status`, `-header`, `-content`, plus
+  `-tabbar` or `-composer` where the frame has one) that tile the frame, the children were
+  re-parented into their band at their original absolute position, and the frame was set to
+  `VERTICAL` with padding 0 and gap 0. Absolute geometry was diffed for all 311 re-parented
+  children before and after: **zero drift**, so the drawing each export renders is unchanged, and
+  the plugin reports `VERTICAL` on every routed frame. Frame captions are untouched, so
+  `design/import.json` still resolves all eleven.
+- **The palette is styles, and it has two holes.** The twelve `PAINT` styles named after the token
+  keys (`color.surface.bg` … `color.danger.red`) are in the file and ten Design System swatches
+  are linked to them. The drawing uses two border colours that `design/tokens.json` does not
+  define — `#1d2633` dark, `#e3e8ee` light — so they stay outside the twelve and
+  `coloursOutsideTokens` keeps reporting them; a token document that covered them would be a
+  change to Task-84's document, not to the file.
+- **The re-import waits on the file's read quota.** `GET /v1/files/:key` answers `429` with
+  `retry-after: 392270`, so the generated artifacts still hold the L6 measurement — same geometry,
+  regions grouped at frame level — until the first import after 2026-11-08T03:00Z. That import is
+  the one that writes `layoutMode: vertical` and the band regions; `--check` runs with it.
+- **Batch 25 is cut so that import does not lose the measurements.** `layoutOf` reads a frame's
+  direct children, so the first re-import would collapse each screen's 40–60 element regions into
+  the 3–5 band boxes. Task-102 teaches the projection to look through a fill-less child frame and
+  to keep a painted one as its own region; it must land before the quota reopens.
+- **One criterion was false and is corrected in `TODO.md`.** L7 asked a re-import to report
+  `styles` > 0, but `scripts/design/import.mjs` never calls `/styles` and `import.test.mjs` pins
+  that it does not, so no code can produce that number; the palette is verified through the REST
+  `/styles` resource, which is the item's own `[live]` criterion.
+- **No components or variants.** A row, a chip and a header repeat, but promoting a row to a
+  master and its siblings to instances means rebuilding those rows with per-instance text
+  overrides, and `instance_set_overrides` only copies between instances that already exist. That
+  is a later design pass; it blocks no screen task, because the export and the banded column
+  already carry the layout.
+
 ### Changed — 2026-11-03 (Task-101, the pipeline's guards stop being prose)
 
 - **No pipeline role fetches the web (D60).** `opencode.json` denied `webfetch` for the
