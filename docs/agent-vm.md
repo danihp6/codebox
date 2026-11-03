@@ -70,7 +70,7 @@ Rules that follow from the table:
 | `brake.sh` | The brake by hand (`on`, `off`) or by window (`window 4`), plus `status` and `reset`. |
 | `prompt.md` | The Orchestrator's prompt. **The canonical copy**: `agent-cycle.yml` reads this file too, so the two hosts cannot drift. |
 | `install.sh` | Bootstrap: user, directories, git, Node 24, OpenCode, Playwright dependencies, the env template and the unit. |
-| `recon.mjs` | The same ref reader the Actions host uses. Node built-ins only, so it runs before `npm ci`. |
+| `recon.mjs` | The same ref reader the Actions host uses. Node built-ins only, so it needs no `node_modules` of its own; it runs after the conditional install and before the model. |
 
 State lives in `$CB_AGENT_STATE` (default `/var/lib/cb-agent`):
 
@@ -93,9 +93,12 @@ the state. Losing it costs history, not a task.
 flock "$CB_AGENT_STATE/lock" run-cycle.sh
   git fetch --prune
   git checkout main && git reset --hard origin/main
-  node scripts/agent/recon.mjs                    # built-ins only
+  # pre-cycle, conditional: only when node_modules is missing or older than the lockfile
+  npm ci --prefer-offline --no-audit --no-fund
+  node scripts/agent/recon.mjs                    # built-ins only, needs no node_modules
   # prompt.md, its {{MERGE}} placeholder substituted, passed as the message
   opencode run --agent orchestrator --auto --model "$CB_AGENT_MODEL" "$prompt"
+  # post-merge gate, installed from the lockfile
   npm ci --prefer-offline --no-audit --no-fund && npm run lint && npm test && npm run build
   node scripts/agent/verdict.mjs                  # green / red + reason
   append cycles.ndjson; write last-cycle.md
