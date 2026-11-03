@@ -88,6 +88,28 @@ first release exists.
   **not measured here** (no `actions: write`, no repository variables, no model budget); an
   `agent-review` order carries the six-step recipe.
 
+### Added — 2026-11-03 (L6, the measured design import)
+
+- **`design/` holds the prototype's eleven routed screens as data.**
+  `node scripts/design/import.mjs --file 3HMV2UN6QviuNXe2T3Htsr` wrote `design/routes.json`
+  (11 routes), one `design/screens/<slug>.json` per frame — its three states and the measured
+  `layout` D58 asks for — and `design/exports/<slug>.png` at scale 2: 780 × 1688, 58–105 kB, all
+  under the 400 kB bound `design/README.md` sets. The page returned 83 frames (11 mapped, 72
+  unmapped) and 42 distinct colours, **35 of them outside `design/tokens.json`**: they project
+  `null` and are measured by `coloursOutsideTokens`, never turned into an invented key. Seven
+  literals met a token value, and every spec is `inferred: true` because no frame carries
+  autolayout — that gap is L7's, one style per palette value and a real layout mode per frame.
+- **The design check reads the new tree clean.** A local replay of
+  `apps/daemon/src/gate/design-check.ts` over the committed documents reports **0 enforced
+  findings and 31 report-only `screen_state_missing`** — the 33 state slots of eleven screens
+  minus the two the map declares (`12 · First run` for Dashboard's `empty`, `14 · Unpaired` for
+  Pairing's `error`). No colour, route or snapshot rule fires, and each spec's `snapshotSha256`
+  matches the PNG beside it.
+- The item's `[live]` half — the gate tail of a real run whose diff touches `design/` — is
+  unmeasured here: `npm test` cannot execute on the operator's Windows box (`test:guard`'s
+  quoting, recorded at Task-100), so the unit half rests on the `packages/design` and
+  `scripts/design` suites and CI stays the authority.
+
 ### Changed — 2026-11-01 (Task-100, the probation streak reads the run history)
 
 - **G8a stops reading a constant.** `createDaemonSettings` hardcoded
