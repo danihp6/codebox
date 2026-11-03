@@ -29,7 +29,7 @@
           ".agent_specs/*": "allow",
           ".agent_specs/**": "allow"
         },
-        "webfetch": "allow"
+        "webfetch": "deny"
       }
     },
     "dev": {
@@ -40,7 +40,8 @@
       "permission": {
         "edit": "allow",
         "bash": "allow",
-        "external_directory": "allow"
+        "external_directory": "allow",
+        "webfetch": "deny"
       }
     },
     "qa": {
@@ -55,7 +56,8 @@
           "TODO.md/*": "allow"
         },
         "bash": "allow",
-        "external_directory": "allow"
+        "external_directory": "allow",
+        "webfetch": "deny"
       }
     }
   }

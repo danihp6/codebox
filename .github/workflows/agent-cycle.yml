@@ -139,7 +139,7 @@ jobs:
           [ -n "$model" ] || model="${CB_AGENT_MODEL:?CB_AGENT_MODEL is not set}"
           # One prompt for both hosts: the VM runs this file directly, and this
           # workflow reads it so the fallback cannot drift from the loop.
-          PROMPT=$(sed -e "s|{{MERGE}}|${{ inputs.merge }}|g" scripts/agent/vm/prompt.md)
+          PROMPT=$(sed -e "s|{{MERGE}}|${{ inputs.merge }}|g" -e "s|{{MAX_DEVS}}|4|g" scripts/agent/vm/prompt.md)
           # A transport drop is not a broken loop: retry once when it shipped nothing. With
           # the durable branches the second attempt adopts whatever the first one pushed,
           # so the retry is cheap; after a task shipped, the next cycle resumes instead.

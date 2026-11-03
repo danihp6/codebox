@@ -43,8 +43,8 @@ produces, and no two tasks create or modify the same path. Exceptions, named in 
 batches when their paths are disjoint and their dependencies are merged. Four dev slots is the
 target; a one-task batch is a last resort, and every empty slot is recorded with the constraint
 that blocked it. The env template suggests two dev slots (`CB_AGENT_MAX_DEVS=2`) on 2/12,
-rising to 4 only on a 4/24 resize, and no shipped workflow, script, prompt or role reads that
-key, so a wave's size stays the Orchestrator's judgement — fewer cores are a reason to take
+rising to 4 only on a 4/24 resize; `run-cycle.sh` reads the key and passes it to the prompt and
+the ledger, and the Actions host renders the ceiling 4, so fewer cores are a reason to take
 fewer tasks, never a licence to serialise.
 
 **Specs for one batch only.** Later batches are re-planned with what actually shipped; a spec

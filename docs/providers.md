@@ -272,9 +272,9 @@ are read by the workflows in `.github/workflows/` and by `scripts/agent/vm/`, ne
 | `CB_AGENT_AUTOPILOT` | repo variable / `$CB_AGENT_STATE/brake` | `on` arms the loop; anything else parks it. |
 | `CB_AGENT_FROM` / `CB_AGENT_UNTIL` | repo variable / `$CB_AGENT_STATE/window` | Armed window as absolute UTC instants. |
 | `CB_AGENT_DAILY_CYCLES` | variable | Cycles per UTC day; `0` or unset means no cap. |
-| `CB_AGENT_MAX_DEVS` | variable | Dev slots per wave; ceiling 4, default 2 on the 2/12 shape. |
+| `CB_AGENT_MAX_DEVS` | variable | Dev slots per wave; ceiling 4, default 2. Read by `scripts/agent/vm/run-cycle.sh` only: substituted into `prompt.md` as `{{MAX_DEVS}}` and recorded as `maxDevs` in `cycles.ndjson`. The Actions host renders the ceiling 4. |
 | `CB_AGENT_MODEL` | variable | `provider/model` passed to `opencode run`. |
-| `CB_AGENT_TOKEN` | Actions secret | Fine-grained PAT with `Variables: read and write`, for the window workflow only. |
+| `CB_AGENT_TOKEN` | Actions secret | Fine-grained PAT, this repository only: `Contents`, `Workflows` and `Variables` write. It is `agent-cycle.yml`'s checkout credential — `actions/checkout` persists it, because `GITHUB_TOKEN` cannot write under `.github/workflows/**` — and the window workflow's `gh variable set` writer; `GH_TOKEN` stays `GITHUB_TOKEN` for the issue and dispatch calls. |
 | `CB_AGENT_GIT_TOKEN` | `/etc/codebox/cb-agent.env` | PAT with `contents: write` + `issues: write` on this repository; the VM host's push credential. |
 | `CB_AGENT_STATE` | VM | State directory, default `/var/lib/cb-agent`. |
 | `CB_AGENT_REPO` | VM | The pipeline's clone of this repository, default `/srv/cb-agent/codebox`; a missing clone stops `run-cycle.sh` at `git fetch`. |
@@ -284,8 +284,10 @@ are read by the workflows in `.github/workflows/` and by `scripts/agent/vm/`, ne
 
 The inference key keeps the name OpenCode documents (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`,
 `OPENROUTER_API_KEY`); only the one `CB_AGENT_MODEL` names is set. **`CB_*` and `CB_AGENT_*`
-must not collide**: a daemon key in a workflow, or a pipeline key in `apps/daemon`, is a test
-failure.
+must not collide**: `packages/contracts/src/config.test.ts` pins the daemon's key list and
+`apps/daemon/src/start.test.ts` fails `loadConfig` on a key it does not know, so a pipeline key
+in `apps/daemon` is a test failure; neither reads `.github/workflows`, so a daemon key in a
+workflow is caught by review, not by the gate.
 
 ### 13.1 Figma import (operator only)
 

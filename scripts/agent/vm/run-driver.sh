@@ -12,6 +12,13 @@ set -uo pipefail
 # shellcheck source=lib.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
+forced_once=false
+if [ "$#" -gt 0 ]; then
+  [ "$1" = '--force' ] || die "unknown argument '$1' (try: --force)"
+  forced_once=true
+  [ "$#" -eq 1 ] || die "unknown argument '$2' (try: --force)"
+fi
+
 load_env
 ensure_state
 have git jq gh node npm opencode flock
@@ -46,21 +53,31 @@ while :; do
     continue
   fi
 
-  open=$(git -C "$CB_AGENT_REPO" show origin/main:TODO.md 2>/dev/null |
-    grep -cE '^[[:space:]]*-[[:space:]]*\[ \][[:space:]]*\*\*\[Task-' || true)
-  cycles_today=$(count_today all)
-  red_today=$(count_today red)
+  force_this_cycle=false
+  if [ "$forced_once" = true ]; then
+    forced_once=false
+    force_this_cycle=true
+    log "gate bypassed for one cycle (--force)"
+    go=true
+    reason='forced by --force'
+    alert=''
+  else
+    open=$(git -C "$CB_AGENT_REPO" show origin/main:TODO.md 2>/dev/null |
+      grep -cE '^[[:space:]]*-[[:space:]]*\[ \][[:space:]]*\*\*\[Task-' || true)
+    cycles_today=$(count_today all)
+    red_today=$(count_today red)
 
-  decision=$(node "$CB_AGENT_REPO/scripts/agent/gate.mjs" \
-    --state "$STATE" \
-    --open "${open:-0}" \
-    --cycles-today "${cycles_today:-0}" \
-    --red-today "${red_today:-0}" \
-    --cap "${CB_AGENT_DAILY_CYCLES:-0}")
+    decision=$(node "$CB_AGENT_REPO/scripts/agent/gate.mjs" \
+      --state "$STATE" \
+      --open "${open:-0}" \
+      --cycles-today "${cycles_today:-0}" \
+      --red-today "${red_today:-0}" \
+      --cap "${CB_AGENT_DAILY_CYCLES:-0}")
 
-  go=$(printf '%s' "$decision" | jq -r .go)
-  reason=$(printf '%s' "$decision" | jq -r .reason)
-  alert=$(printf '%s' "$decision" | jq -r '.alert // empty')
+    go=$(printf '%s' "$decision" | jq -r .go)
+    reason=$(printf '%s' "$decision" | jq -r .reason)
+    alert=$(printf '%s' "$decision" | jq -r '.alert // empty')
+  fi
 
   if [ "$go" != true ]; then
     log "parked: $reason"
@@ -79,7 +96,11 @@ while :; do
 
   log "starting a cycle: $reason"
   before_lines=$(wc -l < "$CYCLES")
-  "$VM_DIR/run-cycle.sh"
+  if [ "$force_this_cycle" = true ]; then
+    "$VM_DIR/run-cycle.sh" --force
+  else
+    "$VM_DIR/run-cycle.sh"
+  fi
   status=$?
   after_lines=$(wc -l < "$CYCLES")
   if [ "$status" -ne 0 ] && [ "$after_lines" -eq "$before_lines" ]; then

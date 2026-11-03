@@ -8,11 +8,36 @@ set -uo pipefail
 # shellcheck source=lib.sh
 . "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib.sh"
 
+forced=false
+if [ "$#" -gt 0 ]; then
+  [ "$1" = '--force' ] || die "unknown argument '$1' (try: --force)"
+  forced=true
+  [ "$#" -eq 1 ] || die "unknown argument '$2' (try: --force)"
+fi
+
 load_env
 ensure_state
 have git jq gh node npm opencode flock
 
 need CB_AGENT_MODEL CB_AGENT_GIT_TOKEN
+
+max_devs=${CB_AGENT_MAX_DEVS:-2}
+case "$max_devs" in
+  '' | *[!0-9]*) die "CB_AGENT_MAX_DEVS=$max_devs is outside 1..4 (the box's ceiling)" ;;
+esac
+if [ "$max_devs" -lt 1 ] || [ "$max_devs" -gt 4 ]; then
+  die "CB_AGENT_MAX_DEVS=$max_devs is outside 1..4 (the box's ceiling)"
+fi
+
+open_disk_order() {
+  local gb=$1
+  node scripts/agent/issue.mjs --label agent-blocked \
+    --title "Autopilot refused: less than 2 GB free on the box" --body-file - <<EOF
+The autopilot measured ${gb} GB free on the filesystem that holds ${STATE}, below the 2 GB floor,
+and refused to start a cycle. Free space on the box (prune logs, remove old node_modules or
+worktrees), then arm it again with scripts/agent/vm/brake.sh on.
+EOF
+}
 
 export GH_TOKEN=$CB_AGENT_GIT_TOKEN
 MERGE=${CB_AGENT_MERGE:-true}
@@ -26,7 +51,16 @@ flock -n 9 || die "another cycle already holds $STATE/lock"
 
 cd "$CB_AGENT_REPO" || die "no repository at $CB_AGENT_REPO (clone it first)"
 
-log "cycle $stamp starts on $model (merge=$MERGE)" | tee -a "$cycle_log"
+MIN_FREE_GB=2
+prune_logs
+free=$(free_gb "$STATE") || free=0
+free=${free:-0}
+if [ "$free" -lt "$MIN_FREE_GB" ]; then
+  open_disk_order "$free" || log "error: could not open the disk order; the refusal stands"
+  die "refusing to start: only $free GB free, below the ${MIN_FREE_GB} GB floor"
+fi
+
+log "cycle $stamp starts on $model (merge=$MERGE, devs=$max_devs)" | tee -a "$cycle_log"
 
 git fetch --prune --quiet origin || die "git fetch failed"
 
@@ -61,7 +95,7 @@ log "recon of the durable state" | tee -a "$cycle_log"
 node scripts/agent/recon.mjs --todo TODO.md --base origin/main --out .agent_specs/resume.md \
   >> "$cycle_log" 2>&1 || die "recon failed"
 
-prompt=$(sed -e "s|{{MERGE}}|$MERGE|g" "$VM_DIR/prompt.md")
+prompt=$(sed -e "s|{{MERGE}}|$MERGE|g" -e "s|{{MAX_DEVS}}|$max_devs|g" "$VM_DIR/prompt.md")
 
 run_cycle() {
   # `--auto` plus a shell, same as the runner. The stream is captured so a transport
@@ -128,11 +162,13 @@ inflight=$(grep -oE 'branches alive: [0-9]+' .agent_specs/resume.md 2>/dev/null 
 jq -nc \
   --arg ts "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
   --arg status "$status" --arg reason "$reason" --arg model "$model" \
+  --argjson maxDevs "$max_devs" --argjson forced "$forced" \
   --arg before "$before_sha" --arg head "$head_sha" \
   --arg tasks "$tasks" --arg tests "$tests" \
   --argjson moved "$moved" --argjson issued "$issued" --argjson gate "$gate_ok" \
   --argjson agent "$agent_ok" --argjson open "${open:-0}" --argjson blocked "${blocked:-0}" \
-  '{ts:$ts,status:$status,reason:$reason,model:$model,before:$before,head:$head,tasks:$tasks,
+  '{ts:$ts,status:$status,reason:$reason,model:$model,maxDevs:$maxDevs,forced:$forced,
+    before:$before,head:$head,tasks:$tasks,
     tests:$tests,moved:$moved,issued:$issued,gate:$gate,agent:$agent,open:$open,blocked:$blocked}' \
   >> "$CYCLES"
 

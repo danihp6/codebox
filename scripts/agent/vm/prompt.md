@@ -17,6 +17,9 @@ ENVIRONMENT FACTS — do not discover them by failing:
   must be measured, through `scripts/agent/issue.mjs`. On the VM you can measure it with
   `npx playwright test` and must say how.
   **Nothing is ever reported as pass without being measured.**
+- Dev slots: this run may use at most {{MAX_DEVS}} devs in parallel; the ceiling is 4. Fewer
+  cores are a reason to take fewer tasks, never a licence to serialise and never a reason to
+  exceed the number.
 - `origin` is reachable and writable; pushes work. The machine may persist, but the durable
   state is the refs, not the disk.
 - The product (`cbd`) and this pipeline are separate users, directories and ports. Never read
@@ -51,7 +54,7 @@ CHOOSE THE BATCH:
    `*Dependencies:*`, then take the **lowest pending batch, complete as cut** (2–4 tasks: no
    two tasks in a batch share a path, so they run together).
 1b. **Fill the batch.** A one-task batch must not waste the other slots: add tasks from later
-   batches up to four, and only when (a) their paths are disjoint from the union of the chosen
+   batches up to `{{MAX_DEVS}}`, and only when (a) their paths are disjoint from the union of the chosen
    ones, (b) they need no file a batch-mate produces, and (c) their own dependencies are already
    merged. Hot files keep one owner per batch. The plan's cut is the floor, not the ceiling.
 2. An item with a `*Decision:*` line carries the human's answer **already taken**, and that

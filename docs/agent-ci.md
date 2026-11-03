@@ -218,10 +218,11 @@ Chaining matters and it is measured: cron is a request. The donor's `*/30` sched
 three times in six hours overnight, so the schedule is the safety net and the chain is the
 loop. `agent-cycle.yml` dispatches the driver at its end and the driver decides.
 
-A park repeats on every pass, so its issue is opened through `scripts/agent/issue.mjs` with the
-`agent-blocked` label: one open issue per condition, and a later pass **comments** on it instead
-of opening a second one. The title is the comparison key, so it never carries the day's count;
-the body does.
+A park repeats on every pass, and only the empty-backlog and red-streak parks open one:
+each goes through `scripts/agent/issue.mjs` with the `agent-blocked` label, and a later pass
+**comments** on the open issue instead of opening a second one. The brake, the window and
+the daily cap park silently in the log. The title is the comparison key, so it never
+carries the day's count; the body does.
 
 `agent-cycle.yml` is also dispatchable by hand, which is the recovery path when the loop is
 parked: the cycle has no brake gate of its own, so a hand dispatch starts one cycle even while
@@ -303,7 +304,7 @@ message naming it.
 | `CB_AGENT_FROM` | variable | — | Start of the armed window, absolute UTC (`2026-10-24T22:00:00Z`). |
 | `CB_AGENT_UNTIL` | variable | — | End of the armed window. Present ⇒ the driver parks outside it. |
 | `CB_AGENT_DAILY_CYCLES` | variable | `0` | Cycles per UTC day; `0` or unset means no cap. |
-| `CB_AGENT_MAX_DEVS` | variable | `2` | Documented and exported by the VM scripts and read by no shipped workflow, script, prompt or role; the wave's size is the Orchestrator's judgement. |
+| `CB_AGENT_MAX_DEVS` | variable | `2` | Documented and exported by the VM scripts; `run-cycle.sh` reads it, substitutes it into the prompt as `{{MAX_DEVS}}` and records `maxDevs` in the ledger. Ceiling 4, default 2. No GitHub workflow reads it, so on the Actions host the wave's size is the Orchestrator's judgement under the ceiling. |
 | `CB_AGENT_MODEL` | variable | required | `provider/model` passed to `opencode run --model`. |
 | `OPENCODE_CLIENT_ID` | variable | required | Public OAuth client id of the OpenCode console, used only by the `id-token` exchange. Kept out of the tree because its `sk_` prefix trips the Checkout.com scan. |
 | `CB_AGENT_TOKEN` | secret | required | Fine-grained PAT, this repository only: `Contents: read and write`, `Workflows: read and write`, `Variables: read and write`. |
@@ -342,9 +343,10 @@ itself), which is cheap next to the cycle it exists to stop starting.
   repository. Where it does not, the only barrier between the agent and `main` is the gate,
   the QA waves and the job's `contents: write` — which is why only `agent-cycle.yml` holds it.
 - The agent runs with `--auto`, a shell, an inference key in its environment and write access
-  to `main`. Only the Orchestrator denies `webfetch`; the Architect allows it and the Dev and
-  QA set no rule, so a subagent can fetch a page. A poisoned document — fetched or inside the
-  repository — is the injection risk worth watching; protected paths are the product's answer
+  to `main`. `webfetch` is denied for every pipeline role — `opencode.json` sets it for
+  `orchestrator`, `architect`, `dev` and `qa`, and `scripts/agent/opencode-config.test.mjs`
+  pins it (D60) — so a poisoned document has to arrive inside the repository. A poisoned
+  document is still the injection risk worth watching: protected paths are the product's answer
   and the pipeline has no equivalent for itself.
 - A human push to `main` while a cycle is in flight can reject the cycle's final push. The
   cycle is told to bring `origin/main` into its branch and re-gate before pushing; if it

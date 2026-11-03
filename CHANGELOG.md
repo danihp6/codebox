@@ -6,6 +6,49 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-03 (Task-101, the pipeline's guards stop being prose)
+
+- **No pipeline role fetches the web (D60).** `opencode.json` denied `webfetch` for the
+  Orchestrator alone; `architect` allowed it and `dev`/`qa` set no rule, while
+  `docs/agent-ci.md` §10 and `docs/agent-vm.md` §10 promised the denial for every role. All four
+  now carry `"webfetch": "deny"`, `scripts/agent/opencode-config.test.mjs` fails if any role is
+  missing or is not `deny`, `docs/security.md` §2 states the rule and D60 records why a
+  permission nobody tests drifts.
+- **`CB_AGENT_MAX_DEVS` has one reader.** `run-cycle.sh` reads the key, validates it into
+  `1..4` before the lock, substitutes it into the canonical `prompt.md` as `{{MAX_DEVS}}` — the
+  bullet states the ceiling to the Orchestrator and step 1b fills the batch up to it — and
+  records `maxDevs` in `cycles.ndjson`. `lib.sh` drops its old default/export so the env file
+  (exported by `set -a`) is the single source; `.github/workflows/agent-cycle.yml` renders the
+  ceiling `4` on that host, so no raw placeholder reaches an agent. The two `docs/providers.md`
+  rows, `docs/agent-ci.md` §10, `docs/agent-vm.md` §1 and `docs/agent-pipeline.md` §2 stop saying
+  nothing reads the key.
+- **The box gets the two guards `docs/agent-vm.md` described.** `lib.sh` gains `prune_logs`
+  (`cycle-*.log` older than 14 days, silent when there is nothing to remove) and `free_gb`
+  (floored GiB on the filesystem holding `$CB_AGENT_STATE`, fail-closed when `df`/`awk` cannot
+  answer); `run-cycle.sh` prunes first and then refuses to start below 2 GB, opening one
+  `agent-blocked` order through `scripts/agent/issue.mjs` with a title that carries no date so a
+  repeat comments instead of duplicating. The `Disk fills` recovery row and the state line stop
+  saying the logs are never pruned.
+- **`--force` exists, and it is spent once.** `decideGate({force})` returns
+  `{ go: true, reason: 'forced by --force' }` before the brake check as a pure decision;
+  `run-cycle.sh [--force]` records `forced: true|false` in the ledger beside `maxDevs`;
+  `run-driver.sh --force` bypasses `gate.mjs` for the first pass only, logs
+  `gate bypassed for one cycle (--force)` and asks the gate again on every later pass. Neither
+  flag clears the brake, and a direct `run-cycle.sh` invocation remains the recovery path.
+- **The four false sentences outside Task-02's writable set are corrected**: the
+  `CB_AGENT_TOKEN` row now names `agent-cycle.yml`'s checkout credential, the
+  `CB_AGENT_MAX_DEVS` row names its reader, the namespace paragraph says which check catches
+  which tree, and `agent.env.example` stops claiming Actions uses `GITHUB_TOKEN` instead. The
+  agent-ci park paragraph now says which two parks open an order.
+- New tests: `scripts/agent/opencode-config.test.mjs` (any role without `deny` fails) and
+  `scripts/agent/vm/run-cycle.test.mjs` (prune, the 2 GB refusal with a fake `df` and a stub
+  `node`, both ledger values, the rendered prompt, and the driver's one-pass bypass).
+- The gate is green on the merged tree (`npm ci`, lint, test, build; app 66 files / 482 tests,
+  workspace 197 files / 1950 passed and 2 skipped). The `[live]` criterion — one forced cycle on
+  the box that prunes a seeded 15-day log, refuses at a 1 GB probe and leaves `forced: true` in
+  `cycles.ndjson` — is **not measured here** (no VM, no model key): `agent-review` issue #119
+  carries the three reads.
+
 ### Changed — 2026-11-03 (Task-02, the pipeline docs say what the shipped tree does)
 
 - **Task-02 closed its own blocker by measuring it.** The item had been `[!]` since Batch 1

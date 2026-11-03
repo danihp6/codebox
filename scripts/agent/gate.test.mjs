@@ -74,4 +74,12 @@ describe('decideGate', () => {
     expect(decision.go).toBe(false);
     expect(decision.reason).toContain('brake');
   });
+
+  it('lets `--force` bypass every guard, brake included', () => {
+    expect(decideGate({ ...base, brake: 'off', openTasks: 0, force: true })).toEqual({
+      go: true,
+      reason: 'forced by --force',
+      alert: null,
+    });
+  });
 });

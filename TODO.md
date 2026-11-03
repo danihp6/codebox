@@ -433,6 +433,32 @@ outside Task-02's writable set (`docs/providers.md` §10's `CB_AGENT_TOKEN` and
 are cut as **Task-101** in Batch 24, so the next cycle has real work instead of a third order for
 the same dry queue.
 
+**Cut — cycle 2026-11-03T02:48Z, after the Task-02 merge and its residue cut (one of four slots
+used).** No task branch was alive (`git ls-remote origin 'refs/heads/task-*'` printed nothing and
+`.agent_specs/resume.md` agreed) and `main` was `96db807`. Batch 24 is the lowest pending batch
+and its only item, **Task-101**, is eligible: Task-02 is merged and Task-48 shipped
+`scripts/agent/issue.mjs`, the helper guard 3 calls. It holds `opencode.json` and
+`docs/decisions.md` (D60); no task holds `package.json`, `package-lock.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`,
+`TODO.md` or `CHANGELOG.md`. The three empty slots have no legal candidate: Task-32 waits on the
+blocked Task-31 (#105); Tasks 90–99 need `design/screens/<slug>.json` and
+`design/exports/<slug>.png`, which do not exist until L6 runs and the Figma read quota reopens at
+2026-11-03T09:42Z (this cut is at 02:48Z); L1–L7 are operator items the driver never picks.
+**Deviations from the item's `*Paths:*` line, recorded:** the item says
+`docs/providers.md` §10, but §10 is `Notifications` — the `CB_AGENT_TOKEN` row, the
+`CB_AGENT_MAX_DEVS` row and the namespace paragraph are in **§13**, and §13 is what the task
+corrects; the task also corrects the two sentences change (1) makes false (`docs/agent-vm.md`
+§10, `docs/agent-ci.md` §12) and the `Filling` clause change (2) makes false
+(`docs/agent-pipeline.md` §2); and `.github/workflows/agent-cycle.yml` gains one line only — it
+renders `{{MAX_DEVS}}` as the literal `4` of the ceiling, so the Actions host never receives a
+raw placeholder while `run-cycle.sh` stays the key's only reader. `lib.sh` loses its old
+`CB_AGENT_MAX_DEVS` default/export for the same reason; the env file's `set -a` still exports it
+and `run-cycle.sh`'s `${CB_AGENT_MAX_DEVS:-2}` supplies the default. The `[live]` criterion — one
+forced cycle on the box that prunes a seeded log, refuses at 1 GB and leaves `forced: true` in
+`cycles.ndjson` — is unmeasured on this runner (no VM, no model key): `agent-review` issue #119
+carries the three reads.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -1957,7 +1983,7 @@ task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
 `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`,
 `apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`, `TODO.md` or `CHANGELOG.md`.
 
-- [ ] **[Task-101]** The guards the pipeline's docs promise and its code does not carry. Four
+- [x] **[Task-101]** The guards the pipeline's docs promise and its code does not carry. Four
       changes, one theme: a reader sees the same facts in the tree as in the docs. **(1)**
       `opencode.json` denies `webfetch` for `architect`, `dev` and `qa` exactly as it does for
       `orchestrator` — `docs/agent-ci.md` §10 and `docs/agent-vm.md` §10 state it for every
