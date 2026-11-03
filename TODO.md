@@ -2124,7 +2124,12 @@ of them.
       are drawn (2026-11-03):** the Design System's `STATES · BUTTON AND ROW` block carries
       `default`, `hover`, `focus-visible`, `pressed` and `disabled` for a button and a row, in
       dark and light, with the focus ring on both — so that criterion is met and only the 320
-      column, the empty/error states and the two flows are still owed. **Desktop is out of v1**
+      column, the empty/error states and the two flows are still owed. **The 320 column has its
+      reference (2026-11-03):** `S5 · Pairing · 320 × 568` fixes the pattern — 16 px margins, a
+      288 px column, the card at radius 16, the primary action at 44 px, the foot under the card
+      — and `design/README.md` §1 names it; the other nine rows are drawn from it. The same pass
+      repaired `01 · Pairing — mobile dark`, whose primary button painted `#0b0f14` on
+      `#0b0f14`: `Pair device` was invisible in the export. **Desktop is out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
       the beta, and `D2`/`D4`, `D5`–`D8` and `D9` stay as the reference they already are. Then
       wire the prototype so **these two flows** are clickable (decided 2026-10-30):

@@ -41,7 +41,7 @@ Figma, not the layer names.
 
 | Screen | Route | Feature folder | dark | light | desktop | 320 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Pairing | `/pair` | `features/pairing` | 01 | L1 | — | — |
+| Pairing | `/pair` | `features/pairing` | 01 | L1 | — | S5 |
 | Repo list | `/repos` | `features/repos` | 02 | L2 | — | — |
 | Repo · backlog | `/repos/:id` | `features/backlog` | 22 | L22 | D9 · LD9 | — |
 | Repo · workers | `/repos/:id/workers` | `features/works` | 20c · 20e–20i | L20 · L20e–L20i | D5–D8 · LD5–LD8 | — |
@@ -60,6 +60,13 @@ deleted: a merged run hands the work on and sleeps, a failed one becomes a decis
 **Missing and known:** there is no frame yet for `/settings/providers` (provider accounts,
 D54), for the per-repository blocks on the dashboard, or for the checkbox column of a backlog
 row.
+
+**The 320 column is being drawn, one reference first.** `S5 · Pairing · 320 × 568` is the
+pattern the other nine rows follow: 16 px margins, a 288 px content column, the status bar at
+13/12 px, the card at radius 16 with its content at 16 px, the primary action full width at
+44 px, and the foot (the command and the note) below the card. `S1`/`S2` are stale — they still
+draw the retired `Chat list`/`Chat` — so a row counts as covered only when its caption names the
+screen it draws, and only `S3` (Credentials) and `S5` (Pairing) do.
 
 ## 2. States and sheets
 

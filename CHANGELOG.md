@@ -19,6 +19,16 @@ first release exists.
 - **`design/README.md` §2 maps the sheet** and states its two states, so Task-99 names a frame and
   an export instead of a description. The export lands with the first re-import after
   2026-11-08T03:00Z; the sheet is drawn, not yet measured.
+- **The 320 column has its reference frame.** `S5 · Pairing · 320 × 568` is the first of the ten
+  routed screens squeezed to the reference width, and it fixes the pattern the other nine follow:
+  16 px margins, a 288 px content column, the card at radius 16 with its content at 16 px, the
+  primary action full width at 44 px, and the foot — the `cb pair` command and the note — under
+  the card. `design/README.md` §1 names it and §1's note records that `S1`/`S2` are stale (they
+  still draw the retired `Chat list`/`Chat`), so a row counts as covered only when its caption
+  names the screen it draws.
+- **`Pair device` was invisible.** `01 · Pairing — mobile dark` painted its primary button
+  `#0b0f14` on `#0b0f14`, with the label the same colour, so the action vanished from the export
+  while the light twin had it right. The fill is `color.brand.bright` again, matching `L1`.
 - **The Design System's interaction states were already in the file** — `default`, `hover`,
   `focus-visible`, `pressed` and `disabled` for a button and for a row, in dark and light, with
   the focus ring on both — so L5's `[unit]` criterion for them is met and `TODO.md` says so. What
