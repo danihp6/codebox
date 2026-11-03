@@ -42,9 +42,10 @@ produces, and no two tasks create or modify the same path. Exceptions, named in 
 **Filling.** A batch that would run one task must try to pull dependency-free tasks from later
 batches when their paths are disjoint and their dependencies are merged. Four dev slots is the
 target; a one-task batch is a last resort, and every empty slot is recorded with the constraint
-that blocked it. The **effective** slot count is host-bound: `CB_AGENT_MAX_DEVS` is 2 on the
-2 OCPU runner and the 2/12 box, and may rise to 4 on a 4/24 box. A host with fewer cores is a
-reason to set the number, never a licence to serialise.
+that blocked it. The env template suggests two dev slots (`CB_AGENT_MAX_DEVS=2`) on 2/12,
+rising to 4 only on a 4/24 resize, and no shipped workflow, script, prompt or role reads that
+key, so a wave's size stays the Orchestrator's judgement — fewer cores are a reason to take
+fewer tasks, never a licence to serialise.
 
 **Specs for one batch only.** Later batches are re-planned with what actually shipped; a spec
 for unattempted work rots.
@@ -162,8 +163,9 @@ states its measurement.
   Recon. A drop that already shipped is not retried; the next cycle resumes.
 - Three red cycles in a day park the loop until a human looks. `CB_AGENT_DAILY_CYCLES` caps a
   normal day when set; unset or `0` means no cap.
-- A **timed window** (`CB_AGENT_FROM`/`CB_AGENT_UNTIL`, absolute UTC) is a belt under the
-  brake: a stale `on` cannot start a cycle past its end.
+- A **timed window** is a belt under the brake: on Actions it is `CB_AGENT_FROM` /
+  `CB_AGENT_UNTIL`, on the box `$CB_AGENT_STATE/window`, and both hold absolute UTC instants,
+  so a stale `on` cannot start a cycle past its end.
 
 ## 9. No human inside a cycle
 

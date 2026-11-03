@@ -426,9 +426,10 @@ never picks. Everything else is merged or `[!]`.
 **The audit's residue got an owner instead of another issue.** The four findings that are *code*
 rather than prose — `webfetch` denied for the Orchestrator alone while `docs/agent-ci.md` §10 and
 `docs/agent-vm.md` §10 promise it for every role, `CB_AGENT_MAX_DEVS` read by nothing, no log
-prune and no free-space guard on the box, and no `run-cycle.sh --force` — plus the three
-sentences outside Task-02's writable set (`docs/providers.md` §10's `CB_AGENT_TOKEN` scope and
-its repeat of the two-tree grep, and `scripts/agent/vm/agent.env.example`'s Actions credential)
+prune and no free-space guard on the box, and no `run-cycle.sh --force` — plus the sentences
+outside Task-02's writable set (`docs/providers.md` §10's `CB_AGENT_TOKEN` and
+`CB_AGENT_MAX_DEVS` rows and its repeat of the two-tree grep, and
+`scripts/agent/vm/agent.env.example`'s Actions credential)
 are cut as **Task-101** in Batch 24, so the next cycle has real work instead of a third order for
 the same dry queue.
 
@@ -530,7 +531,7 @@ without asking a question that the docs already answer.
       lint`, `npm test` and `npm run build` pass with the empty stubs; `[unit]` every
       workspace resolves through the root lockfile; `[unit]` no package has a dependency it
       does not import.
-- [ ] **[Task-02]** Agent pipeline wiring. Implement the pipeline designed in
+- [x] **[Task-02]** Agent pipeline wiring. Implement the pipeline designed in
       `docs/agent-pipeline.md`, `docs/agent-ci.md` and `docs/agent-vm.md`, adapted from
       `pkm-randomlike` with Codebox names: reconcile `.agent_roles/{orchestrator,architect,dev,qa}.md`
       with the scripts, and add `opencode.json`, `scripts/agent/{recon.mjs,gate.mjs,verdict.mjs}`,
@@ -1972,10 +1973,11 @@ task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
       `scripts/agent/issue.mjs`. **(4)** `run-cycle.sh --force` exists as documented: the driver's
       `--force` bypasses `gate.mjs` for one cycle and the ledger records `forced: true`; the
       direct `run-cycle.sh` invocation stays the recovery path because that script reads no brake.
-      The three false sentences Task-02 had to leave alone are corrected here:
+      The four false sentences Task-02 had to leave alone are corrected here:
       `docs/providers.md` §10's `CB_AGENT_TOKEN` row (it is also `agent-cycle.yml`'s checkout
-      token, not "for the window workflow only") and its repeat of the two-tree namespace grep,
-      and `scripts/agent/vm/agent.env.example`'s "Actions uses GITHUB_TOKEN instead".
+      token, not "for the window workflow only"), its `CB_AGENT_MAX_DEVS` row (the same stale
+      promise C7/C13 corrected, found by the QA pass), and its repeat of the two-tree namespace
+      grep, and `scripts/agent/vm/agent.env.example`'s "Actions uses GITHUB_TOKEN instead".
       *Paths:* `opencode.json`, `scripts/agent/{gate.mjs,gate.test.mjs}` (only if the driver's
       bypass needs it), `scripts/agent/vm/{run-cycle.sh,run-driver.sh,lib.sh,prompt.md,
       agent.env.example}`, `scripts/agent/opencode-config.test.mjs` + its ledger/prune tests,

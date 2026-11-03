@@ -6,6 +6,45 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-03 (Task-02, the pipeline docs say what the shipped tree does)
+
+- **Task-02 closed its own blocker by measuring it.** The item had been `[!]` since Batch 1
+  because its `[live]` criterion wanted `CB_AGENT_MODEL` and a provider key; `ed1708b` deleted
+  the secret instead of provisioning it — the cycle trades the job's OIDC token for a
+  short-lived console key (`docs/agent-ci.md` §10) — and the cycle that freed the item ran on
+  that key. Both `[unit]` criteria were re-measured before the cut (`npx vitest run
+  scripts/agent` → 4 files / 33 tests; a dry `brake.sh status` on a temp `CB_AGENT_STATE` →
+  `brake:  unset` / `window: none` / `cycles: 0 today (0 red)`, exit 0).
+- **Fourteen sentences in `docs/agent-pipeline.md`, `docs/agent-ci.md` and `docs/agent-vm.md`
+  described a pipeline the tree does not ship**, and all fourteen now describe the one it does:
+  the Actions checkout credential is the `CB_AGENT_TOKEN` PAT and not an ephemeral
+  `GITHUB_TOKEN`; both hosts pass the substituted prompt as the message argument instead of
+  piping the raw file on stdin; the window workflow's input is `from`, not `start`, and it
+  declares `actions: write` alone; `CB_AGENT_MAX_DEVS` is documented and exported but read by no
+  workflow, script, prompt or role, so a wave's size stays the Orchestrator's judgement; the
+  namespace guard is the contracts' key list and `loadConfig`'s rejection, not a test that greps
+  both trees; `webfetch` is denied for the Orchestrator alone — the Architect allows it and Dev
+  and QA set no rule; the logs are never pruned and no free-space guard exists, so
+  `run-cycle.sh` force-removes every `../wt-cb-*` worktree and nothing else concerns itself with
+  the disk; the conditional install runs before `recon.mjs`, which runs before the model; the
+  timed window is `CB_AGENT_FROM`/`CB_AGENT_UNTIL` on Actions and `$CB_AGENT_STATE/window` on
+  the box; and `run-cycle.sh` takes no `--force` and records no `forced` field, because it
+  reads no brake — the driver's `gate.mjs` is the only reader.
+- **Deviation from the item's `*Paths:*` line, recorded:** the roles, `scripts/agent/**`,
+  `opencode.json` and `.github/workflows/agent-*.yml` were read, not written. The pass verifies
+  the port and does not move it, so the diff is the force-added spec plus the three docs and
+  nothing else; the QA pass proved it with `git diff --name-only` against the hot files.
+- **The residue has an owner.** The four findings that are behaviour rather than prose (the
+  `webfetch` permission for three of the four roles, `CB_AGENT_MAX_DEVS` with no reader, the
+  missing log prune and free-space guard, and the missing `--force`) and the four stale
+  sentences outside this task's writable set are cut as **Task-101** in Batch 24 instead of
+  becoming another `agent-review` order with no task behind it.
+- The gate is green on the merged tree (`npm ci`, lint, test, build; app 66 files / 482 tests,
+  workspace 195 files / 1940 passed and 2 skipped). The `[live]` criterion — one dispatched
+  `agent-cycle` on a throwaway branch reading `moved: yes` or `issues n -> m` with `m > n` — is
+  **not measured here** (no `actions: write`, no repository variables, no model budget); an
+  `agent-review` order carries the six-step recipe.
+
 ### Changed — 2026-11-01 (Task-100, the probation streak reads the run history)
 
 - **G8a stops reading a constant.** `createDaemonSettings` hardcoded

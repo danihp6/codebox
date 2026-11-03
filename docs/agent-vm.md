@@ -23,8 +23,10 @@ Three facts push the loop off Actions:
   pays `npm ci`, the Angular build and (for `[live]` criteria) a Playwright browser download.
 
 The OCI Always Free Ampere box — 2 OCPU / 12 GB, 100 GB boot volume — removes all three and
-keeps `node_modules` and the browser warm. It is not a big machine, so the pipeline's slot
-count is resource-bound: `CB_AGENT_MAX_DEVS=2` on 2/12, rising to 4 only on a 4/24 resize.
+keeps `node_modules` and the browser warm. It is not a big machine: the env template suggests
+two dev slots (`CB_AGENT_MAX_DEVS=2`) on 2/12, rising to 4 only on a 4/24 resize, and no
+shipped workflow, script, prompt or role reads that key, so a wave's size stays the
+Orchestrator's judgement.
 
 ## 2. Separation from the product
 
@@ -68,7 +70,7 @@ Rules that follow from the table:
 | `brake.sh` | The brake by hand (`on`, `off`) or by window (`window 4`), plus `status` and `reset`. |
 | `prompt.md` | The Orchestrator's prompt. **The canonical copy**: `agent-cycle.yml` reads this file too, so the two hosts cannot drift. |
 | `install.sh` | Bootstrap: user, directories, git, Node 24, OpenCode, Playwright dependencies, the env template and the unit. |
-| `recon.mjs` | The same ref reader the Actions host uses. Node built-ins only, so it runs before `npm ci`. |
+| `recon.mjs` | The same ref reader the Actions host uses. Node built-ins only, so it needs no `node_modules` of its own; it runs after the conditional install and before the model. |
 
 State lives in `$CB_AGENT_STATE` (default `/var/lib/cb-agent`):
 
@@ -76,7 +78,7 @@ State lives in `$CB_AGENT_STATE` (default `/var/lib/cb-agent`):
 brake            `on` or anything else
 window           "<from epoch> <until epoch>", present only while a range is armed
 cycles.ndjson    one line per cycle: ts, status, tasks, gate, agent, moved, issued…
-logs/cycle-*.log full transcript of every cycle, kept 14 days
+logs/cycle-*.log full transcript of every cycle, never pruned
 last-cycle.md    the markdown summary of the last one
 lock             flock target: one cycle at a time
 alerts           "title:date" lines, so a parked loop nags once a day, not every wake-up
@@ -91,8 +93,12 @@ the state. Losing it costs history, not a task.
 flock "$CB_AGENT_STATE/lock" run-cycle.sh
   git fetch --prune
   git checkout main && git reset --hard origin/main
-  node scripts/agent/recon.mjs                    # built-ins only
-  opencode run --agent orchestrator --auto --model "$CB_AGENT_MODEL" < scripts/agent/vm/prompt.md
+  # pre-cycle, conditional: only when node_modules is missing or older than the lockfile
+  npm ci --prefer-offline --no-audit --no-fund
+  node scripts/agent/recon.mjs                    # built-ins only, needs no node_modules
+  # prompt.md, its {{MERGE}} placeholder substituted, passed as the message
+  opencode run --agent orchestrator --auto --model "$CB_AGENT_MODEL" "$prompt"
+  # post-merge gate, installed from the lockfile
   npm ci --prefer-offline --no-audit --no-fund && npm run lint && npm test && npm run build
   node scripts/agent/verdict.mjs                  # green / red + reason
   append cycles.ndjson; write last-cycle.md
@@ -101,10 +107,10 @@ flock "$CB_AGENT_STATE/lock" run-cycle.sh
 - `git reset --hard origin/main` is safe **because nobody edits that clone**: every change
   travels through a `task-<ID>` branch on `origin`. A dirty tree or a rebase in progress is a
   hard refusal, not a discard — the script stops and says which file is dirty.
-- `recon.mjs` runs before any install so a broken dependency tree cannot hide the state of the
-  branches. The clone needs no `node_modules` before the cycle: `recon.mjs` and `verdict.mjs`
-  use Node built-ins and `opencode` is installed globally. The dev worktrees install their own
-  dependencies; the post-merge gate installs from the lockfile.
+- `recon.mjs` runs after the conditional install and before the model; it is Node built-ins
+  only, so it needs no `node_modules` of its own. `verdict.mjs` is built-ins too and `opencode`
+  is installed globally. The dev worktrees install their own dependencies; the post-merge gate
+  installs from the lockfile.
 - The lock is `flock`, not a pid file: a killed process releases it and the next cycle
   proceeds. `run-cycle.sh` refuses to start if another cycle holds it.
 - The post-merge gate is the same command as `ci.yml`, run on the merged tree. A red gate
@@ -143,8 +149,8 @@ CB_AGENT_GIT_TOKEN=github_pat_…   # contents: write + issues: write, this repo
 CB_AGENT_STATE=/var/lib/cb-agent
 ```
 
-`CB_AGENT_GIT_TOKEN` is the pipeline's only durable credential on the box. On Actions the
-ephemeral `GITHUB_TOKEN` covered the push; a service needs one that outlives a job. Scope it
+`CB_AGENT_GIT_TOKEN` is the pipeline's only durable credential on the box. The Actions cycle
+checks out with the long-lived **`CB_AGENT_TOKEN`** PAT, so a service needs the same kind. Scope it
 to this repository, grant `contents: write` and `issues: write`, nothing else — no
 `variables`, no `workflows`, no admin. The inference key is the second.
 
@@ -215,9 +221,10 @@ issue a day, three red cycles park the loop, `CB_AGENT_DAILY_CYCLES` caps the da
 and the window is a belt under the brake — a stale `on` cannot start a cycle past its end.
 `brake.sh` is the only writer of that state.
 
-A human at the shell can run one cycle with `run-cycle.sh --force`, which ignores the brake
-for that cycle and records `forced` in the ledger. It is the recovery path when the loop is
-parked, not a way to keep working with the brake off.
+A human at the shell can run one cycle with `run-cycle.sh` directly. The script checks no brake
+of its own — the driver's `gate.mjs` is the only reader — so the run starts even while the loop
+is parked, and the ledger records that cycle like any other. It is the recovery path when the
+loop is parked, not a way to keep working with the brake off.
 
 ## 8. What differs from the workflow
 
@@ -227,7 +234,7 @@ parked, not a way to keep working with the brake off.
 | Concurrency | `concurrency: agent-cycle` | `flock` on `$CB_AGENT_STATE/lock` |
 | Brake | repository variable `CB_AGENT_AUTOPILOT` | `$CB_AGENT_STATE/brake` |
 | Window | `CB_AGENT_FROM`/`UNTIL` + an hourly workflow | `$CB_AGENT_STATE/window`, read by the gate |
-| Credential for `main` | `GITHUB_TOKEN`, per run | a scoped PAT in `cb-agent.env` |
+| Credential for `main` | `CB_AGENT_TOKEN` PAT, per run | a scoped PAT in `cb-agent.env` |
 | Machine | 2 cores, 7 GB, cold every time | 2 cores, 12 GB, warm caches, also runs the product |
 | Job limit | 6 h, then killed | `TimeoutStartSec=21600`, then killed |
 | History | run summaries in the UI | `cycles.ndjson`, `logs/`, `last-cycle.md` |
@@ -246,7 +253,7 @@ are fine with the other being the primary.
 | A cycle hangs | `TimeoutStartSec` kills it; the next cycle adopts the live branch from its marker. |
 | The box reboots | The unit starts; one cycle runs when the brake allows. A mid-task branch is adopted. |
 | `main` moved during the final push | Fetch, merge `origin/main` into the task branch, re-gate, push. If it still fails, the branch stays at `qa: pass` for the next cycle. |
-| Disk fills | `run-cycle.sh` prunes merged worktrees at start and keeps 14 days of logs. `cb-agent` refuses to start a cycle below 2 GB free and opens one issue. |
+| Disk fills | A human's concern: nothing prunes the logs and nothing checks free space. `run-cycle.sh` removes every `../wt-cb-*` worktree and prunes the `git worktree` metadata at the start of a cycle. |
 | The box is rebuilt | `install.sh`, two credentials, clone; the refs restore every task. The state directory is not restored — it is evidence |
 | The product is unhealthy | Not the pipeline's business, unless the cycle's gate says so. `cb doctor` is the product's tool, not the driver's. |
 
@@ -264,10 +271,11 @@ the tools; only `npm ci` and the Playwright browser are paid again.
   compromised box cannot rewrite the loop's own brake on the Actions host.
 - The inference key is the other secret. Both rotate by hand: `brake.sh off`, edit,
   `systemctl restart cb-agent`.
-- The agent runs with `--auto`, a shell and write access to `main`. `webfetch` is denied for
-  every pipeline role, so the repository is the only input; a poisoned document inside it is
-  the injection risk worth watching, and the pipeline has no protected-path list of its own.
-  The brake and the red-streak guard are the containment.
+- The agent runs with `--auto`, a shell and write access to `main`. Only the Orchestrator
+  denies `webfetch`; the Architect allows it and the Dev and QA set no rule, so a subagent can
+  fetch a page. A poisoned document — fetched or inside the repository — is the injection risk
+  worth watching, and the pipeline has no protected-path list of its own. The brake and the
+  red-streak guard are the containment.
 - The pipeline never gets the product's GitHub App key, Vault token or tunnel token. It does
   not need them: it pushes to one repository and opens issues there.
 
@@ -288,7 +296,7 @@ armed at once — they share `main` and the markers, not a lock.
 ## 12. What Batch 1 must prove
 
 - `brake.sh status` reads **off** after `install.sh`, and the unit is enabled but idle.
-- One manual `run-cycle.sh --force` ships a docs-only task through the full ritual on the box.
+- One manual `run-cycle.sh` ships a docs-only task through the full ritual on the box.
 - A cycle that moves nothing is red, and three reds park the loop until `brake.sh reset`.
 - `brake.sh window 0` leaves the brake off and the window file empty.
 - A reboot mid-task is adopted by the next cycle, not redone blindly.
