@@ -24,6 +24,7 @@ const RED_LIMIT = 3;
  * @param {number} input.cyclesToday    cycles started since UTC midnight
  * @param {number} input.redToday       cycles that failed since UTC midnight
  * @param {number} [input.cap]          daily cap; 0 or unset means no cap
+ * @param {boolean} [input.force]       `--force` bypasses every guard, including the brake
  */
 export function decideGate({
   brake,
@@ -34,7 +35,12 @@ export function decideGate({
   cyclesToday,
   redToday = 0,
   cap = 0,
+  force = false,
 }) {
+  if (force === true) {
+    return { go: true, reason: 'forced by --force', alert: null };
+  }
+
   if (String(brake ?? '').trim() !== 'on') {
     return { go: false, reason: `brake is '${String(brake ?? '').trim() || 'unset'}'`, alert: null };
   }

@@ -7,6 +7,7 @@ runner in between. Paths and the split from the product are in `docs/agent-vm.md
 | --- | --- |
 | `run-driver.sh` | The loop: reads the brake, the backlog and today's ledger, asks `gate.mjs`, and runs a cycle when the answer is yes. Runs as `cb-agent.service`. |
 | `run-cycle.sh` | One cycle: fetch, refuse a dirty tree, reset, recon, `opencode run --agent orchestrator --auto`, post-merge gate, verdict, one line in the ledger. Holds the flock. |
+| `run-cycle.test.mjs` | Unit tests for the cycle's guards: `prune_logs`, the 2 GB refusal, `--force` in the ledger, `{{MAX_DEVS}}`, and the driver's one-pass bypass. |
 | `brake.sh` | The brake by hand (`on`, `off`) or by window (`window 4`), plus `status` and `reset`. |
 | `lib.sh` | Shared paths, env loading, logging and the ledger helpers. Sourced. |
 | `prompt.md` | The Orchestrator's prompt. The canonical copy: `agent-cycle.yml` reads this file too. |

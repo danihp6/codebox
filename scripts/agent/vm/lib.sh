@@ -13,13 +13,12 @@ resolve_paths() {
   CB_AGENT_ENV=${CB_AGENT_ENV:-/etc/codebox/cb-agent.env}
   CB_AGENT_MODEL=${CB_AGENT_MODEL:-}
   CB_AGENT_DAILY_CYCLES=${CB_AGENT_DAILY_CYCLES:-0}
-  CB_AGENT_MAX_DEVS=${CB_AGENT_MAX_DEVS:-2}
   CB_AGENT_MERGE=${CB_AGENT_MERGE:-true}
   STATE=$CB_AGENT_STATE
   LOGS=$STATE/logs
   CYCLES=$STATE/cycles.ndjson
   export CB_AGENT_REPO CB_AGENT_STATE CB_AGENT_ENV CB_AGENT_MODEL CB_AGENT_DAILY_CYCLES \
-    CB_AGENT_MAX_DEVS CB_AGENT_MERGE STATE LOGS CYCLES
+    CB_AGENT_MERGE STATE LOGS CYCLES
 }
 
 resolve_paths
@@ -91,6 +90,22 @@ count_today() {
     map(select((.ts // "") >= $date
       and (if $field == "red" then .status == "failed" else true end))) | length
   ' "$CYCLES" 2>/dev/null || echo 0
+}
+
+# Free space in GiB, floored, on the filesystem that holds $1. Non-zero status when df or awk
+# cannot answer; the caller treats that as 0 and refuses.
+free_gb() { df -Pk "$1" 2>/dev/null | awk 'NR==2 {printf "%d", $4/1048576}'; }
+
+# Delete $LOGS/cycle-*.log older than <days> (default 14). Prints the number removed.
+prune_logs() {
+  local days=${1:-14} removed
+  [ -d "$LOGS" ] || return 0
+  removed=$(find "$LOGS" -maxdepth 1 -type f -name 'cycle-*.log' -mtime +"$days" -delete -print \
+    2>/dev/null | wc -l)
+  if [ "$removed" -gt 0 ]; then
+    log "pruned $removed log(s) older than $days day(s)"
+  fi
+  return 0
 }
 
 # Appends one synthetic failure so a cycle that died before writing its own line still

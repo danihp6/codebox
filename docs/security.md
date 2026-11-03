@@ -24,7 +24,7 @@ which control answers each risk. It describes the design; Batch 7 proves it.
 | Network scanner | Finds open ports | None: no inbound port except SSH from one address (D18). |
 | Holder of a leaked tunnel URL | Reaches the HTTPS endpoint | Device auth (D17) + Cloudflare Access. |
 | Thief with the phone | Has an unlocked device | OS lock, biometric gate, short access token, per-device revoke. |
-| Malicious repository content | Text the agent reads | Untrusted-content rule, permission policy, protected paths, diff budget. |
+| Malicious repository content | Text the agent reads | Untrusted-content rule, permission policy, protected paths, diff budget; no pipeline role has `webfetch` — `opencode.json` denies it for `orchestrator`, `architect`, `dev` and `qa` (D60) — so a poisoned document cannot be fetched by URL. |
 | Compromised dependency | Runs in the build | Lockfile, `npm ci`, no install scripts without a decision, CI audit. |
 | Curious model output | Prints a secret it saw | No secret in a child's env, redaction, secret scanning in the gate. |
 | The operator's own mistake | Merges something bad | Guardrails fail closed, revert in one action, brake. |

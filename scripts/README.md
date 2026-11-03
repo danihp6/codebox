@@ -26,6 +26,7 @@ only sanctioned way to open a work order.
 | `verdict.test.mjs` | Unit tests for shipped, resumed, stopped and failed. |
 | `issue.mjs` | Opens a work order at most once: lists the open `agent-review` and `agent-blocked` issues, creates one or comments on the lowest match. |
 | `issue.test.mjs` | Unit tests for the title key, the duplicate finder, the decision, and create-once/comment-on-repeat against a fake port. |
+| `opencode-config.test.mjs` | Pins `opencode.json`'s permission policy: `orchestrator`, `architect`, `dev` and `qa` all deny `webfetch` (D60). |
 | `vm/` | The VM host: driver, cycle, brake, install, unit, env template and the canonical prompt (`scripts/agent/vm/README.md`). |
 | `README.md` | This map. |
 

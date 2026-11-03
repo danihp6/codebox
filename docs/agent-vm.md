@@ -24,9 +24,10 @@ Three facts push the loop off Actions:
 
 The OCI Always Free Ampere box — 2 OCPU / 12 GB, 100 GB boot volume — removes all three and
 keeps `node_modules` and the browser warm. It is not a big machine: the env template suggests
-two dev slots (`CB_AGENT_MAX_DEVS=2`) on 2/12, rising to 4 only on a 4/24 resize, and no
-shipped workflow, script, prompt or role reads that key, so a wave's size stays the
-Orchestrator's judgement.
+two dev slots (`CB_AGENT_MAX_DEVS=2`) on 2/12, rising to 4 only on a 4/24 resize;
+`run-cycle.sh` reads `CB_AGENT_MAX_DEVS`, substitutes it into the prompt as `{{MAX_DEVS}}`
+and records it as `maxDevs` in the ledger, so a wave's size is the operator's setting under
+the ceiling, never a guess.
 
 ## 2. Separation from the product
 
@@ -64,7 +65,7 @@ Rules that follow from the table:
 | Piece | What it does |
 | --- | --- |
 | `run-driver.sh` | The loop: reads the brake, the backlog and today's ledger, asks `gate.mjs`, and runs a cycle when the answer is yes. Runs as a systemd service. |
-| `run-cycle.sh` | One cycle: fetch, reset, recon, `opencode run --agent orchestrator --auto`, post-merge gate, verdict, one line in the ledger. Holds the lock. |
+| `run-cycle.sh` | One cycle: fetch, reset, recon, `opencode run --agent orchestrator --auto`, post-merge gate, verdict, one line in the ledger. Holds the lock. Refuses to start below 2 GB free, prunes `cycle-*.log` older than 14 days, and takes `--force` to record a deliberate cycle. |
 | `gate.mjs` | The decision, pure and unit-tested (`gate.test.mjs`): brake, window, backlog, red streak, cap — in that order. |
 | `verdict.mjs` | The cycle's verdict, pure and unit-tested (`verdict.test.mjs`): a red gate fails; a moved `main` or an opened issue is green even when the stream died. Shared with Actions. |
 | `brake.sh` | The brake by hand (`on`, `off`) or by window (`window 4`), plus `status` and `reset`. |
@@ -78,7 +79,7 @@ State lives in `$CB_AGENT_STATE` (default `/var/lib/cb-agent`):
 brake            `on` or anything else
 window           "<from epoch> <until epoch>", present only while a range is armed
 cycles.ndjson    one line per cycle: ts, status, tasks, gate, agent, moved, issued…
-logs/cycle-*.log full transcript of every cycle, never pruned
+logs/cycle-*.log full transcript of every cycle, pruned after 14 days
 last-cycle.md    the markdown summary of the last one
 lock             flock target: one cycle at a time
 alerts           "title:date" lines, so a parked loop nags once a day, not every wake-up
@@ -96,7 +97,7 @@ flock "$CB_AGENT_STATE/lock" run-cycle.sh
   # pre-cycle, conditional: only when node_modules is missing or older than the lockfile
   npm ci --prefer-offline --no-audit --no-fund
   node scripts/agent/recon.mjs                    # built-ins only, needs no node_modules
-  # prompt.md, its {{MERGE}} placeholder substituted, passed as the message
+  # prompt.md, its {{MERGE}} and {{MAX_DEVS}} placeholders substituted, passed as the message
   opencode run --agent orchestrator --auto --model "$CB_AGENT_MODEL" "$prompt"
   # post-merge gate, installed from the lockfile
   npm ci --prefer-offline --no-audit --no-fund && npm run lint && npm test && npm run build
@@ -226,6 +227,13 @@ of its own — the driver's `gate.mjs` is the only reader — so the run starts 
 is parked, and the ledger records that cycle like any other. It is the recovery path when the
 loop is parked, not a way to keep working with the brake off.
 
+A human can also run `run-cycle.sh --force` when the cycle is deliberate rather than
+recovered: the ledger records `forced: true` either way, and the flag changes nothing else
+— the script still reads no brake. `run-driver.sh --force` spends that bypass for exactly
+one pass: the first pass skips `gate.mjs`, logs `gate bypassed for one cycle (--force)` and
+runs the cycle with `--force`; every later pass asks the gate again. The brake is never
+cleared by either flag.
+
 ## 8. What differs from the workflow
 
 | | Actions | VM |
@@ -253,7 +261,7 @@ are fine with the other being the primary.
 | A cycle hangs | `TimeoutStartSec` kills it; the next cycle adopts the live branch from its marker. |
 | The box reboots | The unit starts; one cycle runs when the brake allows. A mid-task branch is adopted. |
 | `main` moved during the final push | Fetch, merge `origin/main` into the task branch, re-gate, push. If it still fails, the branch stays at `qa: pass` for the next cycle. |
-| Disk fills | A human's concern: nothing prunes the logs and nothing checks free space. `run-cycle.sh` removes every `../wt-cb-*` worktree and prunes the `git worktree` metadata at the start of a cycle. |
+| Disk fills | Not any more. Every cycle prunes `cycle-*.log` older than 14 days first, then measures the filesystem that holds `CB_AGENT_STATE`; below 2 GB free it opens one `agent-blocked` order through `scripts/agent/issue.mjs` (title `Autopilot refused: less than 2 GB free on the box`, so a repeat comments instead of duplicating) and refuses to start. Under the driver that non-zero exit becomes a red cycle through `record_failure`. `run-cycle.sh` also removes every `../wt-cb-*` worktree and prunes the `git worktree` metadata at the start of a cycle. |
 | The box is rebuilt | `install.sh`, two credentials, clone; the refs restore every task. The state directory is not restored — it is evidence |
 | The product is unhealthy | Not the pipeline's business, unless the cycle's gate says so. `cb doctor` is the product's tool, not the driver's. |
 
@@ -271,11 +279,11 @@ the tools; only `npm ci` and the Playwright browser are paid again.
   compromised box cannot rewrite the loop's own brake on the Actions host.
 - The inference key is the other secret. Both rotate by hand: `brake.sh off`, edit,
   `systemctl restart cb-agent`.
-- The agent runs with `--auto`, a shell and write access to `main`. Only the Orchestrator
-  denies `webfetch`; the Architect allows it and the Dev and QA set no rule, so a subagent can
-  fetch a page. A poisoned document — fetched or inside the repository — is the injection risk
-  worth watching, and the pipeline has no protected-path list of its own. The brake and the
-  red-streak guard are the containment.
+- The agent runs with `--auto`, a shell and write access to `main`. `webfetch` is denied for
+  all four pipeline roles and pinned by `scripts/agent/opencode-config.test.mjs` (D60), so a
+  fetched page cannot enter a role's context; a poisoned document inside the repository is
+  the injection risk worth watching, and the pipeline has no protected-path list of its own.
+  The brake and the red-streak guard are the containment.
 - The pipeline never gets the product's GitHub App key, Vault token or tunnel token. It does
   not need them: it pushes to one repository and opens issues there.
 
