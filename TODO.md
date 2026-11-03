@@ -60,6 +60,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 21 | Figma → `design/` import (D52) | 81-84 | 3, then 1 |
 | 22 | Measured spec, Inter and the missing route (D58) | 85-87 | 3 |
 | 23 | Screen alignment against the prototype | 88–99 | 2, then 4, then 4, then 2 |
+| 24 | The pipeline's documented guards | 101 | 1 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -394,6 +395,43 @@ file moved except the two the Orchestrator owns (`TODO.md`, `CHANGELOG.md`). Tas
 `[!]`, narrowed to the live ten-run measurement, and Tasks 90–99 still wait for L6 and L7 — the
 Figma read quota reopens on 2026-11-03T09:42Z.
 
+**Cut — cycle 2026-11-03T02:20Z, after the dry-queue orders #106–#116 (one of four slots used).**
+No task branch was alive (`git ls-remote origin 'refs/heads/task-*'` printed nothing and
+`.agent_specs/resume.md` agreed) and `main` was `ed1708b`. The queue held eleven `[ ]` driver
+items and the block that kept the two `[!]` items shut had lapsed on one of them, so **Task-02**
+is the batch. Its own `BLOCKED:` line set the expiry — "free this task once the secrets exist" —
+and `ed1708b` removed the secret instead of supplying it: `agent-cycle.yml` now trades the job's
+OIDC token for a short-lived console key (`docs/agent-ci.md` §10), and this cycle runs on that
+key. Both `[unit]` criteria were re-measured before the cut (`npx vitest run scripts/agent` →
+4 files / 33 tests; a dry `brake.sh status` on a temp `CB_AGENT_STATE` → `brake:  unset`,
+`window: none`, `cycles: 0 today (0 red)`, exit 0), and the full root gate was green on `main`.
+The task's code has been on `main` since Batch 1; what this pass pays is the reconciliation the
+item always owed — the shipped port against the three design docs. The audit found fourteen
+false sentences (C1–C14: the Actions push credential, the two prompt "pipes on stdin", the
+window workflow's `start`/`from` input and its permissions, `CB_AGENT_MAX_DEVS` with no reader,
+the two-tree namespace grep that no test runs, `webfetch` allowed for three of the four roles,
+the 14-day log prune and the 2 GB guard that do not exist, the recon-before-install order, the
+timed window on the box, and `run-cycle.sh --force`) and corrects them in
+`docs/agent-pipeline.md`, `docs/agent-ci.md` and `docs/agent-vm.md` only.
+**Hot-file holders in this cut:** none. Task-02 claims no hot file: `opencode.json`,
+`.agent_roles/**`, `scripts/agent/**` and `.github/workflows/agent-*.yml` are **read-only**
+inputs for this pass — a behaviour change there is a red task — and `TODO.md`/`CHANGELOG.md`
+stay with the Orchestrator at merge. **Deviation from the item's `*Paths:*` line,** recorded here
+and in the `CHANGELOG`: the roles, the scripts and the workflow are read, not written, because
+the pass verifies the port and does not move it. The three empty slots have no legal candidate:
+Task-32 waits on the blocked Task-31 (#105); Tasks 90–99 need `design/screens/<slug>.json` and
+`design/exports/<slug>.png` and neither directory exists while L6 waits on the Figma quota
+(`429 … retry-after: 338264`, not before 2026-11-03T09:42Z); L1–L7 are operator items the driver
+never picks. Everything else is merged or `[!]`.
+**The audit's residue got an owner instead of another issue.** The four findings that are *code*
+rather than prose — `webfetch` denied for the Orchestrator alone while `docs/agent-ci.md` §10 and
+`docs/agent-vm.md` §10 promise it for every role, `CB_AGENT_MAX_DEVS` read by nothing, no log
+prune and no free-space guard on the box, and no `run-cycle.sh --force` — plus the three
+sentences outside Task-02's writable set (`docs/providers.md` §10's `CB_AGENT_TOKEN` scope and
+its repeat of the two-tree grep, and `scripts/agent/vm/agent.env.example`'s Actions credential)
+are cut as **Task-101** in Batch 24, so the next cycle has real work instead of a third order for
+the same dry queue.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -492,7 +530,7 @@ without asking a question that the docs already answer.
       lint`, `npm test` and `npm run build` pass with the empty stubs; `[unit]` every
       workspace resolves through the root lockfile; `[unit]` no package has a dependency it
       does not import.
-- [!] **[Task-02]** Agent pipeline wiring. Implement the pipeline designed in
+- [ ] **[Task-02]** Agent pipeline wiring. Implement the pipeline designed in
       `docs/agent-pipeline.md`, `docs/agent-ci.md` and `docs/agent-vm.md`, adapted from
       `pkm-randomlike` with Codebox names: reconcile `.agent_roles/{orchestrator,architect,dev,qa}.md`
       with the scripts, and add `opencode.json`, `scripts/agent/{recon.mjs,gate.mjs,verdict.mjs}`,
@@ -512,6 +550,14 @@ without asking a question that the docs already answer.
       BLOCKED: the `[live]` criterion is not measured — it needs `CB_AGENT_MODEL` and a
       provider-key secret (`OPENCODE_API_KEY` / `ANTHROPIC_API_KEY` / …). The code and both
       `[unit]` criteria are on `main`; free this task once the secrets exist.
+      FREED 2026-11-03: the expiry condition above fired. `ed1708b` removed the secret — the
+      cycle trades the job's OIDC token for a short-lived console key (`docs/agent-ci.md` §10),
+      and the cycle that freed this item ran on that key. Both `[unit]` criteria re-measured on
+      that runner (`npx vitest run scripts/agent` → 4 files / 33 tests; a dry `brake.sh status`
+      on a temp `CB_AGENT_STATE` → `brake:  unset` / `window: none` / `cycles: 0 today (0 red)`,
+      exit 0). The pass answers the item's own last sentence: the port against the three design
+      docs, fourteen false sentences corrected (C1–C14 in the spec), no behaviour moved. The
+      `[live]` criterion stays unmeasured here — an `agent-review` issue carries its recipe.
 
 ---
 
@@ -1896,6 +1942,57 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       saves one and fires *Run next* through the same API the page used; `[unit]` the tab strip
       renders exactly two tabs; `[live]` the sheet sits beside L5's frame at 390 × 844.
       *Dependencies:* L5 (the sheet's frame), L6, L7, Task-92.
+
+---
+
+## Batch 24 — The pipeline's documented guards
+
+Cut 2026-11-03T02:20Z as the owner of Task-02's residue: the four findings that are behaviour
+rather than prose, plus the three sentences outside Task-02's writable set. `AGENTS.md` makes
+the first one a security change, which is why they travel together and not inside a doc pass.
+
+**Hot-file holders in this batch:** Task-101 holds `opencode.json` and `docs/decisions.md`. No
+task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`,
+`apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`, `TODO.md` or `CHANGELOG.md`.
+
+- [ ] **[Task-101]** The guards the pipeline's docs promise and its code does not carry. Four
+      changes, one theme: a reader sees the same facts in the tree as in the docs. **(1)**
+      `opencode.json` denies `webfetch` for `architect`, `dev` and `qa` exactly as it does for
+      `orchestrator` — `docs/agent-ci.md` §10 and `docs/agent-vm.md` §10 state it for every
+      pipeline role and the config allows it for three of four, so a role that reads untrusted
+      repository content can also pull an arbitrary URL into its context. This is a security
+      change: `docs/security.md` gains the rule, a test pins every role's `webfetch` to `deny`,
+      and `docs/decisions.md` gains the dated decision (`D60`, the next free ID — no existing ID
+      moves). **(2)** `CB_AGENT_MAX_DEVS` gets one reader: `run-cycle.sh` substitutes it into
+      `scripts/agent/vm/prompt.md` the way `{{MERGE}}` already is, the prompt states the ceiling
+      to the Orchestrator, and the ledger records the value it was told. **(3)** The box gets the
+      two guards `docs/agent-vm.md` §1/§9 describe: logs older than 14 days are pruned at start,
+      and a cycle refuses to start below 2 GB free and opens one `agent-blocked` order through
+      `scripts/agent/issue.mjs`. **(4)** `run-cycle.sh --force` exists as documented: the driver's
+      `--force` bypasses `gate.mjs` for one cycle and the ledger records `forced: true`; the
+      direct `run-cycle.sh` invocation stays the recovery path because that script reads no brake.
+      The three false sentences Task-02 had to leave alone are corrected here:
+      `docs/providers.md` §10's `CB_AGENT_TOKEN` row (it is also `agent-cycle.yml`'s checkout
+      token, not "for the window workflow only") and its repeat of the two-tree namespace grep,
+      and `scripts/agent/vm/agent.env.example`'s "Actions uses GITHUB_TOKEN instead".
+      *Paths:* `opencode.json`, `scripts/agent/{gate.mjs,gate.test.mjs}` (only if the driver's
+      bypass needs it), `scripts/agent/vm/{run-cycle.sh,run-driver.sh,lib.sh,prompt.md,
+      agent.env.example}`, `scripts/agent/opencode-config.test.mjs` + its ledger/prune tests,
+      `scripts/agent/vm/README.md`, `scripts/README.md`, `.agent_roles/orchestrator.md` (the slot
+      ceiling sentence only), `docs/security.md` §2, `docs/decisions.md` (the new D60),
+      `docs/providers.md` §10 and §13, `docs/agent-ci.md` §10, `docs/agent-vm.md` §1, §3, §7, §9.
+      *Dependencies:* Task-02 (the docs baseline this task corrects; merged 2026-11-03), Task-48
+      (`scripts/agent/issue.mjs`, for guard 3). *Acceptance:* `[unit]` a test reads
+      `opencode.json` and fails if any of the four agents' `permission.webfetch` is not `deny`;
+      `[unit]` sourcing `lib.sh` and pruning a temp directory removes a 15-day-old log and keeps
+      a fresh one; `[unit]` with a fake `df` on `PATH` reporting 1 GB, `run-cycle.sh` exits
+      non-zero naming the 2 GB threshold and never reaches the model; `[unit]` `--force` writes
+      `forced: true` in the ledger and an unflagged cycle writes `false`; `[unit]` the existing
+      `npx vitest run scripts/agent` suite still passes and `run-cycle.sh`/`run-driver.sh` pass
+      `bash -n` and `shellcheck` when it is installed; `[live]` on the box, one forced cycle
+      prunes a seeded 15-day-old log, refuses at a 1 GB free-space probe and leaves
+      `forced: true` in `$CB_AGENT_STATE/cycles.ndjson`, read back with `tail -1`.
 
 ---
 
