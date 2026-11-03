@@ -1983,7 +1983,9 @@ task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
       agent.env.example}`, `scripts/agent/opencode-config.test.mjs` + its ledger/prune tests,
       `scripts/agent/vm/README.md`, `scripts/README.md`, `.agent_roles/orchestrator.md` (the slot
       ceiling sentence only), `docs/security.md` §2, `docs/decisions.md` (the new D60),
-      `docs/providers.md` §10 and §13, `docs/agent-ci.md` §10, `docs/agent-vm.md` §1, §3, §7, §9.
+      `docs/providers.md` §10 and §13, `docs/agent-ci.md` §8 (the park sentence: it says a park
+      opens an issue, while only the empty-backlog and red-streak parks do) and §10,
+      `docs/agent-vm.md` §1, §3, §7, §9.
       *Dependencies:* Task-02 (the docs baseline this task corrects; merged 2026-11-03), Task-48
       (`scripts/agent/issue.mjs`, for guard 3). *Acceptance:* `[unit]` a test reads
       `opencode.json` and fails if any of the four agents' `permission.webfetch` is not `deny`;
