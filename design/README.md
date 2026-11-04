@@ -61,7 +61,7 @@ deleted: a merged run hands the work on and sleeps, a failed one becomes a decis
 D54), for the per-repository blocks on the dashboard, or for the checkbox column of a backlog
 row.
 
-**The 320 column is being drawn, one reference first.** `S5 · Pairing · 320 × 568` is the
+**The 320 column is being drawn, one reference first.** `S5 · 320 · Pairing` is the
 pattern the other nine rows follow: 16 px margins, a 288 px content column, the status bar at
 13/12 px, the card at radius 16 with its content at 16 px, the primary action full width at
 44 px, and the foot (the command and the note) below the card. `S1`/`S2` are stale — they still

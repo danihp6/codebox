@@ -2125,7 +2125,7 @@ of them.
       `default`, `hover`, `focus-visible`, `pressed` and `disabled` for a button and a row, in
       dark and light, with the focus ring on both — so that criterion is met and only the 320
       column, the empty/error states and the two flows are still owed. **The 320 column has its
-      reference (2026-11-03):** `S5 · Pairing · 320 × 568` fixes the pattern — 16 px margins, a
+      reference (2026-11-03):** `S5 · 320 · Pairing` fixes the pattern — 16 px margins, a
       288 px column, the card at radius 16, the primary action at 44 px, the foot under the card
       — and `design/README.md` §1 names it; the other nine rows are drawn from it. The same pass
       repaired `01 · Pairing — mobile dark`, whose primary button painted `#0b0f14` on

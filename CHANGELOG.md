@@ -19,7 +19,7 @@ first release exists.
 - **`design/README.md` §2 maps the sheet** and states its two states, so Task-99 names a frame and
   an export instead of a description. The export lands with the first re-import after
   2026-11-08T03:00Z; the sheet is drawn, not yet measured.
-- **The 320 column has its reference frame.** `S5 · Pairing · 320 × 568` is the first of the ten
+- **The 320 column has its reference frame.** `S5 · 320 · Pairing` is the first of the ten
   routed screens squeezed to the reference width, and it fixes the pattern the other nine follow:
   16 px margins, a 288 px content column, the card at radius 16 with its content at 16 px, the
   primary action full width at 44 px, and the foot — the `cb pair` command and the note — under
