@@ -29,7 +29,15 @@ first release exists.
   `DEV`, `QA`), one 32 px face and one 100 × 18 chip per room, the 16 px amber badge over `DEV`'s
   head, and the five-line `LAST EVENTS` list. The road in and the belt out do not survive the
   squeeze; the rooms, their state and the events do. `design/README.md` §1 gives it the
-  Repo · workers row's 320 column; six screens still owe one.
+  Repo · workers row's 320 column; six screens still owed one.
+- **The design session keeps its thread.** `S9 · 320 · Design · session` is the session screen at
+  320 × 568: the `Design · codebox` header and its `design/ · 6 screens · from 4f2a1c3` line, the
+  288 × 176 preview card with four 129 × 48 thumbnails and the `empty`/`loading`/`needs you`/
+  `asleep` chips, the `✓ tokens ✓ routes ✓ states` line, the `SESSION · design` thread with the
+  user bubble, the two-line reply and the file card, the amber `2 changes pending` line, and the
+  composer with the home indicator under it. There is no tabbar: a session is a route, not a tab.
+  `design/README.md` §1 gives it the Design · session row's 320 column; five screens still owed
+  one.
 - **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
   frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
   changelog now name the join key the importer reads, not a description of it.

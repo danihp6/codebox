@@ -2137,7 +2137,10 @@ of them.
       **`S8 · 320 · Repo · workers` follows (2026-11-04):** the factory folds into a 2 × 2 grid of
       132 × 88 rooms inside a 288 × 200 card, one face and one chip per room, the amber badge on
       `DEV`, the two chips in the header and the last-events list under it — so six rows still owe
-      one. The same pass
+      one.
+      **`S9 · 320 · Design · session` follows (2026-11-04):** the preview card with four
+      thumbnails and four state chips, the `✓ tokens ✓ routes ✓ states` line, the session thread,
+      the file card and the composer — so five rows still owe one. The same pass
       repaired `01 · Pairing — mobile dark`, whose primary button painted `#0b0f14` on
       `#0b0f14`: `Pair device` was invisible in the export. **Desktop is out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after

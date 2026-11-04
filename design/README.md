@@ -45,7 +45,7 @@ Figma, not the layer names.
 | Repo list | `/repos` | `features/repos` | 02 | L2 | — | S6 |
 | Repo · backlog | `/repos/:id` | `features/backlog` | 22 | L22 | D9 · LD9 | S7 |
 | Repo · workers | `/repos/:id/workers` | `features/works` | 20c · 20e–20i | L20 · L20e–L20i | D5–D8 · LD5–LD8 | S8 |
-| Design · session | `/sessions/:id` (`design`) | `features/sessions` | 26 | L26 | — | — |
+| Design · session | `/sessions/:id` (`design`) | `features/sessions` | 26 | L26 | — | S9 |
 | Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | — |
 | Settings | `/settings` | `features/settings` | 06 | L6 | — | — |
 | Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
@@ -70,10 +70,12 @@ it to a list screen: the 36 px `+` beside the title, a 36 px search field, 72 px
 dependency rail down the left at 9 px dots, six 48 px rows with a status chip at the right, the
 `6 more` foot and the two-tab bar. `S8 · 320 · Repo · workers` folds the factory into a 2 × 2
 grid of 132 × 88 rooms inside a 288 × 200 card, one face and one chip per room, the amber badge
-on `DEV`'s head, and the last-events list under it. `S1`/`S2` are stale — they still
+on `DEV`'s head, and the last-events list under it. `S9 · 320 · Design · session` keeps the
+preview card with four thumbnails and the four state chips, the `✓ tokens ✓ routes ✓ states`
+line, the session thread and the composer. `S1`/`S2` are stale — they still
 draw the retired `Chat list`/`Chat` — so a row counts as covered only when its caption names the
 screen it draws, and only `S3` (Credentials), `S5` (Pairing), `S6` (Repo list), `S7`
-(Repo · backlog) and `S8` (Repo · workers) do.
+(Repo · backlog), `S8` (Repo · workers) and `S9` (Design · session) do.
 
 ## 2. States and sheets
 
