@@ -105,8 +105,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/pairing/pairing.page.ts` — the pairing screen: code and device name, the inline failure and the dashboard redirect.
 - `src/app/features/pairing/pairing.page.spec.ts` — the hooks, the field rules, the four failures and the redirect.
 - `src/app/features/pairing/i18n.ts` — the pairing dictionary in `en` and `es`.
-- `src/app/features/repos/repos.page.ts` — the repo list, the add wizard entry and the gate/policy badges.
-- `src/app/features/repos/repos.page.spec.ts` — the list hooks, the wizard and the empty/error blocks.
+- `src/app/features/repos/repos.page.ts` — the repo list: the search field, the counted eyebrow, the three-line row with its counts and amber dot, the add row and the create form.
+- `src/app/features/repos/repos.page.spec.ts` — load, empty, error and retry, the counts, the attention dot, the search and the form toggle, slug refusal, create-then-verify and dictionary parity.
 - `src/app/features/repos/repos.api.ts` — `/v1/repos` list, get, create, patch, remove and verify.
 - `src/app/features/repos/repos.api.spec.ts` — every repos URL and method and the boundary parse failure.
 - `src/app/features/repos/repos.store.ts` — the list, create and verify with their optimistic state.
@@ -117,7 +117,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/repos/repo-form.spec.ts` — a missing owner, a bad slug and the trimmed value.
 - `src/app/features/repos/repo-picker.spec.ts` — the three states, the unavailable refusal, the picked id and the picker copy.
 - `src/app/features/repos/repo-picker.ts` — the repository picker: one row per repo with `connected`/`cloning`/`unavailable`.
-- `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`, including the four `repoPicker.*` keys.
+- `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`, including the count, row and search keys and the four `repoPicker.*` keys.
 - `src/app/features/repos/repo-chrome.i18n.ts` — the repository tabs, schedule and design dictionary in `en` and `es`.
 - `src/app/features/repos/repo-tabs.ts` — the four repository tabs as one source of truth and the tab strip component.
 - `src/app/features/repos/repo-tabs.spec.ts` — the four tabs in order, their links and their labels in both locales.
