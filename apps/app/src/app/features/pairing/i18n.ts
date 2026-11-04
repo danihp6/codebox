@@ -4,10 +4,13 @@ export type Locale = 'en' | 'es';
 export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>> = Object.freeze({
   en: Object.freeze({
     'pair.title': 'Pair this device',
+    'pair.tagline': 'Private control plane for your own box.',
+    'pair.eyebrow': 'Pairing code',
     'pair.code': 'Pairing code',
     'pair.code.hint': 'Ten characters from cb pair.',
     'pair.deviceName': 'Device name',
     'pair.deviceName.hint': 'How this device appears in Settings.',
+    'pair.server': 'Server',
     'pair.submit': 'Pair',
     'pair.submitting': 'Pairing…',
     'pair.error.code': 'The code is invalid or has expired.',
@@ -19,10 +22,13 @@ export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>>
   }),
   es: Object.freeze({
     'pair.title': 'Empareja este dispositivo',
+    'pair.tagline': 'Plano de control privado para tu propia caja.',
+    'pair.eyebrow': 'Código de emparejamiento',
     'pair.code': 'Código de emparejamiento',
     'pair.code.hint': 'Diez caracteres de cb pair.',
     'pair.deviceName': 'Nombre del dispositivo',
     'pair.deviceName.hint': 'Cómo aparece este dispositivo en Ajustes.',
+    'pair.server': 'Servidor',
     'pair.submit': 'Emparejar',
     'pair.submitting': 'Emparejando…',
     'pair.error.code': 'El código no es válido o ha caducado.',

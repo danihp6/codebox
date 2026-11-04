@@ -102,8 +102,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/dashboard/dashboard.store.ts` — health, telemetry, the working/ready/recent run signals and the run stream refetch.
 - `src/app/features/dashboard/dashboard.store.spec.ts` — the four reads, the working-state sets, the zero fixture, the first-run probe and the run stream frames.
 - `src/app/features/dashboard/i18n.ts` — the dashboard dictionary in `en` and `es`.
-- `src/app/features/pairing/pairing.page.ts` — the pairing screen: code and device name, the inline failure and the dashboard redirect.
-- `src/app/features/pairing/pairing.page.spec.ts` — the hooks, the field rules, the four failures and the redirect.
+- `src/app/features/pairing/pairing.page.ts` — the pairing screen the prototype frame draws: the masthead, the 342 × 404 card, the code and device fields, the read-only server row, the inline failure and the dashboard redirect.
+- `src/app/features/pairing/pairing.page.spec.ts` — the frame hooks, the field rules, the four failures, the redirect and the dictionary parity.
 - `src/app/features/pairing/i18n.ts` — the pairing dictionary in `en` and `es`.
 - `src/app/features/repos/repos.page.ts` — the repo list, the add wizard entry and the gate/policy badges.
 - `src/app/features/repos/repos.page.spec.ts` — the list hooks, the wizard and the empty/error blocks.
