@@ -22,7 +22,14 @@ first release exists.
   48 px rows with `66 · Docs and ADR pass`-style titles, their `needs` line and a 56 × 18 status
   chip (`merged`, `running`, `queued`, `blocked`), the `6 more in TODO.md · pull to refresh` foot
   and the two-tab bar with `Backlog` lit. `design/README.md` §1 gives it the Repo · backlog row's
-  320 column; seven screens still owe one.
+  320 column; seven screens still owed one.
+- **The factory folds into four rooms.** `S8 · 320 · Repo · workers` is the workers view at
+  320 × 568: the same header with the `▤` and `🔔` chips, the run line (`run 2 · 6m 12s · $0.31`)
+  and the context read, a 288 × 200 card holding a 2 × 2 grid of 132 × 88 rooms (`ORQ`, `ARC`,
+  `DEV`, `QA`), one 32 px face and one 100 × 18 chip per room, the 16 px amber badge over `DEV`'s
+  head, and the five-line `LAST EVENTS` list. The road in and the belt out do not survive the
+  squeeze; the rooms, their state and the events do. `design/README.md` §1 gives it the
+  Repo · workers row's 320 column; six screens still owe one.
 - **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
   frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
   changelog now name the join key the importer reads, not a description of it.

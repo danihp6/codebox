@@ -2133,7 +2133,11 @@ of them.
       row at 44 px, a 64 px tabbar — so eight rows still owe a 320 frame.
       **`S7 · 320 · Repo · backlog` follows (2026-11-04):** the dependency rail at 9 px, six 48 px
       rows with numbered titles and a status chip, the `6 more` foot and the two-tab bar — so seven
-      rows still owe one. The same pass
+      rows still owe one.
+      **`S8 · 320 · Repo · workers` follows (2026-11-04):** the factory folds into a 2 × 2 grid of
+      132 × 88 rooms inside a 288 × 200 card, one face and one chip per room, the amber badge on
+      `DEV`, the two chips in the header and the last-events list under it — so six rows still owe
+      one. The same pass
       repaired `01 · Pairing — mobile dark`, whose primary button painted `#0b0f14` on
       `#0b0f14`: `Pair device` was invisible in the export. **Desktop is out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
