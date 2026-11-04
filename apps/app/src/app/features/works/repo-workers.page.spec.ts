@@ -7,6 +7,7 @@ import type { Work, WorkState } from '@codebox/contracts';
 import { provideIonicAngular } from '@ionic/angular';
 import { afterEach, describe, expect, it } from 'vitest';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { STRINGS, translate } from './i18n';
 import { RepoWorkersPage } from './repo-workers.page';
 
 const REPO_ID = 'repo_01JABCDEFGHJKMNPQRSV';
@@ -31,6 +32,10 @@ function work(id: string, backlogRef: string, state: WorkState): Work {
     createdAt: '2026-10-28T09:12:00Z',
     updatedAt: '2026-10-28T09:12:00Z',
   };
+}
+
+function withCost(source: Work, usd: number): Work {
+  return { ...source, usage: { ...source.usage, usd } };
 }
 
 const QUEUED = work('wrk_01JABCDEF01', 'Task-74', 'queued');
@@ -76,6 +81,10 @@ function hook(element: HTMLElement, id: string): HTMLElement | null {
   return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
 }
 
+function hooks(element: HTMLElement, id: string): HTMLElement[] {
+  return [...element.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)];
+}
+
 function room(element: HTMLElement, id: string): HTMLElement | null {
   return element.querySelector<HTMLElement>(`[data-testid="worker-room"][data-room="${id}"]`);
 }
@@ -87,7 +96,7 @@ function roomFaces(element: HTMLElement, id: string): HTMLElement[] {
 }
 
 function faces(element: HTMLElement): HTMLElement[] {
-  return [...element.querySelectorAll<HTMLElement>('[data-testid="worker-face"]')];
+  return hooks(element, 'worker-face');
 }
 
 function facesWithState(element: HTMLElement, state: string): HTMLElement[] {
@@ -111,15 +120,23 @@ function must<T>(value: T | null): T {
 
 const MOTION_DECORATIONS = ['workers-truck', 'workers-package', 'workers-token'] as const;
 
+/** The drawing's order, read off the document: the road in, the four rooms, the belt out. */
 function factorySequence(element: HTMLElement): string[] {
   const container = must(element.querySelector<HTMLElement>('.cb-workers'));
-  const motion = new Set(['workers-road-in', 'workers-belt-out', ...MOTION_DECORATIONS]);
-  return [...container.children].flatMap((child) => {
-    const testId = child.getAttribute('data-testid');
-    if (testId === 'worker-room') return [`room:${child.getAttribute('data-room') ?? ''}`];
-    if (testId !== null && motion.has(testId)) return [testId];
-    return [];
+  const sequence =
+    '[data-testid="workers-road-in"], [data-testid="worker-room"], ' +
+    '[data-testid="workers-token"], [data-testid="workers-belt-out"]';
+  return [...container.querySelectorAll<HTMLElement>(sequence)].map((node) => {
+    const testId = node.getAttribute('data-testid');
+    return testId === 'worker-room'
+      ? `room:${node.getAttribute('data-room') ?? ''}`
+      : (testId ?? '');
   });
+}
+
+async function boardStateOf(works: readonly Work[]): Promise<string | null> {
+  const { element } = await mount(works);
+  return hook(element, 'page-repo-workers')?.getAttribute('data-board-state') ?? null;
 }
 
 describe('RepoWorkersPage', () => {
@@ -176,7 +193,9 @@ describe('RepoWorkersPage', () => {
       ).toMatch(/^(Queued|Running|Needs you|Asleep)$/);
     }
 
-    expect(element.querySelectorAll('button, [role="button"]')).toHaveLength(0);
+    expect(
+      hooks(element, 'worker-face').some((face) => face.querySelector('button, [role="button"]')),
+    ).toBe(false);
     expect(faces(element).some((face) => face.getAttribute('role') === 'button')).toBe(false);
     expect(hook(element, 'repo-workers-empty')).toBeNull();
   });
@@ -195,9 +214,7 @@ describe('RepoWorkersPage', () => {
       beltOut?.querySelector('[data-testid="worker-face"]')?.getAttribute('data-work-id'),
     ).toBe(MERGED.id);
 
-    const rooms = [...element.querySelectorAll<HTMLElement>('[data-testid="worker-room"]')].map(
-      (section) => section.getAttribute('data-room'),
-    );
+    const rooms = hooks(element, 'worker-room').map((section) => section.getAttribute('data-room'));
     expect(rooms).toEqual(['ORQ', 'ARC', 'DEV', 'QA']);
     expect(
       room(element, 'ARC')
@@ -263,16 +280,21 @@ describe('RepoWorkersPage', () => {
   it('keeps the factory shape on a repository with no work', async () => {
     const { element } = await mount([]);
 
-    expect(hook(element, 'repo-workers-empty')).not.toBeNull();
+    expect(hook(element, 'repo-workers-empty')?.getAttribute('data-board-state')).toBe('asleep');
+    expect(hook(element, 'repo-workers-empty')?.textContent?.trim()).toBe(
+      translate('en', 'workers.empty'),
+    );
     expect(faces(element)).toHaveLength(0);
-    expect(element.querySelectorAll('[data-testid="worker-room"]')).toHaveLength(4);
-    expect(element.querySelectorAll('[data-testid="worker-room-empty"]')).toHaveLength(4);
+    expect(hooks(element, 'worker-room')).toHaveLength(4);
+    expect(hooks(element, 'worker-room-empty')).toHaveLength(4);
     expect(hook(element, 'workers-road-in')?.getAttribute('data-count')).toBe('0');
     expect(hook(element, 'workers-belt-out')?.getAttribute('data-count')).toBe('0');
     for (const id of MOTION_DECORATIONS) {
       expect(decoration(element, id)).toBeNull();
     }
-    expect(element.querySelectorAll('button, [role="button"]')).toHaveLength(0);
+    expect(hook(element, 'workers-chip-waiting')?.getAttribute('data-count')).toBe('0');
+    expect(hook(element, 'workers-chip-delivered')?.getAttribute('data-count')).toBe('0');
+    expect(hook(element, 'page-repo-workers')?.getAttribute('data-board-state')).toBe('asleep');
   });
 
   it('renders the error with its code and retries', async () => {
@@ -301,5 +323,169 @@ describe('RepoWorkersPage', () => {
 
     expect(hook(element, 'repo-workers-error')).toBeNull();
     expect(faceFor(element, RUNNING.id)).not.toBeNull();
+  });
+});
+
+describe('RepoWorkersPage board state', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('reads queued when the only work is waiting to enter', async () => {
+    expect(await boardStateOf([QUEUED])).toBe('queued');
+  });
+
+  it('reads running when a work sits on the builder floor', async () => {
+    expect(await boardStateOf([REVIEW])).toBe('running');
+  });
+
+  it('puts needs-you above running and queued', async () => {
+    expect(await boardStateOf([QUEUED, RUNNING, BLOCKED])).toBe('needs-you');
+  });
+
+  it('reads asleep on an empty repository', async () => {
+    expect(await boardStateOf([])).toBe('asleep');
+  });
+
+  it('reads asleep when every work has been delivered', async () => {
+    expect(await boardStateOf([MERGED])).toBe('asleep');
+  });
+});
+
+describe('RepoWorkersPage drawing', () => {
+  afterEach(() => {
+    TestBed.resetTestingModule();
+  });
+
+  it('holds the room grid, the two lanes and the two chips inside the dashed plan card', async () => {
+    const { element } = await mount(FIXTURE);
+    const plan = must(hook(element, 'workers-plan'));
+
+    expect(hook(element, 'workers-room-grid')).not.toBeNull();
+    expect(plan.contains(must(hook(element, 'workers-room-grid')))).toBe(true);
+    expect(plan.contains(must(hook(element, 'workers-road-in')))).toBe(true);
+    expect(plan.contains(must(hook(element, 'workers-belt-out')))).toBe(true);
+    expect(plan.contains(must(hook(element, 'workers-chip-waiting')))).toBe(true);
+    expect(plan.contains(must(hook(element, 'workers-chip-delivered')))).toBe(true);
+    expect(hooks(element, 'workers-face-ring')).toHaveLength(faces(element).length);
+  });
+  it('colours the ring around a face by that face state', async () => {
+    const { element } = await mount(FIXTURE);
+
+    for (const face of faces(element)) {
+      const ring = must(face.querySelector<HTMLElement>('[data-testid="workers-face-ring"]'));
+      expect(ring.getAttribute('data-state')).toBe(face.getAttribute('data-state'));
+      expect(ring.textContent?.trim()).not.toBe('');
+    }
+    expect(
+      must(faceFor(element, BLOCKED.id)).querySelector('[data-testid="workers-face-ring"]'),
+    ).not.toBeNull();
+  });
+
+  it('carries the lane count on the two chips', async () => {
+    const { element } = await mount(FIXTURE);
+
+    const waiting = must(hook(element, 'workers-chip-waiting'));
+    const delivered = must(hook(element, 'workers-chip-delivered'));
+    expect(waiting.tagName).toBe('BUTTON');
+    expect(waiting.getAttribute('type')).toBe('button');
+    expect(waiting.getAttribute('data-count')).toBe('1');
+    expect(delivered.getAttribute('data-count')).toBe('1');
+    expect(waiting.getAttribute('aria-label')).toBe('Waiting to enter · 1');
+    expect(delivered.getAttribute('aria-label')).toBe('Delivered · 1');
+  });
+
+  it('opens one sheet per chip with a row per lane card and closes it', async () => {
+    const { fixture, element } = await mount(FIXTURE);
+
+    expect(hook(element, 'workers-sheet')).toBeNull();
+
+    must(hook(element, 'workers-chip-waiting')).click();
+    await fixture.whenStable();
+    const waiting = must(hook(element, 'workers-sheet'));
+    expect(waiting.getAttribute('data-lane')).toBe('road-in');
+    expect(
+      hooks(waiting, 'workers-sheet-row').map((row) => row.getAttribute('data-work-id')),
+    ).toEqual([QUEUED.id]);
+    expect(waiting.querySelector('[data-testid="worker-face"]')).toBeNull();
+    expect(waiting.querySelector('a')?.getAttribute('href')).toBe(`/works/${QUEUED.id}`);
+
+    must(hook(element, 'workers-sheet-close')).click();
+    await fixture.whenStable();
+    expect(hook(element, 'workers-sheet')).toBeNull();
+
+    must(hook(element, 'workers-chip-delivered')).click();
+    await fixture.whenStable();
+    const delivered = must(hook(element, 'workers-sheet'));
+    expect(delivered.getAttribute('data-lane')).toBe('belt-out');
+    expect(
+      hooks(delivered, 'workers-sheet-row').map((row) => row.getAttribute('data-work-id')),
+    ).toEqual([MERGED.id]);
+  });
+
+  it('closes the sheet with Escape', async () => {
+    const { fixture, element } = await mount(FIXTURE);
+
+    must(hook(element, 'workers-chip-waiting')).click();
+    await fixture.whenStable();
+    expect(hook(element, 'workers-sheet')).not.toBeNull();
+
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    await fixture.whenStable();
+    expect(hook(element, 'workers-sheet')).toBeNull();
+  });
+
+  it('says when an opened lane has nothing in it', async () => {
+    const { fixture, element } = await mount([]);
+
+    must(hook(element, 'workers-chip-waiting')).click();
+    await fixture.whenStable();
+
+    const sheet = must(hook(element, 'workers-sheet'));
+    expect(hooks(sheet, 'workers-sheet-row')).toHaveLength(0);
+    expect(sheet.textContent).toContain('No work here yet.');
+  });
+
+  it('keeps the ring a ring: needs you is a badge, never a room fill', async () => {
+    const { element } = await mount(FIXTURE);
+
+    const orq = must(room(element, 'ORQ'));
+    expect(orq.classList.contains('cb-worker-room')).toBe(true);
+    expect(orq.querySelectorAll('[data-testid="worker-badge-needs-you"]')).toHaveLength(1);
+    expect(
+      roomFaces(element, 'DEV').some(
+        (face) => face.querySelector('[data-testid="worker-badge-needs-you"]') !== null,
+      ),
+    ).toBe(false);
+  });
+
+  it('sums the header sub line over the loaded works', async () => {
+    const { element } = await mount([withCost(RUNNING, 0.2), withCost(REVIEW, 0.11), QUEUED]);
+
+    const sub = element.querySelector<HTMLElement>('.cb-workers-sub');
+    expect(sub?.textContent?.trim()).toBe('2 running · $0.31');
+  });
+});
+
+describe('workers dictionary', () => {
+  it('carries the same keys in both locales', () => {
+    expect(Object.keys(STRINGS.en).sort()).toEqual(Object.keys(STRINGS.es).sort());
+  });
+
+  it('names the two chips and the sheet in both locales', () => {
+    const keys = [
+      'workers.chip.waiting',
+      'workers.chip.delivered',
+      'workers.sheet.waiting',
+      'workers.sheet.delivered',
+      'workers.sheet.close',
+      'workers.sheet.empty',
+    ] as const;
+
+    for (const locale of ['en', 'es'] as const) {
+      for (const key of keys) {
+        expect(translate(locale, key), `${locale} ${key}`).not.toBe(key);
+      }
+    }
   });
 });

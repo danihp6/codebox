@@ -24,6 +24,12 @@ first release exists.
   as a gutter fed by `dependency-rail.ts`, the chat button in the header (never a `+`) and a
   `next up …` summary over the rows. The parser, the store and the session sheet do not move, and
   the three-line row survives at 320 px without a horizontal scroll.
+- **The workers view draws its factory.** `features/works` renders `20c · Crew · aerial — dark` and
+  its three siblings from `design/screens/repo-workers.json`: the 358 × 300 plan card with four
+  role rooms in a 2 × 2 grid, one face and one task chip per subagent, the road in on the left,
+  the belt out on the right, the `▤` and `🔔` chips as the only controls and `needs you` as a badge
+  over the worker, never a room fill. The four states come from `projectWorkers`; `workers.model.ts`
+  and `workers.motion.ts` keep their rules and the motion honours `prefers-reduced-motion`.
 
 ### Changed — 2026-11-03 (Task-102, the importer sees through the bands)
 

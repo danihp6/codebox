@@ -1917,7 +1917,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       beside the screen and the three-line row survives at 320 px without a horizontal scroll.
       *Dependencies:* L6, L7, Task-88.
 
-- [ ] **[Task-93]** Repo · workers, frames `20c · Crew · aerial — dark` (running) with
+- [x] **[Task-93]** Repo · workers, frames `20c · Crew · aerial — dark` (running) with
       `20i` (queued), `20f` (needs you) and `20e` (asleep). Rewrite `features/works`' board
       against `design/screens/repo-workers.json`: four role rooms, one face and one task chip per
       subagent, the road in on the left, the belt out on the right, the two chips `▤` and `🔔` as
