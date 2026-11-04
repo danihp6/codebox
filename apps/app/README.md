@@ -95,8 +95,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/credentials/credentials.store.ts` — the two independent catalog reads, create/remove and the manifest reload.
 - `src/app/features/credentials/credentials.store.spec.ts` — load, a failed half, create, remove, the manifest start and completion.
 - `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`.
-- `src/app/features/dashboard/dashboard.page.ts` — the four blocks (working, ready, spend, health), the recent runs, the first-run start card and the loading/error/stale states.
-- `src/app/features/dashboard/dashboard.page.spec.ts` — every block from a zero fixture, the start card, the rows of the run blocks and the dictionary parity.
+- `src/app/features/dashboard/dashboard.page.ts` — the frame's inbox (needs you, working, finished · not reviewed, spend, health), the queue footer, the recent runs, the first-run start card and the loading/error/stale states.
+- `src/app/features/dashboard/dashboard.page.spec.ts` — every block from a zero fixture, the frame order, the needs card, the clamped queue footer, the start card, the rows of the run blocks and the dictionary parity.
 - `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry`, `/v1/runs` and `/v1/repos` reads behind the blocks.
 - `src/app/features/dashboard/dashboard.api.spec.ts` — the three new page URLs, the explicit limit, the contract failures and the envelope mapping.
 - `src/app/features/dashboard/dashboard.store.ts` — health, telemetry, the working/ready/recent run signals and the run stream refetch.
