@@ -2146,10 +2146,10 @@ of them.
       report-only exception is retired and `screen_state_missing` becomes enforced.
       **The frames were audited against `docs/app.md` §4 (2026-11-04):** Pairing loses the in-app
       QR and the server chevron, the repo list loses the `⋯` and its dead filter layers, and `S7`
-      gains the chat button its 390 twin already had. **Still owed by that audit:** a `Run` on a
-      ready backlog row (§4) and the pairing form's inline reason — the drawn `14 · Unpaired — 401`
-      is the 401 screen, not the reason the form shows after a used or expired code. Both need a
-      decision before Task-90/92 are cut. **Desktop is out of v1** (ruled 2026-10-30): the eight screens without
+      gains the chat button its 390 twin already had; a ready row's chip is now a filled `Run`
+      (§4). **Still owed by that audit:** the pairing form's inline reason — the drawn
+      `14 · Unpaired — 401` is the 401 screen, not the reason the form shows after a used or
+      expired code. Task-90 needs either a frame for it or the sentence it keeps from the app. **Desktop is out of v1** (ruled 2026-10-30): the eight screens without
       a desktop frame keep it that way until after
       the beta, and `D2`/`D4`, `D5`–`D8` and `D9` stay as the reference they already are. Then
       wire the prototype so **these two flows** are clickable (decided 2026-10-30):

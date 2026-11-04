@@ -19,6 +19,9 @@ first release exists.
 - **The 320 backlog gets the chat button.** `S7 · 320 · Repo · backlog` still had the `⋯` the 390
   frame had replaced; it now carries a 32 px `s7-chat` circle with the same `ON_CLICK` reaction to
   `03a · New session — mobile dark`.
+- **A ready backlog row draws its `Run`.** Rows `80` and `82` carried a green-outlined `ready`
+  chip; the chip is now a filled `Run` with the dark text of a primary action, so the control
+  `docs/app.md` §4 asks for and the app's `backlog-run-*` renders is in the drawing.
 
 ### Added — 2026-11-04 (L5, the three states of every screen)
 
