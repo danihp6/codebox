@@ -19,6 +19,11 @@ first release exists.
   itself — one amber dot for the row that needs a person, and the full-width `+ Add repository`.
   The search filters the rows locally, without a second request, and the dead filter strip and the
   `⋯` menu L5 deleted stay gone.
+- **The backlog draws its three lines.** `features/backlog` renders `22 · Repo · backlog — deps (dark)`:
+  `Task-NN · title`, the section and the `state · runs` flow at a 64 px pitch, the dependency rail
+  as a gutter fed by `dependency-rail.ts`, the chat button in the header (never a `+`) and a
+  `next up …` summary over the rows. The parser, the store and the session sheet do not move, and
+  the three-line row survives at 320 px without a horizontal scroll.
 
 ### Changed — 2026-11-03 (Task-102, the importer sees through the bands)
 

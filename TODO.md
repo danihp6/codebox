@@ -1906,7 +1906,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       beside the screen at 390 × 844 dark, the rows align to its grid and the counts read as three
       numbers. *Dependencies:* L6, L7, Task-88.
 
-- [ ] **[Task-92]** Repo · backlog, frame `22 · Repo · backlog — deps (dark)`. Rewrite
+- [x] **[Task-92]** Repo · backlog, frame `22 · Repo · backlog — deps (dark)`. Rewrite
       `features/backlog` against `design/screens/repo-backlog.json`: the three-line row
       (`Task-NN · title`, the section, the `state · runs · cost` flow), the dependency rail from
       `dependency-rail.ts` and the chat button in the header (never a `+`, `design/README.md` §6).
