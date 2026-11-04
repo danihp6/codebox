@@ -148,7 +148,9 @@ describe('ConnectServiceSheet', () => {
   it('starts the GitHub manifest flow and renders the browser form', async () => {
     const { fixture, element } = await mount();
 
+    expect(hook(element, 'connect-service-sheet')?.getAttribute('data-mode')).toBe('menu');
     await click(fixture, element, 'service-github');
+    expect(hook(element, 'connect-service-sheet')?.getAttribute('data-mode')).toBe('github');
 
     const start = request('POST', '/v1/integrations/github/manifest');
     start.flush(MANIFEST_START);
@@ -164,6 +166,9 @@ describe('ConnectServiceSheet', () => {
     expect(manifest?.value).toBe(JSON.stringify(MANIFEST));
     const state = form?.querySelector<HTMLInputElement>('input[name="state"]');
     expect(state?.value).toBe(MANIFEST_START.state);
+
+    await click(fixture, element, 'connect-service-back');
+    expect(hook(element, 'connect-service-sheet')?.getAttribute('data-mode')).toBe('menu');
   });
 
   it('renders the documented error code when the manifest flow cannot start', async () => {
@@ -192,9 +197,14 @@ describe('ConnectServiceSheet', () => {
   });
 
   it('renders the integration form and hides the header field unless auth is header', async () => {
-    const { fixture, element } = await mount();
+    const { fixture, element, component } = await mount();
+    let closed = 0;
+    component.closed.subscribe(() => {
+      closed += 1;
+    });
 
     await click(fixture, element, 'service-integration');
+    expect(hook(element, 'connect-service-sheet')?.getAttribute('data-mode')).toBe('integration');
 
     expect(hook(element, 'integration-form')).not.toBeNull();
     expect(hook(element, 'integration-header')).toBeNull();
@@ -204,6 +214,10 @@ describe('ConnectServiceSheet', () => {
 
     await choose(fixture, element, 'integration-auth', 'bearer');
     expect(hook(element, 'integration-header')).toBeNull();
+
+    await click(fixture, element, 'connect-service-cancel');
+    expect(closed).toBe(1);
+    expect(hook(element, 'connect-service-sheet')?.getAttribute('data-mode')).toBe('menu');
   });
 
   it('offers the passed credentials in the credential select', async () => {

@@ -15,60 +15,150 @@ import { translate } from './i18n';
 const NAME_MAX_LENGTH = 120;
 const VALUE_MAX_LENGTH = 16_384;
 
+/**
+ * Sheet `19 · Add credential`: form → review → save. The value lives in one signal, one password
+ * input and the emitted body; the review step draws four characters and no input (D50).
+ */
 @Component({
   selector: 'app-add-credential-sheet',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
+      :host {
+        --cb-sheet-stroke: color-mix(in srgb, var(--cb-muted) 28%, transparent);
+        display: block;
+        margin-block-start: 16px;
+      }
       .cb-sheet {
         display: flex;
         flex-direction: column;
-        gap: calc(var(--cb-space) * 2);
-        border: 1px solid var(--cb-surface);
-        border-radius: var(--cb-radius);
-        padding: calc(var(--cb-space) * 3);
+        gap: 12px;
+        inline-size: 100%;
+        padding: 16px;
+        border: 1px solid var(--cb-sheet-stroke);
+        border-radius: 12px;
+        background: var(--cb-surface);
+        color: var(--cb-text);
+        font-family: var(--cb-font-sans);
+        font-size: 12px;
+        line-height: 15px;
+        box-sizing: border-box;
+      }
+      .cb-sheet-title {
+        margin: 0;
+        color: var(--cb-text);
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 18px;
       }
       .cb-sheet-field {
         display: flex;
         flex-direction: column;
-        gap: var(--cb-space);
+        gap: 6px;
+        min-inline-size: 0;
       }
-      .cb-sheet-actions {
-        display: flex;
-        flex-wrap: wrap;
-        gap: calc(var(--cb-space) * 2);
+      .cb-sheet-label {
+        color: var(--cb-muted);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 13px;
       }
-      .cb-sheet-warning {
-        border-inline-start: 3px solid var(--cb-accent);
+      .cb-sheet-input,
+      .cb-sheet-select {
+        inline-size: 100%;
+        min-inline-size: 0;
+        block-size: 44px;
+        padding-inline: 12px;
+        border: 1px solid var(--cb-sheet-stroke);
+        border-radius: 10px;
+        background: var(--cb-bg);
+        color: var(--cb-text);
+        font-family: var(--cb-font-sans);
+        font-size: 13px;
+        line-height: 16px;
+        box-sizing: border-box;
+      }
+      .cb-sheet-warning,
+      .cb-sheet-blocked {
         margin: 0;
-        padding-inline-start: calc(var(--cb-space) * 2);
+        padding-inline-start: 10px;
+        border-inline-start: 3px solid var(--cb-accent);
+        color: var(--cb-text);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 13px;
+        overflow-wrap: anywhere;
       }
       .cb-sheet-blocked {
-        border-inline-start: 3px solid var(--cb-danger);
-        margin: 0;
-        padding-inline-start: calc(var(--cb-space) * 2);
+        border-inline-start-color: var(--cb-danger);
+        color: var(--cb-danger);
       }
       .cb-sheet-review {
         display: flex;
         flex-direction: column;
-        gap: var(--cb-space);
+        gap: 8px;
+        margin: 0;
       }
       .cb-sheet-review p {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
         margin: 0;
+        font-size: 12px;
+        line-height: 15px;
+      }
+      .cb-sheet-review-label {
+        color: var(--cb-muted);
+        font-weight: 400;
+      }
+      .cb-sheet-review-value {
+        min-inline-size: 0;
+        color: var(--cb-text);
+        font-weight: 500;
         overflow-wrap: anywhere;
+      }
+      .cb-sheet-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-block-start: 12px;
+      }
+      .cb-sheet-action {
+        flex: 1 1 120px;
+        min-block-size: 44px;
+        padding-inline: 12px;
+        border: 1px solid var(--cb-sheet-stroke);
+        border-radius: 10px;
+        background: var(--cb-bg);
+        color: var(--cb-muted);
+        font-family: var(--cb-font-sans);
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 15px;
+        cursor: pointer;
+      }
+      .cb-sheet-action-primary {
+        border-color: color-mix(in srgb, var(--cb-accent) 45%, transparent);
+        color: var(--cb-accent);
+        font-weight: 600;
+      }
+      .cb-sheet-action:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
     `,
   ],
   template: `
-    <section class="cb-sheet" data-testid="add-credential-sheet">
+    <section class="cb-sheet" data-testid="add-credential-sheet" [attr.data-step]="step()">
       @if (step() === 'form') {
-        <h2>{{ t('credentials.action.addOpen') }}</h2>
+        <h2 class="cb-sheet-title">{{ t('credentials.action.addOpen') }}</h2>
 
         <label class="cb-sheet-field" for="credential-name">
-          <span>{{ t('credentials.name') }}</span>
+          <span class="cb-sheet-label">{{ t('credentials.name') }}</span>
           <input
             id="credential-name"
+            class="cb-sheet-input"
             data-testid="credential-name"
             type="text"
             autocomplete="off"
@@ -78,9 +168,10 @@ const VALUE_MAX_LENGTH = 16_384;
         </label>
 
         <label class="cb-sheet-field" for="credential-kind">
-          <span>{{ t('credentials.kind') }}</span>
+          <span class="cb-sheet-label">{{ t('credentials.kind') }}</span>
           <select
             id="credential-kind"
+            class="cb-sheet-select"
             data-testid="credential-kind"
             (change)="setKind(valueOf($event))"
           >
@@ -93,9 +184,10 @@ const VALUE_MAX_LENGTH = 16_384;
         </label>
 
         <label class="cb-sheet-field" for="credential-expose">
-          <span>{{ t('credentials.expose') }}</span>
+          <span class="cb-sheet-label">{{ t('credentials.expose') }}</span>
           <select
             id="credential-expose"
+            class="cb-sheet-select"
             data-testid="credential-expose"
             (change)="setExpose(valueOf($event))"
           >
@@ -119,9 +211,10 @@ const VALUE_MAX_LENGTH = 16_384;
         }
 
         <label class="cb-sheet-field" for="credential-value">
-          <span>{{ t('credentials.value') }}</span>
+          <span class="cb-sheet-label">{{ t('credentials.value') }}</span>
           <input
             id="credential-value"
+            class="cb-sheet-input"
             data-testid="credential-value"
             type="password"
             autocomplete="off"
@@ -135,11 +228,17 @@ const VALUE_MAX_LENGTH = 16_384;
         }
 
         <div class="cb-sheet-actions">
-          <button type="button" data-testid="credential-cancel" (click)="close()">
+          <button
+            type="button"
+            class="cb-sheet-action"
+            data-testid="credential-cancel"
+            (click)="close()"
+          >
             {{ t('credentials.action.cancel') }}
           </button>
           <button
             type="button"
+            class="cb-sheet-action cb-sheet-action-primary"
             data-testid="credential-continue"
             [disabled]="envBlocked()"
             (click)="toReview()"
@@ -148,27 +247,33 @@ const VALUE_MAX_LENGTH = 16_384;
           </button>
         </div>
       } @else {
-        <h2>{{ t('credentials.action.addOpen') }}</h2>
+        <h2 class="cb-sheet-title">{{ t('credentials.action.addOpen') }}</h2>
 
         <div class="cb-sheet-review" data-testid="credential-review">
           <p>
-            {{ t('credentials.name') }}:
-            <span data-testid="credential-review-name">{{ name().trim() }}</span>
+            <span class="cb-sheet-review-label">{{ t('credentials.name') }}:</span>
+            <span class="cb-sheet-review-value" data-testid="credential-review-name">{{
+              name().trim()
+            }}</span>
           </p>
           <p>
-            {{ t('credentials.kind') }}:
-            <span data-testid="credential-review-kind">{{ t('credentials.kind.' + kind()) }}</span>
+            <span class="cb-sheet-review-label">{{ t('credentials.kind') }}:</span>
+            <span class="cb-sheet-review-value" data-testid="credential-review-kind">{{
+              t('credentials.kind.' + kind())
+            }}</span>
           </p>
           <p>
-            {{ t('credentials.expose') }}:
-            <span data-testid="credential-review-expose">{{
+            <span class="cb-sheet-review-label">{{ t('credentials.expose') }}:</span>
+            <span class="cb-sheet-review-value" data-testid="credential-review-expose">{{
               t('credentials.expose.' + expose())
             }}</span>
           </p>
           <p>
-            {{ t('credentials.value') }}:
-            <span aria-hidden="true">••••</span>
-            <span data-testid="credential-review-tail">{{ reviewTail() }}</span>
+            <span class="cb-sheet-review-label">{{ t('credentials.value') }}:</span>
+            <span class="cb-sheet-review-value" aria-hidden="true">••••</span>
+            <span class="cb-sheet-review-value" data-testid="credential-review-tail">{{
+              reviewTail()
+            }}</span>
           </p>
         </div>
 
@@ -177,11 +282,17 @@ const VALUE_MAX_LENGTH = 16_384;
         }
 
         <div class="cb-sheet-actions">
-          <button type="button" data-testid="credential-back" (click)="back()">
+          <button
+            type="button"
+            class="cb-sheet-action"
+            data-testid="credential-back"
+            (click)="back()"
+          >
             {{ t('credentials.action.back') }}
           </button>
           <button
             type="button"
+            class="cb-sheet-action cb-sheet-action-primary"
             data-testid="credential-save"
             [disabled]="saving() || envBlocked()"
             (click)="save()"
