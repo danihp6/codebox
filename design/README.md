@@ -47,7 +47,7 @@ Figma, not the layer names.
 | Repo · workers | `/repos/:id/workers` | `features/works` | 20c · 20e–20i | L20 · L20e–L20i | D5–D8 · LD5–LD8 | S8 |
 | Design · session | `/sessions/:id` (`design`) | `features/sessions` | 26 | L26 | — | S9 |
 | Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | S10 |
-| Settings | `/settings` | `features/settings` | 06 | L6 | — | — |
+| Settings | `/settings` | `features/settings` | 06 | L6 | — | S11 |
 | Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
 | Credentials | `/settings/credentials` | `features/credentials` | 16 | L8 | — | S3 |
 | Notifications | `/settings/notifications` | `features/settings` | 17 | L22 | — | — |
@@ -74,10 +74,13 @@ on `DEV`'s head, and the last-events list under it. `S9 · 320 · Design · sess
 preview card with four thumbnails and the four state chips, the `✓ tokens ✓ routes ✓ states`
 line, the session thread and the composer. `S10 · 320 · Dashboard` keeps the `NEEDS YOU` card
 with its `Review`, the working run, the two finished rows, the spend card with its bar and
-sparkline, and the health row. `S1`/`S2` are stale — they still
+sparkline, and the health row. `S11 · 320 · Settings` keeps four groups of 44 px rows —
+preferences, automation, account and the two danger actions — and drops the device card, since
+`/settings/devices` is a row away. `S1`/`S2` are stale — they still
 draw the retired `Chat list`/`Chat` — so a row counts as covered only when its caption names the
 screen it draws, and only `S3` (Credentials), `S5` (Pairing), `S6` (Repo list), `S7`
-(Repo · backlog), `S8` (Repo · workers), `S9` (Design · session) and `S10` (Dashboard) do.
+(Repo · backlog), `S8` (Repo · workers), `S9` (Design · session), `S10` (Dashboard) and `S11`
+(Settings) do.
 
 ## 2. States and sheets
 

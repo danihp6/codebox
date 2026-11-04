@@ -45,6 +45,14 @@ first release exists.
   `FINISHED · NOT REVIEWED` rows and their cost, the `$3.12 of $10.00 daily cap` card with its
   bar and seven-bar sparkline, and the three-column `daemon`/`opencode`/`disk` health row.
   `design/README.md` §1 gives it the Dashboard row's 320 column; four screens still owed one.
+- **Settings keeps every action and loses one card.** `S11 · 320 · Settings` is the settings screen
+  at 320 × 568: `PREFERENCES` with `Notifications` (`2 quiet hours`), `Appearance`
+  (`Dark · English`) and `Provider accounts` (`2 accounts · 1 active`), `AUTOMATION` with
+  `Schedules` (`3 works · 1 paused`), `ACCOUNT` with `Devices` (`2 paired`) and `About`
+  (`v0.1.0 · 4f2a1c3`), and `DANGER ZONE` with `Unpair this device` and `Wipe local cache` — all
+  eight rows at the 44 px target. The `Dani iPhone` card is dropped at this width because
+  `/settings/devices` is one row away and the eight rows plus their labels fill the viewport.
+  `design/README.md` §1 gives it the Settings row's 320 column; three screens still owed one.
 - **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
   frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
   changelog now name the join key the importer reads, not a description of it.
