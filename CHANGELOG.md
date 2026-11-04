@@ -59,6 +59,14 @@ first release exists.
   the two notes (`revoking kills the refresh token`; `a device cannot revoke itself`). Both notes
   wrap at 280 px. `design/README.md` §1 gives it the Devices row's 320 column; two screens still
   owed one.
+- **Notifications is a list of switches, not prose.** `S13 · 320 · Notifications` is the
+  notification settings at 320 × 568: `push only for what needs you`, the browser-permission card
+  (`granted`, `Send test`), the six `EVENTS` rows at 36 px with 32 × 18 toggles (`A chat asks you
+  a question`, `Run or fire failed`, `Schedule fired and needs review` on; `Run finished` and
+  `Merged` off; `Credential changed` fixed to `always` in amber), the `QUIET HOURS` card
+  (`23:00 → 08:00`, `Europe/Madrid · evaluated on the daemon`, its one-line note and toggle), and
+  the foot that states what a push may carry. `design/README.md` §1 gives it the Notifications
+  row's 320 column; one screen still owed one.
 - **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
   frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
   changelog now name the join key the importer reads, not a description of it.
