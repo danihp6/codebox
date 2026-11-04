@@ -6,6 +6,14 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-04 (Batch 23, wave 1: the screens reach the prototype)
+
+- **Pairing draws its frame.** `features/pairing` renders `01 · Pairing — mobile dark` from
+  `design/screens/pairing.json`: the masthead, the card with its 20 px inset, the
+  eyebrow/label/hint/value scale, the 302 × 48 CTA and the inline alert inside the card. The
+  validation (`pairingProblem`, `pairingFailureOf`) and `AuthStore.pair` do not move, and the
+  page measures 320 px wide without a sideways scroll.
+
 ### Changed — 2026-11-03 (Task-102, the importer sees through the bands)
 
 - **A band is not an element.** `layoutOf` measured a routed frame's direct children, so the first

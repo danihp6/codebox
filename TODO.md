@@ -1881,7 +1881,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       2026-10-30:** cut ahead of the design track, beside it; it reads no frame and edits nothing
       under `design/`.
 
-- [ ] **[Task-90]** Pairing, frame `01 · Pairing — mobile dark`, error state `14 · Unpaired — 401`.
+- [x] **[Task-90]** Pairing, frame `01 · Pairing — mobile dark`, error state `14 · Unpaired — 401`.
       Rewrite `features/pairing` from `design/screens/pairing.json`: header, the form column's box
       and gap, the type scale of label/hint/button, the disabled and submitting states and the
       alert, from the spec's `layout` instead of the inline block the page carries today. The
