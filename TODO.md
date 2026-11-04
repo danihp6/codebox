@@ -2130,7 +2130,10 @@ of them.
       — and `design/README.md` §1 names it; the other nine rows are drawn from it.
       **`S6 · 320 · Repo list` follows (2026-11-04):** the same column applied to a list — the
       36 px `+` beside the title, a 36 px search field, three 72 px cards with 8 px gaps, the add
-      row at 44 px, a 64 px tabbar — so eight rows still owe a 320 frame. The same pass
+      row at 44 px, a 64 px tabbar — so eight rows still owe a 320 frame.
+      **`S7 · 320 · Repo · backlog` follows (2026-11-04):** the dependency rail at 9 px, six 48 px
+      rows with numbered titles and a status chip, the `6 more` foot and the two-tab bar — so seven
+      rows still owe one. The same pass
       repaired `01 · Pairing — mobile dark`, whose primary button painted `#0b0f14` on
       `#0b0f14`: `Pair device` was invisible in the export. **Desktop is out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after

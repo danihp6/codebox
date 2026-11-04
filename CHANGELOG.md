@@ -15,7 +15,14 @@ first release exists.
   the `cloned` line and the pending/running/merged meta), the 44 px `Add repository` row, the
   note, and the 64 px tabbar with `Repos` lit. It fixes the list half of the pattern: cards are
   radius 16 and the actions keep the 44 px height. `design/README.md` §1 gives it the Repo list
-  row's 320 column, so eight screens still owe one.
+  row's 320 column, so eight screens still owed one.
+- **The dependency rail survives the squeeze.** `S7 · 320 · Repo · backlog` is the third routed
+  screen at 320 × 568: the same margins and status bar, the back chevron, `dani/codebox` and the
+  overflow, the `next up 80 · 2 waiting on deps` line, the rail at 9 px dots down the left, six
+  48 px rows with `66 · Docs and ADR pass`-style titles, their `needs` line and a 56 × 18 status
+  chip (`merged`, `running`, `queued`, `blocked`), the `6 more in TODO.md · pull to refresh` foot
+  and the two-tab bar with `Backlog` lit. `design/README.md` §1 gives it the Repo · backlog row's
+  320 column; seven screens still owe one.
 - **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
   frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
   changelog now name the join key the importer reads, not a description of it.
