@@ -24,78 +24,209 @@ type Mode = 'menu' | 'github' | 'integration';
 
 const NAME_MAX_LENGTH = 120;
 
+/**
+ * Sheet `18 · Connect a service`, in three modes: the two choices, the GitHub App manifest form
+ * and the generic integration form. One inline panel in the page flow, no overlay and no route.
+ */
 @Component({
   selector: 'app-connect-service-sheet',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
+      :host {
+        --cb-sheet-stroke: color-mix(in srgb, var(--cb-muted) 28%, transparent);
+        display: block;
+        margin-block-start: 16px;
+      }
       .cb-sheet {
         display: flex;
         flex-direction: column;
-        gap: calc(var(--cb-space) * 2);
-        border: 1px solid var(--cb-surface);
-        border-radius: var(--cb-radius);
-        padding: calc(var(--cb-space) * 3);
+        gap: 12px;
+        inline-size: 100%;
+        padding: 16px;
+        border: 1px solid var(--cb-sheet-stroke);
+        border-radius: 12px;
+        background: var(--cb-surface);
+        color: var(--cb-text);
+        font-family: var(--cb-font-sans);
+        font-size: 12px;
+        line-height: 15px;
+        box-sizing: border-box;
       }
-      .cb-sheet-actions {
+      .cb-sheet-title {
+        margin: 0;
+        color: var(--cb-text);
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 18px;
+      }
+      .cb-sheet-hint {
+        margin: 0;
+        color: var(--cb-muted);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 13px;
+        overflow-wrap: anywhere;
+      }
+      .cb-sheet-form {
         display: flex;
-        flex-wrap: wrap;
-        gap: calc(var(--cb-space) * 2);
+        flex-direction: column;
+        gap: 12px;
+        margin: 0;
+        min-inline-size: 0;
       }
       .cb-sheet-field {
         display: flex;
         flex-direction: column;
-        gap: var(--cb-space);
+        gap: 6px;
+        min-inline-size: 0;
+      }
+      .cb-sheet-label {
+        color: var(--cb-muted);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 13px;
+      }
+      .cb-sheet-input,
+      .cb-sheet-select,
+      .cb-sheet-textarea {
+        inline-size: 100%;
+        min-inline-size: 0;
+        block-size: 44px;
+        padding-inline: 12px;
+        border: 1px solid var(--cb-sheet-stroke);
+        border-radius: 10px;
+        background: var(--cb-bg);
+        color: var(--cb-text);
+        font-family: var(--cb-font-sans);
+        font-size: 13px;
+        line-height: 16px;
+        box-sizing: border-box;
+      }
+      .cb-sheet-textarea {
+        block-size: auto;
+        min-block-size: 88px;
+        padding-block: 10px;
+        font-family: var(--cb-font-mono);
+        font-size: 12px;
+        line-height: 15px;
       }
       .cb-sheet-error {
-        border-inline-start: 3px solid var(--cb-danger);
         margin: 0;
-        padding-inline-start: calc(var(--cb-space) * 2);
+        padding-inline-start: 10px;
+        border-inline-start: 3px solid var(--cb-danger);
+        color: var(--cb-danger);
+        font-size: 11px;
+        font-weight: 400;
+        line-height: 13px;
+        overflow-wrap: anywhere;
+      }
+      .cb-sheet-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-block-start: 12px;
+      }
+      .cb-sheet-action {
+        inline-size: 100%;
+        min-block-size: 44px;
+        padding-inline: 12px;
+        border: 1px solid var(--cb-sheet-stroke);
+        border-radius: 10px;
+        background: var(--cb-bg);
+        color: var(--cb-muted);
+        font-family: var(--cb-font-sans);
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 15px;
+        cursor: pointer;
+        box-sizing: border-box;
+      }
+      .cb-sheet-actions > .cb-sheet-action {
+        flex: 1 1 120px;
+        inline-size: auto;
+      }
+      .cb-sheet-action-primary {
+        border-color: color-mix(in srgb, var(--cb-accent) 45%, transparent);
+        color: var(--cb-accent);
+        font-weight: 600;
+      }
+      .cb-sheet-action:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
       }
     `,
   ],
   template: `
-    <section class="cb-sheet" data-testid="connect-service-sheet">
+    <section class="cb-sheet" data-testid="connect-service-sheet" [attr.data-mode]="mode()">
       @if (mode() === 'menu') {
-        <h2>{{ t('connect.title') }}</h2>
-        <button type="button" data-testid="service-github" (click)="startGithub()">
+        <h2 class="cb-sheet-title">{{ t('connect.title') }}</h2>
+        <button
+          type="button"
+          class="cb-sheet-action cb-sheet-action-primary"
+          data-testid="service-github"
+          (click)="startGithub()"
+        >
           {{ t('connect.github') }}
         </button>
-        <button type="button" data-testid="service-integration" (click)="startIntegration()">
+        <button
+          type="button"
+          class="cb-sheet-action"
+          data-testid="service-integration"
+          (click)="startIntegration()"
+        >
           {{ t('connect.integration') }}
         </button>
         <div class="cb-sheet-actions">
-          <button type="button" data-testid="connect-service-cancel" (click)="close()">
+          <button
+            type="button"
+            class="cb-sheet-action"
+            data-testid="connect-service-cancel"
+            (click)="close()"
+          >
             {{ t('connect.cancel') }}
           </button>
         </div>
       } @else if (mode() === 'github') {
-        <h2>{{ t('connect.github') }}</h2>
+        <h2 class="cb-sheet-title">{{ t('connect.github') }}</h2>
         @if (start(); as manifestStart) {
-          <p>{{ t('connect.manifestHint') }}</p>
+          <p class="cb-sheet-hint">{{ t('connect.manifestHint') }}</p>
           <form
+            class="cb-sheet-form"
             method="post"
             [attr.action]="manifestStart.action"
             data-testid="github-manifest-form"
           >
             <input type="hidden" name="manifest" [value]="manifestJson()" />
             <input type="hidden" name="state" [value]="manifestStart.state" />
-            <button type="submit">{{ t('connect.manifestSubmit') }}</button>
+            <button type="submit" class="cb-sheet-action cb-sheet-action-primary">
+              {{ t('connect.manifestSubmit') }}
+            </button>
           </form>
         }
         <div class="cb-sheet-actions">
-          <button type="button" data-testid="connect-service-back" (click)="back()">
+          <button
+            type="button"
+            class="cb-sheet-action"
+            data-testid="connect-service-back"
+            (click)="back()"
+          >
             {{ t('credentials.action.back') }}
           </button>
         </div>
       } @else {
-        <h2>{{ t('connect.integration') }}</h2>
-        <form data-testid="integration-form" (submit)="submitIntegration($event)">
+        <h2 class="cb-sheet-title">{{ t('connect.integration') }}</h2>
+        <form
+          class="cb-sheet-form"
+          data-testid="integration-form"
+          (submit)="submitIntegration($event)"
+        >
           <label class="cb-sheet-field" for="integration-name">
-            <span>{{ t('connect.name') }}</span>
+            <span class="cb-sheet-label">{{ t('connect.name') }}</span>
             <input
               id="integration-name"
+              class="cb-sheet-input"
               data-testid="integration-name"
               type="text"
               autocomplete="off"
@@ -105,9 +236,10 @@ const NAME_MAX_LENGTH = 120;
           </label>
 
           <label class="cb-sheet-field" for="integration-base-url">
-            <span>{{ t('connect.baseUrl') }}</span>
+            <span class="cb-sheet-label">{{ t('connect.baseUrl') }}</span>
             <input
               id="integration-base-url"
+              class="cb-sheet-input"
               data-testid="integration-base-url"
               type="url"
               autocomplete="off"
@@ -117,9 +249,10 @@ const NAME_MAX_LENGTH = 120;
           </label>
 
           <label class="cb-sheet-field" for="integration-auth">
-            <span>{{ t('connect.auth') }}</span>
+            <span class="cb-sheet-label">{{ t('connect.auth') }}</span>
             <select
               id="integration-auth"
+              class="cb-sheet-select"
               data-testid="integration-auth"
               (change)="setAuth(valueOf($event))"
             >
@@ -133,9 +266,10 @@ const NAME_MAX_LENGTH = 120;
 
           @if (auth() === 'header') {
             <label class="cb-sheet-field" for="integration-header">
-              <span>{{ t('connect.headerName') }}</span>
+              <span class="cb-sheet-label">{{ t('connect.headerName') }}</span>
               <input
                 id="integration-header"
+                class="cb-sheet-input"
                 data-testid="integration-header"
                 type="text"
                 autocomplete="off"
@@ -146,9 +280,10 @@ const NAME_MAX_LENGTH = 120;
           }
 
           <label class="cb-sheet-field" for="integration-credential">
-            <span>{{ t('connect.credential') }}</span>
+            <span class="cb-sheet-label">{{ t('connect.credential') }}</span>
             <select
               id="integration-credential"
+              class="cb-sheet-select"
               data-testid="integration-credential"
               (change)="credentialId.set(valueOf($event))"
             >
@@ -161,9 +296,10 @@ const NAME_MAX_LENGTH = 120;
           </label>
 
           <label class="cb-sheet-field" for="integration-hosts">
-            <span>{{ t('connect.hosts') }}</span>
+            <span class="cb-sheet-label">{{ t('connect.hosts') }}</span>
             <textarea
               id="integration-hosts"
+              class="cb-sheet-textarea"
               data-testid="integration-hosts"
               rows="3"
               [value]="hosts()"
@@ -176,11 +312,17 @@ const NAME_MAX_LENGTH = 120;
           }
 
           <div class="cb-sheet-actions">
-            <button type="button" data-testid="connect-service-cancel" (click)="close()">
+            <button
+              type="button"
+              class="cb-sheet-action"
+              data-testid="connect-service-cancel"
+              (click)="close()"
+            >
               {{ t('connect.cancel') }}
             </button>
             <button
               type="button"
+              class="cb-sheet-action cb-sheet-action-primary"
               data-testid="integration-save"
               [disabled]="saving()"
               (click)="submitIntegration()"

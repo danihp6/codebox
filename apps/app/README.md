@@ -84,17 +84,17 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/backlog/new-session.sheet.spec.ts` — no request on render, the four buttons, the body without a work id, the 409 and the read-only create.
 - `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog frame: the back link, the slug, the chat button, the summary line, the rows of three lines with their section and their state · runs flow, the dependency rail as the left gutter with one node per row, the detail panel, the run action and the live-work block.
 - `src/app/features/backlog/repo-backlog.page.spec.ts` — the row hooks and their three lines, every work state label, the summary line, the needs and unmet ids, the rail edges and nodes, the detail panel, the dictionaries, the run visibility, the live work, the error/retry and the sheet.
-- `src/app/features/credentials/add-credential.sheet.ts` — the two-step add-credential sheet: name, kind, expose, the env warning, the confirmation tail and the save.
-- `src/app/features/credentials/add-credential.sheet.spec.ts` — the review step, the four-character tail, the env warning/blocked states and the cleared value.
-- `src/app/features/credentials/connect-service.sheet.ts` — the GitHub App manifest form and the generic integration form.
-- `src/app/features/credentials/connect-service.sheet.spec.ts` — the manifest form fields, the header field visibility and the two save refusals.
+- `src/app/features/credentials/add-credential.sheet.ts` — sheet `19 · Add credential`: the form → review → save card, the env warning and block, the four-character review and the value that never enters the DOM.
+- `src/app/features/credentials/add-credential.sheet.spec.ts` — the `data-step` states, the four-character tail, the env warning/blocked states, the cleared value and the sentinel absent from the form, the review and the save.
+- `src/app/features/credentials/connect-service.sheet.ts` — sheet `18 · Connect a service`: the three modes (`menu`, `github`, `integration`), the manifest form and the integration form.
+- `src/app/features/credentials/connect-service.sheet.spec.ts` — the `data-mode` transitions, the manifest form fields, the header field visibility and the two save refusals.
 - `src/app/features/credentials/credentials.api.ts` — `/v1/credentials` and `/v1/integrations` calls plus the six hand-written payload parsers.
 - `src/app/features/credentials/credentials.api.spec.ts` — every URL and method, the parsers and the error mapping.
-- `src/app/features/credentials/credentials.page.ts` — connected services, open credentials, the two sheets and the manifest-complete path.
-- `src/app/features/credentials/credentials.page.spec.ts` — loading, error, empty, both sections, the two sheet triggers, the confirmed delete and the manifest completion.
+- `src/app/features/credentials/credentials.page.ts` — frame `16 · Settings / Credentials`: the back link, the counted subtitle, the two group headings, the GitHub App card, one card per integration, one row per open credential with its masked metadata, the two action rows, the write-only notes and the two sheets.
+- `src/app/features/credentials/credentials.page.spec.ts` — loading, error, empty, the header hooks, both groups, the GitHub App card against its open-row exclusion, the row metadata, the notes, a sentinel absent from the page, the sheet triggers, one create through the add sheet, the confirmed delete and the manifest completion.
 - `src/app/features/credentials/credentials.store.ts` — the two independent catalog reads, create/remove and the manifest reload.
 - `src/app/features/credentials/credentials.store.spec.ts` — load, a failed half, create, remove, the manifest start and completion.
-- `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`.
+- `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`, with the frame's subtitle, group headings, GitHub App lines and the two write-only notes.
 - `src/app/features/dashboard/dashboard.page.ts` — the frame's inbox (needs you, working, finished · not reviewed, spend, health), the queue footer, the recent runs, the first-run start card and the loading/error/stale states.
 - `src/app/features/dashboard/dashboard.page.spec.ts` — every block from a zero fixture, the frame order, the needs card, the clamped queue footer, the start card, the rows of the run blocks and the dictionary parity.
 - `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry`, `/v1/runs` and `/v1/repos` reads behind the blocks.

@@ -1967,7 +1967,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       three exports sit beside their screens at 390 × 844 and the three list shapes match.
       *Dependencies:* L6, L7, Task-89.
 
-- [ ] **[Task-97]** Credentials, frame `16 · Settings / Credentials`, sheets
+- [x] **[Task-97]** Credentials, frame `16 · Settings / Credentials`, sheets
       `18 · Connect a service` and `19 · Add credential`. Rewrite `features/credentials` against
       `design/screens/credentials.json`: the list, the write-only badges and the two sheets, with
       the frames' boxes and type. The write-only rule of D50 is visible in the drawing (the value

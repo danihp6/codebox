@@ -29,6 +29,14 @@ first release exists.
   theme control wired to `SettingsStore.theme` (dark by default, `data-theme` on `<html>`). The
   stores, the APIs and `providers.page.ts` do not move, and the rows the frames omit (the
   credentials link, the time zone, the brake) keep their pinned hooks.
+- **The credentials screen draws its frame.** `features/credentials` renders `16 · Settings /
+  Credentials` from `design/screens/credentials.json`: the back link and counted subtitle, the
+  GitHub App card, one card per integration, one row per open credential with its `••••` tail
+  and its expose badge, and the two write-only notes, with sheets `18 · Connect a service` and
+  `19 · Add credential` rebuilt to the sheet rule. The write-only rule of D50 is visible in the
+  drawing and still enforced — no value reaches the DOM, test pinned by a sentinel — and the
+  API and the store do not move; rotation stays a follow-up because the client has no rotate
+  call and the frame has no rotate control.
 
 ### Changed — 2026-11-04 (Batch 23, wave 1: the screens reach the prototype)
 

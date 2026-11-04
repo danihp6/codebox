@@ -116,14 +116,17 @@ describe('AddCredentialSheet', () => {
   it('only offers the save control after the review step', async () => {
     const { fixture, element } = await mount();
 
+    expect(hook(element, 'add-credential-sheet')?.getAttribute('data-step')).toBe('form');
     expect(hook(element, 'credential-save')).toBeNull();
     expect(hook(element, 'credential-review')).toBeNull();
 
     await reachReview(fixture, element);
 
+    expect(hook(element, 'add-credential-sheet')?.getAttribute('data-step')).toBe('review');
     expect(hook(element, 'credential-save')).not.toBeNull();
     expect(hook(element, 'credential-review')).not.toBeNull();
     expect(hook(element, 'credential-value')).toBeNull();
+    expect(element.innerHTML).not.toContain(SECRET);
   });
 
   it('shows only the last four characters of the value on review', async () => {
@@ -134,6 +137,7 @@ describe('AddCredentialSheet', () => {
     expect(tail?.textContent).toBe('9876');
     expect(hook(element, 'credential-review')?.textContent).not.toContain(SECRET);
     expect(element.textContent).not.toContain(SECRET);
+    expect(element.innerHTML).not.toContain(SECRET);
   });
 
   it('treats the value input as a password and clears it after the save', async () => {
@@ -142,7 +146,11 @@ describe('AddCredentialSheet', () => {
     expect(input?.getAttribute('type')).toBe('password');
     expect(input?.getAttribute('autocomplete')).toBe('off');
 
-    await reachReview(fixture, element);
+    await fill(fixture, element, 'credential-name', 'OpenAI');
+    await fill(fixture, element, 'credential-value', SECRET);
+    expect(element.innerHTML).not.toContain(SECRET);
+
+    await click(fixture, element, 'credential-continue');
     const saved: CreateCredentialBody[] = [];
     component.saved.subscribe((body) => saved.push(body));
 
@@ -154,6 +162,7 @@ describe('AddCredentialSheet', () => {
     expect(cleared).not.toBeNull();
     expect((cleared as HTMLInputElement).value).toBe('');
     expect(element.textContent).not.toContain(SECRET);
+    expect(element.innerHTML).not.toContain(SECRET);
   });
 
   it('warns about the model environment and blocks env with any other kind', async () => {
