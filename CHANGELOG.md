@@ -67,6 +67,14 @@ first release exists.
   (`23:00 → 08:00`, `Europe/Madrid · evaluated on the daemon`, its one-line note and toggle), and
   the foot that states what a push may carry. `design/README.md` §1 gives it the Notifications
   row's 320 column; one screen still owed one.
+- **About closes the 320 column.** `S14 · 320 · About` is the about screen at 320 × 568: the
+  `codebox` wordmark and its tagline, the 288 × 128 fact card (`Version 0.1.0`,
+  `Commit 4f2a1c3`, `Build 2026-10-27 · 09:12 UTC`, `Instance cb-vm-01 · OCI A1 · arm64`), the
+  `db ok · opencode ok · disk 61%` line with `● healthy · uptime 12 d`, the
+  `Open source licences` row, and the `MIT · Angular 22 · Ionic 9 · Capacitor` /
+  `The VM is disposable. The repo is durable.` foot. With it every row of `design/README.md` §1
+  has a 320 frame — `S3`, `S5`–`S14` — so L5's first `[unit]` criterion is met and only the
+  empty/error states and the two prototype flows remain.
 - **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
   frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
   changelog now name the join key the importer reads, not a description of it.

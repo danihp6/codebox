@@ -51,7 +51,7 @@ Figma, not the layer names.
 | Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | S12 |
 | Credentials | `/settings/credentials` | `features/credentials` | 16 | L8 | — | S3 |
 | Notifications | `/settings/notifications` | `features/settings` | 17 | L22 | — | S13 |
-| About | `/about` | `features/about` | 07 | L7 | — | — |
+| About | `/about` | `features/about` | 07 | L7 | — | S14 |
 
 **One row per state of the workers view:** `20i` queued, `20c` running, `20f` needs you, `20e`
 asleep — and `L20`, `L20f`, `L20i`, `L20e` in light. `20h` (shipped) and `20g` (failed) were
@@ -61,30 +61,13 @@ deleted: a merged run hands the work on and sleeps, a failed one becomes a decis
 D54), for the per-repository blocks on the dashboard, or for the checkbox column of a backlog
 row.
 
-**The 320 column is being drawn, one reference first.** `S5 · 320 · Pairing` is the
-pattern the other nine rows follow: 16 px margins, a 288 px content column, the status bar at
-13/12 px, the card at radius 16 with its content at 16 px, the primary action full width at
-44 px, and the foot (the command and the note) below the card. `S6 · 320 · Repo list` applies
-it to a list screen: the 36 px `+` beside the title, a 36 px search field, 72 px cards with
-8 px gaps, the add row at 44 px and the 64 px tabbar. `S7 · 320 · Repo · backlog` carries the
-dependency rail down the left at 9 px dots, six 48 px rows with a status chip at the right, the
-`6 more` foot and the two-tab bar. `S8 · 320 · Repo · workers` folds the factory into a 2 × 2
-grid of 132 × 88 rooms inside a 288 × 200 card, one face and one chip per room, the amber badge
-on `DEV`'s head, and the last-events list under it. `S9 · 320 · Design · session` keeps the
-preview card with four thumbnails and the four state chips, the `✓ tokens ✓ routes ✓ states`
-line, the session thread and the composer. `S10 · 320 · Dashboard` keeps the `NEEDS YOU` card
-with its `Review`, the working run, the two finished rows, the spend card with its bar and
-sparkline, and the health row. `S11 · 320 · Settings` keeps four groups of 44 px rows —
-preferences, automation, account and the two danger actions — and drops the device card, since
-`/settings/devices` is a row away. `S12 · 320 · Devices` keeps the two 64 px device cards
-(`this device` and `Revoke`), the 44 px `Pair another device` and the two revocation notes.
-`S13 · 320 · Notifications` keeps the browser-permission card, the six event rows with their
-toggles (`Credential changed` stays `always`), and the quiet-hours card. `S1`/`S2` are stale —
-they still
-draw the retired `Chat list`/`Chat` — so a row counts as covered only when its caption names the
-screen it draws, and only `S3` (Credentials), `S5` (Pairing), `S6` (Repo list), `S7`
-(Repo · backlog), `S8` (Repo · workers), `S9` (Design · session), `S10` (Dashboard), `S11`
-(Settings), `S12` (Devices) and `S13` (Notifications) do.
+**The 320 column is complete.** `S5 · 320 · Pairing` fixed the pattern the others follow:
+16 px margins, a 288 px content column, the status bar at 13/12 px, the card at radius 16 with
+its content at 16 px, the primary action full width at 44 px, and the foot (the command and the
+note) below the card. Every row above has a frame: `S3` Credentials, `S5` Pairing, `S6`
+Repo list, `S7` Repo · backlog, `S8` Repo · workers, `S9` Design · session, `S10` Dashboard,
+`S11` Settings, `S12` Devices, `S13` Notifications and `S14` About. `S1`/`S2` are stale — they
+still draw the retired `Chat list`/`Chat` — so they cover no row.
 
 ## 2. States and sheets
 

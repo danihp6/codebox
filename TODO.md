@@ -2124,37 +2124,17 @@ of them.
       are drawn (2026-11-03):** the Design System's `STATES · BUTTON AND ROW` block carries
       `default`, `hover`, `focus-visible`, `pressed` and `disabled` for a button and a row, in
       dark and light, with the focus ring on both — so that criterion is met and only the 320
-      column, the empty/error states and the two flows are still owed. **The 320 column has its
-      reference (2026-11-03):** `S5 · 320 · Pairing` fixes the pattern — 16 px margins, a
-      288 px column, the card at radius 16, the primary action at 44 px, the foot under the card
-      — and `design/README.md` §1 names it; the other nine rows are drawn from it.
-      **`S6 · 320 · Repo list` follows (2026-11-04):** the same column applied to a list — the
-      36 px `+` beside the title, a 36 px search field, three 72 px cards with 8 px gaps, the add
-      row at 44 px, a 64 px tabbar — so eight rows still owe a 320 frame.
-      **`S7 · 320 · Repo · backlog` follows (2026-11-04):** the dependency rail at 9 px, six 48 px
-      rows with numbered titles and a status chip, the `6 more` foot and the two-tab bar — so seven
-      rows still owe one.
-      **`S8 · 320 · Repo · workers` follows (2026-11-04):** the factory folds into a 2 × 2 grid of
-      132 × 88 rooms inside a 288 × 200 card, one face and one chip per room, the amber badge on
-      `DEV`, the two chips in the header and the last-events list under it — so six rows still owe
-      one.
-      **`S9 · 320 · Design · session` follows (2026-11-04):** the preview card with four
-      thumbnails and four state chips, the `✓ tokens ✓ routes ✓ states` line, the session thread,
-      the file card and the composer — so five rows still owe one.
-      **`S10 · 320 · Dashboard` follows (2026-11-04):** the `NEEDS YOU` card with `Review`, the
-      working run and its branch, the queue line, the two finished rows, the spend card with its
-      bar and sparkline, and the health row — so four rows still owe one.
-      **`S11 · 320 · Settings` follows (2026-11-04):** four groups of 44 px rows — preferences,
-      automation, account and the two danger actions — with the device card dropped because
-      `/settings/devices` is a row away — so three rows still owe one.
-      **`S12 · 320 · Devices` follows (2026-11-04):** two 64 px device cards with `this device` and
-      `Revoke`, the 44 px `Pair another device` and the two revocation notes — so two rows still
-      owe one.
-      **`S13 · 320 · Notifications` follows (2026-11-04):** the browser-permission card, the six
-      event rows with toggles (`Credential changed` stays `always`) and the quiet-hours card — so
-      one row still owes one. The same pass
-      repaired `01 · Pairing — mobile dark`, whose primary button painted `#0b0f14` on
-      `#0b0f14`: `Pair device` was invisible in the export. **Desktop is out of v1**
+      column, the empty/error states and the two flows are still owed.
+      **The 320 column is complete (2026-11-04).** `S5 · 320 · Pairing` fixed the pattern — 16 px
+      margins, a 288 px column, the card at radius 16, the primary action at 44 px, the foot under
+      the card — and every row of `design/README.md` §1 now has a frame: `S3` (Credentials), `S5`
+      (Pairing), `S6` (Repo list), `S7` (Repo · backlog), `S8` (Repo · workers), `S9`
+      (Design · session), `S10` (Dashboard), `S11` (Settings), `S12` (Devices), `S13`
+      (Notifications) and `S14` (About). `S1`/`S2` remain stale — they still draw the retired
+      `Chat list`/`Chat` — so they cover no row. The same pass repaired `01 · Pairing — mobile
+      dark`, whose primary button painted `#0b0f14` on `#0b0f14`: `Pair device` was invisible in
+      the export. **Only the empty/error states and the two flows are still owed.** **Desktop is
+      out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
       the beta, and `D2`/`D4`, `D5`–`D8` and `D9` stay as the reference they already are. Then
       wire the prototype so **these two flows** are clickable (decided 2026-10-30):
