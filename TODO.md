@@ -1930,7 +1930,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       the four exports sits beside its state at 390 × 844 and the rooms, the belt and the two
       chips match region by region. *Dependencies:* L6, L7, Task-88, Task-89.
 
-- [ ] **[Task-94]** Design · session, frame `26 · Design · preview + chat — dark`. Rewrite
+- [x] **[Task-94]** Design · session, frame `26 · Design · preview + chat — dark`. Rewrite
       `features/sessions` against `design/screens/design-session.json`: the preview card that
       shows the repository's `design/` at a revision (tokens, routes, declared states, what is
       pending) and the one-target editor under it (D55). The stream, the markdown renderer and the

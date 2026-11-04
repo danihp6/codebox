@@ -6,6 +6,17 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-04 (Batch 23, wave 2: the session and the inbox reach the prototype)
+
+- **The design session draws its frame.** `features/sessions` renders `26 · Design · preview +
+  chat — dark` from `design/screens/design-session.json`: the two-line header, the preview card
+  above the thread with its revision, tokens, routes, one block per screen with its three
+  declared states and the check's findings, the `SESSION · design/` eyebrow, the right-aligned
+  user bubble against the plain agent text, the tool card and the raised composer, all from the
+  spec's `layout`. The thread, the markdown renderer, the store, the stream and the API do not
+  move; the card keeps `present: false` and the revision-unknown state, and the composer is
+  still disabled while a proposal is pending.
+
 ### Changed — 2026-11-04 (Batch 23, wave 1: the screens reach the prototype)
 
 - **Pairing draws its frame.** `features/pairing` renders `01 · Pairing — mobile dark` from

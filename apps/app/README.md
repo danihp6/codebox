@@ -131,14 +131,14 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/repos/repo-schedule.page.spec.ts` — the mode, the window and the next fire, no unexposed field, the notice and the create.
 - `src/app/features/sessions/sessions.api.ts` — one session, its transcript, the send, the stop, the merge and the design preview.
 - `src/app/features/sessions/sessions.api.spec.ts` — every session URL and method, the transcript query, the design preview and the error mapping.
-- `src/app/features/sessions/design-preview.card.ts` — the design preview card: the commit, the tokens, the routes, each screen's three declared states and the check's findings.
-- `src/app/features/sessions/design-preview.card.spec.ts` — the loaded commit and states, the pending line, the repository without `design/`, the refusal and retry, the clean check and a finding.
+- `src/app/features/sessions/design-preview.card.ts` — the design preview card: the eyebrow and the revision pill, the body with the tokens, routes and screens counts and their rows, one block per screen with its three state chips and the check's line or its findings.
+- `src/app/features/sessions/design-preview.card.spec.ts` — the loaded revision pill and states, the body's count order, the pending line, the repository without `design/`, the refusal and retry, the clean check and a finding.
 - `src/app/features/sessions/session-stream.ts` — the pure thread: message merge by id, the live delta buffer, the tool cards and the event application.
 - `src/app/features/sessions/session-stream.spec.ts` — replayed frames, idempotent merges, the foreign session, the tool key and the proposal.
 - `src/app/features/sessions/session.store.ts` — one session: the load, the draft, the send, the stop, the single merge and the pending proposal.
 - `src/app/features/sessions/session.store.spec.ts` — load, send, the blocked composer, the merge and its refusal, the frames and the proposal.
-- `src/app/features/sessions/session.page.ts` — the editor: the target, the design preview above the thread, the thread through `markdown.ts`, the tool cards, the proposal panel and the composer.
-- `src/app/features/sessions/session.page.spec.ts` — the thread, the blocked composer, the proposal panel and the single merge, the preview that follows the proposal, the read-only target and the error/retry.
+- `src/app/features/sessions/session.page.ts` — the editor: the back link, the target sub-line with the pending `from {sha}`, the design preview above the thread, the thread eyebrow, the thread through `markdown.ts`, the tool cards, the proposal panel, the amber preview status line and the raised composer bar.
+- `src/app/features/sessions/session.page.spec.ts` — the thread, the back link, the eyebrow and the status line, the blocked composer, the proposal panel and the single merge, the preview that follows the proposal, the read-only target and the error/retry.
 - `src/app/features/sessions/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/sessions/markdown.spec.ts` — fences, lists and unclosed markup.
 - `src/app/features/sessions/i18n.ts` — the session and design-preview dictionary in `en` and `es`.
