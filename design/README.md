@@ -95,6 +95,12 @@ repository that has none: the empty card, `Manual only · nothing fires on its o
 `Create a schedule`. The 320 twins are `S4` (with a schedule) and `S4b` (without). The sheet is
 drawn at 390 × 844 and 320 × 568; its 1280 layout is out of v1 with the rest of desktop.
 
+**The two prototype flows are wired (2026-11-04).** A: `01 · Pairing → 12 · First run →
+02 · Repo list` (`pair-cta`, `fr-start-cta`). B: `22 · Repo · backlog → 03a · New session →
+04b · Session sheet → 04 · Work · run log` (`bl-chat`, `cf-card-repo`, `cx-kind`). Both are
+native `ON_CLICK` reactions with a 0.2 s dissolve; the backlog header carries the chat button
+§6 requires.
+
 **Removed in the 2026-10-28 re-cut:** the connect-repository picker, the cloning screen and the
 free-chat `⋯` menu. Connecting a repository happens from the `+` on `/repos`, and its clone
 state lives in the row, so a whole screen for it was one tap too many.

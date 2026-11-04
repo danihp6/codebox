@@ -6,6 +6,23 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-04 (L5, the two flows)
+
+- **Flow A is clickable.** `01 · Pairing → 12 · First run → 02 · Repo list`: `pair-cta`
+  (`Pair device`) navigates to `12 · First run — after pairing`, and its `Connect repository`
+  card (`fr-start-cta`) navigates to `02 · Repo list — mobile dark`.
+- **Flow B is clickable.** `22 · Repo · backlog → 03a · New session → 04b · Session sheet →
+  04 · Work · run log`: the backlog's chat button opens `03a`, the `Backlog` target card
+  (`cf-card-repo`) opens `04b`, and the sheet's `backlog · dani/codebox · TODO.md · proposal
+  ready · 1 file` row (`cx-kind`) opens `04`, where the diff, the gate, the merged PR and the
+  ticked task are drawn.
+- **Both flows are native reactions.** `ON_CLICK` with a 0.2 s dissolve, set with
+  `reaction_update`; the `[live]` present-mode run is the operator's, since it needs Figma's
+  presentation and not the plugin.
+- **The backlog header obeys its own rule.** `22 · Repo · backlog — deps (dark)` carried a `⋯`
+  where `design/README.md` §6 requires a chat button. The `⋯` is gone and a 36 px `bl-chat`
+  circle sits at the same right margin, so the flow has a control the product has.
+
 ### Changed — 2026-11-04 (L5, the repo list at 320)
 
 - **The reference width reaches the first list screen.** `S6 · 320 · Repo list` is the second of

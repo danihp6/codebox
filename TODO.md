@@ -2133,9 +2133,11 @@ of them.
       (Notifications) and `S14` (About). `S1`/`S2` remain stale — they still draw the retired
       `Chat list`/`Chat` — so they cover no row. The same pass repaired `01 · Pairing — mobile
       dark`, whose primary button painted `#0b0f14` on `#0b0f14`: `Pair device` was invisible in
-      the export. **Only the empty/error states and the two flows are still owed.** **Desktop is
-      out of v1**
-      (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
+      the export. **The two flows are wired (2026-11-04):** the file's native reactions carry
+      `01 → 12 → 02` and `22 → 03a → 04b → 04`, and the backlog's `⋯` became the chat button its
+      header requires; the `[live]` present-mode pass is the operator's. **Only the empty/error
+      states are still owed.** **Desktop is out of v1** (ruled 2026-10-30): the eight screens without
+      a desktop frame keep it that way until after
       the beta, and `D2`/`D4`, `D5`–`D8` and `D9` stay as the reference they already are. Then
       wire the prototype so **these two flows** are clickable (decided 2026-10-30):
       **A — pairing to first work:** `01 · Pairing → 12 · First run → 02 · Repo list`;
