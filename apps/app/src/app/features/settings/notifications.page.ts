@@ -160,8 +160,6 @@ import type { NotificationEvent } from './notifications.store';
         font-size: 10px;
         font-weight: 600;
         line-height: 12.1px;
-        letter-spacing: 0.06em;
-        text-transform: uppercase;
         color: var(--cb-warn);
       }
       .cb-notifications-locked-hint {
@@ -186,22 +184,28 @@ import type { NotificationEvent } from './notifications.store';
       .cb-notifications-quiet-head {
         display: flex;
         gap: 8px;
-        align-items: center;
+        align-items: flex-start;
         justify-content: space-between;
       }
-      .cb-notifications-quiet-title {
+      .cb-notifications-quiet-current {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-inline-size: 0;
+        margin: 0;
+        overflow-wrap: anywhere;
+      }
+      .cb-notifications-quiet-window {
         font-size: 12px;
         font-weight: 400;
         line-height: 14.52px;
         color: var(--cb-text);
       }
-      .cb-notifications-quiet-current {
-        margin: 0;
-        font-size: 10px;
+      .cb-notifications-quiet-mirror {
+        font-size: 9px;
         font-weight: 400;
-        line-height: 12.1px;
+        line-height: 10.89px;
         color: var(--cb-muted);
-        overflow-wrap: anywhere;
       }
       .cb-notifications-quiet-hint {
         margin: 0;
@@ -363,7 +367,35 @@ import type { NotificationEvent } from './notifications.store';
 
       <div class="cb-notifications-quiet" data-testid="notifications-quiet-card">
         <div class="cb-notifications-quiet-head">
-          <span class="cb-notifications-quiet-title">{{ t('notifications.quiet.title') }}</span>
+          <p
+            class="cb-notifications-quiet-current"
+            data-testid="notifications-quiet-current"
+            [attr.data-quiet-hours]="store.preferences()?.quietHours ?? ''"
+            [attr.data-mirror]="store.mirror() ?? ''"
+          >
+            @if (store.preferences()?.quietHours; as saved) {
+              <span class="cb-notifications-quiet-window">{{ saved }}</span>
+            } @else {
+              <span class="cb-notifications-quiet-window">{{ t('notifications.quiet.none') }}</span>
+            }
+            @switch (store.mirror()) {
+              @case ('synced') {
+                <span class="cb-notifications-quiet-mirror">
+                  {{ t('notifications.quiet.saved') }}
+                </span>
+              }
+              @case ('absent') {
+                <span class="cb-notifications-quiet-mirror">
+                  {{ t('notifications.quiet.absent') }}
+                </span>
+              }
+              @case ('failed') {
+                <span class="cb-notifications-quiet-mirror">
+                  {{ t('notifications.quiet.failed') }}
+                </span>
+              }
+            }
+          </p>
           <span
             class="cb-notifications-track"
             data-testid="notifications-quiet-track"
@@ -371,29 +403,6 @@ import type { NotificationEvent } from './notifications.store';
             aria-hidden="true"
           ></span>
         </div>
-        <p
-          class="cb-notifications-quiet-current"
-          data-testid="notifications-quiet-current"
-          [attr.data-quiet-hours]="store.preferences()?.quietHours ?? ''"
-          [attr.data-mirror]="store.mirror() ?? ''"
-        >
-          @if (store.preferences()?.quietHours; as saved) {
-            <span class="cb-mono">{{ saved }}</span>
-          } @else {
-            {{ t('notifications.quiet.none') }}
-          }
-          @switch (store.mirror()) {
-            @case ('synced') {
-              {{ t('notifications.quiet.saved') }}
-            }
-            @case ('absent') {
-              {{ t('notifications.quiet.absent') }}
-            }
-            @case ('failed') {
-              {{ t('notifications.quiet.failed') }}
-            }
-          }
-        </p>
         <p class="cb-notifications-quiet-hint">{{ t('notifications.quiet.hint') }}</p>
       </div>
 

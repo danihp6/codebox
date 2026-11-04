@@ -139,6 +139,7 @@ import { SettingsStore } from './settings.store';
       }
       .cb-settings-row-danger {
         min-block-size: 48px;
+        border-color: color-mix(in srgb, var(--cb-danger) 65%, transparent);
       }
       .cb-settings-row-cell {
         display: flex;
@@ -195,6 +196,16 @@ import { SettingsStore } from './settings.store';
         line-height: 16.94px;
         color: var(--cb-muted);
         text-decoration: none;
+      }
+      /* The chevron is the only door to /about, so the anchor keeps a 44 px tap target. */
+      a.cb-settings-chevron {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        justify-self: end;
+        min-inline-size: 24px;
+        min-block-size: 44px;
+        margin-inline-start: -9px;
       }
       .cb-settings-notes {
         display: flex;
@@ -349,14 +360,13 @@ import { SettingsStore } from './settings.store';
                 <span class="cb-sr">{{ t('settings.device.name') }}</span>{{ me.device.name }}
               </p>
               <p class="cb-settings-device-meta" data-testid="settings-device-meta">
-                <span>
-                  {{ t('settings.device.platform') }}
-                  <span class="cb-mono">{{ me.device.platform }}</span>
-                </span>
-                <span>
-                  {{ t('settings.device.scopes') }}
-                  <span class="cb-mono">{{ scopes() }}</span>
-                </span>
+                <span class="cb-sr">{{ t('settings.device.platform') }}</span>
+                <span>{{ me.device.platform }}</span>
+                <span aria-hidden="true">·</span>
+                <span>{{ t('devices.current') }}</span>
+                <span aria-hidden="true">·</span>
+                <span class="cb-sr">{{ t('settings.device.scopes') }}</span>
+                <span>{{ scopes() }}</span>
               </p>
             } @else {
               <p class="cb-muted">{{ t('settings.device.none') }}</p>

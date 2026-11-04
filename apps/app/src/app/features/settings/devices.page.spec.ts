@@ -160,7 +160,7 @@ describe('DevicesPage', () => {
     );
     expect(current?.querySelector('[data-testid="device-meta"]')?.textContent).toContain('ios');
     expect(current?.querySelector('[data-testid="device-meta"]')?.textContent).toContain(
-      'read write admin',
+      'read, write, admin',
     );
     expect(current?.querySelector('[data-testid="device-seen"]')?.textContent).toContain(
       CURRENT.lastSeenAt ?? '',

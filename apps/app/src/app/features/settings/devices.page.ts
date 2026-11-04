@@ -186,6 +186,7 @@ import { translate } from './i18n';
       .cb-devices-pair {
         display: flex;
         align-items: center;
+        gap: 8px;
         min-block-size: 48px;
         margin: 16px 0 0;
         padding: 0 15px;
@@ -197,6 +198,11 @@ import { translate } from './i18n';
         font-weight: 400;
         line-height: 14.52px;
         overflow-wrap: anywhere;
+      }
+      .cb-devices-pair-mark {
+        flex: 0 0 auto;
+        font-size: 15px;
+        line-height: 18.15px;
       }
       .cb-devices-note {
         margin: 0;
@@ -301,8 +307,9 @@ import { translate } from './i18n';
                 <div class="cb-device-body">
                   <p class="cb-device-name" data-testid="device-name">{{ device.name }}</p>
                   <p class="cb-device-meta" data-testid="device-meta">
-                    <span class="cb-mono">{{ device.platform }}</span>
-                    <span class="cb-mono">{{ device.scopes.join(' ') }}</span>
+                    <span>{{ device.platform }}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{{ device.scopes.join(', ') }}</span>
                   </p>
                   <p class="cb-device-seen" data-testid="device-seen">
                     {{ t('devices.lastSeen') }}:
@@ -357,6 +364,7 @@ import { translate } from './i18n';
         }
 
         <p class="cb-devices-pair" data-testid="devices-pair" aria-disabled="true">
+          <span class="cb-devices-pair-mark" aria-hidden="true">+</span>
           {{ t('devices.pair') }}
         </p>
 
