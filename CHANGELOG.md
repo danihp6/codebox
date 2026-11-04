@@ -53,6 +53,12 @@ first release exists.
   eight rows at the 44 px target. The `Dani iPhone` card is dropped at this width because
   `/settings/devices` is one row away and the eight rows plus their labels fill the viewport.
   `design/README.md` §1 gives it the Settings row's 320 column; three screens still owed one.
+- **Devices fits two cards and a note.** `S12 · 320 · Devices` is the paired-device screen at
+  320 × 568: `2 paired · scopes are per device`, the 64 px `Dani iPhone` card with `this device`
+  and its scope line, the `Dani MacBook` card with `Revoke`, the 44 px `Pair another device`, and
+  the two notes (`revoking kills the refresh token`; `a device cannot revoke itself`). Both notes
+  wrap at 280 px. `design/README.md` §1 gives it the Devices row's 320 column; two screens still
+  owed one.
 - **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
   frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
   changelog now name the join key the importer reads, not a description of it.

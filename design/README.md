@@ -48,7 +48,7 @@ Figma, not the layer names.
 | Design · session | `/sessions/:id` (`design`) | `features/sessions` | 26 | L26 | — | S9 |
 | Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | S10 |
 | Settings | `/settings` | `features/settings` | 06 | L6 | — | S11 |
-| Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
+| Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | S12 |
 | Credentials | `/settings/credentials` | `features/credentials` | 16 | L8 | — | S3 |
 | Notifications | `/settings/notifications` | `features/settings` | 17 | L22 | — | — |
 | About | `/about` | `features/about` | 07 | L7 | — | — |
@@ -76,11 +76,13 @@ line, the session thread and the composer. `S10 · 320 · Dashboard` keeps the `
 with its `Review`, the working run, the two finished rows, the spend card with its bar and
 sparkline, and the health row. `S11 · 320 · Settings` keeps four groups of 44 px rows —
 preferences, automation, account and the two danger actions — and drops the device card, since
-`/settings/devices` is a row away. `S1`/`S2` are stale — they still
+`/settings/devices` is a row away. `S12 · 320 · Devices` keeps the two 64 px device cards
+(`this device` and `Revoke`), the 44 px `Pair another device` and the two revocation notes.
+`S1`/`S2` are stale — they still
 draw the retired `Chat list`/`Chat` — so a row counts as covered only when its caption names the
 screen it draws, and only `S3` (Credentials), `S5` (Pairing), `S6` (Repo list), `S7`
-(Repo · backlog), `S8` (Repo · workers), `S9` (Design · session), `S10` (Dashboard) and `S11`
-(Settings) do.
+(Repo · backlog), `S8` (Repo · workers), `S9` (Design · session), `S10` (Dashboard), `S11`
+(Settings) and `S12` (Devices) do.
 
 ## 2. States and sheets
 
