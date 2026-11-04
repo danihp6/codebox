@@ -80,6 +80,11 @@ describe('DesignPreviewCard', () => {
     expect(hook(element, 'design-preview')?.getAttribute('data-revision')).toBe(REVISION);
     expect(hook(element, 'design-preview')?.getAttribute('data-present')).toBe('true');
     expect(hook(element, 'design-preview-revision')?.getAttribute('data-sha')).toBe(REVISION);
+    const pill = hook(element, 'design-preview-live');
+    expect(pill?.getAttribute('data-revision')).toBe(REVISION);
+    expect(
+      pill?.querySelector('[data-testid="design-preview-revision"]')?.getAttribute('data-sha'),
+    ).toBe(REVISION);
 
     expect(hooks(element, 'design-preview-token')).toHaveLength(1);
     expect(hook(element, 'design-preview-token')?.getAttribute('data-name')).toBe(
@@ -93,11 +98,25 @@ describe('DesignPreviewCard', () => {
     expect(
       hooks(element, 'design-preview-count').map((node) => node.getAttribute('data-kind')),
     ).toEqual(['tokens', 'routes', 'screens']);
+    expect(hook(element, 'design-preview-body')).not.toBeNull();
+    expect(
+      [
+        ...(hook(element, 'design-preview-body')?.querySelectorAll<HTMLElement>(
+          '[data-testid="design-preview-count"]',
+        ) ?? []),
+      ].map((node) => node.getAttribute('data-kind')),
+    ).toEqual(['tokens', 'routes', 'screens']);
 
     expect(hooks(element, 'design-preview-screen')).toHaveLength(1);
     expect(hook(element, 'design-preview-screen')?.getAttribute('data-screen')).toBe(
       'Repo · backlog',
     );
+    const statesRow = hook(element, 'design-preview-states');
+    expect(hooks(element, 'design-preview-states')).toHaveLength(1);
+    expect(statesRow?.getAttribute('data-screen')).toBe('Repo · backlog');
+    expect(
+      statesRow?.querySelectorAll<HTMLElement>('[data-testid="design-preview-state"]'),
+    ).toHaveLength(3);
     const states = hooks(element, 'design-preview-state');
     expect(states).toHaveLength(3);
     expect(states.map((node) => node.getAttribute('data-state'))).toEqual([
@@ -140,6 +159,7 @@ describe('DesignPreviewCard', () => {
     expect(hook(element, 'design-preview')?.getAttribute('data-present')).toBe('false');
     expect(hook(element, 'design-preview-revision')).not.toBeNull();
     expect(hook(element, 'design-preview-unavailable')).not.toBeNull();
+    expect(hook(element, 'design-preview-body')).toBeNull();
     expect(hook(element, 'design-preview-clean')).toBeNull();
     expect(hooks(element, 'design-preview-token')).toEqual([]);
     expect(hooks(element, 'design-preview-route')).toEqual([]);
@@ -161,6 +181,8 @@ describe('DesignPreviewCard', () => {
       'validation_failed',
     );
     expect(hook(element, 'design-preview')?.getAttribute('data-revision')).toBe('');
+    expect(hook(element, 'design-preview-revision')).toBeNull();
+    expect(hook(element, 'design-preview-live')).toBeNull();
 
     hook(element, 'design-preview-retry')?.click();
     await fixture.whenStable();
