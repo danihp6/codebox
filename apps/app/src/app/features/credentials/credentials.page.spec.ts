@@ -16,6 +16,7 @@ const REQUEST_ID = 'req_01JABCDEFGHJKMNPQRSV';
 const CREDENTIALS_URL = '/v1/credentials';
 const INTEGRATIONS_URL = '/v1/integrations';
 const COMPLETE_URL = '/v1/integrations/github/complete';
+const SECRET = 'sk-sentinel-0123456789';
 
 const MODEL_KEY = {
   id: 'cred_01JABCDEFG',
@@ -72,6 +73,7 @@ const INVALID_STATE = {
 
 const USED_KEYS: readonly string[] = [
   'credentials.action.addOpen',
+  'credentials.action.back',
   'credentials.action.cancel',
   'credentials.action.confirm',
   'credentials.action.connectService',
@@ -79,11 +81,21 @@ const USED_KEYS: readonly string[] = [
   'credentials.deleteConfirm',
   'credentials.empty',
   'credentials.error',
+  'credentials.gh.configured',
+  'credentials.gh.how',
+  'credentials.gh.manage',
+  'credentials.gh.missing',
+  'credentials.group.open',
+  'credentials.group.services',
   'credentials.loading',
   'credentials.retry',
   'credentials.section.open',
   'credentials.section.services',
+  'credentials.service.how',
+  'credentials.sub',
   'credentials.title',
+  'credentials.writeOnly',
+  'credentials.writeOnly.rotate',
 ];
 
 interface MountOptions {
@@ -106,6 +118,10 @@ interface Mounted {
 
 function hook(element: HTMLElement, id: string): HTMLElement | null {
   return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+}
+
+function hookAll(element: HTMLElement, id: string): readonly HTMLElement[] {
+  return [...element.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)];
 }
 
 function flushCatalog(
@@ -186,6 +202,77 @@ describe('CredentialsPage', () => {
     expect(hook(element, 'credentials-loading')).toBeNull();
   });
 
+  it('draws the frame header with the back link and the counted subtitle', async () => {
+    const { element } = await mount({
+      credentials: [MODEL_KEY, GITHUB_CREDENTIAL],
+      integrations: [INTEGRATION],
+    });
+
+    const back = hook(element, 'credentials-back');
+    expect(back?.getAttribute('href')).toBe('/settings');
+    expect(back?.getAttribute('aria-label')).toBe(translate('en', 'credentials.action.back'));
+
+    const sub = hook(element, 'credentials-sub');
+    expect(sub?.getAttribute('data-count')).toBe('3');
+    expect(sub?.textContent?.trim()).toBe(translate('en', 'credentials.sub'));
+  });
+
+  it('draws the two groups in frame order', async () => {
+    const { element } = await mount({ credentials: [MODEL_KEY], integrations: [INTEGRATION] });
+
+    const groups = hookAll(element, 'credentials-group').map((group) =>
+      group.getAttribute('data-group'),
+    );
+    expect(groups).toEqual(['services', 'open']);
+    expect(hook(element, 'credentials-services')?.tagName).toBe('UL');
+    for (const group of hookAll(element, 'credentials-group')) {
+      expect(group.textContent?.trim()).toBe(
+        translate('en', `credentials.group.${group.getAttribute('data-group') ?? ''}`),
+      );
+    }
+  });
+
+  it('draws the GitHub App credential as the first service card, never as an open row', async () => {
+    const { fixture, element } = await mount({
+      credentials: [GITHUB_CREDENTIAL, MODEL_KEY],
+      integrations: [INTEGRATION],
+    });
+
+    const gh = hook(element, 'credentials-gh');
+    expect(gh).not.toBeNull();
+    expect(gh?.getAttribute('data-credential-id')).toBe(GITHUB_CREDENTIAL.id);
+    expect(hook(element, 'credentials-gh-name')?.textContent?.trim()).toBe(GITHUB_CREDENTIAL.name);
+    expect(hook(element, 'credentials-gh-state')?.getAttribute('data-configured')).toBe('true');
+    expect(hook(element, 'credentials-gh-state')?.textContent).toContain(
+      translate('en', 'credentials.gh.configured'),
+    );
+    expect(hook(element, 'credentials-gh-dot')).not.toBeNull();
+    expect(hook(element, 'credentials-gh-how')?.textContent?.trim()).toBe(
+      translate('en', 'credentials.gh.how'),
+    );
+    expect(hook(element, 'credentials-gh-manage')?.textContent?.trim()).toBe(
+      translate('en', 'credentials.gh.manage'),
+    );
+
+    const open = hookAll(element, 'credentials-open-row').map((row) =>
+      row.getAttribute('data-credential-id'),
+    );
+    expect(open).toEqual([MODEL_KEY.id]);
+
+    expect(hook(element, 'connect-service-sheet')).toBeNull();
+    hook(element, 'credentials-gh-manage')?.click();
+    await wait(fixture);
+    expect(hook(element, 'connect-service-sheet')).not.toBeNull();
+  });
+
+  it('keeps the services section when there is no GitHub App credential', async () => {
+    const { element } = await mount({ credentials: [MODEL_KEY], integrations: [INTEGRATION] });
+
+    expect(hook(element, 'credentials-gh')).toBeNull();
+    expect(hook(element, 'credentials-section-services')).not.toBeNull();
+    expect(hookAll(element, 'credentials-service-row')).toHaveLength(1);
+  });
+
   it('renders the services and the open credentials with their chips', async () => {
     const { element } = await mount({
       credentials: [MODEL_KEY, GITHUB_CREDENTIAL],
@@ -195,22 +282,51 @@ describe('CredentialsPage', () => {
     expect(hook(element, 'credentials-section-services')).not.toBeNull();
     expect(hook(element, 'credentials-section-open')).not.toBeNull();
 
-    const services = element.querySelectorAll<HTMLElement>(
-      '[data-testid="credentials-service-row"]',
-    );
+    const services = hookAll(element, 'credentials-service-row');
     expect(services).toHaveLength(1);
     expect(services[0]?.getAttribute('data-service-id')).toBe(INTEGRATION.id);
     expect(services[0]?.textContent).toContain(INTEGRATION.name);
     expect(services[0]?.textContent).toContain(INTEGRATION.auth);
+    expect(hook(element, 'credentials-service-how')?.textContent).toContain(INTEGRATION.baseUrl);
 
-    const open = element.querySelectorAll<HTMLElement>('[data-testid="credentials-open-row"]');
+    const open = hookAll(element, 'credentials-open-row');
     expect(open).toHaveLength(1);
     expect(open[0]?.getAttribute('data-credential-id')).toBe(MODEL_KEY.id);
     expect(open[0]?.textContent).toContain(MODEL_KEY.name);
     expect(open[0]?.textContent).toContain(MODEL_KEY.kind);
     expect(open[0]?.textContent).toContain(MODEL_KEY.expose);
+    expect(hook(element, 'credentials-open-kind')?.textContent?.trim()).toBe(MODEL_KEY.kind);
+    expect(hook(element, 'credentials-open-expose')?.textContent?.trim()).toBe(MODEL_KEY.expose);
+    expect(hook(element, 'credentials-open-expose')?.getAttribute('data-expose')).toBe(
+      MODEL_KEY.expose,
+    );
     expect(hook(element, 'credentials-last-four')?.textContent?.trim()).toBe('••••abcd');
+    expect(element.innerHTML).not.toContain(SECRET);
     expect(hook(element, 'credentials-empty')).toBeNull();
+  });
+
+  it('draws the open row meta and the two write-only notes', async () => {
+    const { element } = await mount({ credentials: [MODEL_KEY], integrations: [] });
+
+    const meta = hook(element, 'credentials-open-meta');
+    expect(meta?.textContent).toContain('••••abcd');
+    expect(meta?.textContent).toContain(MODEL_KEY.expose);
+
+    const notes = hookAll(element, 'credentials-note');
+    expect(notes.map((note) => note.getAttribute('data-note'))).toEqual(['1', '2']);
+    expect(notes[0]?.textContent?.trim()).toBe(translate('en', 'credentials.writeOnly'));
+    expect(notes[1]?.textContent?.trim()).toBe(translate('en', 'credentials.writeOnly.rotate'));
+  });
+
+  it('never renders a value the boundary does not admit', async () => {
+    const leaky = { ...MODEL_KEY, value: SECRET } as unknown as Credential;
+    const { element } = await mount({ credentials: [leaky], integrations: [INTEGRATION] });
+
+    expect(element.innerHTML).not.toContain(SECRET);
+    expect(hook(element, 'credentials-open-row')).toBeNull();
+    expect(hook(element, 'credentials-error')?.getAttribute('data-code')).toBe('contract');
+    expect(hook(element, 'credentials-service-row')).not.toBeNull();
+    expect(element.querySelectorAll('[data-value]')).toHaveLength(0);
   });
 
   it('renders the empty state when both lists are empty', async () => {
@@ -219,6 +335,7 @@ describe('CredentialsPage', () => {
     expect(hook(element, 'credentials-empty')).not.toBeNull();
     expect(hook(element, 'credentials-open-row')).toBeNull();
     expect(hook(element, 'credentials-service-row')).toBeNull();
+    expect(hook(element, 'credentials-gh')).toBeNull();
   });
 
   it('renders the error code and keeps the integrations when the credential read fails', async () => {
@@ -226,9 +343,7 @@ describe('CredentialsPage', () => {
 
     expect(hook(element, 'credentials-error')?.getAttribute('data-code')).toBe('internal');
     expect(hook(element, 'credentials-retry')).not.toBeNull();
-    const services = element.querySelectorAll<HTMLElement>(
-      '[data-testid="credentials-service-row"]',
-    );
+    const services = hookAll(element, 'credentials-service-row');
     expect(services).toHaveLength(1);
     expect(services[0]?.getAttribute('data-service-id')).toBe(INTEGRATION.id);
     expect(hook(element, 'credentials-open-row')).toBeNull();
@@ -241,14 +356,12 @@ describe('CredentialsPage', () => {
     expect(hook(element, 'add-credential-sheet')).toBeNull();
 
     hook(element, 'credentials-connect-service')?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await wait(fixture);
     expect(hook(element, 'connect-service-sheet')).not.toBeNull();
     expect(hook(element, 'add-credential-sheet')).toBeNull();
 
     hook(element, 'credentials-add-open')?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await wait(fixture);
     expect(hook(element, 'add-credential-sheet')).not.toBeNull();
   });
 
@@ -261,22 +374,19 @@ describe('CredentialsPage', () => {
     expect(hook(element, 'credential-delete-confirm')).toBeNull();
 
     hook(element, 'credential-delete')?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await wait(fixture);
 
     expect(hook(element, 'credential-delete-confirm')).not.toBeNull();
     http.expectNone({ method: 'DELETE', url: `${CREDENTIALS_URL}/${MODEL_KEY.id}` });
 
     hook(element, 'credential-delete-confirm')?.click();
-    fixture.detectChanges();
-    await fixture.whenStable();
+    await wait(fixture);
 
     const remove = http.expectOne({ method: 'DELETE', url: `${CREDENTIALS_URL}/${MODEL_KEY.id}` });
     remove.flush(null, { status: 204, statusText: 'No Content' });
 
     flushCatalog(http, { credentials: [], integrations: [INTEGRATION] });
-    await fixture.whenStable();
-    fixture.detectChanges();
+    await wait(fixture);
 
     expect(hook(element, 'credentials-open-row')).toBeNull();
     expect(hook(element, 'credentials-service-row')).not.toBeNull();
@@ -290,7 +400,7 @@ describe('CredentialsPage', () => {
     });
 
     expect(completeBody).toEqual({ code: 'code_01', state: 'st_01JABCDEFG' });
-    const open = element.querySelectorAll<HTMLElement>('[data-testid="credentials-open-row"]');
+    const open = hookAll(element, 'credentials-open-row');
     expect(open).toHaveLength(1);
     expect(open[0]?.getAttribute('data-credential-id')).toBe(MODEL_KEY.id);
     expect(hook(element, 'credentials-error')).toBeNull();
@@ -319,5 +429,26 @@ describe('CredentialsPage', () => {
         expect(translate(locale, key), `${locale} ${key}`).not.toBe(key);
       }
     }
+    for (const key of [
+      'credentials.sub',
+      'credentials.group.services',
+      'credentials.group.open',
+      'credentials.gh.how',
+      'credentials.gh.manage',
+      'credentials.gh.configured',
+      'credentials.gh.missing',
+      'credentials.service.how',
+      'credentials.writeOnly',
+      'credentials.writeOnly.rotate',
+    ]) {
+      expect(translate('en', key), key).not.toBe(key);
+      expect(translate('es', key), key).not.toBe(key);
+    }
   });
 });
+
+async function wait(fixture: ComponentFixture<CredentialsPage>): Promise<void> {
+  fixture.detectChanges();
+  await fixture.whenStable();
+  fixture.detectChanges();
+}
