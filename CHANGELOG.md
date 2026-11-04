@@ -16,6 +16,12 @@ first release exists.
   spec's `layout`. The thread, the markdown renderer, the store, the stream and the API do not
   move; the card keeps `present: false` and the revision-unknown state, and the composer is
   still disabled while a proposal is pending.
+- **The dashboard draws its inbox.** `features/dashboard` renders `05 · Dashboard — mobile dark`
+  from `design/screens/dashboard.json`: the five blocks in the frame's inbox order (`needs you`,
+  working, unreviewed, today's spend, health), the card boxes with their 14 px radius and the
+  type scale from the spec, and `12 · First run — after pairing` as the empty state. The
+  per-repository blocks have no frame, so they keep today's shape and are recorded as pending
+  L5; `dashboard.store.ts`, `dashboard.api.ts` and their specs do not move.
 
 ### Changed — 2026-11-04 (Batch 23, wave 1: the screens reach the prototype)
 

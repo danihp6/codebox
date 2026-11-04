@@ -1941,7 +1941,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       findings; `[live]` the export sits beside the screen at 390 × 844 and the card's header,
       body and states block match the frame. *Dependencies:* L6, L7.
 
-- [ ] **[Task-95]** Dashboard, frame `05 · Dashboard — mobile dark`, empty state
+- [x] **[Task-95]** Dashboard, frame `05 · Dashboard — mobile dark`, empty state
       `12 · First run — after pairing`. Rewrite `features/dashboard` against
       `design/screens/dashboard.json`: the inbox order (`needs you`, running, unreviewed, today's
       spend, health), the card boxes and the type scale from the spec. The per-repository blocks
