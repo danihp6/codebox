@@ -15,6 +15,7 @@ import { provideIonicAngular } from '@ionic/angular';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SECURE_STORE } from '../../core/auth/secure-store';
 import type { SecureStore } from '../../core/auth/secure-store';
+import { SettingsStore as AppSettingsStore } from '../../core/settings/settings.store';
 import { STRINGS, translate } from './i18n';
 import { SettingsPage } from './settings.page';
 
@@ -63,11 +64,17 @@ const SETTINGS_URL = '/v1/settings';
 const PROVIDERS_URL = '/v1/providers';
 const PREFERENCES_URL = '/v1/notifications/preferences';
 
+const SETTINGS_KEY = 'cb.settings';
+
 const USED_KEYS: readonly string[] = [
   'common.loading',
   'common.error',
   'common.retry',
   'settings.title',
+  'settings.group.preferences',
+  'settings.group.automation',
+  'settings.group.account',
+  'settings.group.danger',
   'settings.section.profile',
   'settings.section.credentials',
   'settings.section.devices',
@@ -75,6 +82,13 @@ const USED_KEYS: readonly string[] = [
   'settings.section.providers',
   'settings.section.danger',
   'settings.section.about',
+  'settings.appearance',
+  'settings.theme.dark',
+  'settings.theme.light',
+  'settings.routines',
+  'settings.routines.value',
+  'settings.value.none',
+  'settings.danger.unpair',
   'settings.device.name',
   'settings.device.platform',
   'settings.device.scopes',
@@ -109,9 +123,9 @@ const RETAINED_KEYS: readonly string[] = [
   'settings.quiet.save',
 ];
 
-function memoryStore(): SecureStore {
+function memoryStore(): { readonly store: SecureStore; readonly values: Map<string, string> } {
   const values = new Map<string, string>();
-  return {
+  const store: SecureStore = {
     get: (key) => Promise.resolve(values.get(key) ?? null),
     set: (key, value) => {
       values.set(key, value);
@@ -126,26 +140,37 @@ function memoryStore(): SecureStore {
       return Promise.resolve();
     },
   };
+  return { store, values };
 }
 
 function hook(element: HTMLElement, id: string): HTMLElement | null {
   return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
 }
 
+function all(element: HTMLElement, id: string): HTMLElement[] {
+  return [...element.querySelectorAll<HTMLElement>(`[data-testid="${id}"]`)];
+}
+
+function attribute(element: HTMLElement, id: string, name: string): (string | null)[] {
+  return all(element, id).map((node) => node.getAttribute(name));
+}
+
 interface Mounted {
   readonly fixture: ComponentFixture<SettingsPage>;
   readonly element: HTMLElement;
   readonly http: HttpTestingController;
+  readonly values: Map<string, string>;
 }
 
 async function mount(): Promise<Mounted> {
+  const { store, values } = memoryStore();
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
       provideIonicAngular(),
       provideHttpClient(),
       provideHttpClientTesting(),
-      { provide: SECURE_STORE, useValue: memoryStore() },
+      { provide: SECURE_STORE, useValue: store },
     ],
   });
   const fixture = TestBed.createComponent(SettingsPage);
@@ -154,6 +179,7 @@ async function mount(): Promise<Mounted> {
     fixture,
     element: fixture.nativeElement as HTMLElement,
     http: TestBed.inject(HttpTestingController),
+    values,
   };
 }
 
@@ -203,13 +229,18 @@ describe('SettingsPage', () => {
     expect(hook(element, 'settings-wipe-cache')).not.toBeNull();
   });
 
-  it('renders the profile, the four action rows, brake and about sections', async () => {
+  it('draws the profile card, the four groups, the eight rows and the about facts', async () => {
     const { fixture, element, http } = await mount();
     flushHappy(http);
     await fixture.whenStable();
 
     expect(hook(element, 'settings-profile')?.getAttribute('data-device-id')).toBe(DEVICE.id);
     expect(hook(element, 'settings-profile')?.getAttribute('data-scopes')).toContain('admin');
+    expect(hook(element, 'settings-device-name')?.textContent).toContain(DEVICE.name);
+    expect(hook(element, 'settings-device-meta')?.textContent).toContain('ios');
+    expect(hook(element, 'settings-device-meta')?.textContent).toContain('read write admin');
+
+    expect(hook(element, 'settings-timezone-row')).not.toBeNull();
     expect((hook(element, 'settings-timezone') as HTMLInputElement).value).toBe('Europe/Madrid');
     expect((hook(element, 'settings-save-timezone') as HTMLButtonElement).disabled).toBe(false);
 
@@ -217,15 +248,52 @@ describe('SettingsPage', () => {
     expect(hook(element, 'settings-credentials-link')?.getAttribute('href')).toBe(
       '/settings/credentials',
     );
-    expect(hook(element, 'settings-notifications-open')).not.toBeNull();
-    expect(hook(element, 'settings-providers-open')).not.toBeNull();
+    expect(hook(element, 'settings-about-link')?.getAttribute('href')).toBe('/about');
+    expect(hook(element, 'settings-notifications-open')?.tagName).toBe('BUTTON');
+    expect(hook(element, 'settings-providers-open')?.tagName).toBe('BUTTON');
 
-    expect(hook(element, 'notifications-panel')).toBeNull();
-    expect(hook(element, 'providers-panel')).toBeNull();
+    expect(attribute(element, 'settings-group', 'data-group')).toEqual([
+      'preferences',
+      'automation',
+      'account',
+      'danger',
+    ]);
+    expect(attribute(element, 'settings-row', 'data-row')).toEqual([
+      'notifications',
+      'appearance',
+      'providers',
+      'routines',
+      'brake',
+      'devices',
+      'credentials',
+      'about',
+    ]);
+
+    expect(
+      hook(element, 'settings-row-notifications-value')?.getAttribute('data-enabled'),
+    ).toBe('2');
+    expect(hook(element, 'settings-row-notifications-value')?.textContent).toContain(
+      translate('es', 'settings.quiet.none'),
+    );
+    expect(hook(element, 'settings-row-providers-value')?.getAttribute('data-configured')).toBe('1');
+    expect(hook(element, 'settings-row-providers-value')?.textContent).toContain('1/2');
+    expect(hook(element, 'settings-row-devices-value')?.textContent).toContain(
+      translate('es', 'settings.value.none'),
+    );
+    expect(hook(element, 'settings-row-about-value')?.textContent).toContain(VERSION.version);
+
+    const routines = element.querySelector<HTMLElement>(
+      '[data-testid="settings-row"][data-row="routines"]',
+    );
+    expect(routines?.getAttribute('data-available')).toBe('false');
+    expect(routines?.querySelector('button, a')).toBeNull();
+    expect(hook(element, 'settings-row-routines')?.getAttribute('data-available')).toBe('false');
+    expect(hook(element, 'settings-unpair')?.getAttribute('data-available')).toBe('false');
+    expect(hook(element, 'settings-unpair')?.querySelector('button, a')).toBeNull();
 
     expect(hook(element, 'settings-brake')?.getAttribute('data-enabled')).toBe('false');
     expect(hook(element, 'settings-unavailable-brake')).toBeNull();
-    expect(hook(element, 'settings-wipe-cache')).not.toBeNull();
+    expect(hook(element, 'settings-wipe-cache')?.tagName).toBe('BUTTON');
 
     expect(hook(element, 'settings-version')?.getAttribute('data-version')).toBe(VERSION.version);
     expect(hook(element, 'settings-commit')?.getAttribute('data-commit')).toBe(VERSION.commit);
@@ -354,6 +422,40 @@ describe('SettingsPage', () => {
     expect(hook(element, 'notifications-toggle-run.merged')?.getAttribute('data-enabled')).toBe(
       'true',
     );
+  });
+
+  it('writes the chosen theme into the core settings store and marks it pressed', async () => {
+    const { fixture, element, http, values } = await mount();
+    flushHappy(http);
+    await fixture.whenStable();
+
+    expect(hook(element, 'page-settings')?.getAttribute('data-theme')).toBe('dark');
+    expect(hook(element, 'settings-theme')?.getAttribute('data-theme')).toBe('dark');
+    expect(hook(element, 'settings-theme')?.getAttribute('role')).toBe('group');
+    expect(hook(element, 'settings-theme-dark')?.getAttribute('aria-pressed')).toBe('true');
+    expect(hook(element, 'settings-theme-light')?.getAttribute('aria-pressed')).toBe('false');
+    expect(hook(element, 'settings-row-appearance-value')?.textContent).toContain(
+      translate('es', 'settings.theme.dark'),
+    );
+
+    hook(element, 'settings-theme-light')?.click();
+    await fixture.whenStable();
+
+    expect(TestBed.inject(AppSettingsStore).theme()).toBe('light');
+    expect(hook(element, 'page-settings')?.getAttribute('data-theme')).toBe('light');
+    expect(hook(element, 'settings-theme')?.getAttribute('data-theme')).toBe('light');
+    expect(hook(element, 'settings-theme-light')?.getAttribute('aria-pressed')).toBe('true');
+    expect(hook(element, 'settings-theme-dark')?.getAttribute('aria-pressed')).toBe('false');
+    expect(hook(element, 'settings-row-appearance-value')?.textContent).toContain(
+      translate('es', 'settings.theme.light'),
+    );
+    expect(JSON.parse(values.get(SETTINGS_KEY) ?? '{}')).toMatchObject({ theme: 'light' });
+
+    hook(element, 'settings-theme-dark')?.click();
+    await fixture.whenStable();
+
+    expect(hook(element, 'page-settings')?.getAttribute('data-theme')).toBe('dark');
+    expect(JSON.parse(values.get(SETTINGS_KEY) ?? '{}')).toMatchObject({ theme: 'dark' });
   });
 
   it('reports a required read failure and retries every read', async () => {

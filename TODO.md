@@ -1953,7 +1953,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       sits beside the screen at 390 × 844 and `12` beside the first-run state. *Dependencies:*
       L6, L7, Task-88.
 
-- [ ] **[Task-96]** Settings cluster: `/settings` (`06 · Settings — mobile dark`),
+- [x] **[Task-96]** Settings cluster: `/settings` (`06 · Settings — mobile dark`),
       `/settings/devices` (`15 · Settings / Devices`) and `/settings/notifications` (`17 ·
       Settings / Notifications`). Rewrite the three pages in `features/settings` against their
       three specs, with the theme control Task-89 makes real (`settings.theme`, dark/light) and the

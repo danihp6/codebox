@@ -22,6 +22,13 @@ first release exists.
   type scale from the spec, and `12 · First run — after pairing` as the empty state. The
   per-repository blocks have no frame, so they keep today's shape and are recorded as pending
   L5; `dashboard.store.ts`, `dashboard.api.ts` and their specs do not move.
+- **The settings cluster draws its three frames.** `features/settings` renders `06 · Settings —
+  mobile dark`, `15 · Settings / Devices` and `17 · Settings / Notifications` from their measured
+  specs: the grouped rows at the frame's 64 px pitch, the device card, the pair row and the
+  confirmed revoke, the notification groups with their five toggles and quiet hours, and the
+  theme control wired to `SettingsStore.theme` (dark by default, `data-theme` on `<html>`). The
+  stores, the APIs and `providers.page.ts` do not move, and the rows the frames omit (the
+  credentials link, the time zone, the brake) keep their pinned hooks.
 
 ### Changed — 2026-11-04 (Batch 23, wave 1: the screens reach the prototype)
 
