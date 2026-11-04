@@ -13,6 +13,12 @@ first release exists.
   eyebrow/label/hint/value scale, the 302 × 48 CTA and the inline alert inside the card. The
   validation (`pairingProblem`, `pairingFailureOf`) and `AuthStore.pair` do not move, and the
   page measures 320 px wide without a sideways scroll.
+- **The repo list draws its counted row.** `features/repos` renders `02 · Repo list — mobile dark`:
+  the 24/600 title, the 36 px `+`, the 36 px search field, 72 px rows whose
+  `pending · running · merged` numbers come from `Repo.counts` (D59) — the page never counts works
+  itself — one amber dot for the row that needs a person, and the full-width `+ Add repository`.
+  The search filters the rows locally, without a second request, and the dead filter strip and the
+  `⋯` menu L5 deleted stay gone.
 
 ### Changed — 2026-11-03 (Task-102, the importer sees through the bands)
 

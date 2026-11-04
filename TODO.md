@@ -1893,7 +1893,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       (header, form column, two fields with their hints, button, alert), and nothing scrolls
       sideways at 320 px. *Dependencies:* L6, L7.
 
-- [ ] **[Task-91]** Repo list, frame `02 · Repo list — mobile dark`. Rewrite `features/repos`'
+- [x] **[Task-91]** Repo list, frame `02 · Repo list — mobile dark`. Rewrite `features/repos`'
       list half against `design/screens/repo-list.json`: the row is the frame's counted row
       (`pending · running · merged`, one amber dot for the only thing that needs a person,
       `docs/app.md` §9), and the header's action opens the create form the page already owns. The
