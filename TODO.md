@@ -495,6 +495,30 @@ helper rather than as a new fixture file, so `scripts/design/fixtures/**` stays 
 The `[live]` criterion — the re-import itself — is unmeasured on this runner (no `FIGMA_TOKEN` and
 the quota is spent); it stays the operator's, on or after 2026-11-08T03:00Z.
 
+**Cut — cycle 2026-11-04, after Batch 23 wave 1 (four of four slots used).** No task branch was
+alive; `main` was `200e8a1` and the batch was cut from `l7-prototype-restructure` at `498444c`
+(L6 + L7 + Task-102 + Tasks 90–93 merged, PR #121 still open), not from `main`, because that is
+where the wave lives. **Wave 2 is the batch:** Task-94 (Design · session), Task-95 (Dashboard),
+Task-96 (Settings cluster) and Task-97 (Credentials). All four are eligible — L6, L7, Task-88 and
+Task-89 are merged — and their paths are disjoint: one feature folder each, and no hot file is
+claimed. `apps/app/README.md` is split by line block, the way Batch 20 wave 2 did it: Task-97 owns
+87–97, Task-95 owns 98–104, Task-94 owns 132–144 and Task-96 owns 145–166; the merge of 97 onto
+the base met Task-95's two rewritten dashboard lines at 98–99 and the conflict was resolved by
+keeping each task's own block, no line lost. **The four slots are full, so Task-98 waits:**
+About is eligible and disjoint, but it is wave 3 by construction and no fifth dev exists; Task-99
+waits beside it because L5 is still open — the schedule sheet's frame is drawn (`l5-schedule-sheet`
+at `5d6a469`), but L5 is not ticked until the re-import (the file's quota, not before
+2026-11-08T03:00Z) and the operator's present-mode pass. **Deviations, recorded:** Task-95's item
+says "the five reads" but the store issues four requests (`/v1/health`, `/v1/telemetry`,
+`/v1/runs`, `/v1/repos`) and the five blocks are derived from them; Task-97's item asks the page
+spec to prove rotate, but `CredentialsApi` has no rotate call (`docs/api.md` §5.9 documents the
+endpoint), so the spec proves create, delete and the D50 write-only rule and rotation is a
+follow-up; sheets `18`/`19` and the drawn states of all four screens have no exports (the import
+downloads one PNG per routed screen), so those drawings follow the sheet rule and the `[live]`
+comparisons are unmeasured on this runner and handed to an `agent-review` issue. Branch
+`l5-schedule-sheet` diverged before wave 1 and does not contain it; merging it is the operator's
+path after the live pass, not this cycle's.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
