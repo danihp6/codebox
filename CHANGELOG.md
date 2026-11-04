@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-04 (L5, the frames follow the product)
+
+- **Pairing drops the in-app QR.** `01 · Pairing — mobile dark` and `S5 · 320 · Pairing` carried a
+  `Scan QR instead` link and a `›` on the server row. The QR is printed by `cb pair` and opened by
+  the system camera, and the app has no scanner, so the link is gone and the server line is
+  read-only text (`docs/app.md` §4, `design/README.md` §6).
+- **The repo list drops its dead filters and its menu.** `02 · Repo list — mobile dark` carried
+  four filter labels hidden under the search field and a `⋯` menu. The labels are gone — they were
+  invisible but the imported spec reported them as regions — and so is the menu, leaving the search
+  field and no filters (`docs/app.md` §4/§9). `S6` already drew it that way.
+- **The 320 backlog gets the chat button.** `S7 · 320 · Repo · backlog` still had the `⋯` the 390
+  frame had replaced; it now carries a 32 px `s7-chat` circle with the same `ON_CLICK` reaction to
+  `03a · New session — mobile dark`.
+
 ### Added — 2026-11-04 (L5, the three states of every screen)
 
 - **Every screen now carries its loading, empty and error frame.** One band at `y = 26800`
