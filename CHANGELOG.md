@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-04 (L5, the repo list at 320)
+
+- **The reference width reaches the first list screen.** `S6 · 320 · Repo list` is the second of
+  the ten routed screens squeezed to 320 × 568 and the first one with a list: 16 px margins, a
+  288 px column, the status bar at 13/12, `Repositories` with the 36 px `+` beside it, a 36 px
+  search field, the `ALL REPOSITORIES · 3` eyebrow, three 72 px cards with 8 px gaps (state dot,
+  the `cloned` line and the pending/running/merged meta), the 44 px `Add repository` row, the
+  note, and the 64 px tabbar with `Repos` lit. It fixes the list half of the pattern: cards are
+  radius 16 and the actions keep the 44 px height. `design/README.md` §1 gives it the Repo list
+  row's 320 column, so eight screens still owe one.
+- **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
+  frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
+  changelog now name the join key the importer reads, not a description of it.
+
 ### Added — 2026-11-03 (L5, the schedule sheet)
 
 - **The repository's schedule has a sheet, in both themes and at 320.** `22b`/`L22b` draw the

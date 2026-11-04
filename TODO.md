@@ -2127,7 +2127,10 @@ of them.
       column, the empty/error states and the two flows are still owed. **The 320 column has its
       reference (2026-11-03):** `S5 · 320 · Pairing` fixes the pattern — 16 px margins, a
       288 px column, the card at radius 16, the primary action at 44 px, the foot under the card
-      — and `design/README.md` §1 names it; the other nine rows are drawn from it. The same pass
+      — and `design/README.md` §1 names it; the other nine rows are drawn from it.
+      **`S6 · 320 · Repo list` follows (2026-11-04):** the same column applied to a list — the
+      36 px `+` beside the title, a 36 px search field, three 72 px cards with 8 px gaps, the add
+      row at 44 px, a 64 px tabbar — so eight rows still owe a 320 frame. The same pass
       repaired `01 · Pairing — mobile dark`, whose primary button painted `#0b0f14` on
       `#0b0f14`: `Pair device` was invisible in the export. **Desktop is out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
