@@ -365,6 +365,39 @@ describe('CredentialsPage', () => {
     expect(hook(element, 'add-credential-sheet')).not.toBeNull();
   });
 
+  it('creates a credential through the add sheet without touching the value', async () => {
+    const { fixture, element, http } = await mount({ credentials: [], integrations: [] });
+
+    hook(element, 'credentials-add-open')?.click();
+    await wait(fixture);
+
+    await fillField(fixture, element, 'credential-name', 'Anthropic');
+    await fillField(fixture, element, 'credential-value', SECRET);
+    expect(element.innerHTML).not.toContain(SECRET);
+
+    hook(element, 'credential-continue')?.click();
+    await wait(fixture);
+
+    hook(element, 'credential-save')?.click();
+    await wait(fixture);
+
+    const create = http.expectOne({ method: 'POST', url: CREDENTIALS_URL });
+    expect(create.request.body).toEqual({
+      name: 'Anthropic',
+      kind: 'api_key',
+      expose: 'daemon',
+      value: SECRET,
+    });
+    create.flush(MODEL_KEY);
+
+    flushCatalog(http, { credentials: [MODEL_KEY], integrations: [] });
+    await wait(fixture);
+
+    expect(hook(element, 'add-credential-sheet')).toBeNull();
+    expect(hookAll(element, 'credentials-open-row')).toHaveLength(1);
+    expect(element.innerHTML).not.toContain(SECRET);
+  });
+
   it('asks twice before deleting a credential', async () => {
     const { fixture, element, http } = await mount({
       credentials: [MODEL_KEY],
@@ -451,4 +484,17 @@ async function wait(fixture: ComponentFixture<CredentialsPage>): Promise<void> {
   fixture.detectChanges();
   await fixture.whenStable();
   fixture.detectChanges();
+}
+
+async function fillField(
+  fixture: ComponentFixture<CredentialsPage>,
+  element: HTMLElement,
+  id: string,
+  value: string,
+): Promise<void> {
+  const field = hook(element, id);
+  if (!(field instanceof HTMLInputElement)) throw new Error(`${id} is not an input`);
+  field.value = value;
+  field.dispatchEvent(new Event('input'));
+  await wait(fixture);
 }

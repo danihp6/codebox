@@ -91,7 +91,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/credentials/credentials.api.ts` — `/v1/credentials` and `/v1/integrations` calls plus the six hand-written payload parsers.
 - `src/app/features/credentials/credentials.api.spec.ts` — every URL and method, the parsers and the error mapping.
 - `src/app/features/credentials/credentials.page.ts` — frame `16 · Settings / Credentials`: the back link, the counted subtitle, the two group headings, the GitHub App card, one card per integration, one row per open credential with its masked metadata, the two action rows, the write-only notes and the two sheets.
-- `src/app/features/credentials/credentials.page.spec.ts` — loading, error, empty, the header hooks, both groups, the GitHub App card against its open-row exclusion, the row metadata, the notes, a sentinel absent from the page, the sheet triggers, the confirmed delete and the manifest completion.
+- `src/app/features/credentials/credentials.page.spec.ts` — loading, error, empty, the header hooks, both groups, the GitHub App card against its open-row exclusion, the row metadata, the notes, a sentinel absent from the page, the sheet triggers, one create through the add sheet, the confirmed delete and the manifest completion.
 - `src/app/features/credentials/credentials.store.ts` — the two independent catalog reads, create/remove and the manifest reload.
 - `src/app/features/credentials/credentials.store.spec.ts` — load, a failed half, create, remove, the manifest start and completion.
 - `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`, with the frame's subtitle, group headings, GitHub App lines and the two write-only notes.
