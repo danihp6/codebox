@@ -2135,8 +2135,15 @@ of them.
       dark`, whose primary button painted `#0b0f14` on `#0b0f14`: `Pair device` was invisible in
       the export. **The two flows are wired (2026-11-04):** the file's native reactions carry
       `01 → 12 → 02` and `22 → 03a → 04b → 04`, and the backlog's `⋯` became the chat button its
-      header requires; the `[live]` present-mode pass is the operator's. **Only the empty/error
-      states are still owed.** **Desktop is out of v1** (ruled 2026-10-30): the eight screens without
+      header requires; the `[live]` present-mode pass is the operator's. **The three states of
+      every screen are drawn (2026-11-04):** 29 frames in one band at `y = 26800` carry
+      `loading`, `empty` and `error` for the eleven screens, and the four slots a drawn frame
+      already answered point at it (`01` for Pairing's empty, `14` for its error, `12` for the
+      dashboard's empty and `20e` for the workers' idle state); `design/import.json` names all
+      33. **What waits:** the re-import that writes the specs (the file's read quota answers 429,
+      so `design/screens/*.json` keeps the old nulls and the gate keeps them report-only) and
+      the operator's `[live]` pass. When the re-import lands and the check reports zero, D57's
+      report-only exception is retired and `screen_state_missing` becomes enforced. **Desktop is out of v1** (ruled 2026-10-30): the eight screens without
       a desktop frame keep it that way until after
       the beta, and `D2`/`D4`, `D5`–`D8` and `D9` stay as the reference they already are. Then
       wire the prototype so **these two flows** are clickable (decided 2026-10-30):

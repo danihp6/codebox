@@ -397,7 +397,7 @@ describe('main — write', () => {
     const dashboard = readFileSync(join(root, 'design/screens/dashboard.json'), 'utf8');
     expect(
       dashboard.startsWith(
-        '{\n  "screen": "Dashboard",\n  "route": "/dashboard",\n  "states": {\n    "loading": null,',
+        '{\n  "screen": "Dashboard",\n  "route": "/dashboard",\n  "states": {\n    "loading": "05 · Dashboard — loading",\n    "empty": "12 · First run — after pairing",\n    "error": "05 · Dashboard — error"\n  },',
       ),
     ).toBe(true);
   });

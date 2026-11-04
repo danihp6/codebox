@@ -6,6 +6,26 @@ first release exists.
 
 ## Unreleased
 
+### Added — 2026-11-04 (L5, the three states of every screen)
+
+- **Every screen now carries its loading, empty and error frame.** One band at `y = 26800`
+  (480 px pitch, three rows: `loading`, `empty`, `error`) holds the 29 new frames, each
+  captioned `<frame> — <state>` (`02 · Repo list — empty`). The four slots a drawn frame already
+  answered point at it instead: Pairing's empty is `01`, its error `14 · Unpaired — 401`, the
+  dashboard's empty is `12 · First run — after pairing`, and the workers' empty is
+  `20e · Crew · asleep — dark`.
+- **A state frame keeps the screen's chrome and swaps the body.** The status bar, header,
+  tabbar or composer stay; the content band gives way to a card (`color.surface.raised`, radius
+  16) with a 16/600 title, a 12/400 muted line and, where the product has one, a 44 px action —
+  or to seven skeleton bars and a `Loading…` line. Error titles use `color.danger.red`, Retry is
+  the action, and the header counters stop lying: `0 paired`, `empty backlog · nothing queued`,
+  `not synced`, `design/ · could not be read`.
+- **The map names all 33 state slots.** `design/import.json` fills `loading`, `empty` and
+  `error` for the eleven screens, so no `states` value is `null` any more. The re-import that
+  writes the specs is still the operator's: the file's read quota answers 429, so
+  `design/screens/*.json` keeps the old nulls and the gate keeps reporting them as
+  `(report-only)` until the next window opens.
+
 ### Changed — 2026-11-04 (L5, the two flows)
 
 - **Flow A is clickable.** `01 · Pairing → 12 · First run → 02 · Repo list`: `pair-cta`

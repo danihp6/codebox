@@ -101,6 +101,17 @@ drawn at 390 × 844 and 320 × 568; its 1280 layout is out of v1 with the rest o
 native `ON_CLICK` reactions with a 0.2 s dissolve; the backlog header carries the chat button
 §6 requires.
 
+**The three states of every screen are drawn (2026-11-04).** `loading`, `empty` and `error` are
+frames, not notes: one band at `y = 26800`, 480 px pitch, the 29 new frames captioned
+`<frame> — <state>` (`02 · Repo list — empty`). A state frame keeps the chrome of the screen it
+belongs to and swaps the content band for a card (`color.surface.raised`, radius 16, a 16/600
+title, a 12/400 line and a 44 px action when there is one) or, for `loading`, seven skeleton
+bars and a `Loading…` line. Four slots are answered by a frame that already existed: `01` is
+Pairing's empty, `14 · Unpaired — 401` its error, `12 · First run — after pairing` the
+dashboard's empty, and `20e · Crew · asleep — dark` the workers' empty. `design/import.json`
+names all 33; the generated specs catch up at the next re-import (§4), which the file's read
+quota still blocks.
+
 **Removed in the 2026-10-28 re-cut:** the connect-repository picker, the cloning screen and the
 free-chat `⋯` menu. Connecting a repository happens from the `+` on `/repos`, and its clone
 state lives in the row, so a whole screen for it was one tap too many.
@@ -225,6 +236,12 @@ import selects, then one entry per routed screen:
 | `component` | The standalone component class that renders the route. |
 | `states` | `loading`, `empty` and `error`, each a frame caption or `null`. |
 | `snapshot` | `true` downloads the PNG and fills `snapshotSha256`; `false` writes neither. |
+
+A state caption may name the entry's own frame — Pairing's `empty` is `01`, the form with no
+code — or a frame mapped under another entry: `12`, `14` and `20e` answer the dashboard's empty,
+the pairing error and the workers' idle state. The command resolves the entry's `caption` and
+copies the `states` values through; a state caption is not looked up on the page, so the map is
+their only owner and a rename has to reach both.
 
 The map drives the output: adding a screen is adding an entry. A caption that is no longer on
 the page is fatal — the command stops with `frame_missing` rather than writing a screen the file
