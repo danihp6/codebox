@@ -65,6 +65,8 @@ const LIVE_STATES: ReadonlySet<BacklogRowState> = new Set<BacklogRowState>([
       }
       .cb-bl-back {
         flex: 0 0 auto;
+        margin-inline-start: -6px;
+        padding-inline: 6px;
         color: var(--cb-accent);
         font-size: 22px;
         line-height: 27px;
