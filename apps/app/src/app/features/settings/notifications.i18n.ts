@@ -4,7 +4,9 @@ export type Locale = 'en' | 'es';
 export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>> = Object.freeze({
   en: Object.freeze({
     'notifications.title': 'Notifications',
+    'notifications.group.events': 'Events',
     'notifications.locked.title': 'Credential changed',
+    'notifications.locked.always': 'Always',
     'notifications.locked.hint':
       'Always on: a credential change is never silenced and has no toggle.',
     'notifications.quiet.title': 'Quiet hours',
@@ -14,6 +16,8 @@ export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>>
     'notifications.quiet.saved': 'Quiet hours saved.',
     'notifications.quiet.absent': 'Saved here; this build has no settings route to mirror it to.',
     'notifications.quiet.failed': 'Saved here; mirroring the window to settings failed.',
+    'notifications.note.1': 'Quiet hours are evaluated on the daemon, half-open.',
+    'notifications.note.2': 'A credential change is never silenced.',
     'notifications.close': 'Close',
     'notifications.retry': 'Retry',
     'notifications.title.run.finished': 'A run finished',
@@ -24,7 +28,9 @@ export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>>
   }),
   es: Object.freeze({
     'notifications.title': 'Notificaciones',
+    'notifications.group.events': 'Eventos',
     'notifications.locked.title': 'Credencial cambiada',
+    'notifications.locked.always': 'Siempre',
     'notifications.locked.hint':
       'Siempre activa: un cambio de credencial nunca se silencia y no tiene interruptor.',
     'notifications.quiet.title': 'Horas de silencio',
@@ -36,6 +42,9 @@ export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>>
     'notifications.quiet.absent':
       'Guardado aquí; esta compilación no tiene ruta de ajustes donde espejarlo.',
     'notifications.quiet.failed': 'Guardado aquí; el espejo de la ventana a ajustes ha fallado.',
+    'notifications.note.1':
+      'Las horas de silencio se evalúan en el daemon, con intervalo semiabierto.',
+    'notifications.note.2': 'Un cambio de credencial nunca se silencia.',
     'notifications.close': 'Cerrar',
     'notifications.retry': 'Reintentar',
     'notifications.title.run.finished': 'Una ejecución ha terminado',
