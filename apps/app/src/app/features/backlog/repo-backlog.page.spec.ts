@@ -4,7 +4,13 @@ import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import type { Backlog, BacklogItem, RepoDetail, SseStreamEvent, WorkState } from '@codebox/contracts';
+import type {
+  Backlog,
+  BacklogItem,
+  RepoDetail,
+  SseStreamEvent,
+  WorkState,
+} from '@codebox/contracts';
 import { provideIonicAngular } from '@ionic/angular';
 import { afterEach, describe, expect, it } from 'vitest';
 import { SseService } from '../../core/events/sse.service';
@@ -80,7 +86,9 @@ function stateItems(): readonly BacklogItem[] {
     line: index + 1,
     needs: [],
     work:
-      state === 'none' ? null : { id: `wrk_01JABCDEF${String(index).padStart(2, '0')}`, state, runs: index },
+      state === 'none'
+        ? null
+        : { id: `wrk_01JABCDEF${String(index).padStart(2, '0')}`, state, runs: index },
   }));
 }
 
@@ -144,6 +152,82 @@ describe('RepoBacklogPage', () => {
     expect(hook(element, 'backlog-run-Task-77')).toBeNull();
   });
 
+  it('draws the row as three lines with the section and the state · runs flow', async () => {
+    const { element } = await mount();
+
+    expect(hook(element, 'backlog-row-section')?.textContent?.trim()).toBe('Batch 20');
+    const flow = hook(element, 'backlog-row-flow');
+    expect(flow?.textContent).toContain(translate('en', 'backlog.state.running'));
+    expect(flow?.textContent).toContain('2 runs');
+    expect(flow?.querySelector('[data-testid="backlog-row-state"]')).not.toBeNull();
+    expect(flow?.querySelector('[data-testid="backlog-row-runs"]')).not.toBeNull();
+  });
+
+  it('summarises the first unchecked ref and the rows that wait on a dependency', async () => {
+    const { element } = await mount(backlogOf(DEP_ITEMS));
+
+    const expected = `${translate('en', 'backlog.summary.next').replace(
+      '{ref}',
+      'Task-01',
+    )} · ${translate('en', 'backlog.summary.waiting').replace('{n}', '3')}`;
+    expect(hook(element, 'backlog-summary')?.textContent?.trim()).toBe(expected);
+  });
+
+  it('says every item is done when no row is unchecked', async () => {
+    const { element } = await mount(
+      backlogOf([{ ref: 'Task-90', title: 'Done', checked: true, line: 1, needs: [], work: null }]),
+    );
+
+    expect(hook(element, 'backlog-summary')?.textContent?.trim()).toBe(
+      translate('en', 'backlog.summary.done'),
+    );
+  });
+
+  it('draws one rail node per row with the four kinds', async () => {
+    const items: readonly BacklogItem[] = [
+      { ref: 'Task-10', title: 'Checked', checked: true, line: 1, needs: [], work: null },
+      {
+        ref: 'Task-11',
+        title: 'Merged',
+        checked: false,
+        line: 2,
+        needs: [],
+        work: { id: 'wrk_01JABCDEFG0', state: 'merged', runs: 1 },
+      },
+      {
+        ref: 'Task-12',
+        title: 'Running',
+        checked: false,
+        line: 3,
+        needs: [],
+        work: { id: 'wrk_01JABCDEFG1', state: 'running', runs: 1 },
+      },
+      { ref: 'Task-13', title: 'Blocked', checked: false, line: 4, needs: ['Task-12'], work: null },
+      { ref: 'Task-14', title: 'Ready', checked: false, line: 5, needs: [], work: null },
+    ];
+    const { element } = await mount(backlogOf(items));
+
+    const nodes = [...element.querySelectorAll<HTMLElement>('[data-testid="backlog-rail-node"]')];
+    expect(nodes).toHaveLength(items.length);
+    expect(nodes.map((node) => node.getAttribute('data-kind'))).toEqual([
+      'done',
+      'done',
+      'live',
+      'blocked',
+      'ready',
+    ]);
+    expect(nodes[3]?.getAttribute('aria-label')).toBe(translate('en', 'backlog.rail.blocked'));
+  });
+
+  it('keeps the rail hooks inside the gutter column', async () => {
+    const { element } = await mount(backlogOf(DEP_ITEMS));
+
+    const gutter = hook(element, 'backlog-rail-gutter');
+    expect(gutter).not.toBeNull();
+    expect(gutter?.querySelector('[data-testid="backlog-rail"]')).not.toBeNull();
+    expect(gutter?.querySelectorAll('[data-testid="backlog-rail-edge"]')).toHaveLength(4);
+  });
+
   it('labels every work state and none from the contract enum, with no fallback', async () => {
     const { element } = await mount(backlogOf(stateItems()));
 
@@ -196,18 +280,16 @@ describe('RepoBacklogPage', () => {
 
     hook(element, 'backlog-run-Task-77')?.click();
     await fixture.whenStable();
-    http
-      .expectOne({ method: 'POST', url: '/v1/works' })
-      .flush(
-        {
-          error: {
-            code: 'conflict',
-            message: 'Live work',
-            details: { reason: 'live_work', workId: WORK_ID },
-          },
+    http.expectOne({ method: 'POST', url: '/v1/works' }).flush(
+      {
+        error: {
+          code: 'conflict',
+          message: 'Live work',
+          details: { reason: 'live_work', workId: WORK_ID },
         },
-        { status: 409, statusText: 'Conflict' },
-      );
+      },
+      { status: 409, statusText: 'Conflict' },
+    );
     await fixture.whenStable();
 
     expect(hook(element, 'backlog-live-work')).not.toBeNull();
@@ -254,7 +336,11 @@ describe('RepoBacklogPage', () => {
 
     stream.set({
       event: 'backlog.changed',
-      data: { repoId: 'repo_01JABCDEFGHJKMNPQRSW', revision: '9f1c2ab', ts: '2026-10-28T09:12:00Z' },
+      data: {
+        repoId: 'repo_01JABCDEFGHJKMNPQRSW',
+        revision: '9f1c2ab',
+        ts: '2026-10-28T09:12:00Z',
+      },
     });
     await fixture.whenStable();
     http.expectNone(BACKLOG_URL);
@@ -304,7 +390,9 @@ describe('RepoBacklogPage', () => {
     expect(edges[3]?.textContent).toContain('Task-04 → Task-99');
     expect(edges[3]?.textContent).toContain(translate('en', 'backlog.rail.external'));
 
-    const root = element.querySelector<HTMLElement>('[data-testid="backlog-row"][data-ref="Task-01"]');
+    const root = element.querySelector<HTMLElement>(
+      '[data-testid="backlog-row"][data-ref="Task-01"]',
+    );
     expect(root?.getAttribute('data-needs')).toBe('');
     expect(root?.getAttribute('data-unmet-needs')).toBe('');
     expect(root?.querySelector('[data-testid="backlog-row-needs"]')).toBeNull();
@@ -347,7 +435,9 @@ describe('RepoBacklogPage', () => {
       backlogOf([...DEP_ITEMS.filter((item) => item.ref !== 'Task-04'), blocked]),
     );
 
-    const row = element.querySelector<HTMLElement>('[data-testid="backlog-row"][data-ref="Task-04"]');
+    const row = element.querySelector<HTMLElement>(
+      '[data-testid="backlog-row"][data-ref="Task-04"]',
+    );
     expect(row?.getAttribute('data-unmet-needs')).toBe('Task-01 Task-99');
     const unmet = row?.querySelector('[data-testid="backlog-row-unmet-needs"]')?.textContent ?? '';
     expect(unmet).toContain('Task-01');
@@ -361,7 +451,9 @@ describe('RepoBacklogPage', () => {
     expect(hook(element, 'backlog-detail-empty')).not.toBeNull();
     expect(hook(element, 'backlog-detail-ref')).toBeNull();
 
-    const row = element.querySelector<HTMLElement>('[data-testid="backlog-row"][data-ref="Task-03"]');
+    const row = element.querySelector<HTMLElement>(
+      '[data-testid="backlog-row"][data-ref="Task-03"]',
+    );
     const select = row?.querySelector<HTMLElement>('[data-testid="backlog-row-select"]');
     select?.click();
     await fixture.whenStable();
@@ -403,11 +495,19 @@ describe('RepoBacklogPage', () => {
   it('ships the same dictionary keys in both locales, with the rail and detail copy', () => {
     expect(Object.keys(STRINGS.es).sort()).toEqual(Object.keys(STRINGS.en).sort());
     for (const key of [
+      'backlog.back',
+      'backlog.summary.next',
+      'backlog.summary.waiting',
+      'backlog.summary.done',
       'backlog.rail',
       'backlog.rail.empty',
       'backlog.rail.chain',
       'backlog.rail.branch',
       'backlog.rail.external',
+      'backlog.rail.done',
+      'backlog.rail.live',
+      'backlog.rail.blocked',
+      'backlog.rail.ready',
       'backlog.detail',
       'backlog.detail.empty',
       'backlog.detail.none',
