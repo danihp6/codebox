@@ -142,8 +142,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/sessions/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/sessions/markdown.spec.ts` — fences, lists and unclosed markup.
 - `src/app/features/sessions/i18n.ts` — the session and design-preview dictionary in `en` and `es`.
-- `src/app/features/settings/settings.page.ts` — profile, time zone, the notification panel row, providers, danger zone and about, with explicit `unavailable` blocks.
-- `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, every section, the preference toggle and dictionary completeness.
+- `src/app/features/settings/settings.page.ts` — frame `06`: the device card, the four groups, the eight rows, the theme control and the two danger rows, with explicit `unavailable` blocks.
+- `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, the groups and the rows in order, the theme write into `cb.settings` and dictionary completeness.
 - `src/app/features/settings/settings.api.ts` — `/v1/me`, version, settings, providers, brake, cache wipe, devices and notification preferences; a missing route is not an error.
 - `src/app/features/settings/settings.api.spec.ts` — every URL, 404-as-absent, the 403 scope refusal and boundary parsing.
 - `src/app/features/settings/settings.store.ts` — five independent reads, the time zone, the brake, the cache wipe and optimistic preference toggles.
@@ -151,12 +151,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/settings/notifications.api.ts` — the two preferences calls, the best-effort settings mirror and the envelope mapping.
 - `src/app/features/settings/notifications.api.spec.ts` — the three URLs and methods, the boundary parse failure and the unswallowed 404.
 - `src/app/features/settings/notifications.i18n.ts` — the notification panel dictionary in `en` and `es`.
-- `src/app/features/settings/notifications.page.ts` — the panel: five toggles, the locked credential row, quiet hours and the close output.
-- `src/app/features/settings/notifications.page.spec.ts` — the toggle order, the locked row in both locales, the 500 rollback and the quiet-hours save.
+- `src/app/features/settings/notifications.page.ts` — frame `17`: the header, both group headings, five switches, the locked amber row, the quiet card and the close output.
+- `src/app/features/settings/notifications.page.spec.ts` — the switch order and `data-on`, the locked row in both locales, the 500 rollback and the quiet-hours save.
 - `src/app/features/settings/notifications.store.ts` — the preferences read, the optimistic toggles, the quiet-hours write and the SSE frame projection.
 - `src/app/features/settings/notifications.store.spec.ts` — the payload builder, the toggle rollback, the two-route write and the mirror states.
-- `src/app/features/settings/devices.page.ts` — paired devices, current-device marker and a confirmed revoke per row.
-- `src/app/features/settings/devices.page.spec.ts` — empty state, current-device row, confirm-then-revoke and the error block.
+- `src/app/features/settings/devices.page.ts` — frame `15`: the counted header, one row per device, the outlined pair row, three notes and a confirmed revoke.
+- `src/app/features/settings/devices.page.spec.ts` — the empty state, the header, the device lines, confirm-then-revoke, the second-tap guard and the error block.
 - `src/app/features/settings/devices.store.ts` — paired devices, the calling device and revoke (with logout of the calling device).
 - `src/app/features/settings/devices.store.spec.ts` — load, revoke another device and revoke the calling one down to an empty secure store.
 - `src/app/features/settings/i18n.ts` — the settings and devices dictionary in `en` and `es`.
