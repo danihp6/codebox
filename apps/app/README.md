@@ -168,12 +168,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/works/works.api.spec.ts` — every works URL and method, the empty bodies and the error mapping.
 - `src/app/features/works/work.store.ts` — one work: the detail, the one blocked action, the rework refetch and the state.
 - `src/app/features/works/work.store.spec.ts` — load, the decision navigation, the rework refetch and the refused action.
-- `src/app/features/works/repo-workers.page.ts` — the workers tab: the four role rooms, the road in, the belt out and the four states derived from `WorkState`.
-- `src/app/features/works/repo-workers.page.spec.ts` — the four states from a fixture, the blocked task off the builder's floor, the face links and the absence of a per-agent button.
+- `src/app/features/works/repo-workers.page.ts` — the workers tab: the dashed plan card, the 2 × 2 role grid with one face and one task chip per subagent, the road in, the belt out, the two chips and their sheet, and the four states derived from `WorkState`.
+- `src/app/features/works/repo-workers.page.spec.ts` — the four board states from a fixture, the blocked task off the builder's floor, the face links and their rings, the absence of a per-agent button, the two chip counts and the sheet that closes by its control and by Escape.
 - `src/app/features/works/workers.model.ts` — the pure projection: `laneOf`, `workerStateOf` and `projectWorkers`.
 - `src/app/features/works/workers.model.spec.ts` — every `WorkState`, the order of the four rooms and the daemon order inside a lane.
 - `src/app/features/works/workers.motion.ts` — the pure blink rule: `blinkPhase` and `assignBlinkPhases` over the board's cards.
 - `src/app/features/works/workers.motion.spec.ts` — the phase wrap, the board order and the motion contract read from `variables.css`.
 - `src/app/features/works/work.page.ts` — the work run log: the header facts, one segment per run, the gate/PR cards, the tick and one action, with no composer.
 - `src/app/features/works/work.page.spec.ts` — no textarea or send hook, the header, the cards from run state, the state flip, the tick and the one action.
-- `src/app/features/works/i18n.ts` — the workers, work and run-state dictionary in `en` and `es`.
+- `src/app/features/works/i18n.ts` — the workers, work and run-state dictionary in `en` and `es`, including the two chips, their sheet and the header's sub line.
