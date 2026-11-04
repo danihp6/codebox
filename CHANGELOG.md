@@ -38,6 +38,13 @@ first release exists.
   composer with the home indicator under it. There is no tabbar: a session is a route, not a tab.
   `design/README.md` §1 gives it the Design · session row's 320 column; five screens still owed
   one.
+- **The dashboard keeps its five blocks.** `S10 · 320 · Dashboard` is the dashboard at 320 × 568:
+  `Dashboard` and `synced 9:41`, the `NEEDS YOU` card with `2 to review · 1 running`, its
+  caption and the amber `Review`, the `WORKING` card (`run_01JAB3K9 · gate running`, the branch
+  line, `4m 12s`), the `1 queued · 2 slots free` line with the next fire, the two
+  `FINISHED · NOT REVIEWED` rows and their cost, the `$3.12 of $10.00 daily cap` card with its
+  bar and seven-bar sparkline, and the three-column `daemon`/`opencode`/`disk` health row.
+  `design/README.md` §1 gives it the Dashboard row's 320 column; four screens still owed one.
 - **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
   frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
   changelog now name the join key the importer reads, not a description of it.

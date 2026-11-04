@@ -2140,7 +2140,10 @@ of them.
       one.
       **`S9 · 320 · Design · session` follows (2026-11-04):** the preview card with four
       thumbnails and four state chips, the `✓ tokens ✓ routes ✓ states` line, the session thread,
-      the file card and the composer — so five rows still owe one. The same pass
+      the file card and the composer — so five rows still owe one.
+      **`S10 · 320 · Dashboard` follows (2026-11-04):** the `NEEDS YOU` card with `Review`, the
+      working run and its branch, the queue line, the two finished rows, the spend card with its
+      bar and sparkline, and the health row — so four rows still owe one. The same pass
       repaired `01 · Pairing — mobile dark`, whose primary button painted `#0b0f14` on
       `#0b0f14`: `Pair device` was invisible in the export. **Desktop is out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
