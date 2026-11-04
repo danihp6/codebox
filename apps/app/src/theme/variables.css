@@ -49,6 +49,7 @@
 }
 
 .cb-workers-truck {
+  background: var(--cb-muted);
   animation: cb-truck-in 5s ease-in-out infinite;
 }
 
