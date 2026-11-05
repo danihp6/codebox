@@ -112,6 +112,13 @@ dashboard's empty, and `20e · Crew · asleep — dark` the workers' empty. `des
 names all 33; the generated specs catch up at the next re-import (§4), which the file's read
 quota still blocks.
 
+**The pairing form's inline reason is app copy, not a frame.** `14 · Unpaired — 401` draws the
+screen after a 401; the reason under the code field — one sentence for `used_code`,
+`expired_code` and `unknown_code`, `docs/app.md` §4 — is rendered by `features/pairing` and has
+no frame of its own. Three near-identical copies of `01` would add no region the spec can
+compare, and `features/pairing` already proves the rejected code, its sentence and the enabled
+submit.
+
 **Removed in the 2026-10-28 re-cut:** the connect-repository picker, the cloning screen and the
 free-chat `⋯` menu. Connecting a repository happens from the `+` on `/repos`, and its clone
 state lives in the row, so a whole screen for it was one tap too many.
