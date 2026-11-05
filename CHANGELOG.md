@@ -10,9 +10,9 @@ first release exists.
 
 - **The pairing form's inline reason needs no frame.** `14 · Unpaired — 401` is the screen-level
   error; the reason under the code field is one sentence for `used_code`, `expired_code` and
-  `unknown_code` (`docs/app.md` §4), rendered by `features/pairing`. Task-90 maps a 401 to
-  `codeRejected` and its spec proves the reason, so the audit note closes on the app's sentence
-  instead of three near-identical copies of `01` (`design/README.md` §2).
+  `unknown_code` (`docs/app.md` §4), rendered by `features/pairing`. Task-90 keeps that mapping
+  and the page spec proves the three reasons land on the one sentence, so the audit note closes
+  on the app's copy instead of three near-identical copies of `01` (`design/README.md` §2).
 
 ### Changed — 2026-11-04 (L5, the frames follow the product)
 
