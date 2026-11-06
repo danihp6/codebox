@@ -17,6 +17,8 @@ test('pair, add a repository, run its work and watch the merge', async ({ page }
     await page.waitForURL((url) => !url.pathname.endsWith('/pair'));
 
     await page.goto(`${env.baseUrl}/repos`);
+    await page.click('[data-testid="repos-action-new"]');
+    await page.waitForSelector('[data-testid="repos-form"]');
     await page.fill('[data-testid="repo-slug"]', SLUG);
     await page.fill('[data-testid="repo-default-branch"]', DEFAULT_BRANCH);
     await page.fill('[data-testid="repo-gate"]', GATE);

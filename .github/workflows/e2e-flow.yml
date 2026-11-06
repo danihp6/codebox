@@ -1,0 +1,67 @@
+name: E2E
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    name: e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node 24
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Browser path
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=${RUNNER_TEMP}/ms-playwright" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Playwright
+        env:
+          CB_E2E_OUTPUT: ${{ runner.temp }}/cb-e2e-playwright
+        run: npm run e2e -- --repeat-each=2
+
+      - name: Keep the failure context
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: ${{ runner.temp }}/cb-e2e-playwright
+          if-no-files-found: ignore
+
+      - name: Headless flow
+        run: npm run e2e:unit
+
+      # The `[live]` bound of issue #102: the flow runs again inside a user namespace
+      # where only loopback exists, so a socket anywhere else answers ENETUNREACH. The
+      # runner may deny namespaces (`uid_map: Operation not permitted`), which is the
+      # measurement, not a regression — it must never hide the flow above.
+      - name: No-network guard
+        continue-on-error: true
+        run: |
+          unshare -rn sh -c 'ip link set lo up && ip -brief address show lo'
+          unshare -rn sh -c 'ip link set lo up && npm run e2e -- --repeat-each=2'

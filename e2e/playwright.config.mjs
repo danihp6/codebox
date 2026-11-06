@@ -14,7 +14,9 @@ const config = {
   retries: 0,
   forbidOnly: true,
   reporter: [['list']],
-  outputDir: join(tmpdir(), 'cb-e2e-playwright'),
+  outputDir: process.env.CB_E2E_OUTPUT ?? join(tmpdir(), 'cb-e2e-playwright'),
+  trace: 'retain-on-failure',
+  screenshot: 'only-on-failure',
   timeout: 120_000,
 };
 
