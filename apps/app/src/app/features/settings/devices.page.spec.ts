@@ -40,7 +40,9 @@ const USED_KEYS: readonly string[] = [
   'common.loading',
   'common.error',
   'common.retry',
+  'settings.title',
   'devices.title',
+  'devices.sub',
   'devices.empty',
   'devices.current',
   'devices.current.hint',
@@ -49,6 +51,10 @@ const USED_KEYS: readonly string[] = [
   'devices.lastSeen',
   'devices.never',
   'devices.cancel',
+  'devices.pair',
+  'devices.note.1',
+  'devices.note.2',
+  'devices.note.3',
 ];
 
 function memoryStore(): SecureStore {
@@ -116,11 +122,27 @@ describe('DevicesPage', () => {
     expect(hook(element, 'devices-loading')).toBeNull();
   });
 
+  it('draws the header, the pair row and the three notes', async () => {
+    const { element } = await mount([CURRENT, OTHER]);
+
+    expect(hook(element, 'devices-back')?.getAttribute('href')).toBe('/settings');
+    expect(hook(element, 'devices-sub')?.getAttribute('data-count')).toBe('2');
+    expect(hook(element, 'devices-sub')?.textContent).toContain(translate('es', 'devices.sub'));
+
+    expect(hook(element, 'devices-pair')?.getAttribute('aria-disabled')).toBe('true');
+    expect(hook(element, 'devices-pair')?.textContent).toContain(translate('es', 'devices.pair'));
+    expect(hook(element, 'devices-pair')?.querySelector('button, a')).toBeNull();
+
+    const notes = [...element.querySelectorAll<HTMLElement>('[data-testid="devices-note"]')];
+    expect(notes.map((note) => note.getAttribute('data-note'))).toEqual(['1', '2', '3']);
+  });
+
   it('marks the row of the calling device', async () => {
     const { element } = await mount([CURRENT, OTHER]);
 
     const rows = element.querySelectorAll<HTMLElement>('[data-testid="device-row"]');
     expect(rows).toHaveLength(2);
+    expect(hook(element, 'devices-list')).not.toBeNull();
     expect(rows[0]?.getAttribute('data-device-id')).toBe(CURRENT.id);
     expect(rows[0]?.getAttribute('data-current')).toBe('true');
     expect(rows[1]?.getAttribute('data-device-id')).toBe(OTHER.id);
@@ -128,14 +150,24 @@ describe('DevicesPage', () => {
     expect(hook(element, 'devices-empty')).toBeNull();
   });
 
-  it('renders one scope line per device and never a revoke control on this device', async () => {
+  it('renders the three lines of a row and never a revoke control on this device', async () => {
     const { element } = await mount([CURRENT, OTHER]);
 
     const current = row(element, CURRENT.id);
     const other = row(element, OTHER.id);
-    expect(current?.querySelector('.cb-mono')?.textContent).toContain('ios');
-    expect(current?.textContent).toContain('read write admin');
-    expect(other?.textContent).toContain('read');
+    expect(current?.querySelector('[data-testid="device-name"]')?.textContent).toContain(
+      CURRENT.name,
+    );
+    expect(current?.querySelector('[data-testid="device-meta"]')?.textContent).toContain('ios');
+    expect(current?.querySelector('[data-testid="device-meta"]')?.textContent).toContain(
+      'read, write, admin',
+    );
+    expect(current?.querySelector('[data-testid="device-seen"]')?.textContent).toContain(
+      CURRENT.lastSeenAt ?? '',
+    );
+    expect(other?.querySelector('[data-testid="device-seen"]')?.textContent).toContain(
+      translate('es', 'devices.never'),
+    );
 
     expect(current?.querySelector('[data-testid="device-current"]')).not.toBeNull();
     expect(current?.querySelector('[data-testid="device-current-hint"]')).not.toBeNull();
@@ -170,6 +202,7 @@ describe('DevicesPage', () => {
     const rows = element.querySelectorAll<HTMLElement>('[data-testid="device-row"]');
     expect(rows).toHaveLength(1);
     expect(rows[0]?.getAttribute('data-device-id')).toBe(CURRENT.id);
+    expect(hook(element, 'devices-sub')?.getAttribute('data-count')).toBe('1');
   });
 
   it('issues nothing on a second tap while a revoke is in flight', async () => {

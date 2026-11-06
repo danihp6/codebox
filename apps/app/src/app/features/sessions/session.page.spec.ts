@@ -208,6 +208,7 @@ describe('SessionPage', () => {
     expect(hook(element, 'session-proposal')).toBeNull();
     expect(hook(element, 'session-merge')).toBeNull();
     expect(hook(element, 'design-preview')).toBeNull();
+    expect(hook(element, 'session-preview-status')).toBeNull();
     http.expectNone(DESIGN_URL);
     const composer = element.querySelector<HTMLTextAreaElement>('[data-testid="session-composer"]');
     expect(composer?.disabled).toBe(false);
@@ -269,6 +270,64 @@ describe('SessionPage', () => {
 
     expect(hook(element, 'design-preview-revision')?.getAttribute('data-sha')).toBe(PROPOSAL.sha);
     expect(hook(element, 'design-preview-pending')).not.toBeNull();
+  });
+
+  it('draws the back link, the eyebrow, the status line and the composer bar', async () => {
+    TestBed.configureTestingModule({
+      providers: [
+        provideRouter([]),
+        provideIonicAngular(),
+        provideHttpClient(),
+        provideHttpClientTesting(),
+        { provide: I18nService, useValue: i18nStub },
+        { provide: SseService, useValue: { event: signal<SseStreamEvent | null>(null) } },
+      ],
+    });
+    const fixture = TestBed.createComponent(SessionPage);
+    fixture.componentRef.setInput('id', SESSION_ID);
+    await fixture.whenStable();
+    const element = fixture.nativeElement as HTMLElement;
+    const http = TestBed.inject(HttpTestingController);
+
+    expect(hook(element, 'session-back')?.getAttribute('href')).toBe('/dashboard');
+
+    http.expectOne(SESSION_URL).flush(SESSION);
+    http.expectOne(MESSAGES_URL).flush({ data: [MESSAGE], nextCursor: null });
+    await fixture.whenStable();
+    http.expectOne(DESIGN_URL).flush(PREVIEW);
+    await fixture.whenStable();
+
+    expect(hook(element, 'session-back')?.getAttribute('href')).toBe(
+      `/repos/${SESSION.repoId}`,
+    );
+    expect(hook(element, 'session-thread-eyebrow')?.textContent?.trim()).toBe('SESSION · design/');
+    expect(hook(element, 'session-preview-status')?.getAttribute('data-pending')).toBe('false');
+    expect(hook(element, 'session-preview-count')).toBeNull();
+
+    const bar = hook(element, 'composer-bar');
+    expect(bar).not.toBeNull();
+    for (const id of ['session-composer', 'session-send', 'session-stop']) {
+      const node = hook(element, id);
+      expect(node, id).not.toBeNull();
+      expect(bar?.contains(node), id).toBe(true);
+    }
+    expect(hook(element, 'composer-plus')).toBeNull();
+    expect(hook(element, 'session-overflow')).toBeNull();
+
+    fixture.componentInstance.store.reload();
+    await fixture.whenStable();
+    const carried = { ...SESSION, pendingProposal: PROPOSAL };
+    http.expectOne(SESSION_URL).flush(carried);
+    http.expectOne(MESSAGES_URL).flush({ data: [MESSAGE], nextCursor: null });
+    await fixture.whenStable();
+    http.expectOne(`${DESIGN_URL}?revision=${PROPOSAL.sha}`).flush(previewAt(carried));
+    await fixture.whenStable();
+
+    expect(hook(element, 'session-preview-status')?.getAttribute('data-pending')).toBe('true');
+    expect(hook(element, 'session-preview-count')?.textContent?.trim()).toBe(
+      String(PROPOSAL.paths.length),
+    );
+    expect(hook(element, 'session-commit')?.getAttribute('data-revision')).toBe(PROPOSAL.sha);
   });
 
   it('ships both locales key-for-key', () => {

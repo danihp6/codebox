@@ -14,6 +14,62 @@ first release exists.
   and the page spec proves the three reasons land on the one sentence, so the audit note closes
   on the app's copy instead of three near-identical copies of `01` (`design/README.md` §2).
 
+### Changed — 2026-11-04 (Batch 23, wave 2: the session and the inbox reach the prototype)
+
+- **The design session draws its frame.** `features/sessions` renders `26 · Design · preview +
+  chat — dark` from `design/screens/design-session.json`: the two-line header, the preview card
+  above the thread with its revision, tokens, routes, one block per screen with its three
+  declared states and the check's findings, the `SESSION · design/` eyebrow, the right-aligned
+  user bubble against the plain agent text, the tool card and the raised composer, all from the
+  spec's `layout`. The thread, the markdown renderer, the store, the stream and the API do not
+  move; the card keeps `present: false` and the revision-unknown state, and the composer is
+  still disabled while a proposal is pending.
+- **The dashboard draws its inbox.** `features/dashboard` renders `05 · Dashboard — mobile dark`
+  from `design/screens/dashboard.json`: the five blocks in the frame's inbox order (`needs you`,
+  working, unreviewed, today's spend, health), the card boxes with their 14 px radius and the
+  type scale from the spec, and `12 · First run — after pairing` as the empty state. The
+  per-repository blocks have no frame, so they keep today's shape and are recorded as pending
+  L5; `dashboard.store.ts`, `dashboard.api.ts` and their specs do not move.
+- **The settings cluster draws its three frames.** `features/settings` renders `06 · Settings —
+  mobile dark`, `15 · Settings / Devices` and `17 · Settings / Notifications` from their measured
+  specs: the grouped rows at the frame's 64 px pitch, the device card, the pair row and the
+  confirmed revoke, the notification groups with their five toggles and quiet hours, and the
+  theme control wired to `SettingsStore.theme` (dark by default, `data-theme` on `<html>`). The
+  stores, the APIs and `providers.page.ts` do not move, and the rows the frames omit (the
+  credentials link, the time zone, the brake) keep their pinned hooks.
+- **The credentials screen draws its frame.** `features/credentials` renders `16 · Settings /
+  Credentials` from `design/screens/credentials.json`: the back link and counted subtitle, the
+  GitHub App card, one card per integration, one row per open credential with its `••••` tail
+  and its expose badge, and the two write-only notes, with sheets `18 · Connect a service` and
+  `19 · Add credential` rebuilt to the sheet rule. The write-only rule of D50 is visible in the
+  drawing and still enforced — no value reaches the DOM, test pinned by a sentinel — and the
+  API and the store do not move; rotation stays a follow-up because the client has no rotate
+  call and the frame has no rotate control.
+
+### Changed — 2026-11-04 (Batch 23, wave 1: the screens reach the prototype)
+
+- **Pairing draws its frame.** `features/pairing` renders `01 · Pairing — mobile dark` from
+  `design/screens/pairing.json`: the masthead, the card with its 20 px inset, the
+  eyebrow/label/hint/value scale, the 302 × 48 CTA and the inline alert inside the card. The
+  validation (`pairingProblem`, `pairingFailureOf`) and `AuthStore.pair` do not move, and the
+  page measures 320 px wide without a sideways scroll.
+- **The repo list draws its counted row.** `features/repos` renders `02 · Repo list — mobile dark`:
+  the 24/600 title, the 36 px `+`, the 36 px search field, 72 px rows whose
+  `pending · running · merged` numbers come from `Repo.counts` (D59) — the page never counts works
+  itself — one amber dot for the row that needs a person, and the full-width `+ Add repository`.
+  The search filters the rows locally, without a second request, and the dead filter strip and the
+  `⋯` menu L5 deleted stay gone.
+- **The backlog draws its three lines.** `features/backlog` renders `22 · Repo · backlog — deps (dark)`:
+  `Task-NN · title`, the section and the `state · runs` flow at a 64 px pitch, the dependency rail
+  as a gutter fed by `dependency-rail.ts`, the chat button in the header (never a `+`) and a
+  `next up …` summary over the rows. The parser, the store and the session sheet do not move, and
+  the three-line row survives at 320 px without a horizontal scroll.
+- **The workers view draws its factory.** `features/works` renders `20c · Crew · aerial — dark` and
+  its three siblings from `design/screens/repo-workers.json`: the 358 × 300 plan card with four
+  role rooms in a 2 × 2 grid, one face and one task chip per subagent, the road in on the left,
+  the belt out on the right, the `▤` and `🔔` chips as the only controls and `needs you` as a badge
+  over the worker, never a room fill. The four states come from `projectWorkers`; `workers.model.ts`
+  and `workers.motion.ts` keep their rules and the motion honours `prefers-reduced-motion`.
 ### Changed — 2026-11-04 (L5, the frames follow the product)
 
 - **Pairing drops the in-app QR.** `01 · Pairing — mobile dark` and `S5 · 320 · Pairing` carried a

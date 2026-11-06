@@ -1,21 +1,85 @@
 import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { RouterLink } from '@angular/router';
+import { IonContent, IonHeader, IonToolbar } from '@ionic/angular';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { DevicesStore } from './devices.store';
 import { translate } from './i18n';
 
+/**
+ * Frame `15 · Settings / Devices`: a header with the count, one 342 × 68 row per paired
+ * device, the outlined pair row and three notes. The calling device shows its marker and no
+ * revoke control; another device asks once, then revokes.
+ */
 @Component({
   selector: 'app-devices-page',
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar],
+  imports: [RouterLink, IonContent, IonHeader, IonToolbar],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [DevicesStore],
   styles: [
     `
+      :host {
+        --cb-devices-stroke: color-mix(in srgb, var(--cb-muted) 28%, transparent);
+      }
+      ion-content {
+        --background: var(--cb-bg);
+      }
+      ion-toolbar {
+        --min-height: 60px;
+        --border-width: 0;
+        border-block-end: 1px solid var(--cb-devices-stroke);
+      }
+      .cb-devices-back {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-inline-size: 44px;
+        min-block-size: 44px;
+        margin-inline-start: -2px;
+        color: var(--cb-accent);
+        font-size: 22px;
+        font-weight: 400;
+        line-height: 26.63px;
+        text-decoration: none;
+      }
+      .cb-devices-titles {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-inline-size: 0;
+      }
+      .cb-devices-title {
+        margin: 0;
+        font-family: var(--cb-font-sans);
+        font-size: 15px;
+        font-weight: 600;
+        line-height: 18.15px;
+        color: var(--cb-text);
+        overflow-wrap: anywhere;
+      }
+      .cb-devices-sub {
+        margin: 0;
+        font-family: var(--cb-font-sans);
+        font-size: 10px;
+        font-weight: 400;
+        line-height: 12.1px;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
+      }
       .cb-devices {
         display: flex;
         flex-direction: column;
-        gap: calc(var(--cb-space) * 3);
+        padding: 14px 24px 32px;
+        font-family: var(--cb-font-sans);
+        font-size: 10px;
+        font-weight: 400;
+        line-height: 12.1px;
+        color: var(--cb-text);
+      }
+      .cb-devices-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
         margin: 0;
         padding: 0;
         list-style: none;
@@ -23,52 +87,191 @@ import { translate } from './i18n';
       .cb-device {
         display: flex;
         flex-wrap: wrap;
-        gap: calc(var(--cb-space) * 2);
-        align-items: baseline;
-        border-block-end: 1px solid var(--cb-surface);
-        padding-block: calc(var(--cb-space) * 3);
-        overflow-wrap: anywhere;
+        gap: 8px;
+        align-items: flex-start;
+        min-block-size: 68px;
+        padding: 10px 15px;
+        border: 1px solid var(--cb-devices-stroke);
+        border-radius: 12px;
+        background: var(--cb-surface);
       }
-      .cb-device[data-current='true'] {
-        border-inline-start: 3px solid var(--cb-accent);
-        padding-inline-start: calc(var(--cb-space) * 3);
+      .cb-device-body {
+        display: flex;
+        flex: 1 1 12rem;
+        flex-direction: column;
+        gap: 3px;
+        min-inline-size: 0;
       }
       .cb-device-name {
+        margin: 0;
+        font-size: 14px;
         font-weight: 600;
+        line-height: 16.94px;
+        color: var(--cb-text);
+        overflow-wrap: anywhere;
+      }
+      .cb-device-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0;
+        font-size: 10px;
+        font-weight: 400;
+        line-height: 12.1px;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
+      }
+      .cb-device-seen,
+      .cb-device-hint {
+        margin: 0;
+        font-size: 9px;
+        font-weight: 400;
+        line-height: 10.89px;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
+      }
+      .cb-device-current {
+        flex: 0 0 auto;
+        margin-inline-start: auto;
+        font-size: 10px;
+        font-weight: 400;
+        line-height: 12.1px;
+        color: var(--cb-accent);
+      }
+      .cb-device-revoke {
+        flex: 0 0 auto;
+        margin-inline-start: auto;
+        min-block-size: 32px;
+        padding-inline: 10px;
+        border: 1px solid var(--cb-devices-stroke);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--cb-danger);
+        font: inherit;
+        font-size: 10px;
+        font-weight: 400;
+        line-height: 12.1px;
+      }
+      .cb-device-revoke:disabled {
+        opacity: 0.6;
+      }
+      .cb-device-confirm {
+        display: flex;
+        flex: 1 1 100%;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+        min-inline-size: 0;
+      }
+      .cb-device-confirm-text {
+        flex: 1 1 10rem;
+        min-inline-size: 0;
+        font-size: 10px;
+        font-weight: 400;
+        line-height: 12.1px;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
+      }
+      .cb-device-button {
+        min-block-size: 32px;
+        padding-inline: 10px;
+        border: 1px solid var(--cb-devices-stroke);
+        border-radius: 8px;
+        background: transparent;
+        color: var(--cb-text);
+        font: inherit;
+        font-size: 10px;
+        line-height: 12.1px;
+      }
+      .cb-devices-pair {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-block-size: 48px;
+        margin: 16px 0 0;
+        padding: 0 15px;
+        border: 1px solid var(--cb-devices-stroke);
+        border-radius: 12px;
+        background: var(--cb-bg);
+        color: var(--cb-accent);
+        font-size: 12px;
+        font-weight: 400;
+        line-height: 14.52px;
+        overflow-wrap: anywhere;
+      }
+      .cb-devices-pair-mark {
+        flex: 0 0 auto;
+        font-size: 15px;
+        line-height: 18.15px;
+      }
+      .cb-devices-note {
+        margin: 0;
+        font-size: 10px;
+        font-weight: 400;
+        line-height: 12.1px;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
+      }
+      .cb-devices-notes {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        margin-block-start: 24px;
+      }
+      .cb-devices-empty {
+        display: flex;
+        align-items: center;
+        min-block-size: 48px;
+        margin: 0;
+        padding: 0 15px;
+        border: 1px solid var(--cb-devices-stroke);
+        border-radius: 12px;
+        background: var(--cb-surface);
+        color: var(--cb-muted);
+        font-size: 11px;
+        line-height: 13.31px;
       }
       .cb-mono {
         font-family: var(--cb-font-mono);
-      }
-      .cb-muted {
-        color: var(--cb-muted);
-      }
-      .cb-current-hint {
-        inline-size: 100%;
-        color: var(--cb-muted);
-      }
-      .cb-confirm {
-        display: flex;
-        flex-wrap: wrap;
-        gap: calc(var(--cb-space) * 2);
-        align-items: center;
-        inline-size: 100%;
+        overflow-wrap: anywhere;
       }
       .cb-unavailable {
+        margin-block-end: 8px;
+        padding: 8px 10px;
         border: 1px dashed var(--cb-muted);
-        border-radius: var(--cb-radius);
-        padding: calc(var(--cb-space) * 3);
+        border-radius: 10px;
         color: var(--cb-muted);
+        font-size: 11px;
+        line-height: 13.31px;
       }
     `,
   ],
   template: `
     <ion-header>
       <ion-toolbar>
-        <ion-title>{{ t('devices.title') }}</ion-title>
+        <a
+          class="cb-devices-back"
+          slot="start"
+          data-testid="devices-back"
+          routerLink="/settings"
+          [attr.aria-label]="t('settings.title')"
+        >
+          ‹
+        </a>
+        <div class="cb-devices-titles">
+          <h1 class="cb-devices-title">{{ t('devices.title') }}</h1>
+          <p
+            class="cb-devices-sub"
+            data-testid="devices-sub"
+            [attr.data-count]="store.devices().length"
+          >
+            {{ t('devices.sub') }}
+          </p>
+        </div>
       </ion-toolbar>
     </ion-header>
-    <ion-content class="ion-padding">
-      <div data-testid="page-devices">
+    <ion-content>
+      <div class="cb-devices" data-testid="page-devices">
         @if (store.loading()) {
           <div data-testid="devices-loading">{{ t('common.loading') }}</div>
         }
@@ -76,8 +279,13 @@ import { translate } from './i18n';
         @if (store.error(); as failure) {
           <div class="cb-unavailable" data-testid="devices-error" [attr.data-code]="failure.code">
             <p>{{ t('common.error') }}</p>
-            <p class="cb-mono cb-muted">{{ failure.code }}</p>
-            <button type="button" data-testid="devices-retry" (click)="store.load()">
+            <p class="cb-mono">{{ failure.code }}</p>
+            <button
+              type="button"
+              class="cb-device-button"
+              data-testid="devices-retry"
+              (click)="store.load()"
+            >
               {{ t('common.retry') }}
             </button>
           </div>
@@ -85,10 +293,10 @@ import { translate } from './i18n';
 
         @if (store.devices().length === 0) {
           @if (!store.loading()) {
-            <p data-testid="devices-empty">{{ t('devices.empty') }}</p>
+            <p class="cb-devices-empty" data-testid="devices-empty">{{ t('devices.empty') }}</p>
           }
         } @else {
-          <ul class="cb-devices">
+          <ul class="cb-devices-list" data-testid="devices-list">
             @for (device of store.devices(); track device.id) {
               <li
                 class="cb-device"
@@ -96,37 +304,53 @@ import { translate } from './i18n';
                 [attr.data-device-id]="device.id"
                 [attr.data-current]="device.id === store.currentDeviceId()"
               >
-                <span class="cb-device-name">{{ device.name }}</span>
-                <span class="cb-mono">{{ device.platform }}</span>
-                <span class="cb-mono cb-muted">{{ device.scopes.join(' ') }}</span>
-                <span class="cb-muted">
-                  {{ t('devices.lastSeen') }}:
-                  {{ device.lastSeenAt ?? t('devices.never') }}
-                </span>
+                <div class="cb-device-body">
+                  <p class="cb-device-name" data-testid="device-name">{{ device.name }}</p>
+                  <p class="cb-device-meta" data-testid="device-meta">
+                    <span>{{ device.platform }}</span>
+                    <span aria-hidden="true">·</span>
+                    <span>{{ device.scopes.join(', ') }}</span>
+                  </p>
+                  <p class="cb-device-seen" data-testid="device-seen">
+                    {{ t('devices.lastSeen') }}:
+                    {{ device.lastSeenAt ?? t('devices.never') }}
+                  </p>
+                  @if (device.id === store.currentDeviceId()) {
+                    <p class="cb-device-hint" data-testid="device-current-hint">
+                      {{ t('devices.current.hint') }}
+                    </p>
+                  }
+                </div>
 
                 @if (device.id === store.currentDeviceId()) {
-                  <span data-testid="device-current">{{ t('devices.current') }}</span>
-                  <span class="cb-current-hint" data-testid="device-current-hint">
-                    {{ t('devices.current.hint') }}
+                  <span class="cb-device-current" data-testid="device-current">
+                    {{ t('devices.current') }}
                   </span>
                 } @else if (confirming() === device.id) {
-                  <div class="cb-confirm" data-testid="device-revoke-confirm-block">
-                    <span>{{ t('devices.revoke.confirm') }}</span>
+                  <div class="cb-device-confirm" data-testid="device-revoke-confirm-block">
+                    <span class="cb-device-confirm-text">{{ t('devices.revoke.confirm') }}</span>
                     <button
                       type="button"
+                      class="cb-device-button"
                       data-testid="device-revoke-confirm"
                       [disabled]="store.revokingId() !== null"
                       (click)="revoke(device.id)"
                     >
                       {{ t('devices.revoke') }}
                     </button>
-                    <button type="button" data-testid="device-revoke-cancel" (click)="cancel()">
+                    <button
+                      type="button"
+                      class="cb-device-button"
+                      data-testid="device-revoke-cancel"
+                      (click)="cancel()"
+                    >
                       {{ t('devices.cancel') }}
                     </button>
                   </div>
                 } @else {
                   <button
                     type="button"
+                    class="cb-device-revoke"
                     data-testid="device-revoke"
                     [disabled]="store.revokingId() !== null"
                     (click)="ask(device.id)"
@@ -138,6 +362,23 @@ import { translate } from './i18n';
             }
           </ul>
         }
+
+        <p class="cb-devices-pair" data-testid="devices-pair" aria-disabled="true">
+          <span class="cb-devices-pair-mark" aria-hidden="true">+</span>
+          {{ t('devices.pair') }}
+        </p>
+
+        <div class="cb-devices-notes">
+          <p class="cb-devices-note" data-testid="devices-note" data-note="1">
+            {{ t('devices.note.1') }}
+          </p>
+          <p class="cb-devices-note" data-testid="devices-note" data-note="2">
+            {{ t('devices.note.2') }}
+          </p>
+          <p class="cb-devices-note" data-testid="devices-note" data-note="3">
+            {{ t('devices.note.3') }}
+          </p>
+        </div>
       </div>
     </ion-content>
   `,

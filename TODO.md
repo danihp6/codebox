@@ -495,6 +495,30 @@ helper rather than as a new fixture file, so `scripts/design/fixtures/**` stays 
 The `[live]` criterion — the re-import itself — is unmeasured on this runner (no `FIGMA_TOKEN` and
 the quota is spent); it stays the operator's, on or after 2026-11-08T03:00Z.
 
+**Cut — cycle 2026-11-04, after Batch 23 wave 1 (four of four slots used).** No task branch was
+alive; `main` was `200e8a1` and the batch was cut from `l7-prototype-restructure` at `498444c`
+(L6 + L7 + Task-102 + Tasks 90–93 merged, PR #121 still open), not from `main`, because that is
+where the wave lives. **Wave 2 is the batch:** Task-94 (Design · session), Task-95 (Dashboard),
+Task-96 (Settings cluster) and Task-97 (Credentials). All four are eligible — L6, L7, Task-88 and
+Task-89 are merged — and their paths are disjoint: one feature folder each, and no hot file is
+claimed. `apps/app/README.md` is split by line block, the way Batch 20 wave 2 did it: Task-97 owns
+87–97, Task-95 owns 98–104, Task-94 owns 132–144 and Task-96 owns 145–166; the merge of 97 onto
+the base met Task-95's two rewritten dashboard lines at 98–99 and the conflict was resolved by
+keeping each task's own block, no line lost. **The four slots are full, so Task-98 waits:**
+About is eligible and disjoint, but it is wave 3 by construction and no fifth dev exists; Task-99
+waits beside it because L5 is still open — the schedule sheet's frame is drawn (`l5-schedule-sheet`
+at `5d6a469`), but L5 is not ticked until the re-import (the file's quota, not before
+2026-11-08T03:00Z) and the operator's present-mode pass. **Deviations, recorded:** Task-95's item
+says "the five reads" but the store issues four requests (`/v1/health`, `/v1/telemetry`,
+`/v1/runs`, `/v1/repos`) and the five blocks are derived from them; Task-97's item asks the page
+spec to prove rotate, but `CredentialsApi` has no rotate call (`docs/api.md` §5.9 documents the
+endpoint), so the spec proves create, delete and the D50 write-only rule and rotation is a
+follow-up; sheets `18`/`19` and the drawn states of all four screens have no exports (the import
+downloads one PNG per routed screen), so those drawings follow the sheet rule and the `[live]`
+comparisons are unmeasured on this runner and handed to an `agent-review` issue. Branch
+`l5-schedule-sheet` diverged before wave 1 and does not contain it; merging it is the operator's
+path after the live pass, not this cycle's.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -1881,7 +1905,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       2026-10-30:** cut ahead of the design track, beside it; it reads no frame and edits nothing
       under `design/`.
 
-- [ ] **[Task-90]** Pairing, frame `01 · Pairing — mobile dark`, error state `14 · Unpaired — 401`.
+- [x] **[Task-90]** Pairing, frame `01 · Pairing — mobile dark`, error state `14 · Unpaired — 401`.
       Rewrite `features/pairing` from `design/screens/pairing.json`: header, the form column's box
       and gap, the type scale of label/hint/button, the disabled and submitting states and the
       alert, from the spec's `layout` instead of the inline block the page carries today. The
@@ -1893,7 +1917,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       (header, form column, two fields with their hints, button, alert), and nothing scrolls
       sideways at 320 px. *Dependencies:* L6, L7.
 
-- [ ] **[Task-91]** Repo list, frame `02 · Repo list — mobile dark`. Rewrite `features/repos`'
+- [x] **[Task-91]** Repo list, frame `02 · Repo list — mobile dark`. Rewrite `features/repos`'
       list half against `design/screens/repo-list.json`: the row is the frame's counted row
       (`pending · running · merged`, one amber dot for the only thing that needs a person,
       `docs/app.md` §9), and the header's action opens the create form the page already owns. The
@@ -1906,7 +1930,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       beside the screen at 390 × 844 dark, the rows align to its grid and the counts read as three
       numbers. *Dependencies:* L6, L7, Task-88.
 
-- [ ] **[Task-92]** Repo · backlog, frame `22 · Repo · backlog — deps (dark)`. Rewrite
+- [x] **[Task-92]** Repo · backlog, frame `22 · Repo · backlog — deps (dark)`. Rewrite
       `features/backlog` against `design/screens/repo-backlog.json`: the three-line row
       (`Task-NN · title`, the section, the `state · runs · cost` flow), the dependency rail from
       `dependency-rail.ts` and the chat button in the header (never a `+`, `design/README.md` §6).
@@ -1917,7 +1941,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       beside the screen and the three-line row survives at 320 px without a horizontal scroll.
       *Dependencies:* L6, L7, Task-88.
 
-- [ ] **[Task-93]** Repo · workers, frames `20c · Crew · aerial — dark` (running) with
+- [x] **[Task-93]** Repo · workers, frames `20c · Crew · aerial — dark` (running) with
       `20i` (queued), `20f` (needs you) and `20e` (asleep). Rewrite `features/works`' board
       against `design/screens/repo-workers.json`: four role rooms, one face and one task chip per
       subagent, the road in on the left, the belt out on the right, the two chips `▤` and `🔔` as
@@ -1930,7 +1954,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       the four exports sits beside its state at 390 × 844 and the rooms, the belt and the two
       chips match region by region. *Dependencies:* L6, L7, Task-88, Task-89.
 
-- [ ] **[Task-94]** Design · session, frame `26 · Design · preview + chat — dark`. Rewrite
+- [x] **[Task-94]** Design · session, frame `26 · Design · preview + chat — dark`. Rewrite
       `features/sessions` against `design/screens/design-session.json`: the preview card that
       shows the repository's `design/` at a revision (tokens, routes, declared states, what is
       pending) and the one-target editor under it (D55). The stream, the markdown renderer and the
@@ -1941,7 +1965,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       findings; `[live]` the export sits beside the screen at 390 × 844 and the card's header,
       body and states block match the frame. *Dependencies:* L6, L7.
 
-- [ ] **[Task-95]** Dashboard, frame `05 · Dashboard — mobile dark`, empty state
+- [x] **[Task-95]** Dashboard, frame `05 · Dashboard — mobile dark`, empty state
       `12 · First run — after pairing`. Rewrite `features/dashboard` against
       `design/screens/dashboard.json`: the inbox order (`needs you`, running, unreviewed, today's
       spend, health), the card boxes and the type scale from the spec. The per-repository blocks
@@ -1953,7 +1977,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       sits beside the screen at 390 × 844 and `12` beside the first-run state. *Dependencies:*
       L6, L7, Task-88.
 
-- [ ] **[Task-96]** Settings cluster: `/settings` (`06 · Settings — mobile dark`),
+- [x] **[Task-96]** Settings cluster: `/settings` (`06 · Settings — mobile dark`),
       `/settings/devices` (`15 · Settings / Devices`) and `/settings/notifications` (`17 ·
       Settings / Notifications`). Rewrite the three pages in `features/settings` against their
       three specs, with the theme control Task-89 makes real (`settings.theme`, dark/light) and the
@@ -1967,7 +1991,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       three exports sit beside their screens at 390 × 844 and the three list shapes match.
       *Dependencies:* L6, L7, Task-89.
 
-- [ ] **[Task-97]** Credentials, frame `16 · Settings / Credentials`, sheets
+- [x] **[Task-97]** Credentials, frame `16 · Settings / Credentials`, sheets
       `18 · Connect a service` and `19 · Add credential`. Rewrite `features/credentials` against
       `design/screens/credentials.json`: the list, the write-only badges and the two sheets, with
       the frames' boxes and type. The write-only rule of D50 is visible in the drawing (the value

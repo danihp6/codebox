@@ -87,6 +87,26 @@ const TELEMETRY_URL = '/v1/telemetry?range=24h';
 const RUNS_URL = '/v1/runs?limit=50';
 const REPOS_URL = '/v1/repos?limit=1';
 
+/** The frame's order: the dashboard is an inbox, not a table of counters. */
+const INBOX_ORDER: readonly string[] = [
+  'dashboard-needs-you',
+  'dashboard-working',
+  'dashboard-ready',
+  'health-spend',
+  'health-vm',
+];
+
+/** Regions the frame draws and `docs/app.md` cannot fill; a hook for one of them is a red. */
+const UNBUILT_HOOKS: readonly string[] = [
+  'dashboard-spark',
+  'dashboard-spend-',
+  'dashboard-health-activity',
+  'dashboard-clock',
+  'dashboard-work-next',
+  'dashboard-tab',
+  'dashboard-status',
+];
+
 const USED_KEYS: readonly string[] = [
   'common.loading',
   'common.error',
@@ -94,9 +114,13 @@ const USED_KEYS: readonly string[] = [
   'dashboard.section.working',
   'dashboard.section.ready',
   'dashboard.section.health',
-  'dashboard.section.queue',
   'dashboard.section.spend',
   'dashboard.section.recent',
+  'dashboard.needs.eyebrow',
+  'dashboard.needs.review',
+  'dashboard.needs.running',
+  'dashboard.needs.meta',
+  'dashboard.needs.cta',
   'dashboard.working.empty',
   'dashboard.ready.empty',
   'dashboard.ready.pr',
@@ -107,8 +131,7 @@ const USED_KEYS: readonly string[] = [
   'dashboard.vm.opencode',
   'dashboard.vm.disk',
   'dashboard.queue.pending',
-  'dashboard.queue.running',
-  'dashboard.queue.max',
+  'dashboard.queue.free',
   'dashboard.action.retry',
   'dashboard.empty',
   'dashboard.stale',
@@ -122,6 +145,8 @@ const USED_KEYS: readonly string[] = [
   'dashboard.state.failed',
   'dashboard.state.cancelled',
 ];
+
+const ES = (key: string): string => translate('es', key);
 
 interface Reads {
   readonly health?: Health;
@@ -155,6 +180,20 @@ function envelope(code: string): Record<string, unknown> {
 
 function hook(element: HTMLElement, id: string): HTMLElement | null {
   return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
+}
+
+function required(element: HTMLElement, id: string): HTMLElement {
+  const found = hook(element, id);
+  if (found === null) throw new Error(`missing hook ${id}`);
+  return found;
+}
+
+function text(element: HTMLElement | null): string {
+  return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
+function sweep(element: HTMLElement): readonly HTMLElement[] {
+  return [...element.querySelectorAll<HTMLElement>('[data-testid]')];
 }
 
 interface Mounted {
@@ -223,6 +262,56 @@ describe('DashboardPage', () => {
     expect(hook(element, 'dashboard-stale')).toBeNull();
   });
 
+  it('draws the needs-you card with its counts and its pill', async () => {
+    const { fixture, element, http } = await mount();
+
+    flushAll(http);
+    await fixture.whenStable();
+
+    const needs = required(element, 'dashboard-needs-you');
+    expect(needs.getAttribute('data-review')).toBe('0');
+    expect(needs.getAttribute('data-running')).toBe('0');
+    expect(text(hook(element, 'dashboard-needs-value'))).toBe(
+      `0 ${ES('dashboard.needs.review')} · 0 ${ES('dashboard.needs.running')}`,
+    );
+    expect(text(hook(element, 'dashboard-needs-meta'))).toBe(ES('dashboard.needs.meta'));
+    expect(hook(element, 'dashboard-needs-cta')?.getAttribute('href')).toBe('/repos');
+
+    fixture.componentInstance.store.reload();
+    await fixture.whenStable();
+    flushAll(http, { runs: RUNS });
+    await fixture.whenStable();
+
+    const filled = required(element, 'dashboard-needs-you');
+    expect(filled.getAttribute('data-review')).toBe('1');
+    expect(filled.getAttribute('data-running')).toBe('1');
+    expect(text(hook(element, 'dashboard-needs-value'))).toBe(
+      `1 ${ES('dashboard.needs.review')} · 1 ${ES('dashboard.needs.running')}`,
+    );
+  });
+
+  it('draws the five blocks in the frame order', async () => {
+    const { fixture, element, http } = await mount();
+
+    flushAll(http, { runs: RUNS });
+    await fixture.whenStable();
+
+    const found = sweep(element);
+    const blocks = INBOX_ORDER.map((id) => required(element, id));
+    expect(found).toContain(blocks[0]);
+
+    for (let index = 1; index < blocks.length; index += 1) {
+      const previous = blocks[index - 1] as HTMLElement;
+      const current = blocks[index] as HTMLElement;
+      expect(previous.compareDocumentPosition(current)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    }
+
+    const sections = found
+      .filter((node) => node.getAttribute('data-testid') === 'dashboard-eyebrow')
+      .map((node) => node.getAttribute('data-section'));
+    expect(sections).toEqual(['needs', 'working', 'ready', 'spend', 'health']);
+  });
+
   it('replaces the zeros with the start card on a box without repositories', async () => {
     const { fixture, element, http } = await mount();
 
@@ -257,6 +346,12 @@ describe('DashboardPage', () => {
     expect(workingRows[0]?.getAttribute('data-run-id')).toBe(RUNNING.id);
     expect(workingRows[0]?.getAttribute('data-state')).toBe('running');
     expect(workingRows[0]?.getAttribute('href')).toBe(`/repos/${REPO_ID}`);
+    expect(
+      text(
+        workingRows[0]?.querySelector<HTMLElement>('[data-testid="dashboard-working-cost"]') ??
+          null,
+      ),
+    ).toBe(formatUsd(RUNNING.cost.usd));
 
     const ready = hook(element, 'dashboard-ready');
     expect(ready?.getAttribute('data-count')).toBe('1');
@@ -265,6 +360,7 @@ describe('DashboardPage', () => {
     expect(readyRows[0]?.getAttribute('data-run-id')).toBe(PR_OPEN.id);
     expect(readyRows[0]?.getAttribute('data-pr')).toBe('42');
     expect(readyRows[0]?.getAttribute('href')).toBe(`/repos/${REPO_ID}`);
+    expect(text(readyRows[0] ?? null)).toContain(PR_OPEN.branch);
 
     const recent = [...element.querySelectorAll<HTMLElement>('[data-testid="recent-run"]')];
     expect(recent).toHaveLength(4);
@@ -276,6 +372,27 @@ describe('DashboardPage', () => {
     expect(ready?.querySelector('[data-state="succeeded"]')).toBeNull();
   });
 
+  it('keeps the recent runs and draws no region the contract cannot fill', async () => {
+    const { fixture, element, http } = await mount();
+
+    flushAll(http, { runs: RUNS });
+    await fixture.whenStable();
+
+    const unbuilt = sweep(element)
+      .map((node) => node.getAttribute('data-testid') ?? '')
+      .filter((id) => UNBUILT_HOOKS.some((prefix) => id.startsWith(prefix)));
+    expect(unbuilt).toEqual([]);
+
+    const recent = [...element.querySelectorAll<HTMLElement>('[data-testid="recent-run"]')];
+    expect(recent).toHaveLength(4);
+    for (const row of recent) {
+      expect(row.getAttribute('data-run-id')).not.toBeNull();
+      expect(row.getAttribute('data-state')).not.toBeNull();
+      expect(row.getAttribute('data-created-at')).toBe(TS);
+      expect(row.getAttribute('href')).toBe(`/repos/${REPO_ID}`);
+    }
+  });
+
   it('renders the empty state for an empty runs page', async () => {
     const { fixture, element, http } = await mount();
 
@@ -284,6 +401,24 @@ describe('DashboardPage', () => {
 
     expect(hook(element, 'dashboard-empty')).not.toBeNull();
     expect(hook(element, 'recent-run')).toBeNull();
+  });
+
+  it('clamps the queue footer to the slots that are free', async () => {
+    const { fixture, element, http } = await mount();
+
+    flushAll(http);
+    await fixture.whenStable();
+
+    expect(fixture.componentInstance.freeSlots(HEALTH)).toBe(3);
+    expect(
+      fixture.componentInstance.freeSlots({
+        ...HEALTH,
+        queue: { pending: 0, running: 9, maxConcurrency: 4 },
+      }),
+    ).toBe(0);
+    expect(text(hook(element, 'health-queue'))).toBe(
+      `2 ${ES('dashboard.queue.pending')} · 3 ${ES('dashboard.queue.free')}`,
+    );
   });
 
   it('renders the error block and retries every read', async () => {
