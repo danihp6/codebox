@@ -67,8 +67,8 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/core/util/time-format.ts` — next-fire parts and formatting in the schedule's timezone.
 - `src/app/core/util/time-format.spec.ts` — the pinned parts in two zones and both locales.
 - `src/app/features/about/about.i18n.ts` — the about dictionary in `en` and `es`.
-- `src/app/features/about/about.page.ts` — the server's build identity, its health rows and the shipped third-party licences.
-- `src/app/features/about/about.page.spec.ts` — the response values, the health rows, a null commit, the licence list and the error/retry path.
+- `src/app/features/about/about.page.ts` — frame `07`: the back link and title, the wordmark and tagline, the four-row identity card with its health line and dot, the licences disclosure and the two footnotes.
+- `src/app/features/about/about.page.spec.ts` — both reads, the formatted build time and the null identity values, the health line and its dot, the four rows in order, the licence disclosure and the dictionary parity.
 - `src/app/features/about/about.store.ts` — the two independent reads behind the screen: version and health.
 - `src/app/features/about/about.store.spec.ts` — both reads landing independently, a failed half and the reload.
 - `src/app/features/about/notice.ts` — the shipped `NOTICE` copy and its pure bullet parser.
