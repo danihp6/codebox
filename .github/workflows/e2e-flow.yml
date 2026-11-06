@@ -41,7 +41,17 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Playwright
+        env:
+          CB_E2E_OUTPUT: ${{ runner.temp }}/cb-e2e-playwright
         run: npm run e2e -- --repeat-each=2
+
+      - name: Keep the failure context
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: ${{ runner.temp }}/cb-e2e-playwright
+          if-no-files-found: ignore
 
       - name: Headless flow
         run: npm run e2e:unit
