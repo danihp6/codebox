@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-06 (Batch 23, wave 3: About reaches the prototype)
+
+- **The About screen draws its frame.** `features/about` renders `07 · About — mobile dark` from
+  `design/screens/about.json`: the back link and title, the `codebox` wordmark and its tagline,
+  the raised card with the four label/value rows on their 34 px pitch (Version, Commit, Build,
+  Instance), the hairline rule and the health line with its status dot, the *Open source
+  licences* disclosure over the shipped notice list, and the two footnotes at the bottom. The
+  build time is formatted as `YYYY-MM-DD · HH:MM UTC`; the two reads and `about.store` do not
+  move. The frame draws an instance identity and an uptime the contract does not carry, so
+  `Instance` stays an honest `—` and the additive `/v1/version` field is a follow-up; the shell's
+  bottom tab bar overlays the footnotes because it is shown on every route except `/pair`, which
+  no detail frame draws — tracked in issue #125.
+
 ### Changed — 2026-11-05 (L5, the pairing reason)
 
 - **The pairing form's inline reason needs no frame.** `14 · Unpaired — 401` is the screen-level

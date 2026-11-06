@@ -519,6 +519,28 @@ comparisons are unmeasured on this runner and handed to an `agent-review` issue.
 `l5-schedule-sheet` diverged before wave 1 and does not contain it; merging it is the operator's
 path after the live pass, not this cycle's.
 
+**Cut — cycle 2026-11-06, after Batch 23 wave 2 (one of four slots used).** No task branch was
+alive (`git ls-remote origin 'refs/heads/task-*'` lists only the eight merged wave branches) and
+`main` was `6573b45`. Wave 3 is the rest of Batch 23's screen queue and only **Task-98** (About)
+is eligible: its dependencies L6 and L7 are merged, `design/screens/about.json` and
+`design/exports/about.png` exist, and its paths are one feature folder plus the README block
+69–75. The three empty slots have no legal candidate: Task-99 waits on L5 (the schedule sheet's
+frame is drawn on `l5-schedule-sheet`, merged in PR #122, but L5 is not ticked until the re-import
+at 2026-11-08T03:00Z and the operator's present-mode pass), Task-32 waits on the blocked Task-31
+(#105), and L1, L3 and L5 are operator items the driver never picks. **Hot-file holders in this
+cut:** none. Task-98 claims no hot file, and `TODO.md`/`CHANGELOG.md` stay with the Orchestrator.
+**No path deviation:** the four paths are the item's folder plus the README block; `about.store.*`,
+`notice.*` and `app.routes.ts` are byte-identical. The `[live]` comparison was measured on the
+bundled app and the local daemon: the card is `24, 204, 342 × 200` with its 14 px radius, the four
+rows sit on the 34 px pitch, the rule is `40/310`, the licences row is `342 × 52`, the health line
+is at 364, both footnotes sit at the bottom and the page does not scroll horizontally at 320 px.
+**Two facts the frame draws and the contract does not carry — `Instance` and `uptime` — are
+recorded as deviations:** the daemon knows `CB_INSTANCE_NAME` but `/v1/version` does not report it,
+so the row is an honest `—` and the additive field is a follow-up contract task. **One finding is
+the shell's:** the `About` and `Credentials` exports draw no bottom tab bar, but
+`apps/app/src/app/app.component.ts` shows it on every route except `/pair`, so it overlays the
+About footnotes; it is outside this task's paths and is tracked as issue #125.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -2002,7 +2024,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       `[live]` the export sits beside the screen, and `18`/`19` beside their sheets at 390 × 844.
       *Dependencies:* L6, L7.
 
-- [ ] **[Task-98]** About, frame `07 · About — mobile dark`. Rewrite `features/about` against
+- [x] **[Task-98]** About, frame `07 · About — mobile dark`. Rewrite `features/about` against
       `design/screens/about.json`: version, commit, build time and the instance's identity in the
       frame's blocks. The `about.store` reads do not change.
       *Paths:* `apps/app/src/app/features/about/**`, `apps/app/README.md`.
