@@ -8,8 +8,8 @@
       "route": "/pair",
       "component": "PairingPage",
       "states": {
-        "loading": null,
-        "empty": null,
+        "loading": "01 · Pairing — loading",
+        "empty": "01 · Pairing — mobile dark",
         "error": "14 · Unpaired — 401"
       },
       "snapshot": true
@@ -20,9 +20,9 @@
       "route": "/repos",
       "component": "ReposPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "02 · Repo list — loading",
+        "empty": "02 · Repo list — empty",
+        "error": "02 · Repo list — error"
       },
       "snapshot": true
     },
@@ -32,9 +32,9 @@
       "route": "/repos/:id",
       "component": "RepoBacklogPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "22 · Repo · backlog — loading",
+        "empty": "22 · Repo · backlog — empty",
+        "error": "22 · Repo · backlog — error"
       },
       "snapshot": true
     },
@@ -44,9 +44,9 @@
       "route": "/repos/:id/workers",
       "component": "RepoWorkersPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "20c · Repo · workers — loading",
+        "empty": "20e · Crew · asleep — dark",
+        "error": "20c · Repo · workers — error"
       },
       "snapshot": true
     },
@@ -56,9 +56,9 @@
       "route": "/sessions/:id",
       "component": "SessionPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "26 · Design · session — loading",
+        "empty": "26 · Design · session — empty",
+        "error": "26 · Design · session — error"
       },
       "snapshot": true
     },
@@ -68,9 +68,9 @@
       "route": "/dashboard",
       "component": "DashboardPage",
       "states": {
-        "loading": null,
+        "loading": "05 · Dashboard — loading",
         "empty": "12 · First run — after pairing",
-        "error": null
+        "error": "05 · Dashboard — error"
       },
       "snapshot": true
     },
@@ -80,9 +80,9 @@
       "route": "/settings",
       "component": "SettingsPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "06 · Settings — loading",
+        "empty": "06 · Settings — empty",
+        "error": "06 · Settings — error"
       },
       "snapshot": true
     },
@@ -92,9 +92,9 @@
       "route": "/settings/devices",
       "component": "DevicesPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "15 · Devices — loading",
+        "empty": "15 · Devices — empty",
+        "error": "15 · Devices — error"
       },
       "snapshot": true
     },
@@ -104,9 +104,9 @@
       "route": "/settings/credentials",
       "component": "CredentialsPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "16 · Credentials — loading",
+        "empty": "16 · Credentials — empty",
+        "error": "16 · Credentials — error"
       },
       "snapshot": true
     },
@@ -116,9 +116,9 @@
       "route": "/settings/notifications",
       "component": "NotificationsPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "17 · Notifications — loading",
+        "empty": "17 · Notifications — empty",
+        "error": "17 · Notifications — error"
       },
       "snapshot": true
     },
@@ -128,9 +128,9 @@
       "route": "/about",
       "component": "AboutPage",
       "states": {
-        "loading": null,
-        "empty": null,
-        "error": null
+        "loading": "07 · About — loading",
+        "empty": "07 · About — empty",
+        "error": "07 · About — error"
       },
       "snapshot": true
     }

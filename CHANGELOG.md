@@ -6,6 +6,14 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-05 (L5, the pairing reason)
+
+- **The pairing form's inline reason needs no frame.** `14 · Unpaired — 401` is the screen-level
+  error; the reason under the code field is one sentence for `used_code`, `expired_code` and
+  `unknown_code` (`docs/app.md` §4), rendered by `features/pairing`. Task-90 keeps that mapping
+  and the page spec proves the three reasons land on the one sentence, so the audit note closes
+  on the app's copy instead of three near-identical copies of `01` (`design/README.md` §2).
+
 ### Changed — 2026-11-04 (Batch 23, wave 2: the session and the inbox reach the prototype)
 
 - **The design session draws its frame.** `features/sessions` renders `26 · Design · preview +
@@ -62,6 +70,161 @@ first release exists.
   the belt out on the right, the `▤` and `🔔` chips as the only controls and `needs you` as a badge
   over the worker, never a room fill. The four states come from `projectWorkers`; `workers.model.ts`
   and `workers.motion.ts` keep their rules and the motion honours `prefers-reduced-motion`.
+### Changed — 2026-11-04 (L5, the frames follow the product)
+
+- **Pairing drops the in-app QR.** `01 · Pairing — mobile dark` and `S5 · 320 · Pairing` carried a
+  `Scan QR instead` link and a `›` on the server row. The QR is printed by `cb pair` and opened by
+  the system camera, and the app has no scanner, so the link is gone and the server line is
+  read-only text (`docs/app.md` §4, `design/README.md` §6).
+- **The repo list drops its dead filters and its menu.** `02 · Repo list — mobile dark` carried
+  four filter labels hidden under the search field and a `⋯` menu. The labels are gone — they were
+  invisible but the imported spec reported them as regions — and so is the menu, leaving the search
+  field and no filters (`docs/app.md` §4/§9). `S6` already drew it that way.
+- **The 320 backlog gets the chat button.** `S7 · 320 · Repo · backlog` still had the `⋯` the 390
+  frame had replaced; it now carries a 32 px `s7-chat` circle with the same `ON_CLICK` reaction to
+  `03a · New session — mobile dark`.
+- **A ready backlog row draws its `Run`.** Rows `80` and `82` carried a green-outlined `ready`
+  chip; the chip is now a filled `Run` with the dark text of a primary action, so the control
+  `docs/app.md` §4 asks for and the app's `backlog-run-*` renders is in the drawing.
+
+### Added — 2026-11-04 (L5, the three states of every screen)
+
+- **Every screen now carries its loading, empty and error frame.** One band at `y = 26800`
+  (480 px pitch, three rows: `loading`, `empty`, `error`) holds the 29 new frames, each
+  captioned `<frame> — <state>` (`02 · Repo list — empty`). The four slots a drawn frame already
+  answered point at it instead: Pairing's empty is `01`, its error `14 · Unpaired — 401`, the
+  dashboard's empty is `12 · First run — after pairing`, and the workers' empty is
+  `20e · Crew · asleep — dark`.
+- **A state frame keeps the screen's chrome and swaps the body.** The status bar, header,
+  tabbar or composer stay; the content band gives way to a card (`color.surface.raised`, radius
+  16) with a 16/600 title, a 12/400 muted line and, where the product has one, a 44 px action —
+  or to seven skeleton bars and a `Loading…` line. Error titles use `color.danger.red`, Retry is
+  the action, and the header counters stop lying: `0 paired`, `empty backlog · nothing queued`,
+  `not synced`, `design/ · could not be read`.
+- **The map names all 33 state slots.** `design/import.json` fills `loading`, `empty` and
+  `error` for the eleven screens, so no `states` value is `null` any more. The re-import that
+  writes the specs is still the operator's: the file's read quota answers 429, so
+  `design/screens/*.json` keeps the old nulls and the gate keeps reporting them as
+  `(report-only)` until the next window opens.
+
+### Changed — 2026-11-04 (L5, the two flows)
+
+- **Flow A is clickable.** `01 · Pairing → 12 · First run → 02 · Repo list`: `pair-cta`
+  (`Pair device`) navigates to `12 · First run — after pairing`, and its `Connect repository`
+  card (`fr-start-cta`) navigates to `02 · Repo list — mobile dark`.
+- **Flow B is clickable.** `22 · Repo · backlog → 03a · New session → 04b · Session sheet →
+  04 · Work · run log`: the backlog's chat button opens `03a`, the `Backlog` target card
+  (`cf-card-repo`) opens `04b`, and the sheet's `backlog · dani/codebox · TODO.md · proposal
+  ready · 1 file` row (`cx-kind`) opens `04`, where the diff, the gate, the merged PR and the
+  ticked task are drawn.
+- **Both flows are native reactions.** `ON_CLICK` with a 0.2 s dissolve, set with
+  `reaction_update`; the `[live]` present-mode run is the operator's, since it needs Figma's
+  presentation and not the plugin.
+- **The backlog header obeys its own rule.** `22 · Repo · backlog — deps (dark)` carried a `⋯`
+  where `design/README.md` §6 requires a chat button. The `⋯` is gone and a 36 px `bl-chat`
+  circle sits at the same right margin, so the flow has a control the product has.
+
+### Changed — 2026-11-04 (L5, the repo list at 320)
+
+- **The reference width reaches the first list screen.** `S6 · 320 · Repo list` is the second of
+  the ten routed screens squeezed to 320 × 568 and the first one with a list: 16 px margins, a
+  288 px column, the status bar at 13/12, `Repositories` with the 36 px `+` beside it, a 36 px
+  search field, the `ALL REPOSITORIES · 3` eyebrow, three 72 px cards with 8 px gaps (state dot,
+  the `cloned` line and the pending/running/merged meta), the 44 px `Add repository` row, the
+  note, and the 64 px tabbar with `Repos` lit. It fixes the list half of the pattern: cards are
+  radius 16 and the actions keep the 44 px height. `design/README.md` §1 gives it the Repo list
+  row's 320 column, so eight screens still owed one.
+- **The dependency rail survives the squeeze.** `S7 · 320 · Repo · backlog` is the third routed
+  screen at 320 × 568: the same margins and status bar, the back chevron, `dani/codebox` and the
+  overflow, the `next up 80 · 2 waiting on deps` line, the rail at 9 px dots down the left, six
+  48 px rows with `66 · Docs and ADR pass`-style titles, their `needs` line and a 56 × 18 status
+  chip (`merged`, `running`, `queued`, `blocked`), the `6 more in TODO.md · pull to refresh` foot
+  and the two-tab bar with `Backlog` lit. `design/README.md` §1 gives it the Repo · backlog row's
+  320 column; seven screens still owed one.
+- **The factory folds into four rooms.** `S8 · 320 · Repo · workers` is the workers view at
+  320 × 568: the same header with the `▤` and `🔔` chips, the run line (`run 2 · 6m 12s · $0.31`)
+  and the context read, a 288 × 200 card holding a 2 × 2 grid of 132 × 88 rooms (`ORQ`, `ARC`,
+  `DEV`, `QA`), one 32 px face and one 100 × 18 chip per room, the 16 px amber badge over `DEV`'s
+  head, and the five-line `LAST EVENTS` list. The road in and the belt out do not survive the
+  squeeze; the rooms, their state and the events do. `design/README.md` §1 gives it the
+  Repo · workers row's 320 column; six screens still owed one.
+- **The design session keeps its thread.** `S9 · 320 · Design · session` is the session screen at
+  320 × 568: the `Design · codebox` header and its `design/ · 6 screens · from 4f2a1c3` line, the
+  288 × 176 preview card with four 129 × 48 thumbnails and the `empty`/`loading`/`needs you`/
+  `asleep` chips, the `✓ tokens ✓ routes ✓ states` line, the `SESSION · design` thread with the
+  user bubble, the two-line reply and the file card, the amber `2 changes pending` line, and the
+  composer with the home indicator under it. There is no tabbar: a session is a route, not a tab.
+  `design/README.md` §1 gives it the Design · session row's 320 column; five screens still owed
+  one.
+- **The dashboard keeps its five blocks.** `S10 · 320 · Dashboard` is the dashboard at 320 × 568:
+  `Dashboard` and `synced 9:41`, the `NEEDS YOU` card with `2 to review · 1 running`, its
+  caption and the amber `Review`, the `WORKING` card (`run_01JAB3K9 · gate running`, the branch
+  line, `4m 12s`), the `1 queued · 2 slots free` line with the next fire, the two
+  `FINISHED · NOT REVIEWED` rows and their cost, the `$3.12 of $10.00 daily cap` card with its
+  bar and seven-bar sparkline, and the three-column `daemon`/`opencode`/`disk` health row.
+  `design/README.md` §1 gives it the Dashboard row's 320 column; four screens still owed one.
+- **Settings keeps every action and loses one card.** `S11 · 320 · Settings` is the settings screen
+  at 320 × 568: `PREFERENCES` with `Notifications` (`2 quiet hours`), `Appearance`
+  (`Dark · English`) and `Provider accounts` (`2 accounts · 1 active`), `AUTOMATION` with
+  `Schedules` (`3 works · 1 paused`), `ACCOUNT` with `Devices` (`2 paired`) and `About`
+  (`v0.1.0 · 4f2a1c3`), and `DANGER ZONE` with `Unpair this device` and `Wipe local cache` — all
+  eight rows at the 44 px target. The `Dani iPhone` card is dropped at this width because
+  `/settings/devices` is one row away and the eight rows plus their labels fill the viewport.
+  `design/README.md` §1 gives it the Settings row's 320 column; three screens still owed one.
+- **Devices fits two cards and a note.** `S12 · 320 · Devices` is the paired-device screen at
+  320 × 568: `2 paired · scopes are per device`, the 64 px `Dani iPhone` card with `this device`
+  and its scope line, the `Dani MacBook` card with `Revoke`, the 44 px `Pair another device`, and
+  the two notes (`revoking kills the refresh token`; `a device cannot revoke itself`). Both notes
+  wrap at 280 px. `design/README.md` §1 gives it the Devices row's 320 column; two screens still
+  owed one.
+- **Notifications is a list of switches, not prose.** `S13 · 320 · Notifications` is the
+  notification settings at 320 × 568: `push only for what needs you`, the browser-permission card
+  (`granted`, `Send test`), the six `EVENTS` rows at 36 px with 32 × 18 toggles (`A chat asks you
+  a question`, `Run or fire failed`, `Schedule fired and needs review` on; `Run finished` and
+  `Merged` off; `Credential changed` fixed to `always` in amber), the `QUIET HOURS` card
+  (`23:00 → 08:00`, `Europe/Madrid · evaluated on the daemon`, its one-line note and toggle), and
+  the foot that states what a push may carry. `design/README.md` §1 gives it the Notifications
+  row's 320 column; one screen still owed one.
+- **About closes the 320 column.** `S14 · 320 · About` is the about screen at 320 × 568: the
+  `codebox` wordmark and its tagline, the 288 × 128 fact card (`Version 0.1.0`,
+  `Commit 4f2a1c3`, `Build 2026-10-27 · 09:12 UTC`, `Instance cb-vm-01 · OCI A1 · arm64`), the
+  `db ok · opencode ok · disk 61%` line with `● healthy · uptime 12 d`, the
+  `Open source licences` row, and the `MIT · Angular 22 · Ionic 9 · Capacitor` /
+  `The VM is disposable. The repo is durable.` foot. With it every row of `design/README.md` §1
+  has a 320 frame — `S3`, `S5`–`S14` — so L5's first `[unit]` criterion is met and only the
+  empty/error states and the two prototype flows remain.
+- **The S5 caption is the file's.** The docs called the reference `S5 · Pairing · 320 × 568`; the
+  frame is `S5 · 320 · Pairing`, the shape `S4`/`S4b` already use. The README, `TODO.md` and this
+  changelog now name the join key the importer reads, not a description of it.
+
+### Added — 2026-11-03 (L5, the schedule sheet)
+
+- **The repository's schedule has a sheet, in both themes and at 320.** `22b`/`L22b` draw the
+  repository that has a schedule — mode (`Once` · `Every` · `Window`), the window's days, start,
+  end and zone, the two caps (fires per day, cost per fire), the next fire, and the two actions:
+  `Save schedule` and the manual `Run next`, which starts one run and leaves the schedule alone.
+  `22c`/`L22c` draw the repository that has none — the empty card, `Manual only · nothing fires
+  on its own.` and `Create a schedule` — and `S4`/`S4b` are the 320 × 568 twins. The frames sit
+  beside `22 · Repo · backlog — deps (dark)` and reuse its sheet chrome: a scrim over the screen,
+  a panel with a grabber, the title and the close, and the home indicator at the foot.
+- **`design/README.md` §2 maps the sheet** and states its two states, so Task-99 names a frame and
+  an export instead of a description. The export lands with the first re-import after
+  2026-11-08T03:00Z; the sheet is drawn, not yet measured.
+- **The 320 column has its reference frame.** `S5 · 320 · Pairing` is the first of the ten
+  routed screens squeezed to the reference width, and it fixes the pattern the other nine follow:
+  16 px margins, a 288 px content column, the card at radius 16 with its content at 16 px, the
+  primary action full width at 44 px, and the foot — the `cb pair` command and the note — under
+  the card. `design/README.md` §1 names it and §1's note records that `S1`/`S2` are stale (they
+  still draw the retired `Chat list`/`Chat`), so a row counts as covered only when its caption
+  names the screen it draws.
+- **`Pair device` was invisible.** `01 · Pairing — mobile dark` painted its primary button
+  `#0b0f14` on `#0b0f14`, with the label the same colour, so the action vanished from the export
+  while the light twin had it right. The fill is `color.brand.bright` again, matching `L1`.
+- **The Design System's interaction states were already in the file** — `default`, `hover`,
+  `focus-visible`, `pressed` and `disabled` for a button and for a row, in dark and light, with
+  the focus ring on both — so L5's `[unit]` criterion for them is met and `TODO.md` says so. What
+  L5 still owes is the 320 column for the ten routed screens, the empty/error state of every
+  screen and the two clickable flows.
 
 ### Changed — 2026-11-03 (Task-102, the importer sees through the bands)
 

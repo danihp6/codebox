@@ -41,17 +41,17 @@ Figma, not the layer names.
 
 | Screen | Route | Feature folder | dark | light | desktop | 320 |
 | --- | --- | --- | --- | --- | --- | --- |
-| Pairing | `/pair` | `features/pairing` | 01 | L1 | — | — |
-| Repo list | `/repos` | `features/repos` | 02 | L2 | — | — |
-| Repo · backlog | `/repos/:id` | `features/backlog` | 22 | L22 | D9 · LD9 | — |
-| Repo · workers | `/repos/:id/workers` | `features/works` | 20c · 20e–20i | L20 · L20e–L20i | D5–D8 · LD5–LD8 | — |
-| Design · session | `/sessions/:id` (`design`) | `features/sessions` | 26 | L26 | — | — |
-| Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | — |
-| Settings | `/settings` | `features/settings` | 06 | L6 | — | — |
-| Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | — |
+| Pairing | `/pair` | `features/pairing` | 01 | L1 | — | S5 |
+| Repo list | `/repos` | `features/repos` | 02 | L2 | — | S6 |
+| Repo · backlog | `/repos/:id` | `features/backlog` | 22 | L22 | D9 · LD9 | S7 |
+| Repo · workers | `/repos/:id/workers` | `features/works` | 20c · 20e–20i | L20 · L20e–L20i | D5–D8 · LD5–LD8 | S8 |
+| Design · session | `/sessions/:id` (`design`) | `features/sessions` | 26 | L26 | — | S9 |
+| Dashboard | `/dashboard` | `features/dashboard` | 05 | L5 | D2 · D4 | S10 |
+| Settings | `/settings` | `features/settings` | 06 | L6 | — | S11 |
+| Devices | `/settings/devices` | `features/settings` | 15 | L21 | — | S12 |
 | Credentials | `/settings/credentials` | `features/credentials` | 16 | L8 | — | S3 |
-| Notifications | `/settings/notifications` | `features/settings` | 17 | L22 | — | — |
-| About | `/about` | `features/about` | 07 | L7 | — | — |
+| Notifications | `/settings/notifications` | `features/settings` | 17 | L22 | — | S13 |
+| About | `/about` | `features/about` | 07 | L7 | — | S14 |
 
 **One row per state of the workers view:** `20i` queued, `20c` running, `20f` needs you, `20e`
 asleep — and `L20`, `L20f`, `L20i`, `L20e` in light. `20h` (shipped) and `20g` (failed) were
@@ -60,6 +60,14 @@ deleted: a merged run hands the work on and sleeps, a failed one becomes a decis
 **Missing and known:** there is no frame yet for `/settings/providers` (provider accounts,
 D54), for the per-repository blocks on the dashboard, or for the checkbox column of a backlog
 row.
+
+**The 320 column is complete.** `S5 · 320 · Pairing` fixed the pattern the others follow:
+16 px margins, a 288 px content column, the status bar at 13/12 px, the card at radius 16 with
+its content at 16 px, the primary action full width at 44 px, and the foot (the command and the
+note) below the card. Every row above has a frame: `S3` Credentials, `S5` Pairing, `S6`
+Repo list, `S7` Repo · backlog, `S8` Repo · workers, `S9` Design · session, `S10` Dashboard,
+`S11` Settings, `S12` Devices, `S13` Notifications and `S14` About. `S1`/`S2` are stale — they
+still draw the retired `Chat list`/`Chat` — so they cover no row.
 
 ## 2. States and sheets
 
@@ -77,6 +85,39 @@ Not routes. A sheet is opened over the screen named in its row.
 | Unpaired | `/pair`, after a 401 | `features/pairing` | 14 | L20 |
 | Connect a service | sheet over `/settings/credentials` | `features/credentials` | 18 | L23 |
 | Add credential | sheet over `/settings/credentials` | `features/credentials` | 19 | L24 |
+| Schedule sheet | sheet over `/repos/:id` (backlog header) | `features/backlog` | 22b | L22b |
+
+**The schedule is a sheet, and it has two states.** `22b`/`L22b` draw a repository that has a
+schedule: mode (`Once` · `Every` · `Window`), the window's days, start, end and zone, the caps
+(fires per day, cost per fire), the next fire and the two actions — `Save schedule` and the
+manual `Run next`, which starts one run and leaves the schedule alone. `22c`/`L22c` draw the
+repository that has none: the empty card, `Manual only · nothing fires on its own.` and
+`Create a schedule`. The 320 twins are `S4` (with a schedule) and `S4b` (without). The sheet is
+drawn at 390 × 844 and 320 × 568; its 1280 layout is out of v1 with the rest of desktop.
+
+**The two prototype flows are wired (2026-11-04).** A: `01 · Pairing → 12 · First run →
+02 · Repo list` (`pair-cta`, `fr-start-cta`). B: `22 · Repo · backlog → 03a · New session →
+04b · Session sheet → 04 · Work · run log` (`bl-chat`, `cf-card-repo`, `cx-kind`). Both are
+native `ON_CLICK` reactions with a 0.2 s dissolve; the backlog header carries the chat button
+§6 requires.
+
+**The three states of every screen are drawn (2026-11-04).** `loading`, `empty` and `error` are
+frames, not notes: one band at `y = 26800`, 480 px pitch, the 29 new frames captioned
+`<frame> — <state>` (`02 · Repo list — empty`). A state frame keeps the chrome of the screen it
+belongs to and swaps the content band for a card (`color.surface.raised`, radius 16, a 16/600
+title, a 12/400 line and a 44 px action when there is one) or, for `loading`, seven skeleton
+bars and a `Loading…` line. Four slots are answered by a frame that already existed: `01` is
+Pairing's empty, `14 · Unpaired — 401` its error, `12 · First run — after pairing` the
+dashboard's empty, and `20e · Crew · asleep — dark` the workers' empty. `design/import.json`
+names all 33; the generated specs catch up at the next re-import (§4), which the file's read
+quota still blocks.
+
+**The pairing form's inline reason is app copy, not a frame.** `14 · Unpaired — 401` draws the
+screen after a 401; the reason under the code field — one sentence for `used_code`,
+`expired_code` and `unknown_code`, `docs/app.md` §4 — is rendered by `features/pairing` and has
+no frame of its own. Three near-identical copies of `01` would add no region the spec can
+compare, and `features/pairing` already proves the rejected code, its sentence and the enabled
+submit.
 
 **Removed in the 2026-10-28 re-cut:** the connect-repository picker, the cloning screen and the
 free-chat `⋯` menu. Connecting a repository happens from the `+` on `/repos`, and its clone
@@ -202,6 +243,12 @@ import selects, then one entry per routed screen:
 | `component` | The standalone component class that renders the route. |
 | `states` | `loading`, `empty` and `error`, each a frame caption or `null`. |
 | `snapshot` | `true` downloads the PNG and fills `snapshotSha256`; `false` writes neither. |
+
+A state caption may name the entry's own frame — Pairing's `empty` is `01`, the form with no
+code — or a frame mapped under another entry: `12`, `14` and `20e` answer the dashboard's empty,
+the pairing error and the workers' idle state. The command resolves the entry's `caption` and
+copies the `states` values through; a state caption is not looked up on the page, so the map is
+their only owner and a rename has to reach both.
 
 The map drives the output: adding a screen is adding an entry. A caption that is no longer on
 the page is fatal — the command stops with `frame_missing` rather than writing a screen the file

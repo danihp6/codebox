@@ -2144,7 +2144,39 @@ of them.
       the ten routed screens that were never squeezed (only `S3` exists, `design/README.md` §1),
       **interaction states** (hover, focus-visible, pressed, disabled) in the Design System —
       `docs/app.md` §12 requires accessible targets and the file has no focus ring — and the
-      empty/error state of every screen, not just first-run and offline. **Desktop is out of v1**
+      empty/error state of every screen, not just first-run and offline. **The interaction states
+      are drawn (2026-11-03):** the Design System's `STATES · BUTTON AND ROW` block carries
+      `default`, `hover`, `focus-visible`, `pressed` and `disabled` for a button and a row, in
+      dark and light, with the focus ring on both — so that criterion is met and only the 320
+      column, the empty/error states and the two flows are still owed.
+      **The 320 column is complete (2026-11-04).** `S5 · 320 · Pairing` fixed the pattern — 16 px
+      margins, a 288 px column, the card at radius 16, the primary action at 44 px, the foot under
+      the card — and every row of `design/README.md` §1 now has a frame: `S3` (Credentials), `S5`
+      (Pairing), `S6` (Repo list), `S7` (Repo · backlog), `S8` (Repo · workers), `S9`
+      (Design · session), `S10` (Dashboard), `S11` (Settings), `S12` (Devices), `S13`
+      (Notifications) and `S14` (About). `S1`/`S2` remain stale — they still draw the retired
+      `Chat list`/`Chat` — so they cover no row. The same pass repaired `01 · Pairing — mobile
+      dark`, whose primary button painted `#0b0f14` on `#0b0f14`: `Pair device` was invisible in
+      the export. **The two flows are wired (2026-11-04):** the file's native reactions carry
+      `01 → 12 → 02` and `22 → 03a → 04b → 04`, and the backlog's `⋯` became the chat button its
+      header requires; the `[live]` present-mode pass is the operator's. **The three states of
+      every screen are drawn (2026-11-04):** 29 frames in one band at `y = 26800` carry
+      `loading`, `empty` and `error` for the eleven screens, and the four slots a drawn frame
+      already answered point at it (`01` for Pairing's empty, `14` for its error, `12` for the
+      dashboard's empty and `20e` for the workers' idle state); `design/import.json` names all
+      33. **What waits:** the re-import that writes the specs (the file's read quota answers 429,
+      so `design/screens/*.json` keeps the old nulls and the gate keeps them report-only) and
+      the operator's `[live]` pass. When the re-import lands and the check reports zero, D57's
+      report-only exception is retired and `screen_state_missing` becomes enforced.
+      **The frames were audited against `docs/app.md` §4 (2026-11-04):** Pairing loses the in-app
+      QR and the server chevron, the repo list loses the `⋯` and its dead filter layers, and `S7`
+      gains the chat button its 390 twin already had; a ready row's chip is now a filled `Run`
+      (§4). **The pairing form's inline reason stays in the app, not in a frame (2026-11-05):**
+      `14 · Unpaired — 401` is the screen-level error, Task-90 keeps the failure mapping as it is,
+      so every 401 is `codeRejected`, and the page spec renders `used_code`/`expired_code` with
+      submit still enabled and proves `unknown_code` resolves to the same failure — one sentence
+      (`docs/app.md` §4) covers all three, so a frame per failure would be three near-identical
+      copies of `01`, and `design/README.md` §2 records the choice. **Desktop is out of v1**
       (ruled 2026-10-30): the eight screens without a desktop frame keep it that way until after
       the beta, and `D2`/`D4`, `D5`–`D8` and `D9` stay as the reference they already are. Then
       wire the prototype so **these two flows** are clickable (decided 2026-10-30):
@@ -2163,7 +2195,11 @@ of them.
       `/repos/:id/schedule` is retired and the repository's window, mode, caps and *Run next*
       live in a sheet over the backlog, so L5 owes that sheet a frame — dark, light, 320 and the
       two states — or Task-99 has no export to compare. The two orphan routes themselves are no
-      longer open: the operator decided two tabs and a sheet.
+      longer open: the operator decided two tabs and a sheet. **Drawn 2026-11-03:**
+      `22b`/`L22b` (a schedule: mode, window, caps, next fire, `Save schedule` and `Run next`),
+      `22c`/`L22c` (none: the empty card, `Manual only`, `Create a schedule`) and the 320 twins
+      `S4`/`S4b`, mapped in `design/README.md` §2. Nothing about the sheet is still owed to
+      Task-99; its export lands with the first re-import after 2026-11-08T03:00Z.
 - [x] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
       3HMV2UN6QviuNXe2T3Htsr` with the real `FIGMA_TOKEN`, review the diff, and commit
       `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The token is never
