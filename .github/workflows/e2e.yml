@@ -13,9 +13,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  PLAYWRIGHT_BROWSERS_PATH: ${{ runner.temp }}/ms-playwright
-
 jobs:
   e2e:
     name: e2e
@@ -33,6 +30,9 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      - name: Browser path
+        run: echo "PLAYWRIGHT_BROWSERS_PATH=${RUNNER_TEMP}/ms-playwright" >> "$GITHUB_ENV"
 
       - name: Build
         run: npm run build
