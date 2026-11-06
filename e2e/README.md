@@ -11,8 +11,10 @@ daemon and the workspaces package from their `dist`.
 - `npm run e2e:unit` is the headless half: `node --test "e2e/unit/*.test.mjs"`, no browser, and
   it runs the API flow twice in a row in a fresh temp root each time.
 - `npm run e2e` needs Chromium (`npx playwright install chromium`) and drives the built app.
-- The two `[live]` measurements live in `.github/workflows/e2e.yml`: the Playwright step runs
-  twice inside `unshare -rn`, and the workflow is the only place that measures them.
+- The two `[live]` measurements live in `.github/workflows/e2e.yml`: the browser flow runs
+  twice on the runner first, then the same command runs again inside `unshare -rn`, which is
+  the only place the no-network bound is measured. A runner that denies user namespaces leaves
+  that step neutral instead of hiding the flow (issue #102).
 
 ## Files
 
