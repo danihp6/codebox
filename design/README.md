@@ -126,9 +126,16 @@ padding and item spacing, its regions (box, corner radius, stroke and the fill a
 `design/tokens.json` key) and its type scale — role, family, weight, size, line height and the
 colour key. A colour that is not an exact token value, an `rgba(…)` or a hex outside the twelve,
 projects `null` and is still measured by `coloursOutsideTokens`: the importer never invents a
-key. A frame with no autolayout is projected with `inferred: true`, zero padding, zero gap and
-its regions in reading order (y, then x). A frame with no direct child that has a box writes no
-`layout` at all, so every spec written before the measurement keeps parsing.
+key. A region is one element, never one band: a child frame that paints nothing — no visible
+`SOLID` fill, no stroke and no corner radius, the shape of every band — contributes no region of
+its own and its children are projected in its place, with boxes absolute to the routed frame,
+recursing until a node that paints or a node that is not a `FRAME`; a child frame that paints is
+one region whatever it contains. The routed frame's `layoutMode`, four paddings, gap and type
+scale are its own and do not change, and the regions keep the order `layoutMode` gives them:
+document order with autolayout (a band expanded in place), reading order (y, then x, with
+`inferred: true`, zero padding and zero gap) without it. A frame whose walk finds no element
+with a box writes no `layout` at all, so every spec written before the measurement keeps
+parsing.
 
 The last stdout line is a one-line summary: `frames`, `mapped`, `unmapped`, `colours`,
 `coloursOutsideTokens`, `routes`, `screens` and `exports`. `coloursOutsideTokens` is a

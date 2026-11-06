@@ -175,7 +175,16 @@ describe('projectPage — measured layout', () => {
         stroke: 0,
       },
       { name: 'Ghost', x: 16, y: 140, width: 100, height: 40, fill: null, radius: 0, stroke: 0 },
-      { name: 'Stack', x: 16, y: 188, width: 200, height: 60, fill: null, radius: 0, stroke: 0 },
+      {
+        name: 'Title',
+        x: 20,
+        y: 192,
+        width: 200,
+        height: 24,
+        fill: '#e6edf3',
+        radius: 0,
+        stroke: 0,
+      },
     ]);
     expect(layout.regions.map((region) => region.name)).not.toContain('Hidden');
   });
@@ -275,6 +284,420 @@ describe('projectPage — page children', () => {
     const sizeFailure = failureOf(() => projectPage(noSize, 'Page 1', KEY));
     expect(sizeFailure.code).toBe('file_invalid');
     expect(sizeFailure.message).toContain("text node '20:102'");
+  });
+});
+
+function bandBody() {
+  const bgFill = [{ type: 'SOLID', color: { r: 0.043, g: 0.059, b: 0.078 } }];
+  const raisedFill = [{ type: 'SOLID', color: { r: 0.071, g: 0.094, b: 0.129 } }];
+  const inkFill = [{ type: 'SOLID', color: { r: 0.902, g: 0.929, b: 0.953 } }];
+  const mutedFill = [{ type: 'SOLID', color: { r: 0.545, g: 0.596, b: 0.647 } }];
+  const greenFill = [{ type: 'SOLID', color: { r: 0.0823529, g: 0.5019608, b: 0.2392157 } }];
+  const statusStyle = { fontFamily: 'Inter', fontWeight: 400, fontSize: 12, lineHeightPx: 16 };
+  const rowStyle = { fontFamily: 'Inter', fontWeight: 600, fontSize: 16, lineHeightPx: 24 };
+  return {
+    name: 'codebox',
+    document: {
+      id: '0:0',
+      name: 'Document',
+      type: 'DOCUMENT',
+      children: [
+        {
+          id: '0:3',
+          name: 'Page 1',
+          type: 'CANVAS',
+          children: [
+            {
+              id: '30:100',
+              name: '20 · Banded — mobile dark',
+              type: 'FRAME',
+              absoluteBoundingBox: { x: 0, y: 0, width: 390, height: 844 },
+              layoutMode: 'VERTICAL',
+              paddingTop: 0,
+              paddingRight: 0,
+              paddingBottom: 0,
+              paddingLeft: 0,
+              itemSpacing: 0,
+              fills: bgFill,
+              children: [
+                {
+                  id: '30:101',
+                  name: 'bd-band-status',
+                  type: 'FRAME',
+                  absoluteBoundingBox: { x: 0, y: 0, width: 390, height: 40 },
+                  fills: [],
+                  children: [
+                    {
+                      id: '30:102',
+                      name: 'Status right',
+                      type: 'TEXT',
+                      absoluteBoundingBox: { x: 300, y: 8, width: 66, height: 20 },
+                      style: statusStyle,
+                      fills: mutedFill,
+                    },
+                    {
+                      id: '30:103',
+                      name: 'Status time',
+                      type: 'TEXT',
+                      absoluteBoundingBox: { x: 24, y: 8, width: 60, height: 20 },
+                      style: statusStyle,
+                      fills: inkFill,
+                    },
+                  ],
+                },
+                {
+                  id: '30:110',
+                  name: 'bd-band-content',
+                  type: 'FRAME',
+                  absoluteBoundingBox: { x: 0, y: 40, width: 390, height: 700 },
+                  fills: [],
+                  children: [
+                    {
+                      id: '30:111',
+                      name: 'Row',
+                      type: 'FRAME',
+                      absoluteBoundingBox: { x: 16, y: 56, width: 358, height: 64 },
+                      cornerRadius: 8,
+                      fills: raisedFill,
+                      children: [
+                        {
+                          id: '30:112',
+                          name: 'Row title',
+                          type: 'TEXT',
+                          absoluteBoundingBox: { x: 28, y: 72, width: 120, height: 20 },
+                          style: rowStyle,
+                          fills: inkFill,
+                        },
+                      ],
+                    },
+                    {
+                      id: '30:120',
+                      name: 'bd-band-inner',
+                      type: 'FRAME',
+                      absoluteBoundingBox: { x: 16, y: 136, width: 358, height: 120 },
+                      fills: [],
+                      children: [
+                        {
+                          id: '30:121',
+                          name: 'bd-band-deep',
+                          type: 'FRAME',
+                          absoluteBoundingBox: { x: 16, y: 136, width: 358, height: 120 },
+                          fills: [],
+                          children: [
+                            {
+                              id: '30:122',
+                              name: 'Chip',
+                              type: 'RECTANGLE',
+                              absoluteBoundingBox: { x: 24, y: 150, width: 100, height: 32 },
+                              cornerRadius: 4,
+                              fills: greenFill,
+                            },
+                            {
+                              id: '30:123',
+                              name: 'Ghost',
+                              type: 'RECTANGLE',
+                              absoluteBoundingBox: { x: 140, y: 150, width: 100, height: 32 },
+                              fills: [{ type: 'GRADIENT_LINEAR', gradientStops: [] }],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                },
+                {
+                  id: '30:130',
+                  name: 'bd-band-tabbar',
+                  type: 'FRAME',
+                  absoluteBoundingBox: { x: 0, y: 740, width: 390, height: 104 },
+                  strokeWeight: 1.5,
+                  strokes: [
+                    { type: 'SOLID', color: { r: 0.545, g: 0.596, b: 0.647 }, visible: true },
+                  ],
+                  fills: [],
+                  children: [
+                    {
+                      id: '30:131',
+                      name: 'Tab',
+                      type: 'RECTANGLE',
+                      absoluteBoundingBox: { x: 0, y: 760, width: 130, height: 64 },
+                      fills: raisedFill,
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              id: '31:100',
+              name: '21 · Banded inferred — mobile dark',
+              type: 'FRAME',
+              absoluteBoundingBox: { x: 500, y: 0, width: 390, height: 844 },
+              fills: bgFill,
+              children: [
+                {
+                  id: '31:101',
+                  name: 'inf-band-b',
+                  type: 'FRAME',
+                  absoluteBoundingBox: { x: 500, y: 300, width: 390, height: 100 },
+                  fills: [],
+                  children: [
+                    {
+                      id: '31:102',
+                      name: 'B left',
+                      type: 'RECTANGLE',
+                      absoluteBoundingBox: { x: 516, y: 316, width: 100, height: 40 },
+                    },
+                    {
+                      id: '31:103',
+                      name: 'B right',
+                      type: 'RECTANGLE',
+                      absoluteBoundingBox: { x: 600, y: 316, width: 100, height: 40 },
+                    },
+                  ],
+                },
+                {
+                  id: '31:104',
+                  name: 'inf-band-a',
+                  type: 'FRAME',
+                  absoluteBoundingBox: { x: 500, y: 100, width: 390, height: 100 },
+                  fills: [],
+                  children: [
+                    {
+                      id: '31:105',
+                      name: 'A right',
+                      type: 'RECTANGLE',
+                      absoluteBoundingBox: { x: 600, y: 116, width: 100, height: 40 },
+                    },
+                    {
+                      id: '31:106',
+                      name: 'A left',
+                      type: 'RECTANGLE',
+                      absoluteBoundingBox: { x: 516, y: 116, width: 100, height: 40 },
+                    },
+                  ],
+                },
+              ],
+            },
+            {
+              id: '32:100',
+              name: '22 · Banded empty — mobile dark',
+              type: 'FRAME',
+              absoluteBoundingBox: { x: 1000, y: 0, width: 390, height: 844 },
+              layoutMode: 'VERTICAL',
+              fills: bgFill,
+              children: [
+                {
+                  id: '32:101',
+                  name: 'bd-band-empty',
+                  type: 'FRAME',
+                  absoluteBoundingBox: { x: 1000, y: 0, width: 390, height: 844 },
+                  fills: [],
+                  children: [{ id: '32:102', name: 'No box', type: 'RECTANGLE', fills: [] }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    },
+  };
+}
+
+describe('projectPage — bands', () => {
+  it('projects one region per leaf through a fill-less band', () => {
+    const snapshot = projectPage(bandBody(), 'Page 1', KEY);
+    const { layout } = frameOf(snapshot, '30:100');
+
+    expect(layout.regions).toEqual([
+      {
+        name: 'Status right',
+        x: 300,
+        y: 8,
+        width: 66,
+        height: 20,
+        fill: '#8b98a5',
+        radius: 0,
+        stroke: 0,
+      },
+      {
+        name: 'Status time',
+        x: 24,
+        y: 8,
+        width: 60,
+        height: 20,
+        fill: '#e6edf3',
+        radius: 0,
+        stroke: 0,
+      },
+      {
+        name: 'Row',
+        x: 16,
+        y: 56,
+        width: 358,
+        height: 64,
+        fill: '#121821',
+        radius: 8,
+        stroke: 0,
+      },
+      {
+        name: 'Chip',
+        x: 24,
+        y: 150,
+        width: 100,
+        height: 32,
+        fill: '#15803d',
+        radius: 4,
+        stroke: 0,
+      },
+      {
+        name: 'Ghost',
+        x: 140,
+        y: 150,
+        width: 100,
+        height: 32,
+        fill: null,
+        radius: 0,
+        stroke: 0,
+      },
+      {
+        name: 'bd-band-tabbar',
+        x: 0,
+        y: 740,
+        width: 390,
+        height: 104,
+        fill: null,
+        radius: 0,
+        stroke: 1.5,
+      },
+    ]);
+    expect(layout.layoutMode).toBe('vertical');
+    expect(layout.inferred).toBe(false);
+    expect(layout.box).toEqual({ x: 0, y: 0, width: 390, height: 844 });
+    expect(layout.paddingTop).toBe(0);
+    expect(layout.paddingRight).toBe(0);
+    expect(layout.paddingBottom).toBe(0);
+    expect(layout.paddingLeft).toBe(0);
+    expect(layout.itemSpacing).toBe(0);
+    expect(layout.type).toEqual([
+      {
+        role: 'Status right',
+        family: 'Inter',
+        weight: 400,
+        size: 12,
+        lineHeight: 16,
+        colour: '#8b98a5',
+      },
+      {
+        role: 'Status time',
+        family: 'Inter',
+        weight: 400,
+        size: 12,
+        lineHeight: 16,
+        colour: '#e6edf3',
+      },
+      {
+        role: 'Row title',
+        family: 'Inter',
+        weight: 600,
+        size: 16,
+        lineHeight: 24,
+        colour: '#e6edf3',
+      },
+    ]);
+  });
+
+  it('keeps a child frame that paints as one region', () => {
+    const snapshot = projectPage(bandBody(), 'Page 1', KEY);
+    const { layout } = frameOf(snapshot, '30:100');
+    const names = layout.regions.map((region) => region.name);
+    const row = layout.regions.find((region) => region.name === 'Row');
+    const tabbar = layout.regions.find((region) => region.name === 'bd-band-tabbar');
+
+    expect(row).toEqual({
+      name: 'Row',
+      x: 16,
+      y: 56,
+      width: 358,
+      height: 64,
+      fill: '#121821',
+      radius: 8,
+      stroke: 0,
+    });
+    expect(names).not.toContain('Row title');
+    expect(tabbar).toEqual({
+      name: 'bd-band-tabbar',
+      x: 0,
+      y: 740,
+      width: 390,
+      height: 104,
+      fill: null,
+      radius: 0,
+      stroke: 1.5,
+    });
+    expect(names).not.toContain('Tab');
+  });
+
+  it('recurses two bands deep and emits no transparent band', () => {
+    const snapshot = projectPage(bandBody(), 'Page 1', KEY);
+    const { layout } = frameOf(snapshot, '30:100');
+    const names = layout.regions.map((region) => region.name);
+    const chip = layout.regions.find((region) => region.name === 'Chip');
+    const ghost = layout.regions.find((region) => region.name === 'Ghost');
+
+    expect(chip).toMatchObject({ x: 24, y: 150 });
+    expect(ghost).toEqual({
+      name: 'Ghost',
+      x: 140,
+      y: 150,
+      width: 100,
+      height: 32,
+      fill: null,
+      radius: 0,
+      stroke: 0,
+    });
+    expect(names).not.toContain('bd-band-inner');
+    expect(names).not.toContain('bd-band-deep');
+    expect(names).not.toContain('bd-band-content');
+  });
+
+  it('orders banded regions in reading order without autolayout and in document order with it', () => {
+    const snapshot = projectPage(bandBody(), 'Page 1', KEY);
+    const inferred = frameOf(snapshot, '31:100').layout;
+
+    expect(inferred.inferred).toBe(true);
+    expect(inferred.layoutMode).toBe('none');
+    expect(inferred.regions.map((region) => region.name)).toEqual([
+      'A left',
+      'A right',
+      'B left',
+      'B right',
+    ]);
+    expect(inferred.regions.map((region) => [region.x, region.y])).toEqual([
+      [16, 116],
+      [100, 116],
+      [16, 316],
+      [100, 316],
+    ]);
+    expect(frameOf(snapshot, '30:100').layout.regions.map((region) => region.name)).toEqual([
+      'Status right',
+      'Status time',
+      'Row',
+      'Chip',
+      'Ghost',
+      'bd-band-tabbar',
+    ]);
+  });
+
+  it('writes no layout when every band is empty or unmeasurable', () => {
+    const snapshot = projectPage(bandBody(), 'Page 1', KEY);
+    const frame = snapshot.frames.find((candidate) => candidate.id === '32:100');
+
+    expect(Object.hasOwn(frame, 'layout')).toBe(false);
+    expect(snapshot.frames.map((candidate) => candidate.id)).toEqual([
+      '30:100',
+      '31:100',
+      '32:100',
+    ]);
   });
 });
 

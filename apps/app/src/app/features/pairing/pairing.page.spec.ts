@@ -25,6 +25,11 @@ const DEVICE_NAME = 'Dani iPhone';
 
 const TABLE: Readonly<Record<string, readonly [string, string]>> = {
   'pair.title': ['Pair this device', 'Empareja este dispositivo'],
+  'pair.tagline': [
+    'Private control plane for your own box.',
+    'Plano de control privado para tu propia caja.',
+  ],
+  'pair.eyebrow': ['Pairing code', 'Código de emparejamiento'],
   'pair.code': ['Pairing code', 'Código de emparejamiento'],
   'pair.code.hint': ['Ten characters from cb pair.', 'Diez caracteres de cb pair.'],
   'pair.deviceName': ['Device name', 'Nombre del dispositivo'],
@@ -32,6 +37,7 @@ const TABLE: Readonly<Record<string, readonly [string, string]>> = {
     'How this device appears in Settings.',
     'Cómo aparece este dispositivo en Ajustes.',
   ],
+  'pair.server': ['Server', 'Servidor'],
   'pair.submit': ['Pair', 'Emparejar'],
   'pair.submitting': ['Pairing…', 'Emparejando…'],
   'pair.error.code': [
@@ -147,6 +153,26 @@ describe('PairingPage', () => {
       'Device name',
     );
     expect(hook(element, 'pair-submit')?.textContent).toContain('Pair');
+  });
+
+  it('renders the frame hooks, the server row and no toolbar', async () => {
+    const { element } = await mount();
+
+    for (const id of [
+      'pair-masthead',
+      'pair-wordmark',
+      'pair-tagline',
+      'pair-card',
+      'pair-eyebrow',
+      'pair-code-hint',
+      'pair-device-hint',
+      'pair-server',
+    ]) {
+      expect(hook(element, id), id).not.toBeNull();
+    }
+    expect(hook(element, 'pair-server-value')?.textContent?.trim()).toBe(location.origin);
+    expect(element.querySelector('ion-header')).toBeNull();
+    expect(element.querySelector('ion-toolbar')).toBeNull();
   });
 
   it('rejects two empty fields with the code failure and never calls pair', async () => {

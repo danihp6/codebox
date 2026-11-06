@@ -6,6 +6,125 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-04 (Batch 23, wave 2: the session and the inbox reach the prototype)
+
+- **The design session draws its frame.** `features/sessions` renders `26 · Design · preview +
+  chat — dark` from `design/screens/design-session.json`: the two-line header, the preview card
+  above the thread with its revision, tokens, routes, one block per screen with its three
+  declared states and the check's findings, the `SESSION · design/` eyebrow, the right-aligned
+  user bubble against the plain agent text, the tool card and the raised composer, all from the
+  spec's `layout`. The thread, the markdown renderer, the store, the stream and the API do not
+  move; the card keeps `present: false` and the revision-unknown state, and the composer is
+  still disabled while a proposal is pending.
+- **The dashboard draws its inbox.** `features/dashboard` renders `05 · Dashboard — mobile dark`
+  from `design/screens/dashboard.json`: the five blocks in the frame's inbox order (`needs you`,
+  working, unreviewed, today's spend, health), the card boxes with their 14 px radius and the
+  type scale from the spec, and `12 · First run — after pairing` as the empty state. The
+  per-repository blocks have no frame, so they keep today's shape and are recorded as pending
+  L5; `dashboard.store.ts`, `dashboard.api.ts` and their specs do not move.
+- **The settings cluster draws its three frames.** `features/settings` renders `06 · Settings —
+  mobile dark`, `15 · Settings / Devices` and `17 · Settings / Notifications` from their measured
+  specs: the grouped rows at the frame's 64 px pitch, the device card, the pair row and the
+  confirmed revoke, the notification groups with their five toggles and quiet hours, and the
+  theme control wired to `SettingsStore.theme` (dark by default, `data-theme` on `<html>`). The
+  stores, the APIs and `providers.page.ts` do not move, and the rows the frames omit (the
+  credentials link, the time zone, the brake) keep their pinned hooks.
+- **The credentials screen draws its frame.** `features/credentials` renders `16 · Settings /
+  Credentials` from `design/screens/credentials.json`: the back link and counted subtitle, the
+  GitHub App card, one card per integration, one row per open credential with its `••••` tail
+  and its expose badge, and the two write-only notes, with sheets `18 · Connect a service` and
+  `19 · Add credential` rebuilt to the sheet rule. The write-only rule of D50 is visible in the
+  drawing and still enforced — no value reaches the DOM, test pinned by a sentinel — and the
+  API and the store do not move; rotation stays a follow-up because the client has no rotate
+  call and the frame has no rotate control.
+
+### Changed — 2026-11-04 (Batch 23, wave 1: the screens reach the prototype)
+
+- **Pairing draws its frame.** `features/pairing` renders `01 · Pairing — mobile dark` from
+  `design/screens/pairing.json`: the masthead, the card with its 20 px inset, the
+  eyebrow/label/hint/value scale, the 302 × 48 CTA and the inline alert inside the card. The
+  validation (`pairingProblem`, `pairingFailureOf`) and `AuthStore.pair` do not move, and the
+  page measures 320 px wide without a sideways scroll.
+- **The repo list draws its counted row.** `features/repos` renders `02 · Repo list — mobile dark`:
+  the 24/600 title, the 36 px `+`, the 36 px search field, 72 px rows whose
+  `pending · running · merged` numbers come from `Repo.counts` (D59) — the page never counts works
+  itself — one amber dot for the row that needs a person, and the full-width `+ Add repository`.
+  The search filters the rows locally, without a second request, and the dead filter strip and the
+  `⋯` menu L5 deleted stay gone.
+- **The backlog draws its three lines.** `features/backlog` renders `22 · Repo · backlog — deps (dark)`:
+  `Task-NN · title`, the section and the `state · runs` flow at a 64 px pitch, the dependency rail
+  as a gutter fed by `dependency-rail.ts`, the chat button in the header (never a `+`) and a
+  `next up …` summary over the rows. The parser, the store and the session sheet do not move, and
+  the three-line row survives at 320 px without a horizontal scroll.
+- **The workers view draws its factory.** `features/works` renders `20c · Crew · aerial — dark` and
+  its three siblings from `design/screens/repo-workers.json`: the 358 × 300 plan card with four
+  role rooms in a 2 × 2 grid, one face and one task chip per subagent, the road in on the left,
+  the belt out on the right, the `▤` and `🔔` chips as the only controls and `needs you` as a badge
+  over the worker, never a room fill. The four states come from `projectWorkers`; `workers.model.ts`
+  and `workers.motion.ts` keep their rules and the motion honours `prefers-reduced-motion`.
+
+### Changed — 2026-11-03 (Task-102, the importer sees through the bands)
+
+- **A band is not an element.** `layoutOf` measured a routed frame's direct children, so the first
+  re-import after L7 would have replaced each screen's 40–60 element regions with the 3–5 band
+  boxes. A child `FRAME` that paints nothing — no visible `SOLID` fill, no stroke, no corner
+  radius, the shape L7 gave every band — now contributes no region of its own: its children are
+  projected in its place with boxes absolute to the routed frame, recursing until a node that
+  paints or a node that is not a `FRAME`. A child frame that paints stays one region whatever it
+  contains, and a `RECTANGLE`, `ELLIPSE` or `TEXT` that paints nothing keeps its region as before.
+- **The frame's own facts are untouched.** `layoutMode`, the four paddings, `itemSpacing`, the
+  corner radius, the stroke and the type scale stay the routed frame's, and the type walk still
+  visits every `TEXT` descendant, band or not. A frame with autolayout keeps document order with
+  each band expanded in place; a frame without it keeps reading order (y, then x) with the walk
+  position as the tie-break, so the order the two shapes give a screen does not drift.
+- **`design/README.md` §4 states the rule** beside the import command, so the next reader does not
+  re-derive it from the code, and the item's clock is written down: this must land before the
+  re-import on 2026-11-08T03:00Z.
+- **Measured, not assumed.** Five tests build a banded page in memory — two levels of fill-less
+  bands, a painted row, a stroke-only tabbar, a band that measures nothing and a frame with no
+  autolayout — and the L6 fixtures keep their region counts and boxes except the one `Stack` frame
+  the rule now reads through, whose inner `Title` replaces the band's box.
+  `npx vitest run scripts/design` is 47/47; the `[live]` half is the re-import itself, which needs
+  the token and the quota and stays with the operator.
+
+### Changed — 2026-11-03 (L7, the prototype becomes a real column)
+
+- **The eleven routed frames are columns, not collages.** `01 · Pairing`, `06 · Settings` and
+  `07 · About` already had a body column (`pair-body`, `st-body`, `ab-body`); the other eight —
+  `02 · Repo list`, `22 · Repo · backlog`, `20c · Crew · aerial`, `26 · Design · preview + chat`,
+  `05 · Dashboard`, `15 · Settings / Devices`, `16 · Settings / Credentials` and
+  `17 · Settings / Notifications` — were flat frames with every child absolutely placed. Each was
+  restructured into contiguous bands (`<prefix>-band-status`, `-header`, `-content`, plus
+  `-tabbar` or `-composer` where the frame has one) that tile the frame, the children were
+  re-parented into their band at their original absolute position, and the frame was set to
+  `VERTICAL` with padding 0 and gap 0. Absolute geometry was diffed for all 311 re-parented
+  children before and after: **zero drift**, so the drawing each export renders is unchanged, and
+  the plugin reports `VERTICAL` on every routed frame. Frame captions are untouched, so
+  `design/import.json` still resolves all eleven.
+- **The palette is styles, and it has two holes.** The twelve `PAINT` styles named after the token
+  keys (`color.surface.bg` … `color.danger.red`) are in the file and ten Design System swatches
+  are linked to them. The drawing uses two border colours that `design/tokens.json` does not
+  define — `#1d2633` dark, `#e3e8ee` light — so they stay outside the twelve and
+  `coloursOutsideTokens` keeps reporting them; a token document that covered them would be a
+  change to Task-84's document, not to the file.
+- **The re-import waits on the file's read quota.** `GET /v1/files/:key` answers `429` with
+  `retry-after: 392270`, so the generated artifacts still hold the L6 measurement — same geometry,
+  regions grouped at frame level — until the first import after 2026-11-08T03:00Z. That import is
+  the one that writes `layoutMode: vertical` and the band regions; `--check` runs with it.
+- **Batch 25 is cut so that import does not lose the measurements.** `layoutOf` reads a frame's
+  direct children, so the first re-import would collapse each screen's 40–60 element regions into
+  the 3–5 band boxes. Task-102 teaches the projection to look through a fill-less child frame and
+  to keep a painted one as its own region; it must land before the quota reopens.
+- **One criterion was false and is corrected in `TODO.md`.** L7 asked a re-import to report
+  `styles` > 0, but `scripts/design/import.mjs` never calls `/styles` and `import.test.mjs` pins
+  that it does not, so no code can produce that number; the palette is verified through the REST
+  `/styles` resource, which is the item's own `[live]` criterion.
+- **No components or variants.** A row, a chip and a header repeat, but promoting a row to a
+  master and its siblings to instances means rebuilding those rows with per-instance text
+  overrides, and `instance_set_overrides` only copies between instances that already exist. That
+  is a later design pass; it blocks no screen task, because the export and the banded column
+  already carry the layout.
+
 ### Changed — 2026-11-03 (Task-101, the pipeline's guards stop being prose)
 
 - **No pipeline role fetches the web (D60).** `opencode.json` denied `webfetch` for the

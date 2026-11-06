@@ -2,8 +2,9 @@ import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/cor
 import type { Signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { Capacitor } from '@capacitor/core';
-import { IonContent, IonHeader, IonTitle, IonToolbar } from '@ionic/angular';
+import { IonContent } from '@ionic/angular';
 import { ApiError } from '../../core/api/api-client';
+import { API_BASE_URL } from '../../core/api/http';
 import { AuthStore } from '../../core/auth/auth.store';
 import type { PairPlatform } from '../../core/auth/auth.store';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -43,70 +44,179 @@ export function platformFor(platform: string): PairPlatform {
 @Component({
   selector: 'app-pairing-page',
   standalone: true,
-  imports: [IonContent, IonHeader, IonTitle, IonToolbar],
+  imports: [IonContent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
-      .cb-pair-form {
-        display: grid;
-        gap: calc(var(--cb-space) * 2);
-        width: 100%;
-        /* 420 px at the 4 px token; the frozen width grep forbids a px literal. */
-        max-width: calc(var(--cb-space) * 105);
-        box-sizing: border-box;
+      ion-content {
+        --background: var(--cb-bg);
       }
-      .cb-pair-field {
-        display: grid;
-        gap: var(--cb-space);
-        min-width: 0;
-      }
-      .cb-pair-form label {
+      /* The frame "01 · Pairing — mobile dark" is 390 × 844 with a 24 px page margin; the
+         regions sit at their drawn offsets, so the masthead starts 112 px down. */
+      .cb-pair {
+        display: flex;
+        flex-direction: column;
+        padding: 112px 24px 48px;
+        font-family: var(--cb-font-sans);
         color: var(--cb-text);
       }
-      .cb-pair-form input {
-        width: 100%;
-        box-sizing: border-box;
-        min-width: 0;
-        padding: calc(var(--cb-space) * 2);
+      .cb-pair-masthead {
+        display: flex;
+        flex-direction: column;
+      }
+      .cb-pair-wordmark {
+        margin: 0;
+        align-self: flex-start;
+        font-size: 30px;
+        font-weight: 600;
+        line-height: 36px;
+        color: var(--cb-text);
+      }
+      .cb-pair-tagline {
+        margin: 4px 0 0;
+        align-self: flex-start;
+        font-size: 13px;
+        font-weight: 400;
+        line-height: 16px;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
+      }
+      /* The drawn card is 342 × 404 with a 16 px radius and a 20 px inset: the 1 px stroke sits
+         inside the 19 px padding, so the fields start 20 px from the card's edge. */
+      .cb-pair-card {
+        margin-block-start: 32px;
+        min-block-size: 404px;
+        padding: 19px;
         border: 1px solid var(--cb-surface);
-        border-radius: var(--cb-radius);
-        background: var(--cb-surface);
-        color: var(--cb-text);
+        border-radius: 16px;
+        background: var(--cb-bg);
       }
-      .cb-pair-form button {
-        box-sizing: border-box;
-        min-width: 0;
-        padding: calc(var(--cb-space) * 3);
-        border: 1px solid var(--cb-text);
-        border-radius: var(--cb-radius);
-        background: var(--cb-surface);
-        color: var(--cb-text);
-        cursor: pointer;
+      .cb-pair-form {
+        display: flex;
+        flex-direction: column;
+        margin: 0;
       }
-      .cb-pair-form button:disabled {
-        cursor: progress;
-        opacity: 0.6;
+      .cb-pair-eyebrow {
+        margin: 0;
+        align-self: flex-start;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--cb-muted);
+      }
+      /* The frame draws no code label; the control keeps a named label off-canvas. */
+      .cb-pair-sr {
+        position: absolute;
+        inline-size: 1px;
+        block-size: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .cb-pair-input {
+        inline-size: 100%;
+        min-inline-size: 0;
+        block-size: 48px;
+        padding: 0 16px;
+        border: 1px solid var(--cb-surface);
+        border-radius: 8px;
+        background: var(--cb-bg);
+        color: var(--cb-text);
+        font-family: var(--cb-font-sans);
+        font-size: 14px;
+        line-height: 17px;
+      }
+      .cb-pair-input-code {
+        margin-block-start: 13px;
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: 0.18em;
+      }
+      .cb-pair-label {
+        display: block;
+        align-self: flex-start;
+        margin: 12px 0 0;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 13px;
+        color: var(--cb-muted);
+      }
+      .cb-pair-label + .cb-pair-input {
+        margin-block-start: 8px;
+      }
+      .cb-pair-hint {
+        margin: 8px 0 0;
+        align-self: flex-start;
+        font-size: 11px;
+        line-height: 13px;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
+      }
+      .cb-pair-server {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-block-start: 12px;
+      }
+      .cb-pair-server-label {
+        align-self: flex-start;
+        font-size: 11px;
+        font-weight: 500;
+        line-height: 13px;
+        color: var(--cb-muted);
+      }
+      .cb-pair-server-value {
+        align-self: flex-start;
+        font-size: 12px;
+        line-height: 15px;
+        color: var(--cb-muted);
+        overflow-wrap: anywhere;
       }
       .cb-pair-error {
-        margin: 0;
-        overflow-wrap: anywhere;
+        margin: 12px 0 0;
+        font-size: 12px;
+        line-height: 15px;
         color: var(--cb-danger);
+        overflow-wrap: anywhere;
+      }
+      .cb-pair-cta {
+        margin-block-start: 20px;
+        block-size: 48px;
+        inline-size: 100%;
+        border: 0;
+        border-radius: 10px;
+        background: var(--cb-surface);
+        color: var(--cb-text);
+        font-family: var(--cb-font-sans);
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 17px;
+        cursor: pointer;
+      }
+      .cb-pair-cta:disabled {
+        cursor: progress;
+        opacity: 0.6;
       }
     `,
   ],
   template: `
-    <ion-header>
-      <ion-toolbar>
-        <ion-title>{{ t('pair.title') }}</ion-title>
-      </ion-toolbar>
-    </ion-header>
-    <ion-content class="ion-padding">
-      <div data-testid="page-pair">
-        <form class="cb-pair-form" data-testid="pair-form" (submit)="submit($event)">
-          <div class="cb-pair-field">
-            <label for="pair-code">{{ t('pair.code') }}</label>
+    <ion-content>
+      <div class="cb-pair" data-testid="page-pair">
+        <header class="cb-pair-masthead" data-testid="pair-masthead">
+          <h1 class="cb-pair-wordmark" data-testid="pair-wordmark">Codebox</h1>
+          <p class="cb-pair-tagline" data-testid="pair-tagline">{{ t('pair.tagline') }}</p>
+        </header>
+
+        <div class="cb-pair-card" data-testid="pair-card">
+          <form class="cb-pair-form" data-testid="pair-form" (submit)="submit($event)">
+            <p class="cb-pair-eyebrow" data-testid="pair-eyebrow">{{ t('pair.eyebrow') }}</p>
+
+            <label class="cb-pair-sr" for="pair-code">{{ t('pair.code') }}</label>
             <input
               id="pair-code"
+              class="cb-pair-input cb-pair-input-code"
               data-testid="pair-code"
               type="text"
               autocomplete="one-time-code"
@@ -116,37 +226,48 @@ export function platformFor(platform: string): PairPlatform {
               [value]="code()"
               (input)="setCode(valueOf($event))"
             />
-            <span>{{ t('pair.code.hint') }}</span>
-          </div>
+            <p class="cb-pair-hint" data-testid="pair-code-hint">{{ t('pair.code.hint') }}</p>
 
-          <div class="cb-pair-field">
-            <label for="pair-device-name">{{ t('pair.deviceName') }}</label>
+            <label class="cb-pair-label" for="pair-device-name">{{ t('pair.deviceName') }}</label>
             <input
               id="pair-device-name"
+              class="cb-pair-input"
               data-testid="pair-device-name"
               type="text"
               autocomplete="off"
               [value]="deviceName()"
               (input)="setDeviceName(valueOf($event))"
             />
-            <span>{{ t('pair.deviceName.hint') }}</span>
-          </div>
-
-          <button type="submit" data-testid="pair-submit" [disabled]="submitting()">
-            {{ submitting() ? t('pair.submitting') : t('pair.submit') }}
-          </button>
-
-          @if (failure(); as failure) {
-            <p
-              class="cb-pair-error"
-              data-testid="pair-error"
-              role="alert"
-              [attr.data-failure]="failure"
-            >
-              {{ t('pair.error.' + failure) }}
+            <p class="cb-pair-hint" data-testid="pair-device-hint">
+              {{ t('pair.deviceName.hint') }}
             </p>
-          }
-        </form>
+
+            <div class="cb-pair-server" data-testid="pair-server">
+              <span class="cb-pair-server-label">{{ t('pair.server') }}</span>
+              <span class="cb-pair-server-value" data-testid="pair-server-value">{{ server }}</span>
+            </div>
+
+            @if (failure(); as failure) {
+              <p
+                class="cb-pair-error"
+                data-testid="pair-error"
+                role="alert"
+                [attr.data-failure]="failure"
+              >
+                {{ t('pair.error.' + failure) }}
+              </p>
+            }
+
+            <button
+              class="cb-pair-cta"
+              type="submit"
+              data-testid="pair-submit"
+              [disabled]="submitting()"
+            >
+              {{ submitting() ? t('pair.submitting') : t('pair.submit') }}
+            </button>
+          </form>
+        </div>
       </div>
     </ion-content>
   `,
@@ -167,6 +288,8 @@ export class PairingPage {
   readonly failure: Signal<PairingFailure | PairingProblem | null> = this.failureState.asReadonly();
 
   readonly t: (key: string) => string = (key) => translate(this.i18n.locale(), key);
+
+  readonly server: string = API_BASE_URL === '' ? location.origin : API_BASE_URL;
 
   setCode(value: string): void {
     this.codeState.set(value);

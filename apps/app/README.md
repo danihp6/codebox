@@ -79,34 +79,34 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/backlog/backlog.store.spec.ts` — one work then one attempt in order, the navigation, the live work and the screen error.
 - `src/app/features/backlog/dependency-rail.ts` — the pure drawing rule: `railEdges` and `unmetNeeds` over the wire items.
 - `src/app/features/backlog/dependency-rail.spec.ts` — one edge per need, the three kinds, a root with none and every unmet id.
-- `src/app/features/backlog/i18n.ts` — the backlog row states, the dependency rail and detail copy and the new-session sheet dictionary in `en` and `es`.
+- `src/app/features/backlog/i18n.ts` — the backlog row states, the summary line, the dependency rail, its node labels and the detail copy, and the new-session sheet dictionary in `en` and `es`.
 - `src/app/features/backlog/new-session.sheet.ts` — the four targets, the read-only `repo` entry, the busy guard and one create per tap.
 - `src/app/features/backlog/new-session.sheet.spec.ts` — no request on render, the four buttons, the body without a work id, the 409 and the read-only create.
-- `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog: the header chat button, the four tabs, the rows with plan and state apart, the select button with its needs, the dependency rail, the detail panel, the run action and the live-work block.
-- `src/app/features/backlog/repo-backlog.page.spec.ts` — the row hooks, every work state label, the needs and unmet ids, the rail edges, the detail panel, the dictionaries, the run visibility, the live work, the error/retry and the sheet.
-- `src/app/features/credentials/add-credential.sheet.ts` — the two-step add-credential sheet: name, kind, expose, the env warning, the confirmation tail and the save.
-- `src/app/features/credentials/add-credential.sheet.spec.ts` — the review step, the four-character tail, the env warning/blocked states and the cleared value.
-- `src/app/features/credentials/connect-service.sheet.ts` — the GitHub App manifest form and the generic integration form.
-- `src/app/features/credentials/connect-service.sheet.spec.ts` — the manifest form fields, the header field visibility and the two save refusals.
+- `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog frame: the back link, the slug, the chat button, the summary line, the rows of three lines with their section and their state · runs flow, the dependency rail as the left gutter with one node per row, the detail panel, the run action and the live-work block.
+- `src/app/features/backlog/repo-backlog.page.spec.ts` — the row hooks and their three lines, every work state label, the summary line, the needs and unmet ids, the rail edges and nodes, the detail panel, the dictionaries, the run visibility, the live work, the error/retry and the sheet.
+- `src/app/features/credentials/add-credential.sheet.ts` — sheet `19 · Add credential`: the form → review → save card, the env warning and block, the four-character review and the value that never enters the DOM.
+- `src/app/features/credentials/add-credential.sheet.spec.ts` — the `data-step` states, the four-character tail, the env warning/blocked states, the cleared value and the sentinel absent from the form, the review and the save.
+- `src/app/features/credentials/connect-service.sheet.ts` — sheet `18 · Connect a service`: the three modes (`menu`, `github`, `integration`), the manifest form and the integration form.
+- `src/app/features/credentials/connect-service.sheet.spec.ts` — the `data-mode` transitions, the manifest form fields, the header field visibility and the two save refusals.
 - `src/app/features/credentials/credentials.api.ts` — `/v1/credentials` and `/v1/integrations` calls plus the six hand-written payload parsers.
 - `src/app/features/credentials/credentials.api.spec.ts` — every URL and method, the parsers and the error mapping.
-- `src/app/features/credentials/credentials.page.ts` — connected services, open credentials, the two sheets and the manifest-complete path.
-- `src/app/features/credentials/credentials.page.spec.ts` — loading, error, empty, both sections, the two sheet triggers, the confirmed delete and the manifest completion.
+- `src/app/features/credentials/credentials.page.ts` — frame `16 · Settings / Credentials`: the back link, the counted subtitle, the two group headings, the GitHub App card, one card per integration, one row per open credential with its masked metadata, the two action rows, the write-only notes and the two sheets.
+- `src/app/features/credentials/credentials.page.spec.ts` — loading, error, empty, the header hooks, both groups, the GitHub App card against its open-row exclusion, the row metadata, the notes, a sentinel absent from the page, the sheet triggers, one create through the add sheet, the confirmed delete and the manifest completion.
 - `src/app/features/credentials/credentials.store.ts` — the two independent catalog reads, create/remove and the manifest reload.
 - `src/app/features/credentials/credentials.store.spec.ts` — load, a failed half, create, remove, the manifest start and completion.
-- `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`.
-- `src/app/features/dashboard/dashboard.page.ts` — the four blocks (working, ready, spend, health), the recent runs, the first-run start card and the loading/error/stale states.
-- `src/app/features/dashboard/dashboard.page.spec.ts` — every block from a zero fixture, the start card, the rows of the run blocks and the dictionary parity.
+- `src/app/features/credentials/i18n.ts` — the credentials dictionary in `en` and `es`, with the frame's subtitle, group headings, GitHub App lines and the two write-only notes.
+- `src/app/features/dashboard/dashboard.page.ts` — the frame's inbox (needs you, working, finished · not reviewed, spend, health), the queue footer, the recent runs, the first-run start card and the loading/error/stale states.
+- `src/app/features/dashboard/dashboard.page.spec.ts` — every block from a zero fixture, the frame order, the needs card, the clamped queue footer, the start card, the rows of the run blocks and the dictionary parity.
 - `src/app/features/dashboard/dashboard.api.ts` — the `/v1/telemetry`, `/v1/runs` and `/v1/repos` reads behind the blocks.
 - `src/app/features/dashboard/dashboard.api.spec.ts` — the three new page URLs, the explicit limit, the contract failures and the envelope mapping.
 - `src/app/features/dashboard/dashboard.store.ts` — health, telemetry, the working/ready/recent run signals and the run stream refetch.
 - `src/app/features/dashboard/dashboard.store.spec.ts` — the four reads, the working-state sets, the zero fixture, the first-run probe and the run stream frames.
 - `src/app/features/dashboard/i18n.ts` — the dashboard dictionary in `en` and `es`.
-- `src/app/features/pairing/pairing.page.ts` — the pairing screen: code and device name, the inline failure and the dashboard redirect.
-- `src/app/features/pairing/pairing.page.spec.ts` — the hooks, the field rules, the four failures and the redirect.
+- `src/app/features/pairing/pairing.page.ts` — the pairing screen the prototype frame draws: the masthead, the 342 × 404 card, the code and device fields, the read-only server row, the inline failure and the dashboard redirect.
+- `src/app/features/pairing/pairing.page.spec.ts` — the frame hooks, the field rules, the four failures, the redirect and the dictionary parity.
 - `src/app/features/pairing/i18n.ts` — the pairing dictionary in `en` and `es`.
-- `src/app/features/repos/repos.page.ts` — the repo list, the add wizard entry and the gate/policy badges.
-- `src/app/features/repos/repos.page.spec.ts` — the list hooks, the wizard and the empty/error blocks.
+- `src/app/features/repos/repos.page.ts` — the repo list: the search field, the counted eyebrow, the three-line row with its counts and amber dot, the add row and the create form.
+- `src/app/features/repos/repos.page.spec.ts` — load, empty, error and retry, the counts, the attention dot, the search and the form toggle, slug refusal, create-then-verify and dictionary parity.
 - `src/app/features/repos/repos.api.ts` — `/v1/repos` list, get, create, patch, remove and verify.
 - `src/app/features/repos/repos.api.spec.ts` — every repos URL and method and the boundary parse failure.
 - `src/app/features/repos/repos.store.ts` — the list, create and verify with their optimistic state.
@@ -117,7 +117,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/repos/repo-form.spec.ts` — a missing owner, a bad slug and the trimmed value.
 - `src/app/features/repos/repo-picker.spec.ts` — the three states, the unavailable refusal, the picked id and the picker copy.
 - `src/app/features/repos/repo-picker.ts` — the repository picker: one row per repo with `connected`/`cloning`/`unavailable`.
-- `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`, including the four `repoPicker.*` keys.
+- `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`, including the count, row and search keys and the four `repoPicker.*` keys.
 - `src/app/features/repos/repo-chrome.i18n.ts` — the repository tabs, schedule and design dictionary in `en` and `es`.
 - `src/app/features/repos/repo-tabs.ts` — the four repository tabs as one source of truth and the tab strip component.
 - `src/app/features/repos/repo-tabs.spec.ts` — the four tabs in order, their links and their labels in both locales.
@@ -131,19 +131,19 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/repos/repo-schedule.page.spec.ts` — the mode, the window and the next fire, no unexposed field, the notice and the create.
 - `src/app/features/sessions/sessions.api.ts` — one session, its transcript, the send, the stop, the merge and the design preview.
 - `src/app/features/sessions/sessions.api.spec.ts` — every session URL and method, the transcript query, the design preview and the error mapping.
-- `src/app/features/sessions/design-preview.card.ts` — the design preview card: the commit, the tokens, the routes, each screen's three declared states and the check's findings.
-- `src/app/features/sessions/design-preview.card.spec.ts` — the loaded commit and states, the pending line, the repository without `design/`, the refusal and retry, the clean check and a finding.
+- `src/app/features/sessions/design-preview.card.ts` — the design preview card: the eyebrow and the revision pill, the body with the tokens, routes and screens counts and their rows, one block per screen with its three state chips and the check's line or its findings.
+- `src/app/features/sessions/design-preview.card.spec.ts` — the loaded revision pill and states, the body's count order, the pending line, the repository without `design/`, the refusal and retry, the clean check and a finding.
 - `src/app/features/sessions/session-stream.ts` — the pure thread: message merge by id, the live delta buffer, the tool cards and the event application.
 - `src/app/features/sessions/session-stream.spec.ts` — replayed frames, idempotent merges, the foreign session, the tool key and the proposal.
 - `src/app/features/sessions/session.store.ts` — one session: the load, the draft, the send, the stop, the single merge and the pending proposal.
 - `src/app/features/sessions/session.store.spec.ts` — load, send, the blocked composer, the merge and its refusal, the frames and the proposal.
-- `src/app/features/sessions/session.page.ts` — the editor: the target, the design preview above the thread, the thread through `markdown.ts`, the tool cards, the proposal panel and the composer.
-- `src/app/features/sessions/session.page.spec.ts` — the thread, the blocked composer, the proposal panel and the single merge, the preview that follows the proposal, the read-only target and the error/retry.
+- `src/app/features/sessions/session.page.ts` — the editor: the back link, the target sub-line with the pending `from {sha}`, the design preview above the thread, the thread eyebrow, the thread through `markdown.ts`, the tool cards, the proposal panel, the amber preview status line and the raised composer bar.
+- `src/app/features/sessions/session.page.spec.ts` — the thread, the back link, the eyebrow and the status line, the blocked composer, the proposal panel and the single merge, the preview that follows the proposal, the read-only target and the error/retry.
 - `src/app/features/sessions/markdown.ts` — the small markdown parser: paragraphs, fenced code and lists.
 - `src/app/features/sessions/markdown.spec.ts` — fences, lists and unclosed markup.
 - `src/app/features/sessions/i18n.ts` — the session and design-preview dictionary in `en` and `es`.
-- `src/app/features/settings/settings.page.ts` — profile, time zone, the notification panel row, providers, danger zone and about, with explicit `unavailable` blocks.
-- `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, every section, the preference toggle and dictionary completeness.
+- `src/app/features/settings/settings.page.ts` — frame `06`: the device card, the four groups, the eight rows, the theme control and the two danger rows, with explicit `unavailable` blocks.
+- `src/app/features/settings/settings.page.spec.ts` — the unavailable blocks, the groups and the rows in order, the theme write into `cb.settings` and dictionary completeness.
 - `src/app/features/settings/settings.api.ts` — `/v1/me`, version, settings, providers, brake, cache wipe, devices and notification preferences; a missing route is not an error.
 - `src/app/features/settings/settings.api.spec.ts` — every URL, 404-as-absent, the 403 scope refusal and boundary parsing.
 - `src/app/features/settings/settings.store.ts` — five independent reads, the time zone, the brake, the cache wipe and optimistic preference toggles.
@@ -151,12 +151,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/settings/notifications.api.ts` — the two preferences calls, the best-effort settings mirror and the envelope mapping.
 - `src/app/features/settings/notifications.api.spec.ts` — the three URLs and methods, the boundary parse failure and the unswallowed 404.
 - `src/app/features/settings/notifications.i18n.ts` — the notification panel dictionary in `en` and `es`.
-- `src/app/features/settings/notifications.page.ts` — the panel: five toggles, the locked credential row, quiet hours and the close output.
-- `src/app/features/settings/notifications.page.spec.ts` — the toggle order, the locked row in both locales, the 500 rollback and the quiet-hours save.
+- `src/app/features/settings/notifications.page.ts` — frame `17`: the header, both group headings, five switches, the locked amber row, the quiet card and the close output.
+- `src/app/features/settings/notifications.page.spec.ts` — the switch order and `data-on`, the locked row in both locales, the 500 rollback and the quiet-hours save.
 - `src/app/features/settings/notifications.store.ts` — the preferences read, the optimistic toggles, the quiet-hours write and the SSE frame projection.
 - `src/app/features/settings/notifications.store.spec.ts` — the payload builder, the toggle rollback, the two-route write and the mirror states.
-- `src/app/features/settings/devices.page.ts` — paired devices, current-device marker and a confirmed revoke per row.
-- `src/app/features/settings/devices.page.spec.ts` — empty state, current-device row, confirm-then-revoke and the error block.
+- `src/app/features/settings/devices.page.ts` — frame `15`: the counted header, one row per device, the outlined pair row, three notes and a confirmed revoke.
+- `src/app/features/settings/devices.page.spec.ts` — the empty state, the header, the device lines, confirm-then-revoke, the second-tap guard and the error block.
 - `src/app/features/settings/devices.store.ts` — paired devices, the calling device and revoke (with logout of the calling device).
 - `src/app/features/settings/devices.store.spec.ts` — load, revoke another device and revoke the calling one down to an empty secure store.
 - `src/app/features/settings/i18n.ts` — the settings and devices dictionary in `en` and `es`.
@@ -168,12 +168,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/works/works.api.spec.ts` — every works URL and method, the empty bodies and the error mapping.
 - `src/app/features/works/work.store.ts` — one work: the detail, the one blocked action, the rework refetch and the state.
 - `src/app/features/works/work.store.spec.ts` — load, the decision navigation, the rework refetch and the refused action.
-- `src/app/features/works/repo-workers.page.ts` — the workers tab: the four role rooms, the road in, the belt out and the four states derived from `WorkState`.
-- `src/app/features/works/repo-workers.page.spec.ts` — the four states from a fixture, the blocked task off the builder's floor, the face links and the absence of a per-agent button.
+- `src/app/features/works/repo-workers.page.ts` — the workers tab: the dashed plan card, the 2 × 2 role grid with one face and one task chip per subagent, the road in, the belt out, the two chips and their sheet, and the four states derived from `WorkState`.
+- `src/app/features/works/repo-workers.page.spec.ts` — the four board states from a fixture, the blocked task off the builder's floor, the face links and their rings, the absence of a per-agent button, the two chip counts and the sheet that closes by its control and by Escape.
 - `src/app/features/works/workers.model.ts` — the pure projection: `laneOf`, `workerStateOf` and `projectWorkers`.
 - `src/app/features/works/workers.model.spec.ts` — every `WorkState`, the order of the four rooms and the daemon order inside a lane.
 - `src/app/features/works/workers.motion.ts` — the pure blink rule: `blinkPhase` and `assignBlinkPhases` over the board's cards.
 - `src/app/features/works/workers.motion.spec.ts` — the phase wrap, the board order and the motion contract read from `variables.css`.
 - `src/app/features/works/work.page.ts` — the work run log: the header facts, one segment per run, the gate/PR cards, the tick and one action, with no composer.
 - `src/app/features/works/work.page.spec.ts` — no textarea or send hook, the header, the cards from run state, the state flip, the tick and the one action.
-- `src/app/features/works/i18n.ts` — the workers, work and run-state dictionary in `en` and `es`.
+- `src/app/features/works/i18n.ts` — the workers, work and run-state dictionary in `en` and `es`, including the two chips, their sheet and the header's sub line.

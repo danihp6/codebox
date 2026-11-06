@@ -302,6 +302,12 @@ describe('projectPage', () => {
     }
   });
 
+  it('projects no layout for every frame of the legacy fixture', () => {
+    const snapshot = projectPage(jsonFixture('file.json'), 'Page 1', KEY);
+    expect(snapshot.frames).toHaveLength(13);
+    expect(snapshot.frames.every((frame) => !Object.hasOwn(frame, 'layout'))).toBe(true);
+  });
+
   it('fails a frame without a size', () => {
     const body = jsonFixture('file.json');
     delete body.document.children[1].children[0].absoluteBoundingBox;

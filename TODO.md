@@ -61,6 +61,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 22 | Measured spec, Inter and the missing route (D58) | 85-87 | 3 |
 | 23 | Screen alignment against the prototype | 88–99 | 2, then 4, then 4, then 2 |
 | 24 | The pipeline's documented guards | 101 | 1 |
+| 25 | The measured spec sees through the bands | 102 | 1 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -458,6 +459,65 @@ and `run-cycle.sh`'s `${CB_AGENT_MAX_DEVS:-2}` supplies the default. The `[live]
 forced cycle on the box that prunes a seeded log, refuses at 1 GB and leaves `forced: true` in
 `cycles.ndjson` — is unmeasured on this runner (no VM, no model key): `agent-review` issue #119
 carries the three reads.
+
+**Cut — operator-ordered cycle 2026-11-03, after L6 (zero driver slots).** The operator ordered the
+rest of the design track instead of a driver batch: no task branch was alive and `main` was
+`200e8a1`, the L6 merge. **L7 shipped** as the record above describes — the twelve palette styles
+are in place and ten swatches are linked, and the eight flat routed frames became `VERTICAL`
+columns of bands with zero geometric drift, verified child by child, so the eleven exports still
+show the same pixels. Nothing under `design/` moved: the re-import is parked by the file's read
+quota (`429`, `retry-after: 392270`, not before 2026-11-08T03:00Z) and the generated artifacts keep
+the L6 measurement until it runs. **Hot-file holders in this cut:** none. `TODO.md` and
+`CHANGELOG.md` are the Orchestrator's, and no task holds `package.json`, `package-lock.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`,
+`opencode.json` or `docs/decisions.md`. **What this does not free:** the screen waves. D59 parks
+them while the design track is open, and **L5** still is — 320 for the ten routed screens that were
+never squeezed, the interaction states in the Design System, the empty/error state of every screen,
+flows A and B, and the schedule sheet L5 owes Task-99 — so Tasks 90–99 stay parked behind it.
+**L2 closed with this cut:** its deliverables are the recut file (2026-10-28), the token document
+(Task-84) and the measured exports (L6), and the item itself says its export step is the L6 import.
+Task-31 stays `[!]` (the live ten-run measurement, issue #105) and Task-32 waits behind it; L1, L3
+and L4 keep their place after the design track.
+
+**Cut — cycle 2026-11-03, after L7 (one of four slots used).** No task branch was alive and the
+base was `89e37b1`, the L7 commit on `l7-prototype-restructure` (PR #121 open), so the batch was
+cut from that branch and **not** from `main`: Batch 25's item and the L7 record live there.
+**Task-102** is the only item of Batch 25 and it is eligible — Task-85 is merged and L7 is done —
+and it is a hard clock: the first re-import after the file's read quota reopens
+(2026-11-08T03:00Z) would otherwise write one region per band and lose the geometry D58 promised
+the screen tasks. The three empty slots have no legal candidate: Tasks 90–99 stay parked behind
+L5, Task-32 waits on the blocked Task-31 (#105), and L1, L3, L4 and L5 are operator items the
+driver never picks. **Hot-file holders in this cut:** none. The task claims no hot file, and
+`TODO.md`/`CHANGELOG.md` stay with the Orchestrator. **No path deviation:** the four paths the
+item lists are the four the branch touches; the banded page is built inside `layout.test.mjs` by a
+helper rather than as a new fixture file, so `scripts/design/fixtures/**` stays byte-identical.
+The `[live]` criterion — the re-import itself — is unmeasured on this runner (no `FIGMA_TOKEN` and
+the quota is spent); it stays the operator's, on or after 2026-11-08T03:00Z.
+
+**Cut — cycle 2026-11-04, after Batch 23 wave 1 (four of four slots used).** No task branch was
+alive; `main` was `200e8a1` and the batch was cut from `l7-prototype-restructure` at `498444c`
+(L6 + L7 + Task-102 + Tasks 90–93 merged, PR #121 still open), not from `main`, because that is
+where the wave lives. **Wave 2 is the batch:** Task-94 (Design · session), Task-95 (Dashboard),
+Task-96 (Settings cluster) and Task-97 (Credentials). All four are eligible — L6, L7, Task-88 and
+Task-89 are merged — and their paths are disjoint: one feature folder each, and no hot file is
+claimed. `apps/app/README.md` is split by line block, the way Batch 20 wave 2 did it: Task-97 owns
+87–97, Task-95 owns 98–104, Task-94 owns 132–144 and Task-96 owns 145–166; the merge of 97 onto
+the base met Task-95's two rewritten dashboard lines at 98–99 and the conflict was resolved by
+keeping each task's own block, no line lost. **The four slots are full, so Task-98 waits:**
+About is eligible and disjoint, but it is wave 3 by construction and no fifth dev exists; Task-99
+waits beside it because L5 is still open — the schedule sheet's frame is drawn (`l5-schedule-sheet`
+at `5d6a469`), but L5 is not ticked until the re-import (the file's quota, not before
+2026-11-08T03:00Z) and the operator's present-mode pass. **Deviations, recorded:** Task-95's item
+says "the five reads" but the store issues four requests (`/v1/health`, `/v1/telemetry`,
+`/v1/runs`, `/v1/repos`) and the five blocks are derived from them; Task-97's item asks the page
+spec to prove rotate, but `CredentialsApi` has no rotate call (`docs/api.md` §5.9 documents the
+endpoint), so the spec proves create, delete and the D50 write-only rule and rotation is a
+follow-up; sheets `18`/`19` and the drawn states of all four screens have no exports (the import
+downloads one PNG per routed screen), so those drawings follow the sheet rule and the `[live]`
+comparisons are unmeasured on this runner and handed to an `agent-review` issue. Branch
+`l5-schedule-sheet` diverged before wave 1 and does not contain it; merging it is the operator's
+path after the live pass, not this cycle's.
 
 ### Screens awaiting the prototype
 
@@ -1845,7 +1905,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       2026-10-30:** cut ahead of the design track, beside it; it reads no frame and edits nothing
       under `design/`.
 
-- [ ] **[Task-90]** Pairing, frame `01 · Pairing — mobile dark`, error state `14 · Unpaired — 401`.
+- [x] **[Task-90]** Pairing, frame `01 · Pairing — mobile dark`, error state `14 · Unpaired — 401`.
       Rewrite `features/pairing` from `design/screens/pairing.json`: header, the form column's box
       and gap, the type scale of label/hint/button, the disabled and submitting states and the
       alert, from the spec's `layout` instead of the inline block the page carries today. The
@@ -1857,7 +1917,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       (header, form column, two fields with their hints, button, alert), and nothing scrolls
       sideways at 320 px. *Dependencies:* L6, L7.
 
-- [ ] **[Task-91]** Repo list, frame `02 · Repo list — mobile dark`. Rewrite `features/repos`'
+- [x] **[Task-91]** Repo list, frame `02 · Repo list — mobile dark`. Rewrite `features/repos`'
       list half against `design/screens/repo-list.json`: the row is the frame's counted row
       (`pending · running · merged`, one amber dot for the only thing that needs a person,
       `docs/app.md` §9), and the header's action opens the create form the page already owns. The
@@ -1870,7 +1930,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       beside the screen at 390 × 844 dark, the rows align to its grid and the counts read as three
       numbers. *Dependencies:* L6, L7, Task-88.
 
-- [ ] **[Task-92]** Repo · backlog, frame `22 · Repo · backlog — deps (dark)`. Rewrite
+- [x] **[Task-92]** Repo · backlog, frame `22 · Repo · backlog — deps (dark)`. Rewrite
       `features/backlog` against `design/screens/repo-backlog.json`: the three-line row
       (`Task-NN · title`, the section, the `state · runs · cost` flow), the dependency rail from
       `dependency-rail.ts` and the chat button in the header (never a `+`, `design/README.md` §6).
@@ -1881,7 +1941,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       beside the screen and the three-line row survives at 320 px without a horizontal scroll.
       *Dependencies:* L6, L7, Task-88.
 
-- [ ] **[Task-93]** Repo · workers, frames `20c · Crew · aerial — dark` (running) with
+- [x] **[Task-93]** Repo · workers, frames `20c · Crew · aerial — dark` (running) with
       `20i` (queued), `20f` (needs you) and `20e` (asleep). Rewrite `features/works`' board
       against `design/screens/repo-workers.json`: four role rooms, one face and one task chip per
       subagent, the road in on the left, the belt out on the right, the two chips `▤` and `🔔` as
@@ -1894,7 +1954,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       the four exports sits beside its state at 390 × 844 and the rooms, the belt and the two
       chips match region by region. *Dependencies:* L6, L7, Task-88, Task-89.
 
-- [ ] **[Task-94]** Design · session, frame `26 · Design · preview + chat — dark`. Rewrite
+- [x] **[Task-94]** Design · session, frame `26 · Design · preview + chat — dark`. Rewrite
       `features/sessions` against `design/screens/design-session.json`: the preview card that
       shows the repository's `design/` at a revision (tokens, routes, declared states, what is
       pending) and the one-target editor under it (D55). The stream, the markdown renderer and the
@@ -1905,7 +1965,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       findings; `[live]` the export sits beside the screen at 390 × 844 and the card's header,
       body and states block match the frame. *Dependencies:* L6, L7.
 
-- [ ] **[Task-95]** Dashboard, frame `05 · Dashboard — mobile dark`, empty state
+- [x] **[Task-95]** Dashboard, frame `05 · Dashboard — mobile dark`, empty state
       `12 · First run — after pairing`. Rewrite `features/dashboard` against
       `design/screens/dashboard.json`: the inbox order (`needs you`, running, unreviewed, today's
       spend, health), the card boxes and the type scale from the spec. The per-repository blocks
@@ -1917,7 +1977,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       sits beside the screen at 390 × 844 and `12` beside the first-run state. *Dependencies:*
       L6, L7, Task-88.
 
-- [ ] **[Task-96]** Settings cluster: `/settings` (`06 · Settings — mobile dark`),
+- [x] **[Task-96]** Settings cluster: `/settings` (`06 · Settings — mobile dark`),
       `/settings/devices` (`15 · Settings / Devices`) and `/settings/notifications` (`17 ·
       Settings / Notifications`). Rewrite the three pages in `features/settings` against their
       three specs, with the theme control Task-89 makes real (`settings.theme`, dark/light) and the
@@ -1931,7 +1991,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       three exports sit beside their screens at 390 × 844 and the three list shapes match.
       *Dependencies:* L6, L7, Task-89.
 
-- [ ] **[Task-97]** Credentials, frame `16 · Settings / Credentials`, sheets
+- [x] **[Task-97]** Credentials, frame `16 · Settings / Credentials`, sheets
       `18 · Connect a service` and `19 · Add credential`. Rewrite `features/credentials` against
       `design/screens/credentials.json`: the list, the write-only badges and the two sheets, with
       the frames' boxes and type. The write-only rule of D50 is visible in the drawing (the value
@@ -2026,6 +2086,38 @@ task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
 
 ---
 
+## Batch 25 — The measured spec sees through the bands
+
+Cut 2026-11-03 by L7, which turned the eleven routed frames into columns of bands: the projection
+reads a frame's **direct** children, so the first re-import after the file's read quota reopens
+would replace each screen's 40–60 element regions with the 3–5 band boxes the restructure just
+drew. It must land **before** that re-import (not before 2026-11-08T03:00Z), or the specs the
+screen tasks implement from lose every element position D58 promised them.
+
+**Hot-file holders in this batch:** none. Task-102 claims no hot file; `TODO.md` and `CHANGELOG.md`
+stay with the Orchestrator.
+
+- [x] **[Task-102]** The importer projects one region per element, not per band. Teach
+      `layoutOf` in `scripts/design/import.mjs` to look through a child frame that carries no fill,
+      no stroke and no corner radius — the shape L7 gave every band — and emit its children with
+      boxes absolute to the routed frame, recursing to the leaf. A child frame that paints is a
+      region of its own, exactly as today, so a card, a row or a chip keeps its box and the band
+      contributes nothing when it only groups. `layoutMode`, the padding, the gap and the type
+      scale are unchanged: the banded frame reports `vertical` and its elements keep their
+      coordinates, which is the whole point of the restructure. The rule is written where the
+      import is described, so the next reader does not re-derive it from the code.
+      *Paths:* `scripts/design/import.mjs`, `scripts/design/import.test.mjs`,
+      `scripts/design/layout.test.mjs`, `design/README.md` §4 (the projection rule only).
+      *Dependencies:* Task-85 (the `layout` shape, merged), L7 (the bands, done 2026-11-03).
+      *Acceptance:* `[unit]` a fixture page whose routed frame holds fill-less band frames projects
+      one region per leaf, each box absolute to the routed frame, and each leaf's name, fill,
+      radius and stroke unchanged; `[unit]` a child frame that paints stays a single region;
+      `[unit]` the L6 fixtures keep their region counts and boxes byte for byte; `[live]` the first
+      re-import after the file's quota reopens writes `layoutMode: vertical` on the eleven routed
+      frames and a region count within one of the L6 spec per screen.
+
+---
+
 ## Local / human (never picked by the driver)
 
 The driver only counts `- [ ] **[Task-NN]**`; these `L<n>` items are outside the queue by
@@ -2038,14 +2130,16 @@ open** — the two tasks that draw no page, Task-88 and Task-89, were freed by t
 2026-10-30 and run beside this track — and none of the three later items (L1, L3, L4) runs ahead
 of them.
 
-- [ ] **L2 — Visual prototype.** A Figma file with the routed screens and the tokens in
+- [x] **L2 — Visual prototype.** A Figma file with the routed screens and the tokens in
       `docs/app.md` §9; export PNGs and a screen-to-route map in `design/`. **Superseded by
       D51-D54 (2026-10-28):** the file holds 40 frames drawn against the retired chat model, so
       the frames are renamed, retired and re-cut against `Repo · backlog` and `Work`, and
       `design/README.md` carries the new map. The export step is the Batch 21 importer
       (`node scripts/design/import.mjs`) run by the operator at L6; the token document is authored
       in the repository by Task-84, never imported; neither ever becomes a driver task.
-      *Dependencies:* none.
+      *Dependencies:* none. **Done — 2026-11-03:** the three deliverables exist — the re-cut file
+      (2026-10-28), `design/tokens.json` (Task-84) and the eleven specs, eleven exports and route
+      map the L6 import committed — so nothing in this item is still owed.
 - [ ] **L5 — Design completeness.** Close what the prototype still lacks, in this order: 320 for
       the ten routed screens that were never squeezed (only `S3` exists, `design/README.md` §1),
       **interaction states** (hover, focus-visible, pressed, disabled) in the Design System —
@@ -2099,7 +2193,7 @@ of them.
       Pairing's `error`). The token came from `.env` into the command's environment only and is
       committed nowhere; `--check` was not run a second time, so the file's read budget keeps its
       single attempt.
-- [ ] **L7 — Restructure the prototype (D58).** Before the alignment batch, turn the file into the
+- [x] **L7 — Restructure the prototype (D58).** Before the alignment batch, turn the file into the
       shape the importer can read *semantically*: a **colour style per palette value** (the twelve
       of `design/tokens.json`), **autolayout** on the main column of the eleven routed frames with
       real padding and gap, and **components/variants** where a row, a chip or a header repeats.
@@ -2107,10 +2201,41 @@ of them.
       and do not convert a routed frame into a component until Task-85 is merged, because only
       from then is a `COMPONENT` child accepted. **No Variables**: the REST endpoint answers 403
       outside Enterprise, so styles are the source. *Dependencies:* L6 and Task-85.
-      *Acceptance:* `[unit]` a re-import reports `styles` > 0 and `layoutMode` present on the
-      eleven routed frames, with the eleven captions still resolving; `[live]`
-      `GET /v1/files/:key/styles` lists the palette names and every routed frame reports
-      `VERTICAL` or `HORIZONTAL`.
+      *Acceptance:* `[unit]` a re-import writes `layoutMode: vertical` on the eleven routed frames
+      with the eleven captions still resolving; `[live]` `GET /v1/files/:key/styles` lists the
+      twelve palette names and the plugin reports `VERTICAL` or `HORIZONTAL` on every routed
+      frame. **The `styles` count is not a field of the importer** — `scripts/design/import.mjs`
+      never calls `/styles` and `import.test.mjs` pins that it does not — so the old wording asked
+      for a measurement no code produces; the palette is checked through the REST `/styles`
+      resource instead, exactly as the `[live]` criterion says.
+      **Done — 2026-11-03, operator-ordered.** The twelve `PAINT` styles named after the token
+      keys (`color.surface.bg` … `color.danger.red`) are in the file and ten Design System
+      swatches are linked to them; no thirteenth style was invented, and the two border values
+      the drawing uses (`#1d2633` dark, `#e3e8ee` light) stay outside `design/tokens.json`, so
+      `coloursOutsideTokens` keeps reporting them. `01`, `06` and `07` already had a real body
+      column (`pair-body`, `st-body`, `ab-body`); the other eight — `02`, `22`, `20c`, `26`,
+      `05`, `15`, `16` and `17` — were flat, and each was restructured into contiguous bands
+      (`<prefix>-band-status`, `-header`, `-content`, and `-tabbar` or `-composer` where the frame
+      has one) whose boxes tile the frame, with every child re-parented into its band at its
+      original absolute position and the frame then set to `VERTICAL`, padding 0, gap 0. Absolute
+      geometry was diffed for all 311 re-parented children before and after: zero drift, so the
+      eleven exports are unchanged and the plugin reports `VERTICAL` on all eleven routed frames.
+      **What waits:** the re-import. The file's read quota is spent — `GET /v1/files/:key` answers
+      `429` with `retry-after: 392270` (not before 2026-11-08T03:00Z) — so `design/routes.json`,
+      `design/screens/*.json` and `design/exports/*.png` still hold the L6 measurement, which is
+      geometrically identical and only groups regions at frame level; the first import after the
+      quota reopens must write `layoutMode: vertical` and the band regions, and `--check` runs
+      with it. **It must run after Task-102:** `layoutOf` measures a frame's direct children, so
+      without that projection change the first re-import would collapse each screen's 40–60
+      element regions into the 3–5 band boxes L7 just drew, and D58's measured geometry would
+      reach the screen tasks with no element position at all. `[live]` is unmeasured on this runner (the REST `/styles` read is the same 429):
+      the plugin's own `style_list` and `node_info` stand in, and the re-import is the human read.
+      **Deviation, recorded:** no components or variants were built. Rows, chips and headers do
+      repeat, but promoting one row to a master and its siblings to instances means rebuilding
+      those rows with per-instance text overrides, and the plugin's `instance_set_overrides` only
+      copies between instances that already exist; that is a later design pass and it blocks no
+      screen task, because the exported PNG and the banded column carry the layout the screens
+      implement.
 - [ ] **L1 — Release signing.** Keep the Android keystore and the Apple certificate off the
       repository and off Actions; Task-29 builds unsigned artifacts and checksums; the operator
       signs and distributes. *Dependencies:* Q1 (distribution) and Task-29.

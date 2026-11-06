@@ -20,6 +20,31 @@ const REPO: Repo = {
   protectedPaths: ['.github/**'],
   enabled: true,
   createdAt: '2026-10-24T18:03:11Z',
+  counts: { pending: 2, running: 1, merged: 3 },
+};
+
+const QUIET: Repo = {
+  id: 'repo_01JABCDEFGHJKMNPQRSW',
+  slug: 'dani/codebox',
+  defaultBranch: 'trunk',
+  gate: 'npm test',
+  policy: 'manual',
+  protectedPaths: [],
+  enabled: false,
+  createdAt: '2026-10-25T09:12:00Z',
+  counts: { pending: 0, running: 0, merged: 5 },
+};
+
+/** A fixture written before D59: it carries no counts and must not pretend to. */
+const LEGACY: Repo = {
+  id: 'repo_01JABCDEFGHJKMNPQRSX',
+  slug: 'legacy/panel',
+  defaultBranch: 'main',
+  gate: 'npm test',
+  policy: 'auto',
+  protectedPaths: [],
+  enabled: true,
+  createdAt: '2026-10-20T10:00:00Z',
 };
 
 const VERIFY: RepoVerify = {
@@ -41,9 +66,17 @@ const USED_KEYS: readonly string[] = [
   'common.loading',
   'common.error',
   'repos.title',
-  'repos.section.list',
-  'repos.section.add',
   'repos.empty',
+  'repos.empty.filter',
+  'repos.search.placeholder',
+  'repos.count',
+  'repos.counts.pending',
+  'repos.counts.running',
+  'repos.counts.merged',
+  'repos.row.attention',
+  'repos.note',
+  'repos.action.new',
+  'repos.action.add',
   'repos.action.retry',
   'repos.action.create',
   'repos.action.verify',
@@ -54,8 +87,6 @@ const USED_KEYS: readonly string[] = [
   'repos.error.slug',
   'repos.error.defaultBranch',
   'repos.error.gate',
-  'repos.policy.auto',
-  'repos.policy.manual',
   'repos.verify.title',
   'repos.verify.ok',
   'repos.verify.ko',
@@ -88,13 +119,18 @@ function hook(element: HTMLElement, id: string): HTMLElement | null {
   return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
 }
 
+function text(element: HTMLElement | null): string {
+  return (element?.textContent ?? '').replace(/\s+/g, ' ').trim();
+}
+
 interface Mounted {
   readonly fixture: ComponentFixture<ReposPage>;
   readonly element: HTMLElement;
   readonly http: HttpTestingController;
+  readonly page: ReposPage;
 }
 
-async function mount(repos: readonly Repo[] = []): Promise<Mounted> {
+async function create(): Promise<Mounted> {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -107,12 +143,36 @@ async function mount(repos: readonly Repo[] = []): Promise<Mounted> {
   const fixture = TestBed.createComponent(ReposPage);
   await fixture.whenStable();
   const http = TestBed.inject(HttpTestingController);
-  http.expectOne(LIST_URL).flush({ data: [...repos], nextCursor: null });
-  await fixture.whenStable();
-  return { fixture, element: fixture.nativeElement as HTMLElement, http };
+  return {
+    fixture,
+    element: fixture.nativeElement as HTMLElement,
+    http,
+    page: fixture.componentInstance,
+  };
 }
 
-function typeInto(fixture: ComponentFixture<ReposPage>, element: HTMLElement, id: string, value: string): Promise<void> {
+async function mount(repos: readonly Repo[] = []): Promise<Mounted> {
+  const mounted = await create();
+  mounted.http.expectOne(LIST_URL).flush({ data: [...repos], nextCursor: null });
+  await mounted.fixture.whenStable();
+  return mounted;
+}
+
+async function mountFailure(): Promise<Mounted> {
+  const mounted = await create();
+  mounted.http
+    .expectOne(LIST_URL)
+    .flush(null, { status: 500, statusText: 'Internal Server Error' });
+  await mounted.fixture.whenStable();
+  return mounted;
+}
+
+function typeInto(
+  fixture: ComponentFixture<ReposPage>,
+  element: HTMLElement,
+  id: string,
+  value: string,
+): Promise<void> {
   const field = hook(element, id);
   if (!(field instanceof HTMLInputElement) && !(field instanceof HTMLTextAreaElement)) {
     throw new Error(`field ${id} is missing`);
@@ -120,6 +180,11 @@ function typeInto(fixture: ComponentFixture<ReposPage>, element: HTMLElement, id
   field.value = value;
   field.dispatchEvent(new Event('input'));
   return fixture.whenStable();
+}
+
+async function openForm(fixture: ComponentFixture<ReposPage>, element: HTMLElement): Promise<void> {
+  hook(element, 'repos-add')?.click();
+  await fixture.whenStable();
 }
 
 describe('ReposPage', () => {
@@ -142,11 +207,116 @@ describe('ReposPage', () => {
 
     expect(hook(element, 'repos-empty')).not.toBeNull();
     expect(hook(element, 'repo-row')).toBeNull();
+    expect(hook(element, 'repos-loading')).toBeNull();
+  });
+
+  it('renders a failed list with its code and retries it', async () => {
+    const { fixture, element, http } = await mountFailure();
+
+    const failure = hook(element, 'repos-error');
+    expect(failure?.getAttribute('data-code')).toBe('internal');
+    expect(hook(element, 'repos-loading')).toBeNull();
+    expect(hook(element, 'repo-row')).toBeNull();
+
+    hook(element, 'repos-retry')?.click();
+    await fixture.whenStable();
+
+    http.expectOne(LIST_URL).flush({ data: [REPO], nextCursor: null });
+    await fixture.whenStable();
+
+    expect(hook(element, 'repos-error')).toBeNull();
+    expect(hook(element, 'repo-row')?.getAttribute('data-repo-id')).toBe(REPO.id);
+  });
+
+  it('draws the three counts and one attention dot on the row that needs a person', async () => {
+    const { element, page } = await mount([REPO, QUIET]);
+
+    const rows = element.querySelectorAll<HTMLElement>('[data-testid="repo-row"]');
+    expect(rows).toHaveLength(2);
+
+    const counts = rows[0]?.querySelector<HTMLElement>('[data-testid="repo-row-counts"]') ?? null;
+    expect(counts?.getAttribute('data-pending')).toBe('2');
+    expect(counts?.getAttribute('data-running')).toBe('1');
+    expect(counts?.getAttribute('data-merged')).toBe('3');
+    expect(text(counts)).toBe(
+      `2 ${page.t('repos.counts.pending')} · 1 ${page.t('repos.counts.running')} · 3 ${page.t('repos.counts.merged')}`,
+    );
+
+    const quiet = rows[1]?.querySelector<HTMLElement>('[data-testid="repo-row-counts"]') ?? null;
+    expect(quiet?.getAttribute('data-pending')).toBe('0');
+
+    const state = rows[0]?.querySelector<HTMLElement>('[data-testid="repo-row-state"]') ?? null;
+    expect(state?.getAttribute('data-state')).toBe('enabled');
+    expect(text(state)).toBe(REPO.defaultBranch);
+    expect(
+      rows[1]?.querySelector<HTMLElement>('[data-testid="repo-row-state"]')?.getAttribute('data-state'),
+    ).toBe('disabled');
+
+    const attention = element.querySelectorAll<HTMLElement>('[data-testid="repo-row-attention"]');
+    expect(attention).toHaveLength(1);
+    expect(attention[0]?.closest('[data-testid="repo-row"]')?.getAttribute('data-repo-id')).toBe(
+      REPO.id,
+    );
+  });
+
+  it('leaves a row written before the counts without a counts line or a dot', async () => {
+    const { element } = await mount([LEGACY]);
+
+    expect(hook(element, 'repo-row')?.getAttribute('data-repo-id')).toBe(LEGACY.id);
+    expect(hook(element, 'repo-row-counts')).toBeNull();
+    expect(hook(element, 'repo-row-attention')).toBeNull();
+    expect(hook(element, 'repos-count')?.textContent).toContain('1');
+  });
+
+  it('filters the rows by slug without a second request', async () => {
+    const { fixture, element, http, page } = await mount([REPO, QUIET]);
+
+    expect(element.querySelectorAll('[data-testid="repo-row"]')).toHaveLength(2);
+    expect(text(hook(element, 'repos-count'))).toBe(`${page.t('repos.count')} · 2`);
+
+    await typeInto(fixture, element, 'repos-search', 'WIDGET');
+
+    const filtered = element.querySelectorAll<HTMLElement>('[data-testid="repo-row"]');
+    expect(filtered).toHaveLength(1);
+    expect(filtered[0]?.getAttribute('data-repo-id')).toBe(REPO.id);
+    expect(text(hook(element, 'repos-count'))).toBe(`${page.t('repos.count')} · 1`);
+
+    await typeInto(fixture, element, 'repos-search', 'nothing-matches');
+    expect(element.querySelectorAll('[data-testid="repo-row"]')).toHaveLength(0);
+    expect(hook(element, 'repos-empty')).toBeNull();
+    expect(element.textContent).toContain(page.t('repos.empty.filter'));
+
+    await typeInto(fixture, element, 'repos-search', '');
+    expect(element.querySelectorAll('[data-testid="repo-row"]')).toHaveLength(2);
+    http.expectNone(LIST_URL);
+  });
+
+  it('opens and closes the create form from the header and from the add row', async () => {
+    const { fixture, element } = await mount([]);
+
+    const form = () => hook(element, 'repos-form');
+    expect(form()?.getAttribute('data-open')).toBe('false');
+    expect(hook(element, 'repo-slug')).not.toBeNull();
+    expect(hook(element, 'repos-action-new')?.getAttribute('aria-expanded')).toBe('false');
+
+    hook(element, 'repos-action-new')?.click();
+    await fixture.whenStable();
+    expect(form()?.getAttribute('data-open')).toBe('true');
+    expect(hook(element, 'repos-action-new')?.getAttribute('aria-expanded')).toBe('true');
+
+    hook(element, 'repos-action-new')?.click();
+    await fixture.whenStable();
+    expect(form()?.getAttribute('data-open')).toBe('false');
+
+    hook(element, 'repos-add')?.click();
+    await fixture.whenStable();
+    expect(form()?.getAttribute('data-open')).toBe('true');
   });
 
   it('refuses to submit a slug without owner/name and sends nothing', async () => {
     const { fixture, element, http } = await mount();
 
+    await openForm(fixture, element);
     await typeInto(fixture, element, 'repo-slug', 'widgets');
     hook(element, 'repo-submit')?.click();
     await fixture.whenStable();
@@ -158,6 +328,7 @@ describe('ReposPage', () => {
   it('creates the repository and shows the verification without a reload', async () => {
     const { fixture, element, http } = await mount();
 
+    await openForm(fixture, element);
     await typeInto(fixture, element, 'repo-slug', 'acme/widgets');
     await typeInto(fixture, element, 'repo-protected-paths', '.github/**\nops/**');
     hook(element, 'repo-submit')?.click();

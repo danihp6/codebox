@@ -42,43 +42,208 @@ export function declaredStates(screen: DesignScreenView): readonly DeclaredState
   changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
-      .cb-design-preview {
+      .cb-pv {
         display: flex;
         flex-direction: column;
-        gap: calc(var(--cb-space) * 2);
-        margin-block-end: calc(var(--cb-space) * 4);
-        padding: calc(var(--cb-space) * 3);
+        gap: 8px;
+        margin-block-end: 16px;
+        padding: 12px 16px;
         border: 1px solid var(--cb-surface);
-        border-radius: var(--cb-radius);
+        border-radius: 14px;
         overflow-wrap: anywhere;
       }
-      .cb-design-preview h2 {
-        margin: 0;
-        font-size: 1rem;
+      .cb-pv-head {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+        min-block-size: 18px;
       }
-      .cb-design-preview ul {
-        margin: 0;
-        padding-inline-start: calc(var(--cb-space) * 4);
+      .cb-pv-eyebrow {
+        color: var(--cb-muted);
+        font-size: 9px;
+        line-height: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
       }
-      .cb-design-preview .cb-muted {
+      .cb-pv-live {
+        display: inline-flex;
+        flex: 0 0 auto;
+        align-items: center;
+        justify-content: center;
+        inline-size: 58px;
+        block-size: 18px;
+        border: 1px solid var(--cb-surface);
+        border-radius: 9px;
+        color: var(--cb-muted);
+        font-family: var(--cb-font-mono);
+        font-size: 8px;
+        line-height: 10px;
+        font-weight: 500;
+      }
+      .cb-pv-rev {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .cb-pv-body {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-block-size: 210px;
+      }
+      .cb-pv-count,
+      .cb-pv-states-h {
+        margin: 8px 0 0;
+        color: var(--cb-muted);
+        font-size: 9px;
+        line-height: 11px;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .cb-pv-list {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .cb-pv-row {
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+        min-inline-size: 0;
+        font-size: 9px;
+        line-height: 11px;
+      }
+      .cb-pv-token-value {
+        display: block;
+        min-inline-size: 0;
+        overflow-x: auto;
+        white-space: nowrap;
+      }
+      .cb-pv-screen {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-block-start: 4px;
+      }
+      .cb-pv-screen-title {
+        color: var(--cb-text);
+        font-size: 12px;
+        line-height: 15px;
+        font-weight: 600;
+      }
+      .cb-pv-screen-route {
+        color: var(--cb-muted);
+        font-family: var(--cb-font-mono);
+        font-size: 9px;
+        line-height: 11px;
+      }
+      .cb-pv-states {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .cb-pv-chip {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+        min-inline-size: 74px;
+        min-block-size: 20px;
+        padding-inline: 10px;
+        border: 1px solid var(--cb-surface);
+        border-radius: 10px;
+        background: var(--cb-surface);
+        color: var(--cb-muted);
+        font-size: 9px;
+        line-height: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+      }
+      .cb-pv-chip[data-declared='true'] {
+        color: var(--cb-warn);
+      }
+      .cb-pv-chip-note {
+        font-size: 8px;
+        line-height: 10px;
+      }
+      .cb-pv-checks {
+        margin: 8px 0 0;
+        color: var(--cb-accent);
+        font-size: 9px;
+        line-height: 11px;
+      }
+      .cb-pv-note {
+        margin: 0;
+        color: var(--cb-muted);
+        font-size: 10px;
+        line-height: 12px;
+      }
+      .cb-pv-pending {
+        margin: 0;
+        color: var(--cb-warn);
+        font-size: 10px;
+        line-height: 12px;
+      }
+      .cb-pv-findings {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .cb-pv-finding {
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+        font-size: 9px;
+        line-height: 11px;
+      }
+      .cb-pv-mono {
+        font-family: var(--cb-font-mono);
+      }
+      .cb-pv-muted {
         color: var(--cb-muted);
       }
     `,
   ],
   template: `
     <section
-      class="cb-design-preview"
+      class="cb-pv"
       data-testid="design-preview"
       [attr.data-revision]="preview()?.revision ?? ''"
       [attr.data-present]="present()"
+      [attr.aria-label]="t('session.preview.title')"
     >
+      <header class="cb-pv-head">
+        <span class="cb-pv-eyebrow">{{ t('session.preview.eyebrow') }}</span>
+        @if (preview(); as loaded) {
+          <span
+            class="cb-pv-live"
+            data-testid="design-preview-live"
+            [attr.data-revision]="loaded.revision"
+            [attr.title]="t('session.preview.revision') + ' ' + loaded.revision"
+          >
+            <span
+              class="cb-pv-rev"
+              data-testid="design-preview-revision"
+              [attr.data-sha]="loaded.revision"
+              >{{ loaded.revision.slice(0, 7) }}</span
+            >
+          </span>
+        }
+      </header>
+
       @if (loading()) {
-        <div data-testid="design-preview-loading">{{ t('session.preview.loading') }}</div>
+        <p class="cb-pv-note" data-testid="design-preview-loading">
+          {{ t('session.preview.loading') }}
+        </p>
       }
 
       @if (error(); as failure) {
         <div data-testid="design-preview-error" [attr.data-code]="failure.code">
-          <p>{{ t('session.preview.error') }}</p>
+          <p class="cb-pv-note">{{ t('session.preview.error') }}</p>
           <button type="button" data-testid="design-preview-retry" (click)="reload()">
             {{ t('session.preview.retry') }}
           </button>
@@ -86,100 +251,110 @@ export function declaredStates(screen: DesignScreenView): readonly DeclaredState
       }
 
       @if (preview(); as loaded) {
-        <h2>{{ t('session.preview.title') }}</h2>
-        <p data-testid="design-preview-revision" [attr.data-sha]="loaded.revision">
-          <span>{{ t('session.preview.revision') }}</span>
-          <span class="cb-mono">{{ loaded.revision }}</span>
-        </p>
-
         @if (pending()) {
-          <p data-testid="design-preview-pending">{{ t('session.preview.pending') }}</p>
+          <p class="cb-pv-pending" data-testid="design-preview-pending">
+            {{ t('session.preview.pending') }}
+          </p>
         }
 
         @if (!loaded.present) {
-          <p data-testid="design-preview-unavailable">{{ t('session.preview.unavailable') }}</p>
+          <p class="cb-pv-note" data-testid="design-preview-unavailable">
+            {{ t('session.preview.unavailable') }}
+          </p>
         } @else {
-          <p data-testid="design-preview-count" data-kind="tokens">
-            {{ t('session.preview.tokens') }}: {{ loaded.tokens.length }}
-          </p>
-          <ul>
-            @for (token of loaded.tokens; track token.name) {
-              <li data-testid="design-preview-token" [attr.data-name]="token.name">
-                <span class="cb-mono">{{ token.name }}</span>
-                <span class="cb-muted">{{ token.type }}</span>
-                <span class="cb-mono">{{ token.value }}</span>
-              </li>
-            }
-          </ul>
+          <div class="cb-pv-body" data-testid="design-preview-body">
+            <p class="cb-pv-count" data-testid="design-preview-count" data-kind="tokens">
+              {{ t('session.preview.tokens') }}: {{ loaded.tokens.length }}
+            </p>
+            <ul class="cb-pv-list">
+              @for (token of loaded.tokens; track token.name) {
+                <li class="cb-pv-row" data-testid="design-preview-token" [attr.data-name]="token.name">
+                  <span class="cb-pv-mono">{{ token.name }}</span>
+                  <span class="cb-pv-muted">{{ token.type }}</span>
+                  <span class="cb-pv-mono cb-pv-token-value">{{ token.value }}</span>
+                </li>
+              }
+            </ul>
 
-          <p data-testid="design-preview-count" data-kind="routes">
-            {{ t('session.preview.routes') }}: {{ loaded.routes.length }}
-          </p>
-          <ul>
-            @for (route of loaded.routes; track route.path) {
-              <li
-                data-testid="design-preview-route"
-                [attr.data-path]="route.path"
-                [attr.data-component]="route.component"
-              >
-                <span class="cb-mono">{{ route.path }}</span>
-                <span>{{ route.screen }}</span>
-                @if (route.component === '') {
-                  <span class="cb-muted">{{ t('session.preview.undeclared') }}</span>
-                } @else {
-                  <span class="cb-mono">{{ route.component }}</span>
-                }
-              </li>
-            }
-          </ul>
-
-          <p data-testid="design-preview-count" data-kind="screens">
-            {{ t('session.preview.screens') }}: {{ loaded.screens.length }}
-          </p>
-          <ul>
-            @for (screen of loaded.screens; track screen.screen) {
-              <li
-                data-testid="design-preview-screen"
-                [attr.data-screen]="screen.screen"
-                [attr.data-route]="screen.route"
-              >
-                <span>{{ screen.screen }}</span>
-                <span class="cb-mono cb-muted">{{ screen.route }}</span>
-                <ul>
-                  @for (state of statesOf(screen); track state.kind) {
-                    <li
-                      data-testid="design-preview-state"
-                      [attr.data-state]="state.kind"
-                      [attr.data-declared]="state.caption === null ? 'false' : 'true'"
-                    >
-                      <span class="cb-mono">{{ state.kind }}</span>
-                      @if (state.caption === null) {
-                        <span class="cb-muted">{{ t('session.preview.undeclared') }}</span>
-                      } @else {
-                        <span>{{ state.caption }}</span>
-                      }
-                    </li>
+            <p class="cb-pv-count" data-testid="design-preview-count" data-kind="routes">
+              {{ t('session.preview.routes') }}: {{ loaded.routes.length }}
+            </p>
+            <ul class="cb-pv-list">
+              @for (route of loaded.routes; track route.path) {
+                <li
+                  class="cb-pv-row"
+                  data-testid="design-preview-route"
+                  [attr.data-path]="route.path"
+                  [attr.data-component]="route.component"
+                >
+                  <span class="cb-pv-mono">{{ route.path }}</span>
+                  <span>{{ route.screen }}</span>
+                  @if (route.component === '') {
+                    <span class="cb-pv-muted">{{ t('session.preview.undeclared') }}</span>
+                  } @else {
+                    <span class="cb-pv-mono">{{ route.component }}</span>
                   }
-                </ul>
-              </li>
-            }
-          </ul>
+                </li>
+              }
+            </ul>
+
+            <p class="cb-pv-count" data-testid="design-preview-count" data-kind="screens">
+              {{ t('session.preview.screens') }}: {{ loaded.screens.length }}
+            </p>
+          </div>
+
+          <p class="cb-pv-states-h">{{ t('session.preview.states') }}</p>
+
+          @for (screen of loaded.screens; track screen.screen) {
+            <div
+              class="cb-pv-screen"
+              data-testid="design-preview-screen"
+              [attr.data-screen]="screen.screen"
+              [attr.data-route]="screen.route"
+            >
+              <span class="cb-pv-screen-title">{{ screen.screen }}</span>
+              <span class="cb-pv-screen-route">{{ screen.route }}</span>
+              <div
+                class="cb-pv-states"
+                data-testid="design-preview-states"
+                [attr.data-screen]="screen.screen"
+              >
+                @for (state of statesOf(screen); track state.kind) {
+                  <span
+                    class="cb-pv-chip"
+                    data-testid="design-preview-state"
+                    [attr.data-state]="state.kind"
+                    [attr.data-declared]="state.caption === null ? 'false' : 'true'"
+                    [attr.title]="state.caption ?? t('session.preview.undeclared')"
+                  >
+                    <span>{{ state.kind }}</span>
+                    @if (state.caption === null) {
+                      <span class="cb-pv-chip-note">{{ t('session.preview.undeclared') }}</span>
+                    }
+                  </span>
+                }
+              </div>
+            </div>
+          }
 
           @if (loaded.findings.length === 0) {
-            <p data-testid="design-preview-clean">{{ t('session.preview.clean') }}</p>
+            <p class="cb-pv-checks" data-testid="design-preview-clean">
+              {{ t('session.preview.clean') }}
+            </p>
           } @else {
-            <ul>
+            <ul class="cb-pv-findings">
               @for (
                 finding of loaded.findings;
                 track finding.file + ':' + finding.line + ':' + finding.rule
               ) {
                 <li
+                  class="cb-pv-finding"
                   data-testid="design-preview-finding"
                   [attr.data-rule]="finding.rule"
                   [attr.data-file]="finding.file"
                   [attr.data-line]="finding.line"
                 >
-                  <span class="cb-mono">{{ finding.file }}:{{ finding.line }}</span>
+                  <span class="cb-pv-mono">{{ finding.file }}:{{ finding.line }}</span>
                   <span>{{ finding.message }}</span>
                 </li>
               }
