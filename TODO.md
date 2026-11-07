@@ -62,6 +62,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 23 | Screen alignment against the prototype | 88–99 | 2, then 4, then 4, then 2 |
 | 24 | The pipeline's documented guards | 101 | 1 |
 | 25 | The measured spec sees through the bands | 102 | 1 |
+| 26 | Wave 3's two debts: the instance's name and the shell's bar | 103–104 | 2 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -540,6 +541,36 @@ so the row is an honest `—` and the additive field is a follow-up contract tas
 the shell's:** the `About` and `Credentials` exports draw no bottom tab bar, but
 `apps/app/src/app/app.component.ts` shows it on every route except `/pair`, so it overlays the
 About footnotes; it is outside this task's paths and is tracked as issue #125.
+
+**Cut — cycle 2026-11-07, after Batch 23 wave 3 (two of four slots used).** No task branch was
+alive (`git ls-remote origin 'refs/heads/task-*'` prints nothing) and `main` was `d6bcf5a`. The
+driver queue is dry: **Task-99** waits on L5 — the sheet's four frames are drawn on
+`l5-schedule-sheet` (merged in PR #122), but L5 is not ticked before the file's next re-import
+(not before 2026-11-08T03:00Z) and the operator's present-mode pass, and `design/exports/` holds
+no schedule-sheet export to compare against — **Task-32** waits on the blocked Task-31 (#105),
+and L1, L3, L4 and L5 are operator items the driver never picks. Wave 3 nonetheless left two
+**measured** debts with no owner, and both are legal now because neither draws a screen and
+neither reads a frame that does not exist: **Task-103** is Task-98's Deviation 1 (the frame draws
+`Instance` with a value and `/v1/version` does not carry one) and **Task-104** is issue #125 (the
+exports draw the bar on three screens and the code draws it on eleven). Their paths are disjoint
+— the contract, the daemon version route and `features/about` against the app shell,
+`styles.css` and `docs/app.md` §4 — and neither needs a file the other produces. They are cut
+together as one batch: neither is a prerequisite of the other, and these two slots are the only
+legal ones. **Hot-file holders in this cut:** Task-103 holds
+`packages/contracts/src/index.ts` and leaves it **byte-identical** — `Version` is
+`z.infer<typeof versionSchema>` and the schema is already re-exported, so the field is added in
+`resources.ts` and no other task may claim that file; **Task-104 claims no hot file**, because
+the bar's rule is derived from `SHELL_TABS` in a new `shell/shell-tabs.ts` and
+`apps/app/src/app/app.routes.ts` therefore stays free for Task-99. `TODO.md` and `CHANGELOG.md`
+stay with the Orchestrator. **`apps/app/README.md` has one writer this time:** Task-104, for the
+two `shell/**` lines its new files need; Task-103 adds, renames and deletes no app file, and
+`readme.spec.ts` only forces a README edit on one of those. The two empty slots have no legal
+candidate in any later batch: Task-99 is blocked on L5, Task-32 on the blocked Task-31, and
+L1/L3/L4/L5 are operator items. **Deviations from the items' `*Paths:*` lines, recorded:**
+Task-103 also claims `apps/daemon/src/start.test.ts` (the headless listener the `[live]`
+criterion reads) and one summary line in `packages/contracts/src/openapi.ts` (it enumerates the
+payload and would otherwise be false); Task-104 claims `apps/app/src/app/shell/tabs.page.ts` and
+its spec for one `data-testid` on the bar, the stable hook both width measurements read.
 
 ### Screens awaiting the prototype
 
@@ -2137,6 +2168,70 @@ stay with the Orchestrator.
       `[unit]` the L6 fixtures keep their region counts and boxes byte for byte; `[live]` the first
       re-import after the file's quota reopens writes `layoutMode: vertical` on the eleven routed
       frames and a region count within one of the L6 spec per screen.
+
+---
+
+## Batch 26 — Wave 3's two debts
+
+Task-98 measured both and neither had an owner: the identity the frame draws and the contract
+does not carry, and the tab bar the exports draw on three screens and the code draws on eleven.
+Neither is a screen — one is a contract field with its consumer, the other is the shell — so
+they do not wait for L5 and neither needs `design/exports/`. They travel together because they
+are the whole of the legal work: the queue behind them is blocked or is an `L<n>`.
+
+**Hot-file holders in this batch:** Task-103 holds `packages/contracts/src/index.ts` (held, not
+edited: the field lands in `resources.ts` and `Version` is inferred). Task-104 claims none:
+`apps/app/src/app/app.routes.ts` stays free for Task-99. `TODO.md` and `CHANGELOG.md` are the
+Orchestrator's.
+
+- [ ] **[Task-103]** The instance's name reaches `/v1/version` and the About row. `07 · About —
+      mobile dark` draws `Instance` with a value; the contract carries no such key, so
+      `features/about` renders an honest `—` (Task-98, Deviation 1). `versionSchema` gains
+      `instance: z.string().optional()` — additive, so no `/v2` (D16), and optional so a
+      payload or fixture written before the field keeps parsing, exactly as `repoSchema.counts`
+      is; the daemon always sets it from `CB_INSTANCE_NAME`, the value the log base already
+      carries (`apps/daemon/src/main.ts:88`) and the one `docs/providers.md` §2 already calls
+      "shown in the app". The About row keeps its frozen `data-identity` hook and carries the
+      name, or `unavailable` when the field is absent. `/v1/health` does not move: the frame
+      draws no uptime, so uptime stays out.
+      *Paths:* `packages/contracts/src/resources.ts` + `resources.test.ts`,
+      `packages/contracts/src/openapi.ts` (the `getVersion` summary only),
+      `apps/daemon/src/app.ts` + `app.test.ts`, `apps/daemon/src/start.test.ts`,
+      `apps/app/src/app/features/about/about.page.ts` + `about.page.spec.ts`,
+      `docs/api.md` §5.1.
+      *Acceptance:* `[unit]` the schema parses a payload with `instance` and one without it and
+      still rejects an unknown key; `[unit]` `GET /v1/version` answers
+      `instance: <CB_INSTANCE_NAME>` and the OpenAPI document keeps its 63 paths; `[unit]` the
+      About row shows the name with `data-identity` equal to it, and `—` with
+      `data-identity="unavailable"` only for a payload without the field; `[live]` a daemon
+      started with `CB_INSTANCE_NAME=cb-test-103` on an ephemeral port answers `/v1/version`
+      with `"instance":"cb-test-103"` and `/v1/health` with 200.
+      *Dependencies:* none — Task-98 and L6 are merged and the frame already places the row.
+- [ ] **[Task-104]** The shell's tab bar only where the frame draws it (issue #125). The exports
+      draw a three-tab bar at `y 780, h 64` on Dashboard, Repo list and Settings; About,
+      Credentials, Devices, Notifications and Design session draw none; a repository draws its
+      **own** two-tab strip instead. `app.component.ts` shows the bar on every route but `/pair`,
+      so at 390 × 844 it covers About's footnotes (measured in Task-98). The rule becomes the
+      route table's own: a pure `showsShellTabs(url)` reads `SHELL_TABS` and answers true only
+      for the three top-level destinations; the shell renders `<app-tabs>` on those alone, marks
+      `ion-app` with `data-shell-tabs`, and reserves the bar's 64 px so no page can paint behind
+      it. `apps/app/src/app/app.routes.ts` does not move — the hot file stays free for Task-99.
+      *Paths:* `apps/app/src/app/shell/{shell-tabs.ts,shell-tabs.spec.ts,tabs.page.ts,
+      tabs.page.spec.ts}`, `apps/app/src/app/app.component.ts` + `app.component.spec.ts`,
+      `apps/app/src/styles.css`, `apps/app/README.md`, `docs/app.md` §4.
+      *Acceptance:* `[unit]` `showsShellTabs` is true for `/dashboard`, `/repos` and `/settings`
+      (with a trailing slash, a query and a fragment) and false for `/`, `/pair`, `/about`, the
+      four `/settings/*` details, the four `/repos/*` destinations, `/works/:id`,
+      `/sessions/:id` and an unknown path, and every `SHELL_TABS` path is true by derivation;
+      `[unit]` the shell renders `<app-tabs>`, `data-shell-tabs="shown"` and three `tab-*`
+      buttons on a tab root and neither on `/about`; `[unit]` `styles.css` declares
+      `--cb-shell-tab-bar-height: 64px` and insets the outlet by it when shown; `[unit]` the
+      design gate reports zero findings; `[live]` at 390 × 844 on the three the bar's box is
+      `0, 780, 390 × 64` and the outlet's bottom is 780, and on the eight the attribute reads
+      `hidden` with no `ion-tab-bar` in the DOM; at 320 × 568 the bar is `0, 504, 320 × 64` and
+      the page does not scroll horizontally.
+      *Dependencies:* none — L6/L7 are merged and the five exports that carry or omit the bar are
+      in the tree.
 
 ---
 
