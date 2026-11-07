@@ -93,9 +93,13 @@ is a bug in one of the two.
 | `/settings/notifications` | Notifications | Five toggleable events plus the non-toggleable credential alert, and quiet hours. |
 | `/about` | About | Version, commit, server health, licences. |
 
-Bottom tabs: **Dashboard · Repos · Settings** (D47). A repository is a destination, not a
-filter; Settings owns the cross-repository lists. Detail screens push onto the stack; deep links
-(`codebox://works/<id>`, `https://cb.example.com/works/<id>`) open the same route.
+Bottom tabs: **Dashboard · Repos · Settings** (D47). The shell renders the bar **only on those
+three routes** — the exports draw it at `y 780, h 64` there — and on no pushed destination:
+`/about`, the three `/settings/*` details, every `/repos/:id…` screen (which draws its own two
+tabs), `/works/:id` and `/sessions/:id` carry the screen's own back control instead. A
+repository is a destination, not a filter; Settings owns the cross-repository lists. Detail
+screens push onto the stack; deep links (`codebox://works/<id>`,
+`https://cb.example.com/works/<id>`) open the same route.
 
 A repository carries exactly four tabs — **Backlog · Workers · Schedule · Design** — and the tab
 strip is one component, so a tab can never exist on one screen and not another.

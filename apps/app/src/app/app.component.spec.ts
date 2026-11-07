@@ -1,6 +1,7 @@
-import { signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
+import { provideRouter, Router } from '@angular/router';
+import type { Routes } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { AppComponent } from './app.component';
@@ -50,10 +51,21 @@ function stubI18n(): I18nService {
   } as unknown as I18nService;
 }
 
-async function mount(secure: SecureStore) {
+@Component({ standalone: true, template: '<p>dashboard</p>' })
+class DashboardStub {}
+
+@Component({ standalone: true, template: '<p>about</p>' })
+class AboutStub {}
+
+const TWO_ROUTES: Routes = [
+  { path: 'dashboard', component: DashboardStub },
+  { path: 'about', component: AboutStub },
+];
+
+async function mount(secure: SecureStore, routes: Routes = []) {
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([]),
+      provideRouter(routes),
       provideIonicAngular(),
       { provide: SECURE_STORE, useValue: secure },
       { provide: AuthStore, useValue: stubAuth() },
@@ -75,6 +87,31 @@ function themeAttribute(): string | null {
 describe('AppComponent', () => {
   beforeEach(() => {
     document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('renders the bar on a tab root and not on a pushed route', async () => {
+    const fixture = await mount(memoryStore(), TWO_ROUTES);
+    const element = fixture.nativeElement as HTMLElement;
+    const router = TestBed.inject(Router);
+    const app = element.querySelector('ion-app');
+
+    await router.navigateByUrl('/dashboard');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(app?.getAttribute('data-shell-tabs')).toBe('shown');
+    const tabs = element.querySelector('app-tabs');
+    expect(tabs).not.toBeNull();
+    expect(tabs?.querySelectorAll('[data-testid^="tab-"]')).toHaveLength(3);
+
+    await router.navigateByUrl('/about');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    expect(app?.getAttribute('data-shell-tabs')).toBe('hidden');
+    expect(element.querySelector('app-tabs')).toBeNull();
   });
 
   it('renders the offline banner inside the shell while the connection is stale', async () => {
