@@ -20,6 +20,7 @@ const VERSION: Version = {
   commit: 'deadbee',
   builtAt: '2026-01-02T03:04:05Z',
   node: 'v24.9.1',
+  instance: 'cb-vm-01',
 };
 
 const HEALTH: Health = {
@@ -179,10 +180,12 @@ describe('AboutPage', () => {
     const version = hookFor(element, 'about-version', 'data-version', '9.9.9-test');
     const commit = hookFor(element, 'about-commit', 'data-commit', 'deadbee');
     const builtAt = hookFor(element, 'about-built-at', 'data-built-at', '2026-01-02T03:04:05Z');
+    const instance = hookFor(element, 'about-instance', 'data-identity', 'cb-vm-01');
 
     expect(version?.textContent).toContain('9.9.9-test');
     expect(commit?.textContent).toContain('deadbee');
     expect(builtAt?.textContent).toContain('2026-01-02 · 03:04 UTC');
+    expect(instance?.textContent?.trim()).toBe('cb-vm-01');
     expect(hook(element, 'about-error')).toBeNull();
   });
 
@@ -199,10 +202,13 @@ describe('AboutPage', () => {
 
     const commit = hookFor(element, 'about-commit', 'data-commit', 'none');
     const builtAt = hookFor(element, 'about-built-at', 'data-built-at', 'none');
+    const instance = hook(element, 'about-instance');
 
     expect(commit?.textContent).toContain('—');
     expect(builtAt?.textContent).toContain('—');
     expect(commit?.textContent).not.toContain('deadbee');
+    expect(instance?.textContent?.trim()).toBe('—');
+    expect(instance?.getAttribute('data-identity')).toBe('unavailable');
   });
 
   it('renders the health line, its dot and the localised status the server reported', async () => {
@@ -327,8 +333,8 @@ describe('AboutPage', () => {
     }
 
     const instance = hook(element, 'about-instance');
-    expect(instance?.textContent?.trim()).toBe('—');
-    expect(instance?.getAttribute('data-identity')).toBe('unavailable');
+    expect(instance?.textContent?.trim()).toBe('cb-vm-01');
+    expect(instance?.getAttribute('data-identity')).toBe('cb-vm-01');
 
     const notes = hooks(element, 'about-footnote');
     expect(notes.map((note) => note.getAttribute('data-note'))).toEqual(['1', '2']);

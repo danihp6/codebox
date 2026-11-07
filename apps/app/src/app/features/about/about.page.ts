@@ -382,7 +382,12 @@ const SEPARATOR = ' · ';
                     {{ t('about.instance') }}
                   </span>
                   <span class="cb-about-row-value" data-testid="about-row-value">
-                    <span data-testid="about-instance" data-identity="unavailable">—</span>
+                    <span
+                      data-testid="about-instance"
+                      [attr.data-identity]="version.instance ?? 'unavailable'"
+                    >
+                      {{ version.instance ?? '—' }}
+                    </span>
                   </span>
                 </div>
               </div>

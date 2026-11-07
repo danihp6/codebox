@@ -65,6 +65,7 @@ function liveEnv(root: string): NodeJS.ProcessEnv {
     CB_STATE_DIR: join(root, 'state'),
     CB_INSTALL_DIR: join(root, 'install'),
     CB_OPENCODE_URL: 'http://127.0.0.1:9',
+    CB_INSTANCE_NAME: 'cb-test-103',
     CB_LOG_LEVEL: 'debug',
   };
 }
@@ -163,6 +164,7 @@ describe('startDaemon', () => {
     const versionBody: unknown = await version.json();
     expect(() => parseVersion(versionBody)).not.toThrow();
     expect((versionBody as { node: string }).node).toBe(process.version);
+    expect((versionBody as { instance?: string }).instance).toBe('cb-test-103');
 
     const index = await fetch(`${base}/`);
     expect(index.status).toBe(200);

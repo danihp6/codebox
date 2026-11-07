@@ -377,6 +377,37 @@ describe('resources', () => {
     }
   });
 
+  it('Version carries the optional instance name and still rejects a stranger', () => {
+    const withoutInstance = parseVersion({
+      version: '1.0.0',
+      commit: null,
+      builtAt: null,
+      node: 'v24.0.0',
+    });
+    expect(withoutInstance.instance).toBeUndefined();
+
+    const named = parseVersion({
+      version: '1.0.0',
+      commit: null,
+      builtAt: null,
+      node: 'v24.0.0',
+      instance: 'cb-instance',
+    });
+    expect(named.instance).toBe('cb-instance');
+
+    const extra = parseError(() =>
+      parseVersion({
+        version: '1.0.0',
+        commit: null,
+        builtAt: null,
+        node: 'v24.0.0',
+        extra: 1,
+      }),
+    );
+    expect(extra).toBeInstanceOf(ContractParseError);
+    expect(extra instanceof ContractParseError ? extra.first.path : null).toBe('version.extra');
+  });
+
   it('guardrail ids are exactly the D12 list and cannot drift', () => {
     expect([...GUARDRAIL_IDS]).toEqual([
       'gate',
