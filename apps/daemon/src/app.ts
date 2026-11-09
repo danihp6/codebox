@@ -147,6 +147,7 @@ export function createApp(options: CreateAppOptions): DaemonApp {
         commit: context.build.commit,
         builtAt: context.build.builtAt,
         node: process.version,
+        instance: context.config.CB_INSTANCE_NAME,
       }),
       200,
     ),

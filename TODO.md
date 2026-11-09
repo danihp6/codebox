@@ -2184,7 +2184,7 @@ edited: the field lands in `resources.ts` and `Version` is inferred). Task-104 c
 `apps/app/src/app/app.routes.ts` stays free for Task-99. `TODO.md` and `CHANGELOG.md` are the
 Orchestrator's.
 
-- [ ] **[Task-103]** The instance's name reaches `/v1/version` and the About row. `07 · About —
+- [x] **[Task-103]** The instance's name reaches `/v1/version` and the About row. `07 · About —
       mobile dark` draws `Instance` with a value; the contract carries no such key, so
       `features/about` renders an honest `—` (Task-98, Deviation 1). `versionSchema` gains
       `instance: z.string().optional()` — additive, so no `/v2` (D16), and optional so a

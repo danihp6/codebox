@@ -166,7 +166,7 @@ retained for 24 h.
 | Method | Path | Auth | Returns |
 | --- | --- | --- | --- |
 | `GET` | `/v1/health` | none | `{ status, db, opencode, disk, queue, version }` — no secrets, no paths. |
-| `GET` | `/v1/version` | none | `{ version, commit, builtAt, node }`. |
+| `GET` | `/v1/version` | none | `{ version, commit, builtAt, node, instance }`. |
 | `GET` | `/v1/telemetry?range=24h` | `read` | Spend, runs, failures, disk, queue depth. |
 | `GET` | `/v1/providers` | `read` | Per provider: `configured`, `mode`, `lastOkAt`, `fingerprint`. |
 | `POST` | `/v1/admin/brake` | `admin` | `{ enabled }` — the global auto-merge brake. |
@@ -176,6 +176,9 @@ retained for 24 h.
 settings or admin subsystem, so each answers `404` and the app renders the control unavailable
 ([`operations.md`](operations.md) §6, §9). The paths and payloads are frozen here and in
 `packages/contracts/src/openapi.ts`; no open task in `TODO.md` owns the mount.
+
+`instance` is `CB_INSTANCE_NAME` ([`providers.md`](providers.md) §2), the same name the log
+base carries; a daemon older than the field omits it, which is why the key is optional.
 
 `health.status` is `ok`, `degraded` or `down`. `degraded` means one dependency is missing
 (for example no GitHub credential: the backlog and works are readable, git writes are

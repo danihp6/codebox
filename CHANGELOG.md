@@ -6,6 +6,15 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-09 (Batch 26: the instance's name and the shell's bar)
+
+- **The daemon reports its instance name.** `versionSchema` gains an additive, optional
+  `instance` (D16) — the value of `CB_INSTANCE_NAME`, the same name the log base already carries —
+  and `GET /v1/version` answers it; `docs/api.md` §5.1 and the OpenAPI summary say so. The About
+  screen's `Instance` row draws the name with its frozen `data-identity` hook instead of the
+  honest `—` Task-98 left (Deviation 1 closes); a payload from an older daemon without the field
+  still parses and still renders `—`. `/v1/health` does not move: the frame draws no uptime.
+
 ### Changed — 2026-11-06 (Batch 23, wave 3: About reaches the prototype)
 
 - **The About screen draws its frame.** `features/about` renders `07 · About — mobile dark` from

@@ -721,7 +721,7 @@ const ROUTES: readonly RouteSpec[] = [
     path: '/v1/version',
     method: 'get',
     operationId: 'getVersion',
-    summary: 'Version, commit, build time and node version.',
+    summary: 'Version, commit, build time, node version and the instance name.',
     tag: 'health',
     status: '200',
     response: 'Version',

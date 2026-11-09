@@ -219,7 +219,17 @@ describe('GET /v1/version', () => {
       commit: null,
       builtAt: null,
       node: process.version,
+      instance: context.config.CB_INSTANCE_NAME,
     });
+  });
+
+  it('reports the instance name the process was configured with', async () => {
+    const { app } = harness({ config: { CB_INSTANCE_NAME: 'cb-test-103' } });
+    const response = await app.request(`${API_PREFIX}/version`);
+    expect(response.status).toBe(200);
+    const body = await jsonBody(response);
+    expect(() => parseVersion(body)).not.toThrow();
+    expect(body).toMatchObject({ instance: 'cb-test-103' });
   });
 });
 

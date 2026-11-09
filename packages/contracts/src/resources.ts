@@ -53,6 +53,10 @@ export const versionSchema = z.strictObject({
   commit: z.string().min(1).nullable(),
   builtAt: timestampSchema.nullable(),
   node: z.string().min(1),
+  // Optional and unvalidated on purpose: it is CB_INSTANCE_NAME, which the loader accepts even
+  // when empty, so a min(1) here would turn a bad env into a 500 on the endpoint About reads.
+  // The daemon always sets it (D16: an additive field is not a breaking change).
+  instance: z.string().optional(),
 });
 
 export const TELEMETRY_RANGES = ['1h', '24h', '7d', '30d'] as const;
