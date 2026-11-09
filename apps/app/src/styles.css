@@ -1,3 +1,7 @@
+:root {
+  --cb-shell-tab-bar-height: 64px;
+}
+
 *,
 *::before,
 *::after {
@@ -30,11 +34,17 @@ app-tabs {
   inset-block-end: 0;
   inset-inline: 0;
   z-index: 10;
+  block-size: var(--cb-shell-tab-bar-height);
 }
 
 ion-tab-bar {
   border-top: 1px solid var(--cb-surface);
+  block-size: calc(var(--cb-shell-tab-bar-height) - 1px);
   padding-block-end: env(safe-area-inset-bottom, 0);
+}
+
+ion-app[data-shell-tabs='shown'] ion-router-outlet {
+  inset-block-end: var(--cb-shell-tab-bar-height);
 }
 
 .cb-tab-active {

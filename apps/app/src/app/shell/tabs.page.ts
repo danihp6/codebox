@@ -10,7 +10,7 @@ import { I18nService } from '../core/i18n/i18n.service';
   imports: [RouterLink, RouterLinkActive, IonLabel, IonRouterLink, IonTabBar, IonTabButton],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ion-tab-bar slot="bottom">
+    <ion-tab-bar slot="bottom" data-testid="shell-tab-bar">
       @for (tab of tabs; track tab.id) {
         <ion-tab-button
           [routerLink]="tab.path"

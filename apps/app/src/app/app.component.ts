@@ -8,6 +8,7 @@ import { SseService } from './core/events/sse.service';
 import { I18nService } from './core/i18n/i18n.service';
 import { SettingsStore } from './core/settings/settings.store';
 import { OfflineBanner } from './shared/offline-banner';
+import { showsShellTabs } from './shell/shell-tabs';
 import { TabsPage } from './shell/tabs.page';
 
 @Component({
@@ -16,7 +17,7 @@ import { TabsPage } from './shell/tabs.page';
   imports: [IonApp, IonRouterOutlet, TabsPage, OfflineBanner],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <ion-app>
+    <ion-app [attr.data-shell-tabs]="showTabs() ? 'shown' : 'hidden'">
       <ion-router-outlet></ion-router-outlet>
       @if (showTabs()) {
         <app-tabs />
@@ -45,7 +46,7 @@ export class AppComponent {
   );
 
   readonly sseState = this.sse.state;
-  readonly showTabs = computed(() => !this.url().startsWith('/pair'));
+  readonly showTabs = computed(() => showsShellTabs(this.url()));
 
   constructor() {
     inject(I18nService);

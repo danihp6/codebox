@@ -45,6 +45,7 @@ describe('TabsPage', () => {
     expect(SHELL_TABS.map((tab) => tab.id)).toEqual(['dashboard', 'repos', 'settings']);
 
     const element = fixture.nativeElement as HTMLElement;
+    expect(element.querySelector('[data-testid="shell-tab-bar"]')).not.toBeNull();
     const buttons = element.querySelectorAll<HTMLElement>('[data-testid^="tab-"]');
     expect(buttons).toHaveLength(3);
     expect([...buttons].map((button) => button.getAttribute('data-testid'))).toEqual([
@@ -57,6 +58,16 @@ describe('TabsPage', () => {
       'Repos',
       'Settings',
     ]);
+  });
+});
+
+describe('shell tab bar geometry', () => {
+  it('pins the 64 px bar and the outlet inset in the committed stylesheet', () => {
+    const css = readFileSync(resolve(process.cwd(), 'src/styles.css'), 'utf8');
+
+    expect(css).toContain('--cb-shell-tab-bar-height: 64px');
+    expect(css).toMatch(/app-tabs\s*\{[^}]*block-size:\s*var\(--cb-shell-tab-bar-height\)/);
+    expect(css).toContain("ion-app[data-shell-tabs='shown'] ion-router-outlet");
   });
 });
 

@@ -14,6 +14,12 @@ first release exists.
   screen's `Instance` row draws the name with its frozen `data-identity` hook instead of the
   honest `—` Task-98 left (Deviation 1 closes); a payload from an older daemon without the field
   still parses and still renders `—`. `/v1/health` does not move: the frame draws no uptime.
+- **The shell's tab bar follows the frames.** A pure `showsShellTabs(url)` derived from
+  `SHELL_TABS` renders the bottom bar only on the three top-level destinations — Dashboard, Repos
+  and Settings — and hides it on every pushed screen, as `design/exports/**` draws it. The shell
+  marks `ion-app` with `data-shell-tabs`, reserves the bar's 64 px so no page paints behind it,
+  and closes issue #125: the bar no longer overlays the About footnotes, and the measured box is
+  `0, 780, 390 × 64` at 390 × 844 (`0, 504, 320 × 64` at 320 × 568).
 
 ### Changed — 2026-11-06 (Batch 23, wave 3: About reaches the prototype)
 

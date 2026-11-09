@@ -2207,7 +2207,7 @@ Orchestrator's.
       started with `CB_INSTANCE_NAME=cb-test-103` on an ephemeral port answers `/v1/version`
       with `"instance":"cb-test-103"` and `/v1/health` with 200.
       *Dependencies:* none — Task-98 and L6 are merged and the frame already places the row.
-- [ ] **[Task-104]** The shell's tab bar only where the frame draws it (issue #125). The exports
+- [x] **[Task-104]** The shell's tab bar only where the frame draws it (issue #125). The exports
       draw a three-tab bar at `y 780, h 64` on Dashboard, Repo list and Settings; About,
       Credentials, Devices, Notifications and Design session draw none; a repository draws its
       **own** two-tab strip instead. `app.component.ts` shows the bar on every route but `/pair`,
