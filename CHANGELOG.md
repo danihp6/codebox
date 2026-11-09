@@ -6,6 +6,27 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-09 (L5: the measured re-import)
+
+- **The design specs carry the file's layout.** The re-import wrote all eleven
+  `design/screens/*.json` with `layoutMode: vertical` and `inferred: false`; all eleven emit
+  element regions. The three older body columns (`pair-body`, `st-body`, `ab-body`) are `SOLID`
+  paints at zero opacity, and the importer now treats a zero-opacity paint as painting nothing,
+  so those bands are looked through like the other eight; `rgba(0, 0, 0, 0)` no longer enters
+  the colour set. `design/routes.json` and the eleven `design/exports/*.png` are byte-identical.
+  Summary: 129 frames, 11 mapped, 117 unmapped, 26 colours, 19 outside `design/tokens.json`.
+- **A sheet has an export without a route.** `design/import.json` gains an optional `sheets`
+  list and the command writes one PNG per entry from the same image request; the schedule sheet
+  lands as `design/exports/schedule-sheet.png` (frame `22b`, 780 × 1688 at scale 2). The map's
+  parser rejects a caption that repeats a routed frame, a repeated file and a file that is not
+  kebab-case; `design/README.md` §4/§7 and `packages/design` explain the new key.
+- **The `[live]` present-mode pass is still open.** `GET /v1/files/:key?depth=6` answered `429`
+  with `retry-after: 272639`, so the run read the same document through the `nodes` endpoint at
+  the same depth and `--check` replays zero drift; the browser profile is signed out, so flows
+  A and B could not be walked. The five reactions still resolve statically (`pair-cta` → `12`,
+  `fr-start-cta` → `02`, `bl-chat` → `03a`, `cf-card-repo` → `04b`, `cx-kind` → `04`), but L5
+  stays open and Task-99 stays blocked.
+
 ### Changed — 2026-11-09 (Batch 26: the instance's name and the shell's bar)
 
 - **The daemon reports its instance name.** `versionSchema` gains an additive, optional

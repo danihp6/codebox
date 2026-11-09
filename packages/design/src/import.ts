@@ -77,10 +77,20 @@ export interface ImportMapFrame {
   readonly snapshot: boolean;
 }
 
+/** A drawn sheet that is not a route: the map still owns its export. */
+export interface ImportMapSheet {
+  /** The frame name exactly as drawn in Figma; the join key between the page and the entry. */
+  readonly caption: string;
+  /** The export's file stem under `design/exports/`; a kebab-case slug. */
+  readonly file: string;
+}
+
 export interface ImportMap {
   readonly fileKey: string;
   readonly page: string;
   readonly frames: readonly ImportMapFrame[];
+  /** Non-route frames to export: a sheet has a frame and a PNG, never a route or a spec. */
+  readonly sheets: readonly ImportMapSheet[];
 }
 
 export interface DesignImportInput {
@@ -153,11 +163,19 @@ const importMapFrameSchema = z.strictObject({
   snapshot: z.boolean(),
 });
 
+const sheetSchema = z.strictObject({
+  caption: nonEmptySchema,
+  file: nonEmptySchema.refine((value) => /^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value), {
+    message: 'must be a kebab-case slug',
+  }),
+});
+
 const importMapSchema = z
   .strictObject({
     fileKey: nonEmptySchema,
     page: nonEmptySchema,
     frames: z.array(importMapFrameSchema),
+    sheets: z.array(sheetSchema).default([]),
   })
   .superRefine((map, ctx) => {
     for (const field of ['caption', 'screen', 'route'] as const) {
@@ -173,6 +191,25 @@ const importMapSchema = z
         seen.add(frame[field]);
       });
     }
+    const captions = new Set(map.frames.map((frame) => frame.caption));
+    const files = new Set<string>();
+    map.sheets.forEach((sheet, index) => {
+      if (captions.has(sheet.caption)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['sheets', index, 'caption'],
+          message: 'caption repeats a routed frame',
+        });
+      }
+      if (files.has(sheet.file)) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['sheets', index, 'file'],
+          message: 'file repeats an earlier sheet',
+        });
+      }
+      files.add(sheet.file);
+    });
   });
 
 function issuesOf(error: z.ZodError): DesignIssue[] {

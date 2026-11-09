@@ -121,12 +121,18 @@ function paintColour(paint, frameId) {
   return `rgba(${Math.round(clamp01(r) * 255)}, ${Math.round(clamp01(g) * 255)}, ${Math.round(clamp01(b) * 255)}, ${alpha})`;
 }
 
+// A SOLID paint at zero opacity paints nothing: the frame is showing the parent's fill, so a
+// band drawn that way must be looked through exactly like a fill-less one.
+function paintsSomething(paint) {
+  if (!isRecord(paint) || paint.type !== 'SOLID' || paint.visible === false) return false;
+  return !(typeof paint.opacity === 'number' && paint.opacity <= 0);
+}
+
 function collectFills(node, frameId, into) {
   const paints = node.fills;
   if (Array.isArray(paints)) {
     for (const paint of paints) {
-      if (!isRecord(paint)) continue;
-      if (paint.type !== 'SOLID' || paint.visible === false) continue;
+      if (!paintsSomething(paint)) continue;
       into.push(paintColour(paint, frameId));
     }
   }
@@ -172,8 +178,7 @@ function solidColour(node, frameId) {
   const paints = node.fills;
   if (!Array.isArray(paints)) return null;
   for (const paint of paints) {
-    if (!isRecord(paint)) continue;
-    if (paint.type !== 'SOLID' || paint.visible === false) continue;
+    if (!paintsSomething(paint)) continue;
     return paintColour(paint, frameId);
   }
   return null;
@@ -564,18 +569,31 @@ export async function main(argv, io = {}) {
       const frame = snapshot.frames.find((candidate) => candidate.caption === entry.caption);
       targets.push({ caption: entry.caption, frame });
     }
+    const sheetTargets = [];
+    for (const entry of map.sheets) {
+      const frame = snapshot.frames.find((candidate) => candidate.caption === entry.caption);
+      if (frame === undefined) {
+        throw new ImportCommandError(
+          'frame_missing',
+          `no frame captioned '${entry.caption}' (sheets)`,
+          1,
+        );
+      }
+      sheetTargets.push({ caption: entry.caption, file: entry.file, frame });
+    }
 
     // A caption is untrusted Figma data; a null prototype keeps `__proto__` a plain key.
     const exported = Object.create(null);
-    if (targets.length > 0) {
-      const ids = targets.map((target) => target.frame.id).join(',');
+    const downloads = [...targets, ...sheetTargets];
+    if (downloads.length > 0) {
+      const ids = downloads.map((target) => target.frame.id).join(',');
       const imagesUrl = `${FIGMA_API}/v1/images/${encodeURIComponent(key)}?ids=${ids}&format=png&scale=2`;
       const imagesBody = await requestJson(fetchImpl, imagesUrl, token);
       if (isRecord(imagesBody) && imagesBody.err !== null && imagesBody.err !== undefined) {
         throw new ImportCommandError('export_missing', String(imagesBody.err), 1);
       }
       const images = isRecord(imagesBody) && isRecord(imagesBody.images) ? imagesBody.images : {};
-      for (const target of targets) {
+      for (const target of downloads) {
         const url = images[target.frame.id];
         if (typeof url !== 'string' || url === '') {
           throw new ImportCommandError('export_missing', `no export for '${target.caption}'`, 1);
@@ -633,6 +651,10 @@ export async function main(argv, io = {}) {
         relative: `${design.EXPORTS_DIR}/${screenSlug(item.spec.screen)}.png`,
         content: exported[item.entry.caption],
       }));
+    const sheetFiles = sheetTargets.map((target) => ({
+      relative: `${design.EXPORTS_DIR}/${target.file}.png`,
+      content: exported[target.caption],
+    }));
 
     let drifted = false;
     if (options.check) {
@@ -640,6 +662,7 @@ export async function main(argv, io = {}) {
         { relative: design.ROUTES_PATH, content: routesContent },
         ...screens,
         ...exportedFiles,
+        ...sheetFiles,
       ];
       for (const artifact of artifacts) {
         if (sameBytes(join(root, artifact.relative), artifact.content)) continue;
@@ -659,12 +682,17 @@ export async function main(argv, io = {}) {
         writeFileSync(join(root, file.relative), file.content);
         stdout(`wrote ${file.relative} (${file.content.length} bytes)\n`);
       }
+      for (const file of sheetFiles) {
+        writeFileSync(join(root, file.relative), file.content);
+        stdout(`wrote ${file.relative} (${file.content.length} bytes)\n`);
+      }
     }
 
     const mappedCaptions = new Set(map.frames.map((entry) => entry.caption));
+    const sheetCaptions = new Set(map.sheets.map((entry) => entry.caption));
     const matchedCaptions = new Set(
       snapshot.frames
-        .filter((frame) => mappedCaptions.has(frame.caption))
+        .filter((frame) => mappedCaptions.has(frame.caption) || sheetCaptions.has(frame.caption))
         .map((frame) => frame.caption),
     );
     const summary = {
@@ -676,6 +704,7 @@ export async function main(argv, io = {}) {
       routes: result.routes.length,
       screens: result.screens.length,
       exports: exportedFiles.length,
+      sheets: sheetFiles.length,
     };
     stdout(`${JSON.stringify(summary)}\n`);
 

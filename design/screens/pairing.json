@@ -2,8 +2,8 @@
   "screen": "Pairing",
   "route": "/pair",
   "states": {
-    "loading": null,
-    "empty": null,
+    "loading": "01 · Pairing — loading",
+    "empty": "01 · Pairing — mobile dark",
     "error": "14 · Unpaired — 401"
   },
   "snapshotSha256": "6708fa9a8b278bc61c2735770748466856236026dd29cae15b5d14559890242a",
@@ -14,7 +14,7 @@
       "width": 390,
       "height": 844
     },
-    "layoutMode": "none",
+    "layoutMode": "vertical",
     "paddingTop": 0,
     "paddingRight": 0,
     "paddingBottom": 0,
@@ -22,12 +22,12 @@
     "itemSpacing": 0,
     "cornerRadius": 0,
     "strokes": 0,
-    "inferred": true,
+    "inferred": false,
     "regions": [
       {
         "name": "status-time",
         "x": 28,
-        "y": 14,
+        "y": 12,
         "width": 27,
         "height": 16,
         "fill": "color.ink.text",
@@ -36,8 +36,8 @@
       },
       {
         "name": "status-right",
-        "x": 316,
-        "y": 14,
+        "x": 311,
+        "y": 12,
         "width": 59,
         "height": 15,
         "fill": "color.ink.muted",
@@ -47,7 +47,7 @@
       {
         "name": "pair-wordmark",
         "x": 24,
-        "y": 112,
+        "y": 102,
         "width": 126,
         "height": 36,
         "fill": "color.ink.text",
@@ -57,7 +57,7 @@
       {
         "name": "pair-tagline",
         "x": 24,
-        "y": 152,
+        "y": 154,
         "width": 290,
         "height": 16,
         "fill": "color.ink.muted",
@@ -67,7 +67,7 @@
       {
         "name": "pair-card",
         "x": 24,
-        "y": 200,
+        "y": 186,
         "width": 342,
         "height": 404,
         "fill": "color.surface.bg",
@@ -75,309 +75,9 @@
         "stroke": 1
       },
       {
-        "name": "pair-eyebrow",
-        "x": 44,
-        "y": 222,
-        "width": 78,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-0",
-        "x": 44,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-1",
-        "x": 74,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-2",
-        "x": 104,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-3",
-        "x": 134,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-4",
-        "x": 164,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-5",
-        "x": 202,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-6",
-        "x": 232,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-7",
-        "x": 262,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-8",
-        "x": 292,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-9",
-        "x": 322,
-        "y": 246,
-        "width": 26,
-        "height": 38,
-        "fill": "color.surface.bg",
-        "radius": 6,
-        "stroke": 1
-      },
-      {
-        "name": "pair-slot-0-char",
-        "x": 52,
-        "y": 256,
-        "width": 10,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-1-char",
-        "x": 82,
-        "y": 256,
-        "width": 11,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-2-char",
-        "x": 112,
-        "y": 256,
-        "width": 11,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-3-char",
-        "x": 142,
-        "y": 256,
-        "width": 15,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-4-char",
-        "x": 172,
-        "y": 256,
-        "width": 11,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-5-char",
-        "x": 210,
-        "y": 256,
-        "width": 13,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-6-char",
-        "x": 240,
-        "y": 256,
-        "width": 12,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-7-char",
-        "x": 270,
-        "y": 256,
-        "width": 11,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-8-char",
-        "x": 300,
-        "y": 256,
-        "width": 10,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-slot-9-char",
-        "x": 330,
-        "y": 256,
-        "width": 10,
-        "height": 19,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-code-hint",
-        "x": 44,
-        "y": 292,
-        "width": 218,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-device-label",
-        "x": 44,
-        "y": 326,
-        "width": 69,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-device-input",
-        "x": 44,
-        "y": 348,
-        "width": 302,
-        "height": 48,
-        "fill": "color.surface.bg",
-        "radius": 8,
-        "stroke": 1
-      },
-      {
-        "name": "pair-device-value",
-        "x": 60,
-        "y": 362,
-        "width": 79,
-        "height": 17,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-server-label",
-        "x": 44,
-        "y": 414,
-        "width": 43,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-server-value",
-        "x": 44,
-        "y": 434,
-        "width": 145,
-        "height": 15,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-cta",
-        "x": 44,
-        "y": 472,
-        "width": 302,
-        "height": 48,
-        "fill": "color.surface.bg",
-        "radius": 10,
-        "stroke": 0
-      },
-      {
-        "name": "pair-cta-label",
-        "x": 158,
-        "y": 486,
-        "width": 75,
-        "height": 17,
-        "fill": "color.surface.bg",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "pair-scan",
-        "x": 140,
-        "y": 536,
-        "width": 94,
-        "height": 15,
-        "fill": "color.brand.bright",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "pair-help",
         "x": 24,
-        "y": 648,
+        "y": 667,
         "width": 248,
         "height": 13,
         "fill": "color.ink.muted",
@@ -387,7 +87,7 @@
       {
         "name": "pair-cmd",
         "x": 24,
-        "y": 668,
+        "y": 692,
         "width": 342,
         "height": 44,
         "fill": "color.surface.bg",
@@ -395,21 +95,11 @@
         "stroke": 1
       },
       {
-        "name": "pair-cmd-text",
-        "x": 38,
-        "y": 683,
-        "width": 152,
-        "height": 13,
-        "fill": "color.brand.bright",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "pair-footnote",
         "x": 24,
         "y": 748,
-        "width": 357,
-        "height": 13,
+        "width": 342,
+        "height": 26,
         "fill": "color.ink.muted",
         "radius": 0,
         "stroke": 0
@@ -457,86 +147,6 @@
         "colour": "color.ink.muted"
       },
       {
-        "role": "pair-slot-0-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-1-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-2-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-3-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-4-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-5-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-6-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-7-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-8-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "pair-slot-9-char",
-        "family": "Inter",
-        "weight": 600,
-        "size": 16,
-        "lineHeight": 19.363636016845703,
-        "colour": "color.ink.text"
-      },
-      {
         "role": "pair-code-hint",
         "family": "Inter",
         "weight": 400,
@@ -553,14 +163,6 @@
         "colour": "color.ink.muted"
       },
       {
-        "role": "pair-device-value",
-        "family": "Inter",
-        "weight": 400,
-        "size": 14,
-        "lineHeight": 16.94318199157715,
-        "colour": "color.ink.text"
-      },
-      {
         "role": "pair-server-label",
         "family": "Inter",
         "weight": 500,
@@ -575,22 +177,6 @@
         "size": 12,
         "lineHeight": 14.522727012634277,
         "colour": "color.ink.muted"
-      },
-      {
-        "role": "pair-cta-label",
-        "family": "Inter",
-        "weight": 600,
-        "size": 14,
-        "lineHeight": 16.94318199157715,
-        "colour": "color.surface.bg"
-      },
-      {
-        "role": "pair-scan",
-        "family": "Inter",
-        "weight": 400,
-        "size": 12,
-        "lineHeight": 14.522727012634277,
-        "colour": "color.brand.bright"
       },
       {
         "role": "pair-help",

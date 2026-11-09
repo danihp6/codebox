@@ -2317,6 +2317,22 @@ of them.
       `22c`/`L22c` (none: the empty card, `Manual only`, `Create a schedule`) and the 320 twins
       `S4`/`S4b`, mapped in `design/README.md` §2. Nothing about the sheet is still owed to
       Task-99; its export lands with the first re-import after 2026-11-08T03:00Z.
+      **The measured re-import landed (2026-11-09):** `GET /v1/files/:key?depth=6` still
+      answered `429` (`retry-after: 272639`, not before 2026-11-12T15:55Z), so the run read the
+      same document through `GET /v1/files/:key/nodes?ids=0:0&depth=6` and fed it to the
+      unchanged command; a replay of `--check` reports zero drift. All eleven specs carry
+      `layoutMode: vertical` and `inferred: false` and all eleven emit element regions: the three
+      older body columns (`pair-body`, `st-body`, `ab-body`) are `SOLID` paints at zero opacity,
+      and a zero-opacity paint now paints nothing, so those bands are looked through like the
+      other eight and `rgba(0, 0, 0, 0)` no longer enters the colour set. The eleven exports are
+      byte-identical and `design/exports/schedule-sheet.png` (780 × 1688, 80 kB, frame `22b`) is
+      new. Summary: 129 frames, 11 mapped, 117 unmapped, 26 colours, 19 outside the tokens.
+      **Still owed:** the `[live]` present-mode pass — the runner's browser profile is signed out
+      and Figma answers the file URL with `403` and the login dialog — so L5 stays open and
+      Task-99 stays blocked. A live read through the plugin confirms the two flows still resolve
+      (`pair-cta` → `12`, `fr-start-cta` → `02`, `bl-chat` → `03a`, `cf-card-repo` → `04b`,
+      `cx-kind` → `04`, all `ON_CLICK` with a 0.2 s dissolve), but the click-through itself was
+      not walked.
 - [x] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
       3HMV2UN6QviuNXe2T3Htsr` with the real `FIGMA_TOKEN`, review the diff, and commit
       `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The token is never

@@ -93,7 +93,9 @@ schedule: mode (`Once` · `Every` · `Window`), the window's days, start, end an
 manual `Run next`, which starts one run and leaves the schedule alone. `22c`/`L22c` draw the
 repository that has none: the empty card, `Manual only · nothing fires on its own.` and
 `Create a schedule`. The 320 twins are `S4` (with a schedule) and `S4b` (without). The sheet is
-drawn at 390 × 844 and 320 × 568; its 1280 layout is out of v1 with the rest of desktop.
+drawn at 390 × 844 and 320 × 568; its 1280 layout is out of v1 with the rest of desktop. Its
+export is `design/exports/schedule-sheet.png` (frame `22b`, 780 × 1688 at scale 2), written by
+the import in §4 from the map's `sheets` list; a sheet has an export and no route or spec.
 
 **The two prototype flows are wired (2026-11-04).** A: `01 · Pairing → 12 · First run →
 02 · Repo list` (`pair-cta`, `fr-start-cta`). B: `22 · Repo · backlog → 03a · New session →
@@ -109,8 +111,7 @@ title, a 12/400 line and a 44 px action when there is one) or, for `loading`, se
 bars and a `Loading…` line. Four slots are answered by a frame that already existed: `01` is
 Pairing's empty, `14 · Unpaired — 401` its error, `12 · First run — after pairing` the
 dashboard's empty, and `20e · Crew · asleep — dark` the workers' empty. `design/import.json`
-names all 33; the generated specs catch up at the next re-import (§4), which the file's read
-quota still blocks.
+names all 33; the generated specs caught up with them at the 2026-11-09 re-import (§4).
 
 **The pairing form's inline reason is app copy, not a frame.** `14 · Unpaired — 401` draws the
 screen after a 401; the reason under the code field — one sentence for `used_code`,
@@ -160,7 +161,9 @@ node scripts/design/import.mjs --file <key>
 The three families are `design/routes.json`, one `design/screens/<slug>.json` per route and one
 `design/exports/<slug>.png` per frame with `snapshot: true`; the slug is the one `screenSlug`
 derives from the screen name in §1 (`Repo · backlog` → `repo-backlog`), so a screen's spec and
-its export share one slug and a task can name both.
+its export share one slug and a task can name both. The map's `sheets` list adds one export
+without a route or a spec, through the same image request: `schedule-sheet.png` is
+`22b · Schedule sheet — mobile dark`, and no screen spec is written for it.
 
 A spec whose frame is measurable also carries a `layout`: the frame's box, its layout mode,
 padding and item spacing, its regions (box, corner radius, stroke and the fill as a
@@ -168,8 +171,9 @@ padding and item spacing, its regions (box, corner radius, stroke and the fill a
 colour key. A colour that is not an exact token value, an `rgba(…)` or a hex outside the twelve,
 projects `null` and is still measured by `coloursOutsideTokens`: the importer never invents a
 key. A region is one element, never one band: a child frame that paints nothing — no visible
-`SOLID` fill, no stroke and no corner radius, the shape of every band — contributes no region of
-its own and its children are projected in its place, with boxes absolute to the routed frame,
+`SOLID` fill (a zero-opacity `SOLID` paint paints nothing), no stroke and no corner radius, the
+shape of every band — contributes no region of its own and its children are projected in its
+place, with boxes absolute to the routed frame,
 recursing until a node that paints or a node that is not a `FRAME`; a child frame that paints is
 one region whatever it contains. The routed frame's `layoutMode`, four paddings, gap and type
 scale are its own and do not change, and the regions keep the order `layoutMode` gives them:
@@ -179,7 +183,7 @@ with a box writes no `layout` at all, so every spec written before the measureme
 parsing.
 
 The last stdout line is a one-line summary: `frames`, `mapped`, `unmapped`, `colours`,
-`coloursOutsideTokens`, `routes`, `screens` and `exports`. `coloursOutsideTokens` is a
+`coloursOutsideTokens`, `routes`, `screens`, `exports` and `sheets`. `coloursOutsideTokens` is a
 measurement, not a failure: a colour outside `design/tokens.json` prints its own line and the
 exit code stays 0.
 
@@ -233,7 +237,8 @@ reserved for fills and dots.
 ## 7. The import map
 
 `design/import.json` is the map the command reads. It declares the `fileKey` and the `page` the
-import selects, then one entry per routed screen:
+import selects, then one entry per routed screen and an optional `sheets` list of frames that
+are exported without a route:
 
 | Key | Meaning |
 | --- | --- |
@@ -243,6 +248,11 @@ import selects, then one entry per routed screen:
 | `component` | The standalone component class that renders the route. |
 | `states` | `loading`, `empty` and `error`, each a frame caption or `null`. |
 | `snapshot` | `true` downloads the PNG and fills `snapshotSha256`; `false` writes neither. |
+
+A sheet entry carries only `caption` and `file`: `file` is the kebab-case stem under
+`design/exports/` (`schedule-sheet`), the caption is resolved on the page like a routed frame,
+and no row is added to `routes.json` and no spec is written. A sheet caption may not repeat a
+routed caption, and two sheets may not share a file.
 
 A state caption may name the entry's own frame — Pairing's `empty` is `01`, the form with no
 code — or a frame mapped under another entry: `12`, `14` and `20e` answer the dashboard's empty,

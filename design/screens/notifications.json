@@ -2,9 +2,9 @@
   "screen": "Notifications",
   "route": "/settings/notifications",
   "states": {
-    "loading": null,
-    "empty": null,
-    "error": null
+    "loading": "17 · Notifications — loading",
+    "empty": "17 · Notifications — empty",
+    "error": "17 · Notifications — error"
   },
   "snapshotSha256": "0b0be385b384beaaa029c5ed4ea0c5d5d81f4414352116754ccb1492e5acdd49",
   "layout": {
@@ -14,7 +14,7 @@
       "width": 390,
       "height": 844
     },
-    "layoutMode": "none",
+    "layoutMode": "vertical",
     "paddingTop": 0,
     "paddingRight": 0,
     "paddingBottom": 0,
@@ -22,7 +22,7 @@
     "itemSpacing": 0,
     "cornerRadius": 0,
     "strokes": 0,
-    "inferred": true,
+    "inferred": false,
     "regions": [
       {
         "name": "nt-status-time",
@@ -80,7 +80,7 @@
         "y": 104,
         "width": 390,
         "height": 1,
-        "fill": null,
+        "fill": "color.surface.raised",
         "radius": 0,
         "stroke": 0
       },
@@ -105,21 +105,21 @@
         "stroke": 0
       },
       {
-        "name": "nt-perm-test",
-        "x": 288,
-        "y": 134,
-        "width": 46,
-        "height": 12,
-        "fill": "color.brand.bright",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "nt-perm-v",
         "x": 40,
         "y": 146,
         "width": 45,
         "height": 15,
+        "fill": "color.brand.bright",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "nt-perm-test",
+        "x": 288,
+        "y": 134,
+        "width": 46,
+        "height": 12,
         "fill": "color.brand.bright",
         "radius": 0,
         "stroke": 0
@@ -131,6 +131,16 @@
         "width": 40,
         "height": 12,
         "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "nt-ev-0-label",
+        "x": 24,
+        "y": 226,
+        "width": 152,
+        "height": 15,
+        "fill": "color.ink.text",
         "radius": 0,
         "stroke": 0
       },
@@ -155,10 +165,10 @@
         "stroke": 0
       },
       {
-        "name": "nt-ev-0-label",
+        "name": "nt-ev-1-label",
         "x": 24,
-        "y": 226,
-        "width": 152,
+        "y": 272,
+        "width": 93,
         "height": 15,
         "fill": "color.ink.text",
         "radius": 0,
@@ -185,10 +195,10 @@
         "stroke": 0
       },
       {
-        "name": "nt-ev-1-label",
+        "name": "nt-ev-2-label",
         "x": 24,
-        "y": 272,
-        "width": 93,
+        "y": 318,
+        "width": 186,
         "height": 15,
         "fill": "color.ink.text",
         "radius": 0,
@@ -215,10 +225,10 @@
         "stroke": 0
       },
       {
-        "name": "nt-ev-2-label",
+        "name": "nt-ev-3-label",
         "x": 24,
-        "y": 318,
-        "width": 186,
+        "y": 364,
+        "width": 70,
         "height": 15,
         "fill": "color.ink.text",
         "radius": 0,
@@ -245,10 +255,10 @@
         "stroke": 0
       },
       {
-        "name": "nt-ev-3-label",
+        "name": "nt-ev-4-label",
         "x": 24,
-        "y": 364,
-        "width": 70,
+        "y": 410,
+        "width": 44,
         "height": 15,
         "fill": "color.ink.text",
         "radius": 0,
@@ -272,36 +282,6 @@
         "height": 16,
         "fill": "color.ink.muted",
         "radius": 8,
-        "stroke": 0
-      },
-      {
-        "name": "nt-ev-4-label",
-        "x": 24,
-        "y": 410,
-        "width": 44,
-        "height": 15,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "nt-ev-cred",
-        "x": 24,
-        "y": 456,
-        "width": 111,
-        "height": 15,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "nt-ev-cred-always",
-        "x": 322,
-        "y": 456,
-        "width": 34,
-        "height": 12,
-        "fill": "color.waiting.bright",
-        "radius": 0,
         "stroke": 0
       },
       {
@@ -335,26 +315,6 @@
         "stroke": 0
       },
       {
-        "name": "nt-quiet-track",
-        "x": 328,
-        "y": 534,
-        "width": 38,
-        "height": 22,
-        "fill": "color.brand.bright",
-        "radius": 11,
-        "stroke": 1
-      },
-      {
-        "name": "nt-quiet-knob",
-        "x": 347,
-        "y": 537,
-        "width": 16,
-        "height": 16,
-        "fill": "color.surface.bg",
-        "radius": 8,
-        "stroke": 0
-      },
-      {
         "name": "nt-quiet-v",
         "x": 40,
         "y": 546,
@@ -375,6 +335,26 @@
         "stroke": 0
       },
       {
+        "name": "nt-quiet-track",
+        "x": 328,
+        "y": 534,
+        "width": 38,
+        "height": 22,
+        "fill": "color.brand.bright",
+        "radius": 11,
+        "stroke": 1
+      },
+      {
+        "name": "nt-quiet-knob",
+        "x": 347,
+        "y": 537,
+        "width": 16,
+        "height": 16,
+        "fill": "color.surface.bg",
+        "radius": 8,
+        "stroke": 0
+      },
+      {
         "name": "nt-note",
         "x": 24,
         "y": 612,
@@ -391,6 +371,26 @@
         "width": 109,
         "height": 11,
         "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "nt-ev-cred",
+        "x": 24,
+        "y": 456,
+        "width": 111,
+        "height": 15,
+        "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "nt-ev-cred-always",
+        "x": 322,
+        "y": 456,
+        "width": 34,
+        "height": 12,
+        "fill": "color.waiting.bright",
         "radius": 0,
         "stroke": 0
       }

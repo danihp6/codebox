@@ -584,6 +584,27 @@
                 }
               }
             ]
+          },
+          {
+            "id": "55:3",
+            "name": "22b · Schedule sheet — mobile dark",
+            "type": "FRAME",
+            "absoluteBoundingBox": {
+              "x": 0,
+              "y": 12800,
+              "width": 390,
+              "height": 844
+            },
+            "fills": [
+              {
+                "type": "SOLID",
+                "color": {
+                  "r": 0.043,
+                  "g": 0.059,
+                  "b": 0.078
+                }
+              }
+            ]
           }
         ]
       }
