@@ -254,10 +254,10 @@ A change touching any of these needs a security review in the same task:
 
 ## 12. Incident response
 
-1. **Brake first.** Set `CB_AUTOMERGE=off` in `/etc/codebox/instance.env` and restart
-   `codebox.service`; it stops merges at the next guardrail evaluation and never cuts a merge in
-   half (`cb brake on` answers `unsupported` until the daemon mounts the route,
-   [`operations.md`](operations.md) §6).
+1. **Brake first.** `cb brake on` (`POST /v1/admin/brake`, `admin` scope) stops merges at the
+   next guardrail evaluation and never cuts a merge in half; it needs no restart (D61). The
+   boot switch `CB_AUTOMERGE=off` in `/etc/codebox/instance.env` plus a restart does the same
+   when the API is unreachable ([`operations.md`](operations.md) §6).
 2. **Contain.** Revoke the device (`DELETE /v1/devices/{id}`) or rotate the credential that
    leaked.
 3. **Preserve.** Copy the run's events and logs before retention or cleanup.

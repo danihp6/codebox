@@ -132,6 +132,30 @@ wires every subsystem behind feature flags; later tasks add modules, not imports
 - `src/repos/ids.ts` — the only `repo_` id generator.
 - `src/repos/service.test.ts` — the defaults, the id shape, the 404s, the delete refusals, the paging and the verify checks.
 - `src/repos/routes.test.ts` — the §5.2 HTTP contract: statuses, counts, scopes, envelopes and the verify 503.
+- `src/works/index.ts` — the `works` subsystem module: one shared service, the routes, no timer.
+- `src/works/service.ts` — list, create from a ref, detail with its repository and runs, the refusals, the attempt that opens a run, the decision session, the review stamp, the interrupt and the manual *Run next* selection.
+- `src/works/routes.ts` — the `docs/api.md` §5.6 handlers, their body and query schemas and their scopes.
+- `src/works/ids.ts` — the only `wrk_` id generator.
+- `src/works/routes.test.ts` — creating from the file, the ref refusals, `spec_in_git`, `live_work`, the run link, `already_reviewed`, `no_live_run`, the decision session and the empty backlog.
+- `src/backlog/index.ts` — the `backlog` subsystem module: one shared service, the route, no timer.
+- `src/backlog/service.ts` — the bare-clone read, the projection joined with works and `needs`, the ref resolution, the selection feed and the worktree tick.
+- `src/backlog/select.ts` — the `BacklogWorkState[]` feed: the repository's works, paged until exhausted.
+- `src/backlog/routes.ts` — `GET /v1/repos/{id}/backlog`, its `read` scope and the unknown-repository 404.
+- `src/backlog/service.test.ts` — projection counts against the package fixture, the projected `needs`, ref refusals, run counts and the byte-exact tick.
+- `src/backlog/routes.test.ts` — the HTTP object, the empty projection and the 404 envelope.
+- `src/sessions/index.ts` — the `sessions` subsystem module: one shared service, the routes, no timer.
+- `src/sessions/service.ts` — the create/prepare, the awaited agent turn, the proposal diff and its merge, compact, interrupt and archive, plus `TARGET_WRITE_SETS` and `outsideTarget`.
+- `src/sessions/routes.ts` — the `docs/api.md` §5.6.1 handlers, their body and query schemas and their scopes.
+- `src/sessions/ids.ts` — the only `sess_` and `msg_` id generators.
+- `src/sessions/errors.ts` — the session refusals mapped onto the §3 envelope and its reason tokens.
+- `src/sessions/sessions.test.ts` — the four `outsideTarget` cases, the `workId` invariant, `read_only_session`, `target_violation` without a push, `proposal_pending`, `proposal_none`, a merge and one turn.
+- `src/admin/index.ts` — the `admin` subsystem module: one settings service, the four routes, no timer.
+- `src/admin/service.ts` — the effective settings, the one writable key, the brake row and the cache wipe over `WorkspaceManager.listWorktrees`/`removeWorktree`.
+- `src/admin/routes.ts` — `GET`/`PATCH /v1/settings` and the two `/v1/admin` handlers with their scopes and the one-key patch schema.
+- `src/admin/service.test.ts` — the defaults, the stored overrides, the live `automerge` getter and the terminal/live/orphan wipe cases.
+- `src/admin/routes.test.ts` — the four statuses, the `write`/`admin` split, the unknown-key `422` and the `202` with no body.
+- `src/settings/effective.ts` — `effectiveSettings` and `effectiveAutomerge`: the stored rows over the `CB_*` defaults and the quiet-hours read.
+- `src/settings/effective.test.ts` — the config defaults, the stored overrides and the two malformed-row fallbacks.
 - `src/integrations/service.test.ts` — allowlist refusal before `fetch`, header injection,
   truncation and the manifest flow.
 - `src/config.test.ts` — config loading, failure naming, bind parsing, paths, build info.

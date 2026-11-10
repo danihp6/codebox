@@ -70,6 +70,7 @@ function only(name: SubsystemName): SubsystemFlags {
     sessions: false,
     design: false,
     repos: false,
+    admin: false,
   };
   flags[name] = true;
   return flags;
@@ -88,7 +89,7 @@ function moduleNotFound(name: SubsystemName): Error {
 }
 
 describe('subsystems', () => {
-  it('lists the seventeen subsystems in order, append-only', () => {
+  it('lists the eighteen subsystems in order, append-only', () => {
     expect([...SUBSYSTEMS]).toEqual([
       'auth',
       'events',
@@ -107,14 +108,23 @@ describe('subsystems', () => {
       'sessions',
       'design',
       'repos',
+      'admin',
     ]);
   });
 
   it('keeps the bootstrapped names at their indices', () => {
     expect(SUBSYSTEMS[0]).toBe('auth');
     expect(SUBSYSTEMS.indexOf('cli')).toBe(11);
-    expect(SUBSYSTEMS.slice(12)).toEqual(['works', 'backlog', 'sessions', 'design', 'repos']);
+    expect(SUBSYSTEMS.slice(12)).toEqual([
+      'works',
+      'backlog',
+      'sessions',
+      'design',
+      'repos',
+      'admin',
+    ]);
     expect(SUBSYSTEMS.indexOf('repos')).toBe(16);
+    expect(SUBSYSTEMS.indexOf('admin')).toBe(17);
   });
 
   it('enables every subsystem by default', () => {
