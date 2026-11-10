@@ -616,6 +616,19 @@ retired route's component would otherwise be dead code), `docs/app.md` §4/§5 a
 `design/README.md` §2). The schedule API and store stay in `features/repos`; the sheet imports the
 store.
 
+**Cut — cycle 2026-11-10, after Task-99 (one of four slots used).** No task branch was alive and
+`main` was `f75516a`. The driver queue is dry: Task-31 is `[!]` (issue #105) and Task-32 waits
+behind it, while L1, L3 and L4 are operator items. The one measured code debt with no owner is
+issue **#104**: `/v1/settings`, `/v1/admin/brake` and `/v1/admin/cache/wipe` answer 404, so
+`cb brake` degrades to `unsupported`/exit 5 and the Settings screen's two danger controls are
+dead. It is cut as **Task-106** (option (a), the emergency stop that ships), and it carries the
+README half of issue #76 because the same folder map is its path. **Hot-file holders in this
+cut:** none. Task-106 claims no hot file; `TODO.md` and `CHANGELOG.md` stay with the
+Orchestrator. The three empty slots have no legal candidate: Task-31 waits on the live ten-run
+measurement (#105), Task-32 behind it, L1/L3/L4 are operator items, issue #110 is a decision
+about the cycle's own trace and not code, and issue #79's schedule tab was retired by Task-99
+(the sheet edits the saved schedule; it does not draw `selection`, `refs` or `maxAttempts`).
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -2333,6 +2346,43 @@ once L5 is ticked the two can share a batch; before the tick, this is the one le
       on this Windows host only (CRLF `NOTICE` and POSIX/shell suites, none in the diff). Task
       branch `94c4ee6`, QA `04ed602`, merged into **`l5-reimport`** at `75e5567` and landed on
       `main` with PR **#127**. The `[live]` box cycle is issue **#126**.
+
+---
+
+## Batch 28 — The operator's runtime stop
+
+Cut 2026-11-10 from `main` at `f75516a`. The queue had no driver item left; this is the one
+measured code debt without an owner (issue #104, option (a)). It closes the four 404s the CLI
+and the app already call, and the brake becomes effective without a restart.
+
+**Hot-file holders in this batch:** none. Task-106 holds no hot file, and `TODO.md`/`CHANGELOG.md`
+belong to the Orchestrator.
+
+- [ ] **[Task-106]** Mount the settings and admin routes. Add the `admin` subsystem (appended
+      last to `SUBSYSTEMS`, so `apps/daemon/src/main.ts` does not move) and the
+      `settings/effective.ts` projection: `GET /v1/settings` composes the nine keys (stored
+      `automerge`/`timezone` over the `CB_*` defaults, `quietHours` from the push preferences);
+      `PATCH /v1/settings` writes `timezone` only (any other key is `422`); `POST
+      /v1/admin/brake { enabled }` stores `automerge = !enabled` and answers `{ enabled }`;
+      `POST /v1/admin/cache/wipe` removes worktrees whose run is terminal, keeps live ones and
+      bare clones, and answers `202`. `liveRunSettings(context)` gives the engine a getter so a
+      brake written after the engine was built is read at the next guardrail evaluation.
+      *Paths:* `apps/daemon/src/admin/**`, `apps/daemon/src/settings/**`,
+      `apps/daemon/src/modules.ts` + `modules.test.ts`, `apps/daemon/src/runs/engine.ts`,
+      `apps/daemon/README.md`, `packages/contracts/src/openapi.ts` (the PATCH summary),
+      `docs/api.md` §5.1/§5.7, `docs/operations.md` §6/§9, `docs/security.md` §12,
+      `docs/decisions.md` (D61).
+      *Dependencies:* none. `settingsSchema`, `brakeSchema`, the two OpenAPI paths, the app
+      client and `cb brake` already exist; the daemon half is the gap.
+      *Acceptance:* `[unit]` the four routes answer their contracts and the scope split (`write`
+      for PATCH, `admin` for both admin routes, `403` otherwise); `[unit]` a timezone patch
+      round-trips and an `automerge` patch is `422`; `[unit]` the brake flips `GET /v1/settings`
+      and a settings object built before the flip reads `'off'` afterwards; `[unit]` the wipe
+      removes the terminal worktree, keeps the running one, and the fake manager proves it;
+      `[unit]` the pinned subsystem list is updated and `main.ts` is untouched; `[unit]` lint,
+      the daemon suites and the build pass; `[live]` `cb brake on` then a run ends `pr_open`
+      with `automerger_off`, and `cb brake off` releases it without a restart — unmeasured on
+      this runner, handed to an `agent-review` issue.
 
 ---
 
