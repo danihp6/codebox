@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { Run, Schedule } from '@codebox/contracts';
+import type { RepoSchedule, Run } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ApiError } from '../../core/api/api-client';
 import type { ScheduleWrite } from './repo-schedule.api';
@@ -10,26 +10,24 @@ import { RepoScheduleStore } from './repo-schedule.store';
 const REPO_ID = 'repo_01JABCDEFGHJKMNPQRSV';
 const LIST_URL = `/v1/schedules?repoId=${REPO_ID}`;
 
-const SCHEDULE: Schedule = {
+const SCHEDULE: RepoSchedule = {
   id: 'sch_01JABCDEFGHJK',
   repoId: REPO_ID,
-  chatSessionId: null,
-  title: 'Backlog shift',
-  prompt: 'Work the backlog in file order.',
   mode: 'window',
   cron: null,
   timezone: 'Europe/Madrid',
   windowStart: '09:00',
   windowEnd: '17:00',
   cooldownMinutes: 15,
+  selection: 'nextPending',
+  refs: [],
+  maxAttempts: 2,
   maxFires: null,
   maxCostPerFireUsd: null,
-  firePolicy: 'new_chat',
   consecutiveFailures: 0,
   firesCount: 3,
   spendUsd: 1.5,
   enabled: true,
-  policy: 'auto',
   nextFireAt: '2026-10-30T08:00:00Z',
   lastFiredAt: null,
   createdAt: '2026-10-28T09:00:00Z',
@@ -71,6 +69,9 @@ const WRITE_CRON: ScheduleWrite = {
   cron: '0 9 * * *',
   windowStart: null,
   windowEnd: null,
+  selection: 'nextPending',
+  refs: [],
+  maxAttempts: 2,
   maxFires: null,
   maxCostPerFireUsd: null,
 };
@@ -81,6 +82,9 @@ const WRITE_WINDOW: ScheduleWrite = {
   cron: null,
   windowStart: '09:00',
   windowEnd: '17:00',
+  selection: 'refs',
+  refs: ['Task-35'],
+  maxAttempts: 3,
   maxFires: 4,
   maxCostPerFireUsd: 2,
 };
@@ -102,7 +106,7 @@ describe('RepoScheduleStore', () => {
     TestBed.resetTestingModule();
   });
 
-  function load(schedule: Schedule | null = SCHEDULE): void {
+  function load(schedule: RepoSchedule | null = SCHEDULE): void {
     store.load(REPO_ID);
     http.expectOne(LIST_URL).flush({ data: schedule === null ? [] : [schedule], nextCursor: null });
   }
@@ -173,10 +177,7 @@ describe('RepoScheduleStore', () => {
     store.load(REPO_ID);
     http.expectOne(LIST_URL).flush({ data: [], nextCursor: null });
 
-    store.save(
-      { repoId: REPO_ID, title: 'acme/widgets', prompt: 'acme/widgets' },
-      WRITE_CRON,
-    );
+    store.save(REPO_ID, WRITE_CRON);
     http
       .expectOne({ method: 'POST', url: '/v1/schedules' })
       .flush(envelope('conflict', { reason: 'schedule_exists' }), {
@@ -189,20 +190,17 @@ describe('RepoScheduleStore', () => {
     expect(store.error()).toBeNull();
   });
 
-  it('creates the missing row with the repository identity and the write body', () => {
+  it('creates the missing row with the write body and the repo id, no identity', () => {
     store.load(REPO_ID);
     http.expectOne(LIST_URL).flush({ data: [], nextCursor: null });
 
-    store.save({ repoId: REPO_ID, title: 'acme/widgets', prompt: 'acme/widgets' }, WRITE_CRON);
+    store.save(REPO_ID, WRITE_CRON);
     expect(store.busy()).toBe('save');
 
     const create = http.expectOne({ method: 'POST', url: '/v1/schedules' });
-    expect(create.request.body).toEqual({
-      ...WRITE_CRON,
-      repoId: REPO_ID,
-      title: 'acme/widgets',
-      prompt: 'acme/widgets',
-    });
+    expect(create.request.body).toEqual({ ...WRITE_CRON, repoId: REPO_ID });
+    expect(create.request.body).not.toHaveProperty('title');
+    expect(create.request.body).not.toHaveProperty('prompt');
     create.flush(SCHEDULE, { status: 201, statusText: 'Created' });
 
     expect(store.schedule()).toEqual(SCHEDULE);
@@ -213,7 +211,7 @@ describe('RepoScheduleStore', () => {
   it('patches the stored row and keeps the answer', () => {
     load();
 
-    store.save({ repoId: REPO_ID, title: 'acme/widgets', prompt: 'acme/widgets' }, WRITE_WINDOW);
+    store.save(REPO_ID, WRITE_WINDOW);
 
     const patch = http.expectOne({ method: 'PATCH', url: `/v1/schedules/${SCHEDULE.id}` });
     expect(patch.request.body).toEqual(WRITE_WINDOW);
@@ -227,7 +225,7 @@ describe('RepoScheduleStore', () => {
     store.load(REPO_ID);
     http.expectOne(LIST_URL).flush({ data: [], nextCursor: null });
 
-    store.save({ repoId: REPO_ID, title: 'acme/widgets', prompt: 'acme/widgets' }, WRITE_CRON);
+    store.save(REPO_ID, WRITE_CRON);
     http
       .expectOne({ method: 'POST', url: '/v1/schedules' })
       .flush(envelope('validation_failed'), { status: 422, statusText: 'Unprocessable' });

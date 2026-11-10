@@ -4,66 +4,67 @@ import {
   errorCodeSchema,
   errorEnvelopeSchema,
   parsePage,
+  parseRepoSchedule,
   parseRun,
-  parseSchedule,
-  scheduleSchema,
+  repoScheduleSchema,
 } from '@codebox/contracts';
-import type { Page, Run, Schedule, ScheduleMode } from '@codebox/contracts';
+import type { Page, RepoSchedule, Run, ScheduleMode, Selection } from '@codebox/contracts';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { ApiError } from '../../core/api/api-client';
 import { API_BASE_URL, API_PREFIX } from '../../core/api/http';
 
-/** The editable half of a schedule: the keys the sheet writes and `PATCH` accepts. */
+/** The editable half of a repository schedule: the keys the sheet writes and `PATCH` accepts. */
 export interface ScheduleWrite {
   readonly mode: ScheduleMode;
   readonly timezone: string;
   readonly cron: string | null;
   readonly windowStart: string | null;
   readonly windowEnd: string | null;
+  readonly selection: Selection;
+  readonly refs: readonly string[];
+  readonly maxAttempts: number;
   readonly maxFires: number | null;
   readonly maxCostPerFireUsd: number | null;
 }
 
 export interface RepoScheduleCreateBody extends ScheduleWrite {
   readonly repoId: string;
-  /**
-   * The create route still requires the two legacy columns D56 retired
-   * (apps/daemon/src/schedules/routes.ts:39-56, docs/api.md §5.10 lines 881-883).
-   * The scheduler never reads them; the sheet sends the repository's identity so the
-   * request is valid. A daemon task drops them and this field with them.
-   */
-  readonly title: string;
-  readonly prompt: string;
 }
 
-/** docs/api.md §5.9/§5.10: the repository's one schedule, answered as the legacy `Schedule`. */
+/** docs/api.md §5.10: the repository's one schedule, answered as `RepoSchedule`. */
 @Injectable({ providedIn: 'root' })
 export class RepoScheduleApi {
   constructor(private readonly http: HttpClient) {}
 
-  list(repoId: string): Observable<Page<Schedule>> {
+  list(repoId: string): Observable<Page<RepoSchedule>> {
     const params = new HttpParams().set('repoId', repoId);
     return this.send(this.http.get<unknown>(this.url('/schedules'), { params }), (input) =>
-      parsePage(scheduleSchema, input, 'schedules'),
+      parsePage(repoScheduleSchema, input, 'schedules'),
     );
   }
 
-  create(body: RepoScheduleCreateBody): Observable<Schedule> {
-    return this.send(this.http.post<unknown>(this.url('/schedules'), body), parseSchedule);
+  create(body: RepoScheduleCreateBody): Observable<RepoSchedule> {
+    return this.send(this.http.post<unknown>(this.url('/schedules'), body), parseRepoSchedule);
   }
 
-  update(id: string, body: ScheduleWrite): Observable<Schedule> {
-    return this.send(this.http.patch<unknown>(this.url(`/schedules/${id}`), body), parseSchedule);
+  update(id: string, body: ScheduleWrite): Observable<RepoSchedule> {
+    return this.send(
+      this.http.patch<unknown>(this.url(`/schedules/${id}`), body),
+      parseRepoSchedule,
+    );
   }
 
-  pause(id: string): Observable<Schedule> {
-    return this.send(this.http.post<unknown>(this.url(`/schedules/${id}/pause`), {}), parseSchedule);
+  pause(id: string): Observable<RepoSchedule> {
+    return this.send(
+      this.http.post<unknown>(this.url(`/schedules/${id}/pause`), {}),
+      parseRepoSchedule,
+    );
   }
 
-  resume(id: string): Observable<Schedule> {
+  resume(id: string): Observable<RepoSchedule> {
     return this.send(
       this.http.post<unknown>(this.url(`/schedules/${id}/resume`), {}),
-      parseSchedule,
+      parseRepoSchedule,
     );
   }
 

@@ -843,18 +843,18 @@ opens a run of it. This subsection is the API object; [`docs/jobs.md`](jobs.md) 
 field table, the selection rule, the three modes, the claim and the tick.
 
 - `GET /v1/schedules` (`read`) — the §4 page, newest first, narrowed by `repoId` and `enabled`;
-  `{ data, nextCursor }` with a cursor stable under inserts.
+  `{ data, nextCursor }` with a cursor stable under inserts; every entry is a `RepoSchedule`.
 - `POST /v1/schedules` (`write`) — creates the schedule and answers `201` with the stored
-  `Schedule`.
-- `GET /v1/schedules/{id}` (`read`) — answers `{ schedule, nextFires }` (`ScheduleDetail`, up
+  `RepoSchedule`.
+- `GET /v1/schedules/{id}` (`read`) — answers `{ schedule, nextFires }` (`RepoScheduleDetail`, up
   to five preview instants).
 - `PATCH /v1/schedules/{id}` (`write`) — the editable fields; answers `200` with the
-  `Schedule`.
+  `RepoSchedule`.
 - `DELETE /v1/schedules/{id}` (`write`) — deletes the schedule and its fire rows; `204`.
 - `POST /v1/schedules/{id}/pause` (`write`) — `enabled: false` and `nextFireAt: null`; answers
-  `200` with the `Schedule`.
+  `200` with the `RepoSchedule`.
 - `POST /v1/schedules/{id}/resume` (`write`) — `enabled: true` and the next fire recomputed
-  from now; answers `200` with the `Schedule`.
+  from now; answers `200` with the `RepoSchedule`.
 - `POST /v1/repos/{id}/run-next` (`runs`) — the same selection, once, outside any schedule:
   answers `202` with the created `Run`, or `409 nothing_pending`.
 
@@ -893,14 +893,20 @@ The table also keeps the legacy `title`, `prompt`, `chat_session_id`, `fire_poli
   `windowStart`/`windowEnd` of the form `HH:MM` and `windowStart !== windowEnd`; every other
   mode has a 5-field `cron` and null window bounds.
 - `repoId` is required and a repository has **at most one** schedule: a second create is `409`
-  with `details.reason = "schedule_exists"`. There is no schedule without a repository and no
-  schedule tied to a work (D56).
+  with `details.path = "schedule.repoId"` and `details.reason = "schedule_exists"`. There is no
+  schedule without a repository and no schedule tied to a work (D56).
 - `selection` is `nextPending` (the default) or `refs`; with `refs`, `refs` is a non-empty list
-  of backlog refs and only those are considered.
+  of backlog refs and only those are considered. A create or patch whose pair disagrees is `422`
+  at `schedule.refs`: `details.reason = "selection_empty"` when `refs` is empty, no reason when
+  `nextPending` carries refs. A patch may move one half; the stored other half closes it.
 - Defaults on create: `cooldownMinutes` `0`; `selection` `nextPending`; `maxAttempts` `2`;
   `maxFires` and `maxCostPerFireUsd` `null`; `enabled` `true`.
 - `consecutiveFailures`, `firesCount`, `spendUsd`, `nextFireAt` and `lastFiredAt` are written
-  by the daemon, never by a client.
+  by the daemon, never by a client. `repoId` is immutable after create.
+- The schedule sheet's frame (`22b`/`22c`) draws no selector: the app carries `selection`,
+  `refs` and `maxAttempts` hidden, copies the stored values into the draft and sends them back
+  on save, so a `refs` schedule keeps its refs. Editing them from the app is a deliberate gap
+  until a frame draws the control.
 - Refusals: `422 validation_failed` with `details.path = "schedule.<key>"` and `details.reason`
   one of `field_count`, `range`, `step`, `syntax`, `no_fire`, `timezone`, `window`,
   `repo_missing`, `selection_empty`. An unknown id is `404 not_found` with

@@ -6,6 +6,25 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-10 (Task-107: the repository schedule the daemon reads)
+
+- **The API writes the D56 row.** `POST /v1/schedules` requires `repoId`, carries `selection`,
+  `refs`, `maxAttempts` and no legacy `title`, `prompt` or `chatSessionId`; every write goes
+  through `store.repoSchedules` (the `title = ''` sentinel), so the tick's `fire.ts` and the
+  manual *Run next* read the row instead of `null`. A second schedule for a repository is `409
+  schedule_exists`, a `refs` selection with no refs is `422 selection_empty`, and the list/detail
+  responses parse as `RepoSchedule`/`RepoScheduleDetail`.
+- **The schedule sheet sends the D56 body** and preserves a stored `refs`/`maxAttempts` on save;
+  its frame, focus and i18n do not change. The frame draws no selector, so the three fields
+  travel hidden and a later L item owns the UI (recorded in `docs/api.md` §5.10).
+- **Two hardening fixes QA found before merge:** the D56 accessor now filters `title = ''`, so a
+  legacy chat row with a `NULL` `repo_id` answers `404`/empty instead of `500`; and
+  `works.runNext` uses the schedule's `selection`/`refs`, as *Run next* promised.
+- `docs/api.md` §5.10 and D56 carry the shape. Dev `b8da8bb`, QA `4ebc249`; 177 targeted tests,
+  the two app feature folders 130/130 (full app 554/555, the one `NOTICE` CRLF failure
+  pre-existing), lint and build green. The root `npm test` is red on the Windows host only, as
+  before. The `[live]` box flow is issue #131.
+
 ### Changed — 2026-11-10 (Task-106: the operator's runtime stop)
 
 - **The four routes exist.** The new `admin` subsystem (the eighteenth entry; `main.ts` does

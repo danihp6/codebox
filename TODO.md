@@ -2430,7 +2430,7 @@ detail schema export) and `docs/decisions.md` (a D56 amendment). No task holds `
 `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
 `opencode.json`, `TODO.md` or `CHANGELOG.md`.
 
-- [ ] **[Task-107]** Write and serve the D56 schedule. `POST /v1/schedules` requires `repoId`,
+- [x] **[Task-107]** Write and serve the D56 schedule. `POST /v1/schedules` requires `repoId`,
       carries `selection`, `refs` and `maxAttempts` (defaults `nextPending`, `[]`, `2`) and no
       legacy `title`, `prompt` or `chatSessionId`; the create/patch/pause/resume path writes
       `store.repoSchedules` (the `title = ''` sentinel the unique index expects), so the tick's
@@ -2438,15 +2438,16 @@ detail schema export) and `docs/decisions.md` (a D56 amendment). No task holds `
       `repoScheduleSchema` (the `Schedule` type stays internal to the fire path). The schedule
       sheet keeps its frame (`22b`/`22c`): it sends the D56 body with the three defaults and
       draws nothing new, because the frame has no selection controls — recorded as a deliberate
-      gap for a later L item. `docs/api.md` §5.9, `docs/jobs.md` (schedule execution) and D56
-      carry the shape.
+      gap for a later L item. `docs/api.md` §5.10 and D56 carry the shape; `docs/jobs.md` was
+      already true and stays untouched.
       *Paths:* `packages/contracts/src/{works.ts,works.test.ts,index.ts}`,
       `packages/contracts/README.md` (the `works.ts` line),
       `apps/daemon/src/schedules/{service.ts,routes.ts}` + their tests,
-      `apps/daemon/README.md` (only if a line changes),
+      `apps/daemon/src/works/{service.ts,routes.test.ts}` (the *Run next* selection),
       `apps/app/src/app/features/repos/{repo-schedule.api.ts,repo-schedule.api.spec.ts,repo-schedule.store.ts,repo-schedule.store.spec.ts}`,
-      `apps/app/src/app/features/backlog/{schedule-sheet.ts,schedule-sheet.spec.ts}`,
-      `docs/api.md` §5.9, `docs/jobs.md` (schedule section), `docs/decisions.md` (D56).
+      `apps/app/src/app/features/backlog/{schedule-sheet.ts,schedule-sheet.spec.ts,repo-backlog.page.spec.ts}`
+      (the last one fixture-only), `packages/store/src/repo-schedules.ts` + test (the legacy-row
+      guard), `docs/api.md` §5.10, `docs/decisions.md` (D56).
       *Dependencies:* none. `repoScheduleSchema`, `pageOfRepoSchedule`, the `schedules` columns
       (`0006_works.sql`) and the unique index exist; the writer and the response are the gap.
       *Acceptance:* `[unit]` a create with `{ repoId, mode: 'every', cron, timezone }` answers
@@ -2459,6 +2460,19 @@ detail schema export) and `docs/decisions.md` (a D56 amendment). No task holds `
       save body carries the D56 keys and no legacy pair; `[unit]` lint, the daemon and app
       suites run and the build passes; `[live]` the sheet creates, edits and fires a repository
       schedule on the box — unmeasured on this runner, handed to an `agent-review` issue.
+      **Done — 2026-11-10:** every write goes through `store.repoSchedules`; the create/patch
+      bodies are the strict D56 object (`422` for `title`/`prompt`/`chatSessionId`/`firePolicy`/
+      `policy`/`repoId`-on-patch), a second create is `409 schedule_exists`, a `refs` selection
+      with no refs is `422 selection_empty`, and the responses parse as
+      `RepoSchedule`/`RepoScheduleDetail`. The tick and *Run next* now read the row, including
+      its `selection`/`refs`. QA found and the dev closed two risks before merge: the D56
+      accessor now filters `title = ''`, so a legacy chat row with a `NULL` `repo_id` answers
+      `404`/empty instead of `500`, and `works.runNext` uses the schedule's selection instead of
+      hardcoded `nextPending`. Dev `b8da8bb`, QA `4ebc249` (177 targeted tests, app 130/130 in
+      the two feature folders and 554/555 full — the one `NOTICE` CRLF failure is pre-existing;
+      lint and build green; the root `npm test` still cannot run on this Windows host). One
+      out-of-spec file is fixture-only: `repo-backlog.page.spec.ts`. Issue #79 closes; the
+      `[live]` box flow is issue #131.
 
 ---
 

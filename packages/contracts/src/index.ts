@@ -316,12 +316,14 @@ export {
   sessionMessageSchema,
   sessionSchema,
   repoScheduleSchema,
+  repoScheduleDetailSchema,
   parseBacklog,
   parseWork,
   parseWorkDetail,
   parseSession,
   parseSessionMessage,
   parseRepoSchedule,
+  parseRepoScheduleDetail,
 } from './works.js';
 export type {
   BacklogWorkRef,
@@ -334,6 +336,7 @@ export type {
   SessionMessage,
   Session,
   RepoSchedule,
+  RepoScheduleDetail,
 } from './works.js';
 
 // Design preview: docs/api.md §5.2, D52.

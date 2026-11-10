@@ -1,14 +1,19 @@
 import { describe, expect, it } from 'vitest';
-import { parseSchedule, parseScheduleDetail } from '@codebox/contracts';
+import type { BacklogEntry, SelectionPolicy } from '@codebox/backlog';
+import type { Repo, RepoSchedule } from '@codebox/contracts';
+import { parseRepoSchedule, parseRepoScheduleDetail, parseSchedule } from '@codebox/contracts';
 import type { SchedulePatch } from '@codebox/store';
 import { openInMemoryStore } from '@codebox/store';
 import type { Store } from '@codebox/store';
+import type { BacklogService } from '../backlog/service.js';
 import { loadConfig, readBuildInfo, resolvePaths } from '../config.js';
 import { createLogger } from '../logger.js';
 import { DEFAULT_SUBSYSTEM_FLAGS, createShutdownRegistry } from '../modules.js';
 import type { DaemonContext } from '../modules.js';
+import type { RunEngine } from '../run/ports.js';
+import { createRunsService } from '../runs/service.js';
 import { RunApiError } from '../runs/errors.js';
-import { ScheduleFireError } from './fire.js';
+import { ScheduleFireError, createScheduleFirePort } from './fire.js';
 import type { ScheduleFirePort } from './fire.js';
 import { createSchedulesService, newScheduleId, schedulesRuntimeOf } from './service.js';
 import type { SchedulesService } from './service.js';
@@ -96,6 +101,7 @@ function fakePort(store: Store): FakePort {
 }
 
 interface Harness {
+  readonly context: DaemonContext;
   readonly store: Store;
   readonly service: SchedulesService;
   readonly port: FakePort;
@@ -119,13 +125,15 @@ function harness(failure: ScheduleFireError | null = null): Harness {
   let cursor = new Date(NOW);
   const port = fakePort(store);
   port.failure = failure;
+  const context = contextFor(store, cursor);
   const service = createSchedulesService({
-    context: contextFor(store, cursor),
+    context: { ...context, clock: () => cursor },
     now: () => cursor,
     fire: port,
   });
   const runtime = schedulesRuntimeOf(service);
   return {
+    context,
     store,
     service,
     port,
@@ -138,6 +146,7 @@ function harness(failure: ScheduleFireError | null = null): Harness {
   };
 }
 
+/** A legacy `/v1/schedules` row: the tick still reads the table through the legacy mapper. */
 function fixture(
   input: Record<string, unknown> & { id: string },
 ): ReturnType<typeof parseSchedule> {
@@ -171,15 +180,13 @@ function fixture(
 
 function windowInput(): Parameters<SchedulesService['create']>[0] {
   return {
-    title: 'Nightly drain',
-    prompt: 'Pick the next issue and open a PR.',
+    repoId: REPO_ID,
     mode: 'window',
     timezone: 'Europe/Madrid',
     windowStart: '22:00',
     windowEnd: '06:00',
     cooldownMinutes: 20,
     maxCostPerFireUsd: 1.5,
-    repoId: REPO_ID,
   };
 }
 
@@ -193,34 +200,72 @@ function errorOf(run: () => unknown): RunApiError {
   throw new Error('the call should have thrown');
 }
 
+function repoScheduleFixture(input: Partial<RepoSchedule> = {}): RepoSchedule {
+  return parseRepoSchedule({
+    id: 'sch_000001',
+    repoId: REPO_ID,
+    mode: 'every',
+    cron: '0 10 * * *',
+    timezone: 'UTC',
+    windowStart: null,
+    windowEnd: null,
+    cooldownMinutes: 0,
+    selection: 'nextPending',
+    refs: [],
+    maxAttempts: 2,
+    maxFires: null,
+    maxCostPerFireUsd: null,
+    consecutiveFailures: 0,
+    firesCount: 0,
+    spendUsd: 0,
+    enabled: true,
+    nextFireAt: null,
+    lastFiredAt: null,
+    createdAt: NOW,
+    updatedAt: NOW,
+    ...input,
+  });
+}
+
 describe('newScheduleId', () => {
   it('mints the sch_ prefix the contract accepts', () => {
     const id = newScheduleId();
     expect(id.startsWith('sch_')).toBe(true);
-    expect(fixture({ id }).id).toBe(id);
+    expect(repoScheduleFixture({ id }).id).toBe(id);
     expect(() => newScheduleId(() => Buffer.alloc(4))).toThrow(RangeError);
   });
 });
 
 describe('create', () => {
   it('stores a window schedule whose next fire is the coming opening', () => {
-    const { service } = harness();
+    const { service, store } = harness();
     const created = service.create(windowInput());
     expect(created.id).toMatch(/^sch_/);
     expect(created.mode).toBe('window');
     expect(created.cron).toBeNull();
     expect(created.enabled).toBe(true);
+    expect(created.selection).toBe('nextPending');
+    expect(created.refs).toEqual([]);
+    expect(created.maxAttempts).toBe(2);
     expect(created.firesCount).toBe(0);
     expect(created.spendUsd).toBe(0);
-    expect(created.policy).toBe('manual');
-    expect(created.firePolicy).toBe('new_chat');
     expect(created.nextFireAt).toBe('2026-10-25T21:00:00Z');
-    expect(parseSchedule(created)).toEqual(created);
+    expect(parseRepoSchedule(created)).toEqual(created);
+    expect(store.repoSchedules.getByRepo(REPO_ID)).toEqual(created);
+  });
+
+  it('writes the empty title sentinel the D56 accessor filters on', () => {
+    const { service, store } = harness();
+    const created = service.create(windowInput());
+    const legacy = store.schedules.get(created.id);
+    expect(legacy?.title).toBe('');
+    expect(legacy?.prompt).toBe('');
+    expect(legacy?.repoId).toBe(REPO_ID);
   });
 
   it('stores an every schedule and a once schedule from their cron', () => {
-    const { service } = harness();
-    const every = service.create({
+    const everyHarness = harness();
+    const every = everyHarness.service.create({
       ...windowInput(),
       mode: 'every',
       cron: '0 12 * * *',
@@ -232,7 +277,7 @@ describe('create', () => {
     expect(every.windowStart).toBeNull();
     expect(every.nextFireAt).toBe('2026-10-25T12:00:00Z');
 
-    const once = service.create({
+    const once = harness().service.create({
       ...windowInput(),
       mode: 'once',
       cron: '30 9 1 1 *',
@@ -243,15 +288,24 @@ describe('create', () => {
     expect(once.nextFireAt).toBe('2027-01-01T09:30:00Z');
   });
 
-  it('refuses a missing repository, a missing target and a bad cron or zone', () => {
+  it('carries the selection pair and the retry budget', () => {
     const { service } = harness();
-    expect(
-      errorOf(() => service.create({ ...windowInput(), repoId: 'repo_000000' })).details,
-    ).toEqual({ path: 'schedule.repoId', reason: 'repo_missing' });
-    expect(errorOf(() => service.create({ ...windowInput(), repoId: null })).details).toEqual({
-      path: 'schedule.repoId',
-      reason: 'repo_required',
+    const refs = service.create({
+      ...windowInput(),
+      selection: 'refs',
+      refs: ['Task-35'],
+      maxAttempts: 3,
     });
+    expect(refs.selection).toBe('refs');
+    expect(refs.refs).toEqual(['Task-35']);
+    expect(refs.maxAttempts).toBe(3);
+  });
+
+  it('refuses a missing repository, a bad cron or zone and a bad selection pair', () => {
+    const { service } = harness();
+    expect(errorOf(() => service.create({ ...windowInput(), repoId: 'repo_000000' })).details).toEqual(
+      { path: 'schedule.repoId', reason: 'repo_missing' },
+    );
     expect(
       errorOf(() =>
         service.create({
@@ -277,42 +331,30 @@ describe('create', () => {
     expect(
       errorOf(() => service.create({ ...windowInput(), timezone: 'Mars/Olympus' })).details,
     ).toEqual({ path: 'schedule.timezone', reason: 'timezone' });
-    expect(errorOf(() => service.create({ ...windowInput(), windowEnd: '22:00' })).details).toEqual(
-      { path: 'schedule.windowStart', reason: 'window' },
-    );
+    expect(errorOf(() => service.create({ ...windowInput(), windowEnd: '22:00' })).details).toEqual({
+      path: 'schedule.windowStart',
+      reason: 'window',
+    });
     expect(errorOf(() => service.create({ ...windowInput(), cron: '0 3 * * *' })).details).toEqual({
       path: 'schedule.cron',
       reason: 'window',
     });
+    expect(errorOf(() => service.create({ ...windowInput(), selection: 'refs' })).details).toEqual({
+      path: 'schedule.refs',
+      reason: 'selection_empty',
+    });
+    expect(
+      errorOf(() => service.create({ ...windowInput(), refs: ['Task-35'] })).details,
+    ).toEqual({ path: 'schedule.refs' });
   });
 
-  it('refuses an unknown chat and a chat schedule that clears its chat', () => {
-    const { service, store } = harness();
-    expect(
-      errorOf(() => service.create({ ...windowInput(), chatSessionId: 'chat_000000' })).details,
-    ).toEqual({ path: 'schedule.chatSessionId', reason: 'repo_missing' });
-    const chat = store.chats.createSession(
-      {
-        id: 'chat_000002',
-        repoId: REPO_ID,
-        title: 'Nightly drain',
-        status: 'idle',
-        createdAt: NOW,
-        updatedAt: NOW,
-        lastMessage: null,
-      },
-      { opencodeSessionId: null, worktree: null },
-    );
-    const schedule = service.create({
-      ...windowInput(),
-      repoId: null,
-      chatSessionId: chat.id,
-    });
-    expect(schedule.firePolicy).toBe('continue');
-    expect(errorOf(() => service.patch(schedule.id, { chatSessionId: null })).details).toEqual({
-      path: 'schedule.chatSessionId',
-      reason: 'repo_required',
-    });
+  it('refuses a second schedule for the repository as schedule_exists', () => {
+    const { service } = harness();
+    service.create(windowInput());
+    const error = errorOf(() => service.create(windowInput()));
+    expect(error.code).toBe('conflict');
+    expect(error.status).toBe(409);
+    expect(error.details).toEqual({ path: 'schedule.repoId', reason: 'schedule_exists' });
   });
 });
 
@@ -327,7 +369,7 @@ describe('list, get, patch, pause, resume and remove', () => {
     expect(service.list({ limit: 10, cursor: null, enabled: false }).data).toEqual([]);
 
     const detail = service.get(created.id);
-    expect(parseScheduleDetail(detail)).toEqual(detail);
+    expect(parseRepoScheduleDetail(detail)).toEqual(detail);
     expect(detail.nextFires).toEqual([
       '2026-10-25T21:00:00Z',
       '2026-10-25T21:20:00Z',
@@ -347,9 +389,9 @@ describe('list, get, patch, pause, resume and remove', () => {
       windowStart: null,
       windowEnd: null,
     });
-    const renamed = service.patch(created.id, { title: 'Renamed', prompt: 'Do less.' });
-    expect(renamed.title).toBe('Renamed');
-    expect(renamed.nextFireAt).toBe('2026-10-25T12:00:00Z');
+    const tuned = service.patch(created.id, { maxAttempts: 4 });
+    expect(tuned.maxAttempts).toBe(4);
+    expect(tuned.nextFireAt).toBe('2026-10-25T12:00:00Z');
 
     expect(service.patch(created.id, { cron: '0 18 * * *' }).nextFireAt).toBe(
       '2026-10-25T18:00:00Z',
@@ -362,7 +404,29 @@ describe('list, get, patch, pause, resume and remove', () => {
     expect(resumed.nextFireAt).toBe('2026-10-25T18:00:00Z');
 
     expect(errorOf(() => service.patch(created.id, { cron: 'nope' })).status).toBe(422);
-    expect(store.schedules.get(created.id)?.cron).toBe('0 18 * * *');
+    expect(store.repoSchedules.get(created.id)?.cron).toBe('0 18 * * *');
+  });
+
+  it('validates a patch of one half of the selection against the stored other half', () => {
+    const { service, store } = harness();
+    const created = service.create(windowInput());
+
+    const refs = service.patch(created.id, { selection: 'refs', refs: ['Task-35'] });
+    expect(refs.selection).toBe('refs');
+    expect(refs.refs).toEqual(['Task-35']);
+
+    expect(errorOf(() => service.patch(created.id, { refs: [] })).details).toEqual({
+      path: 'schedule.refs',
+      reason: 'selection_empty',
+    });
+    const cleared = service.patch(created.id, { selection: 'nextPending', refs: [] });
+    expect(cleared.selection).toBe('nextPending');
+    expect(cleared.refs).toEqual([]);
+    expect(errorOf(() => service.patch(created.id, { selection: 'refs' })).details).toEqual({
+      path: 'schedule.refs',
+      reason: 'selection_empty',
+    });
+    expect(store.repoSchedules.getByRepo(REPO_ID)?.selection).toBe('nextPending');
   });
 
   it('refuses an unknown id on every verb', () => {
@@ -389,7 +453,90 @@ describe('list, get, patch, pause, resume and remove', () => {
     expect(resumed.nextFireAt).toBe('2026-10-25T21:00:00Z');
 
     service.remove(created.id);
-    expect(store.schedules.get(created.id)).toBeNull();
+    expect(store.repoSchedules.get(created.id)).toBeNull();
+    expect(store.repoSchedules.getByRepo(REPO_ID)).toBeNull();
+  });
+});
+
+describe('the row a schedule writes is the row the fire reads', () => {
+  const ITEMS: readonly BacklogEntry[] = [
+    {
+      ref: 'Task-35',
+      title: 'Routine engine',
+      body: 'Routine engine\nBuild it.',
+      needs: [],
+      state: 'open',
+      checked: false,
+      line: 10,
+      section: 'Batch 15',
+    },
+    {
+      ref: 'Task-36',
+      title: 'Session replay',
+      body: 'Session replay\nReplay it.',
+      needs: [],
+      state: 'open',
+      checked: false,
+      line: 20,
+      section: 'Batch 15',
+    },
+  ];
+
+  function engine(): RunEngine {
+    return {
+      start: async () => ({ runId: 'run_ignored', state: 'succeeded' }),
+      cancel: async () => false,
+      active: () => [],
+    };
+  }
+
+  it('hands fire.ts the stored refs pair and selects only that item', async () => {
+    const h = harness();
+    const created = h.service.create({
+      ...windowInput(),
+      selection: 'refs',
+      refs: ['Task-36'],
+      maxAttempts: 3,
+    });
+    const policies: SelectionPolicy[] = [];
+    const backlog: BacklogService = {
+      read: async () => null,
+      project: async () => null,
+      resolveItem: async (_repo: Repo, ref) => {
+        const item = ITEMS.find((entry) => entry.ref === ref) ?? ITEMS[0];
+        return { item, revision: '9f1c2ab' };
+      },
+      select: async (_repo: Repo, policy) => {
+        policies.push(policy);
+        const candidates =
+          policy.selection === 'refs'
+            ? ITEMS.filter((entry) => policy.refs.includes(entry.ref))
+            : ITEMS;
+        const item = candidates[0];
+        return item === undefined ? { kind: 'nothing_pending' } : { kind: 'selected', item };
+      },
+      tick: async () => ({ outcome: 'untouched', ref: 'Task-35' }),
+    } as unknown as BacklogService;
+    const runs = createRunsService({ context: h.context, engine: engine() });
+    const port = createScheduleFirePort({
+      context: h.context,
+      runs: () => runs,
+      backlog: () => backlog,
+    });
+
+    const schedule = h.store.repoSchedules.get(created.id);
+    expect(schedule).not.toBeNull();
+    if (schedule === null) return;
+    const { runId } = await port.startRun({ schedule, scheduledFor: '2026-10-25T21:00:00Z' });
+
+    expect(policies).toEqual([
+      { selection: 'refs', refs: ['Task-36'], maxAttempts: 3 },
+    ]);
+    expect(h.store.works.findByBacklogRef(REPO_ID, 'Task-36')).not.toBeNull();
+    expect(h.store.works.findByBacklogRef(REPO_ID, 'Task-35')).toBeNull();
+    expect(h.store.runs.getRecord(runId)?.workId ?? null).toBe(
+      h.store.works.findByBacklogRef(REPO_ID, 'Task-36')?.id ?? null,
+    );
   });
 });
 
@@ -501,13 +648,16 @@ describe('tick', () => {
   it('anchors the next window fire on the finish instant, not the claim', async () => {
     const h = harness();
     const created = h.service.create(windowInput());
-    h.store.schedules.update(created.id, { nextFireAt: '2026-10-25T10:00:00Z' });
+    h.store.repoSchedules.update(created.id, {
+      nextFireAt: '2026-10-25T10:00:00Z',
+      updatedAt: NOW,
+    });
     h.setNow('2026-10-25T10:04:00.000Z');
     await h.service.tick();
     await h.drain();
     // 10:04 + 20 minutes is outside 22:00–06:00, so the next fire is the coming opening.
-    expect(h.store.schedules.get(created.id)?.nextFireAt).toBe('2026-10-25T21:00:00Z');
-    expect(h.store.schedules.get(created.id)?.firesCount).toBe(1);
+    expect(h.store.repoSchedules.get(created.id)?.nextFireAt).toBe('2026-10-25T21:00:00Z');
+    expect(h.store.repoSchedules.get(created.id)?.firesCount).toBe(1);
   });
 
   it('fails a repo-less schedule with repo_required', async () => {

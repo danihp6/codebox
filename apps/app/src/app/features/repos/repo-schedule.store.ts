@@ -1,6 +1,6 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type { Run, Schedule } from '@codebox/contracts';
+import type { RepoSchedule, Run } from '@codebox/contracts';
 import { finalize } from 'rxjs';
 import type { ApiError } from '../../core/api/api-client';
 import { RepoScheduleApi } from './repo-schedule.api';
@@ -24,7 +24,7 @@ export class RepoScheduleStore {
   private readonly destroy = inject(DestroyRef);
 
   readonly repoId = signal<string | null>(null);
-  readonly schedule = signal<Schedule | null>(null);
+  readonly schedule = signal<RepoSchedule | null>(null);
   readonly loading = signal(true);
   readonly error = signal<ApiError | null>(null);
   readonly busy = signal<RepoScheduleBusy | null>(null);
@@ -86,10 +86,7 @@ export class RepoScheduleStore {
       });
   }
 
-  save(
-    identity: { readonly repoId: string; readonly title: string; readonly prompt: string },
-    body: ScheduleWrite,
-  ): void {
+  save(repoId: string, body: ScheduleWrite): void {
     if (this.busy() !== null) return;
     this.error.set(null);
     this.notice.set(null);
@@ -97,7 +94,7 @@ export class RepoScheduleStore {
     const schedule = this.schedule();
     const request =
       schedule === null
-        ? this.api.create({ ...body, ...identity })
+        ? this.api.create({ ...body, repoId })
         : this.api.update(schedule.id, body);
     request
       .pipe(
@@ -117,7 +114,7 @@ export class RepoScheduleStore {
   }
 
   private toggle(
-    previous: Schedule,
+    previous: RepoSchedule,
     action: 'pause' | 'resume',
     enabled: boolean,
   ): void {

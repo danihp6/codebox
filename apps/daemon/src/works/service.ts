@@ -341,8 +341,8 @@ export function createWorksService(options: CreateWorkOptions): WorksService {
       const repo = requireRepo(store, repoId);
       const schedule = store.repoSchedules.getByRepo(repoId);
       const selection = await backlog.select(repo, {
-        selection: 'nextPending',
-        refs: [],
+        selection: schedule?.selection ?? 'nextPending',
+        refs: schedule?.refs ?? [],
         maxAttempts: schedule?.maxAttempts ?? 2,
       });
       if (selection.kind !== 'selected') throw conflict(selection.kind);

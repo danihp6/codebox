@@ -4,10 +4,12 @@ import {
   backlogSchema,
   parseBacklog,
   parseRepoSchedule,
+  parseRepoScheduleDetail,
   parseSession,
   parseSessionMessage,
   parseWork,
   parseWorkDetail,
+  repoScheduleDetailSchema,
   repoScheduleSchema,
   sessionMessageSchema,
   sessionProposalSchema,
@@ -392,5 +394,33 @@ describe('repository schedule', () => {
     const error = errorOf(() => parseRepoSchedule({ ...repoSchedule, maxAttempts: 0 }));
     expect(error).toBeInstanceOf(ContractParseError);
     expect(error instanceof ContractParseError ? error.boundary : null).toBe('repoSchedule');
+  });
+
+  it('round-trips the detail with up to five preview instants', () => {
+    const fires = [
+      '2026-10-29T02:00:00Z',
+      '2026-10-30T02:00:00Z',
+      '2026-10-31T02:00:00Z',
+      '2026-11-01T02:00:00Z',
+      '2026-11-02T02:00:00Z',
+    ];
+    const detail = { schedule: repoSchedule, nextFires: fires };
+    expect(parseRepoScheduleDetail(detail)).toEqual(detail);
+    expect(repoScheduleDetailSchema.safeParse(detail).success).toBe(true);
+    expect(refusal({ schedule: repoSchedule, nextFires: ['not-an-instant'] }, repoScheduleDetailSchema)).toBe(
+      false,
+    );
+    expect(
+      refusal({ schedule: { ...repoSchedule, title: 'Nightly' }, nextFires: [] }, repoScheduleDetailSchema),
+    ).toBe(false);
+    expect(refusal({ schedule: repoSchedule, nextFires: [], extra: true }, repoScheduleDetailSchema)).toBe(
+      false,
+    );
+  });
+
+  it('names the repoScheduleDetail boundary when a field fails', () => {
+    const error = errorOf(() => parseRepoScheduleDetail({ schedule: repoSchedule, nextFires: [1] }));
+    expect(error).toBeInstanceOf(ContractParseError);
+    expect(error instanceof ContractParseError ? error.boundary : null).toBe('repoScheduleDetail');
   });
 });
