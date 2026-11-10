@@ -64,6 +64,8 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 25 | The measured spec sees through the bands | 102 | 1 |
 | 26 | Wave 3's two debts: the instance's name and the shell's bar | 103–104 | 2 |
 | 27 | The gate stops reporting (D57 retired) | 105 | 1 |
+| 28 | The operator's runtime stop | 106 | 1 |
+| 29 | The repository schedule the daemon reads (D56) | 107 | 1 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -628,6 +630,21 @@ Orchestrator. The three empty slots have no legal candidate: Task-31 waits on th
 measurement (#105), Task-32 behind it, L1/L3/L4 are operator items, issue #110 is a decision
 about the cycle's own trace and not code, and issue #79's schedule tab was retired by Task-99
 (the sheet edits the saved schedule; it does not draw `selection`, `refs` or `maxAttempts`).
+
+**Cut — operator question 2026-11-10, after Task-106 (one of four slots used).** The queue is
+still dry, but the Task-106 audit turned up a real divergence from D56: `store.repoSchedules`
+is a second accessor over the same `schedules` table, and `getByRepo` only sees a row whose
+`title` is the empty sentinel. The only writer, `POST /v1/schedules`, still writes the legacy
+row with a real `title`/`prompt`, so `apps/daemon/src/schedules/fire.ts` and
+`apps/daemon/src/works/service.ts` always read `null` and fall back to `nextPending`, `[]` and
+`maxAttempts: 2`. The D56 fields are therefore unreachable in production. It is cut as
+**Task-107**. **Hot-file holders in this cut:** Task-107 holds `docs/decisions.md` (a D56
+amendment); no task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`,
+`apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`, `opencode.json`, `TODO.md` or
+`CHANGELOG.md`. The three empty slots have no legal candidate: Task-31 is `[!]` (#105) and
+Task-32 waits behind it, L1/L3/L4 are operator items, and issues #75 and #110 are decisions
+about wording and the cycle's own trace, not code.
 
 ### Screens awaiting the prototype
 
@@ -2394,6 +2411,53 @@ belong to the Orchestrator.
       §10.4 and §12, which carried the same stale `unsupported` sentences, and the spec named
       base `f75516a` while the cut landed at `28ae813`. Issues #104 and #76 close; the `[live]`
       brake cycle is an `agent-review` issue.
+
+---
+
+## Batch 29 — The repository schedule the daemon reads (D56)
+
+Cut 2026-11-10 after the Task-106 audit. `repoSchedules` is not a second table: it is the D56
+accessor over `schedules`, and `getByRepo` only sees a row whose `title` is the empty sentinel
+(`packages/store/src/repo-schedules.ts`). The only writer, `POST /v1/schedules`, still writes the
+legacy row with a real `title`/`prompt`, so `apps/daemon/src/schedules/fire.ts` and
+`apps/daemon/src/works/service.ts` always read `null` and fall back to `nextPending`, `[]` and
+`maxAttempts: 2`. The D56 selection fields are unreachable in production. This batch makes the
+API write and serve the D56 object.
+
+**Hot-file holders in this batch:** Task-107 holds `docs/decisions.md` (a D56 amendment). No task
+holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`packages/contracts/src/index.ts`, `opencode.json`, `TODO.md` or `CHANGELOG.md`.
+
+- [ ] **[Task-107]** Write and serve the D56 schedule. `POST /v1/schedules` requires `repoId`,
+      carries `selection`, `refs` and `maxAttempts` (defaults `nextPending`, `[]`, `2`) and no
+      legacy `title`, `prompt` or `chatSessionId`; the create/patch/pause/resume path writes
+      `store.repoSchedules` (the `title = ''` sentinel the unique index expects), so the tick's
+      `fire.ts` and the manual *Run next* read the real row. The list/detail responses parse with
+      `repoScheduleSchema` (the `Schedule` type stays internal to the fire path). The schedule
+      sheet keeps its frame (`22b`/`22c`): it sends the D56 body with the three defaults and
+      draws nothing new, because the frame has no selection controls — recorded as a deliberate
+      gap for a later L item. `docs/api.md` §5.9, `docs/jobs.md` (schedule execution) and D56
+      carry the shape.
+      *Paths:* `packages/contracts/src/{resources.ts,openapi.ts,openapi.test.ts}`,
+      `packages/contracts/README.md` (the two lines that change),
+      `apps/daemon/src/schedules/{service.ts,routes.ts}` + their tests,
+      `apps/daemon/README.md` (only if a line changes),
+      `apps/app/src/app/features/repos/{repo-schedule.api.ts,repo-schedule.api.spec.ts,repo-schedule.store.ts,repo-schedule.store.spec.ts}`,
+      `apps/app/src/app/features/backlog/{schedule-sheet.ts,schedule-sheet.spec.ts}`,
+      `docs/api.md` §5.9, `docs/jobs.md` (schedule section), `docs/decisions.md` (D56).
+      *Dependencies:* none. `repoScheduleSchema`, `pageOfRepoSchedule`, the `schedules` columns
+      (`0006_works.sql`) and the unique index exist; the writer and the response are the gap.
+      *Acceptance:* `[unit]` a create with `{ repoId, mode: 'every', cron, timezone }` answers
+      `201` with `repoScheduleSchema` and leaves a row `store.repoSchedules.getByRepo` finds
+      (`title === ''`, `selection === 'nextPending'`, `maxAttempts === 2`); `[unit]` a `PATCH
+      { maxAttempts: 3 }` is read back and a `PATCH { selection: 'refs', refs: ['Task-35'] }`
+      makes `POST /v1/repos/{id}/run-next` select that item, while `refs: []` is `422`;
+      `[unit]` a body with `title`, `prompt` or `chatSessionId` is `422` (dialect retired);
+      `[unit]` `GET /v1/schedules?repoId=` parses with `pageOfRepoSchedule`, and the sheet's
+      save body carries the D56 keys and no legacy pair; `[unit]` lint, the daemon and app
+      suites run and the build passes; `[live]` the sheet creates, edits and fires a repository
+      schedule on the box — unmeasured on this runner, handed to an `agent-review` issue.
 
 ---
 
