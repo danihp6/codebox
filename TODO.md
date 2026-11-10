@@ -2299,8 +2299,8 @@ once L5 is ticked the two can share a batch; before the tick, this is the one le
       design-scan step 6/6, `npm run lint`, `npm run test:guard` and `npm run build` green, the
       design documents check and the design gate each `0 finding(s)`; the root `npm test` is red
       on this Windows host only (CRLF `NOTICE` and POSIX/shell suites, none in the diff). Task
-      branch `94c4ee6`, QA `04ed602`, merged into **`l5-reimport`** at `75e5567` — it rides the L5
-      PR and `main` does not move. The `[live]` box cycle is issue **#126**.
+      branch `94c4ee6`, QA `04ed602`, merged into **`l5-reimport`** at `75e5567` and landed on
+      `main` with PR **#127**. The `[live]` box cycle is issue **#126**.
 
 ---
 

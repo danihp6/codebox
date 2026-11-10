@@ -19,7 +19,7 @@ first release exists.
   with `enforced: 1, reportOnly: 0`. The design documents check reports `0 finding(s)` over the
   eleven specs the 2026-11-09 re-import wrote, which is what made the flip legal. The `[live]`
   cycle on the box is unmeasured on this runner and is issue #126. Merged into `l5-reimport`
-  (`75e5567`), not `main`: it rides the L5 PR.
+  (`75e5567`) and landed on `main` with the L5 PR #127.
 
 ### Changed — 2026-11-09 (L5: the measured re-import)
 
