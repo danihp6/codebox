@@ -596,6 +596,26 @@ still hold nulls — and merging the re-import early would preempt L5's tick, wh
 forbids. The spec is `.agent_specs/task-105.md`; it freezes `main`'s nulls as the reason, so a
 reader does not re-derive it.
 
+**Cut — cycle 2026-11-10, after the L5 tick (one of four slots used).** No task branch was alive
+and `main` was `1f6924a` (the L5 PR merge; the L5 tick lands immediately before this record). The
+operator walked present mode — flow A `01 → 12 → 02`, flow B `22 → 03a → 04b → 04` and the 320
+twin `S7 → 03a`, no dead hotspot — so **L5 is done** and the last screen item on the queue,
+**Task-99** (two tabs and the schedule sheet), is eligible: L6, L7 and Task-92 are merged and
+`design/exports/schedule-sheet.png` is in the tree. It is the batch. The three empty slots have no
+legal candidate: Task-32 waits on the blocked Task-31 (#105), Task-31 is `[!]` for the live ten-run
+measurement, and L1/L3/L4 are operator items. **Hot-file holders in this cut:** Task-99 holds
+`apps/app/src/app/app.routes.ts`; no task holds `package.json`, `package-lock.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`packages/contracts/src/index.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or
+`docs/decisions.md`. Docs are claimed by section: Task-99 holds `docs/app.md` §4–§5, `docs/api.md`
+§11 and `design/README.md` §6, and `apps/app/README.md` has one writer, its own line blocks.
+**Deviations from the item's `*Paths:*` line, recorded:** it adds `repo-design.page.*` (the
+retired route's component would otherwise be dead code), `docs/app.md` §4/§5 and `docs/api.md`
+§11 (the route-table test and two false sentences force them) and
+`features/backlog/schedule-sheet.ts`/`.spec.ts` (the sheet lives in the backlog feature,
+`design/README.md` §2). The schedule API and store stay in `features/repos`; the sheet imports the
+store.
+
 ### Screens awaiting the prototype
 
 Eleven routed screens were implemented from `packages/contracts` and `design/tokens.json` alone,
@@ -2326,7 +2346,7 @@ of them.
       *Dependencies:* none. **Done — 2026-11-03:** the three deliverables exist — the re-cut file
       (2026-10-28), `design/tokens.json` (Task-84) and the eleven specs, eleven exports and route
       map the L6 import committed — so nothing in this item is still owed.
-- [ ] **L5 — Design completeness.** Close what the prototype still lacks, in this order: 320 for
+- [x] **L5 — Design completeness.** Close what the prototype still lacks, in this order: 320 for
       the ten routed screens that were never squeezed (only `S3` exists, `design/README.md` §1),
       **interaction states** (hover, focus-visible, pressed, disabled) in the Design System —
       `docs/app.md` §12 requires accessible targets and the file has no focus ring — and the
@@ -2402,6 +2422,12 @@ of them.
       (`pair-cta` → `12`, `fr-start-cta` → `02`, `bl-chat` → `03a`, `cf-card-repo` → `04b`,
       `cx-kind` → `04`, all `ON_CLICK` with a 0.2 s dissolve), but the click-through itself was
       not walked.
+      **Done — 2026-11-10:** the operator walked present mode at 390 × 844 — flow A
+      `01 → 12 → 02` (`pair-cta`, `fr-start-cta`), flow B `22 → 03a → 04b → 04` (`bl-chat`,
+      `cf-card-repo`, `cx-kind`) and the 320 twin `S7 → 03a` (`s7-chat`) — with no dead hotspot
+      reported. The re-import and Task-105 are on `main` (`1f6924a`), the design check reports
+      zero findings and `screen_state_missing` is enforced, so nothing in this item is still
+      owed: Task-99 is freed.
 - [x] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
       3HMV2UN6QviuNXe2T3Htsr` with the real `FIGMA_TOKEN`, review the diff, and commit
       `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The token is never
