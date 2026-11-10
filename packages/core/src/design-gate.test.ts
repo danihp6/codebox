@@ -11,8 +11,8 @@ interface Finding {
 }
 
 describe('design rule enforcement', () => {
-  it('reports a missing screen state and enforces the other three rules', () => {
-    expect(designRuleEnforcement('screen_state_missing')).toBe('report-only');
+  it('enforces the four design rules', () => {
+    expect(designRuleEnforcement('screen_state_missing')).toBe('enforced');
     expect(designRuleEnforcement('colour_outside_tokens')).toBe('enforced');
     expect(designRuleEnforcement('route_without_component')).toBe('enforced');
     expect(designRuleEnforcement('snapshot_hash_mismatch')).toBe('enforced');
@@ -23,31 +23,33 @@ describe('design rule enforcement', () => {
     expect(designRuleEnforcement('something_new')).toBe('enforced');
   });
 
-  it('pins one frozen report-only rule', () => {
-    expect(REPORT_ONLY_DESIGN_RULES).toEqual(['screen_state_missing']);
+  it('pins an empty frozen report-only list', () => {
+    expect(REPORT_ONLY_DESIGN_RULES).toEqual([]);
     expect(Object.isFrozen(REPORT_ONLY_DESIGN_RULES)).toBe(true);
   });
 });
 
 describe('classifyDesignFindings', () => {
-  it('partitions a mixed list and keeps the input order inside each half', () => {
+  it('keeps every finding of a mixed list on the enforced side in the input order', () => {
     const findings: readonly Finding[] = [
       { rule: 'colour_outside_tokens', file: 'a' },
       { rule: 'screen_state_missing', file: 'b' },
       { rule: 'something_new', file: 'c' },
-      { rule: 'screen_state_missing', file: 'd' },
+      { rule: 'route_without_component', file: 'd' },
+      { rule: 'snapshot_hash_mismatch', file: 'e' },
     ];
 
     const classified = classifyDesignFindings(findings);
 
     expect(classified.enforced).toEqual([
       { rule: 'colour_outside_tokens', file: 'a' },
-      { rule: 'something_new', file: 'c' },
-    ]);
-    expect(classified.reportOnly).toEqual([
       { rule: 'screen_state_missing', file: 'b' },
-      { rule: 'screen_state_missing', file: 'd' },
+      { rule: 'something_new', file: 'c' },
+      { rule: 'route_without_component', file: 'd' },
+      { rule: 'snapshot_hash_mismatch', file: 'e' },
     ]);
+    expect(classified.enforced[0]).toBe(findings[0]);
+    expect(classified.reportOnly).toEqual([]);
   });
 
   it('returns two empty halves for an empty list and does not mutate the input', () => {
@@ -55,8 +57,8 @@ describe('classifyDesignFindings', () => {
 
     expect(classifyDesignFindings<Finding>([])).toEqual({ enforced: [], reportOnly: [] });
     const classified = classifyDesignFindings(findings);
-    expect(classified.reportOnly).toHaveLength(1);
+    expect(classified.enforced).toHaveLength(1);
     expect(findings).toHaveLength(1);
-    expect(classified.reportOnly[0]).toBe(findings[0]);
+    expect(classified.enforced[0]).toBe(findings[0]);
   });
 });
