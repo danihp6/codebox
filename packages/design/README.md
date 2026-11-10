@@ -25,7 +25,8 @@ environment, and no image decoding — the only thing done to a PNG is hashing i
   over the added lines of a diff.
 - `snapshot.ts` — `snapshotHash` and `checkSnapshots`.
 - `import.ts` — the import-map parser and the projection of one Figma page into routes, screen
-  specs and the mapped fills, plus the hash that fills a spec's field.
+  specs and the mapped fills, plus the hash that fills a spec's field; the map's `sheets` are
+  validated and exported by the command, never projected into a spec.
 - `tokens.test.ts` — flattening, aliases, every pinned `$type`, and each parse error.
 - `routes.test.ts` — the route list, an empty component kept as data, and the rejected shapes.
 - `screens.test.ts` — the three states, the hash format and the rejected shapes.
@@ -44,7 +45,8 @@ environment, and no image decoding — the only thing done to a PNG is hashing i
 - `fixtures/figma/file.json` — the page snapshot the import suite projects: every mapped caption
   and the frames outside the map.
 - `fixtures/figma/file-missing.json` — the same page with the Dashboard frame renamed.
-- `fixtures/figma/import.json` — a byte copy of `design/import.json`, asserted equal by the suite.
+- `fixtures/figma/import.json` — a byte copy of `design/import.json` (frames and the sheet
+  entry), asserted equal by the suite.
 - `fixtures/figma/export-dashboard.png` — a 1 × 1 PNG, hashed and never decoded.
 - `fixtures/figma/layout.json` — a projected page with one measured frame: literal fills that
   become token keys, one colour outside the tokens and a full layout.

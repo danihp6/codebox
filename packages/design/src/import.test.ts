@@ -154,6 +154,9 @@ describe('parseImportMap', () => {
 
     expect(map.frames).toHaveLength(11);
     expect(map.frames.every((frame) => frame.snapshot)).toBe(true);
+    expect(map.sheets).toEqual([
+      { caption: '22b · Schedule sheet — mobile dark', file: 'schedule-sheet' },
+    ]);
     expect(
       readFileSync(new URL('./fixtures/figma/import.json', import.meta.url)).equals(
         readFileSync(SHIPPED_MAP),
@@ -165,9 +168,33 @@ describe('parseImportMap', () => {
     const map = parseImportMap({ fileKey: 'key', page: 'Page 1', frames: [] });
 
     expect(map.frames).toEqual([]);
+    expect(map.sheets).toEqual([]);
     expect(importDesign({ snapshot: { fileKey: 'key', page: 'Page 1', frames: [] }, map })).toEqual(
       { routes: [], screens: [], colours: [] },
     );
+  });
+
+  it('rejects a sheet that repeats a routed caption, a used file or a bad slug', () => {
+    const cases: Array<(map: Record<string, unknown>) => void> = [
+      (map) => {
+        map['sheets'] = [{ caption: '01 · Pairing — mobile dark', file: 'sheet' }];
+      },
+      (map) => {
+        map['sheets'] = [
+          { caption: '22b · Schedule sheet — mobile dark', file: 'sheet' },
+          { caption: '22c · Schedule sheet — empty dark', file: 'sheet' },
+        ];
+      },
+      (map) => {
+        map['sheets'] = [{ caption: '22b · Schedule sheet — mobile dark', file: 'Sheet' }];
+      },
+    ];
+    for (const mutate of cases) {
+      const map = mutableShippedMap();
+      mutate(map);
+
+      expect(parseFailure(map).code).toBe('map_invalid');
+    }
   });
 
   it('requires the three states and takes an empty one as null', () => {

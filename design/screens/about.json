@@ -2,9 +2,9 @@
   "screen": "About",
   "route": "/about",
   "states": {
-    "loading": null,
-    "empty": null,
-    "error": null
+    "loading": "07 · About — loading",
+    "empty": "07 · About — empty",
+    "error": "07 · About — error"
   },
   "snapshotSha256": "af670fc84522a5c1904b43b18fb0f78d2affdbd5142176f947401fa52a67a8d4",
   "layout": {
@@ -14,7 +14,7 @@
       "width": 390,
       "height": 844
     },
-    "layoutMode": "none",
+    "layoutMode": "vertical",
     "paddingTop": 0,
     "paddingRight": 0,
     "paddingBottom": 0,
@@ -22,12 +22,12 @@
     "itemSpacing": 0,
     "cornerRadius": 0,
     "strokes": 0,
-    "inferred": true,
+    "inferred": false,
     "regions": [
       {
         "name": "ab-status-time",
         "x": 28,
-        "y": 14,
+        "y": 12,
         "width": 27,
         "height": 16,
         "fill": "color.ink.text",
@@ -36,8 +36,8 @@
       },
       {
         "name": "ab-status-right",
-        "x": 316,
-        "y": 14,
+        "x": 311,
+        "y": 12,
         "width": 59,
         "height": 15,
         "fill": "color.ink.muted",
@@ -46,8 +46,8 @@
       },
       {
         "name": "ab-back",
-        "x": 18,
-        "y": 50,
+        "x": 24,
+        "y": 51.5,
         "width": 8,
         "height": 27,
         "fill": "color.brand.bright",
@@ -56,7 +56,7 @@
       },
       {
         "name": "ab-title",
-        "x": 40,
+        "x": 44,
         "y": 56,
         "width": 45,
         "height": 18,
@@ -67,7 +67,7 @@
       {
         "name": "ab-wordmark",
         "x": 24,
-        "y": 118,
+        "y": 96,
         "width": 143,
         "height": 41,
         "fill": "color.ink.text",
@@ -77,7 +77,7 @@
       {
         "name": "ab-tagline",
         "x": 24,
-        "y": 162,
+        "y": 153,
         "width": 258,
         "height": 15,
         "fill": "color.ink.muted",
@@ -87,152 +87,22 @@
       {
         "name": "ab-card",
         "x": 24,
-        "y": 204,
+        "y": 184,
         "width": 342,
-        "height": 200,
+        "height": 201,
         "fill": "color.surface.raised",
         "radius": 14,
         "stroke": 1
       },
       {
-        "name": "ab-row-Version-k",
-        "x": 40,
-        "y": 220,
-        "width": 39,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-row-Version-v",
-        "x": 150,
-        "y": 220,
-        "width": 26,
-        "height": 15,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-row-Commit-k",
-        "x": 40,
-        "y": 254,
-        "width": 41,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-row-Commit-v",
-        "x": 150,
-        "y": 254,
-        "width": 46,
-        "height": 15,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-row-Build-k",
-        "x": 40,
-        "y": 288,
-        "width": 26,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-row-Build-v",
-        "x": 150,
-        "y": 288,
-        "width": 137,
-        "height": 15,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-row-Instance-k",
-        "x": 40,
-        "y": 322,
-        "width": 45,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-row-Instance-v",
-        "x": 150,
-        "y": 322,
-        "width": 151,
-        "height": 15,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-rule",
-        "x": 40,
-        "y": 352,
-        "width": 310,
-        "height": 1,
-        "fill": null,
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-health",
-        "x": 40,
-        "y": 364,
-        "width": 231,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-health-dot",
-        "x": 40,
-        "y": 386,
-        "width": 52,
-        "height": 13,
-        "fill": "color.brand.bright",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "ab-licences",
         "x": 24,
-        "y": 424,
+        "y": 401,
         "width": 342,
         "height": 52,
         "fill": "color.surface.raised",
         "radius": 10,
         "stroke": 1
-      },
-      {
-        "name": "ab-licences-chev",
-        "x": 348,
-        "y": 439,
-        "width": 6,
-        "height": 17,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "ab-licences-label",
-        "x": 40,
-        "y": 441,
-        "width": 133,
-        "height": 16,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
       },
       {
         "name": "ab-footnote-1",
@@ -303,70 +173,6 @@
         "size": 12,
         "lineHeight": 14.522727012634277,
         "colour": "color.ink.muted"
-      },
-      {
-        "role": "ab-row-Version-k",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "ab-row-Version-v",
-        "family": "Inter",
-        "weight": 400,
-        "size": 12,
-        "lineHeight": 14.522727012634277,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "ab-row-Commit-k",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "ab-row-Commit-v",
-        "family": "Inter",
-        "weight": 400,
-        "size": 12,
-        "lineHeight": 14.522727012634277,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "ab-row-Build-k",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "ab-row-Build-v",
-        "family": "Inter",
-        "weight": 400,
-        "size": 12,
-        "lineHeight": 14.522727012634277,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "ab-row-Instance-k",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "ab-row-Instance-v",
-        "family": "Inter",
-        "weight": 400,
-        "size": 12,
-        "lineHeight": 14.522727012634277,
-        "colour": "color.ink.text"
       },
       {
         "role": "ab-health",

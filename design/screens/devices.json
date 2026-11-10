@@ -2,9 +2,9 @@
   "screen": "Devices",
   "route": "/settings/devices",
   "states": {
-    "loading": null,
-    "empty": null,
-    "error": null
+    "loading": "15 · Devices — loading",
+    "empty": "15 · Devices — empty",
+    "error": "15 · Devices — error"
   },
   "snapshotSha256": "2dc5544c0a97b8ecd8b7dcb36f42932eb11f215a4b9263280f402aa9db96e5fb",
   "layout": {
@@ -14,7 +14,7 @@
       "width": 390,
       "height": 844
     },
-    "layoutMode": "none",
+    "layoutMode": "vertical",
     "paddingTop": 0,
     "paddingRight": 0,
     "paddingBottom": 0,
@@ -22,7 +22,7 @@
     "itemSpacing": 0,
     "cornerRadius": 0,
     "strokes": 0,
-    "inferred": true,
+    "inferred": false,
     "regions": [
       {
         "name": "dv-status-time",
@@ -80,7 +80,7 @@
         "y": 104,
         "width": 390,
         "height": 1,
-        "fill": null,
+        "fill": "color.surface.raised",
         "radius": 0,
         "stroke": 0
       },
@@ -105,16 +105,6 @@
         "stroke": 0
       },
       {
-        "name": "dv-row-0-action",
-        "x": 292.6000061035156,
-        "y": 142,
-        "width": 52,
-        "height": 12,
-        "fill": "color.brand.bright",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "dv-row-0-meta",
         "x": 40,
         "y": 152,
@@ -131,6 +121,16 @@
         "width": 59,
         "height": 11,
         "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-0-action",
+        "x": 292.6000061035156,
+        "y": 142,
+        "width": 52,
+        "height": 12,
+        "fill": "color.brand.bright",
         "radius": 0,
         "stroke": 0
       },
@@ -155,16 +155,6 @@
         "stroke": 0
       },
       {
-        "name": "dv-row-1-action",
-        "x": 319.6000061035156,
-        "y": 218,
-        "width": 35,
-        "height": 12,
-        "fill": "color.danger.red",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "dv-row-1-meta",
         "x": 40,
         "y": 228,
@@ -181,6 +171,16 @@
         "width": 73,
         "height": 11,
         "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "dv-row-1-action",
+        "x": 319.6000061035156,
+        "y": 218,
+        "width": 35,
+        "height": 12,
+        "fill": "color.danger.red",
         "radius": 0,
         "stroke": 0
       },

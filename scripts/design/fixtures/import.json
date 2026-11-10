@@ -134,5 +134,11 @@
       },
       "snapshot": true
     }
+  ],
+  "sheets": [
+    {
+      "caption": "22b · Schedule sheet — mobile dark",
+      "file": "schedule-sheet"
+    }
   ]
 }

@@ -12,6 +12,7 @@ export type {
   FigmaTypeRow,
   ImportMap,
   ImportMapFrame,
+  ImportMapSheet,
 } from './import.js';
 export { parseRoutes } from './routes.js';
 export { parseScreenSpec } from './screens.js';

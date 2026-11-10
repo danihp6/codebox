@@ -2,9 +2,9 @@
   "screen": "Settings",
   "route": "/settings",
   "states": {
-    "loading": null,
-    "empty": null,
-    "error": null
+    "loading": "06 · Settings — loading",
+    "empty": "06 · Settings — empty",
+    "error": "06 · Settings — error"
   },
   "snapshotSha256": "c9069c9fab001e4dcc302d7463bdaede6e72b934a9d7f161de78b712901f86ce",
   "layout": {
@@ -12,9 +12,9 @@
       "x": 2400,
       "y": 0,
       "width": 390,
-      "height": 844
+      "height": 884
     },
-    "layoutMode": "none",
+    "layoutMode": "vertical",
     "paddingTop": 0,
     "paddingRight": 0,
     "paddingBottom": 0,
@@ -22,12 +22,12 @@
     "itemSpacing": 0,
     "cornerRadius": 0,
     "strokes": 0,
-    "inferred": true,
+    "inferred": false,
     "regions": [
       {
         "name": "st-status-time",
         "x": 28,
-        "y": 14,
+        "y": 12,
         "width": 27,
         "height": 16,
         "fill": "color.ink.text",
@@ -36,8 +36,8 @@
       },
       {
         "name": "st-status-right",
-        "x": 316,
-        "y": 14,
+        "x": 311,
+        "y": 12,
         "width": 59,
         "height": 15,
         "fill": "color.ink.muted",
@@ -57,37 +57,17 @@
       {
         "name": "st-device",
         "x": 24,
-        "y": 100,
+        "y": 101,
         "width": 342,
-        "height": 64,
+        "height": 65,
         "fill": "color.surface.raised",
         "radius": 14,
         "stroke": 1
       },
       {
-        "name": "st-device-name",
-        "x": 40,
-        "y": 114,
-        "width": 87,
-        "height": 18,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-device-meta",
-        "x": 40,
-        "y": 136,
-        "width": 122,
-        "height": 13,
-        "fill": "color.brand.bright",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "st-group-PREFERENCES",
         "x": 24,
-        "y": 184,
+        "y": 182,
         "width": 71,
         "height": 12,
         "fill": "color.ink.muted",
@@ -97,87 +77,27 @@
       {
         "name": "st-row-Notifications",
         "x": 24,
-        "y": 204,
+        "y": 202,
         "width": 342,
         "height": 52,
         "fill": "color.surface.raised",
         "radius": 10,
         "stroke": 1
-      },
-      {
-        "name": "st-row-Notifications-chev",
-        "x": 348,
-        "y": 219,
-        "width": 6,
-        "height": 17,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Notifications-label",
-        "x": 40,
-        "y": 221,
-        "width": 78,
-        "height": 16,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Notifications-value",
-        "x": 200,
-        "y": 222,
-        "width": 69,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
       },
       {
         "name": "st-row-Appearance",
         "x": 24,
-        "y": 262,
+        "y": 260,
         "width": 342,
         "height": 52,
         "fill": "color.surface.raised",
         "radius": 10,
         "stroke": 1
-      },
-      {
-        "name": "st-row-Appearance-chev",
-        "x": 348,
-        "y": 277,
-        "width": 6,
-        "height": 17,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Appearance-label",
-        "x": 40,
-        "y": 279,
-        "width": 75,
-        "height": 16,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Appearance-value",
-        "x": 200,
-        "y": 280,
-        "width": 71,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
       },
       {
         "name": "st-row-Providers",
         "x": 24,
-        "y": 320,
+        "y": 318,
         "width": 342,
         "height": 52,
         "fill": "color.surface.raised",
@@ -185,39 +105,9 @@
         "stroke": 1
       },
       {
-        "name": "st-row-Providers-chev",
-        "x": 348,
-        "y": 335,
-        "width": 6,
-        "height": 17,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Providers-label",
-        "x": 40,
-        "y": 337,
-        "width": 111,
-        "height": 16,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Providers-value",
-        "x": 200,
-        "y": 338,
-        "width": 141,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "st-group-AUTOMATION",
         "x": 24,
-        "y": 388,
+        "y": 386,
         "width": 68,
         "height": 12,
         "fill": "color.ink.muted",
@@ -227,7 +117,7 @@
       {
         "name": "st-row-Routines",
         "x": 24,
-        "y": 408,
+        "y": 406,
         "width": 342,
         "height": 52,
         "fill": "color.surface.raised",
@@ -235,39 +125,9 @@
         "stroke": 1
       },
       {
-        "name": "st-row-Routines-chev",
-        "x": 348,
-        "y": 423,
-        "width": 6,
-        "height": 17,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Routines-label",
-        "x": 40,
-        "y": 425,
-        "width": 64,
-        "height": 16,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Routines-value",
-        "x": 200,
-        "y": 426,
-        "width": 97,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "st-group-ACCOUNT",
         "x": 24,
-        "y": 476,
+        "y": 474,
         "width": 51,
         "height": 12,
         "fill": "color.ink.muted",
@@ -277,47 +137,17 @@
       {
         "name": "st-row-Devices",
         "x": 24,
-        "y": 496,
+        "y": 494,
         "width": 342,
         "height": 52,
         "fill": "color.surface.raised",
         "radius": 10,
         "stroke": 1
-      },
-      {
-        "name": "st-row-Devices-chev",
-        "x": 348,
-        "y": 511,
-        "width": 6,
-        "height": 17,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Devices-label",
-        "x": 40,
-        "y": 513,
-        "width": 49,
-        "height": 16,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-Devices-value",
-        "x": 200,
-        "y": 514,
-        "width": 43,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
       },
       {
         "name": "st-row-About",
         "x": 24,
-        "y": 554,
+        "y": 552,
         "width": 342,
         "height": 52,
         "fill": "color.surface.raised",
@@ -325,39 +155,9 @@
         "stroke": 1
       },
       {
-        "name": "st-row-About-chev",
-        "x": 348,
-        "y": 569,
-        "width": 6,
-        "height": 17,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-About-label",
-        "x": 40,
-        "y": 571,
-        "width": 37,
-        "height": 16,
-        "fill": "color.ink.text",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-row-About-value",
-        "x": 200,
-        "y": 572,
-        "width": 80,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "st-group-danger",
         "x": 24,
-        "y": 622,
+        "y": 620,
         "width": 72,
         "height": 12,
         "fill": "color.ink.muted",
@@ -367,27 +167,17 @@
       {
         "name": "st-danger-Unpair this device",
         "x": 24,
-        "y": 642,
+        "y": 640,
         "width": 342,
         "height": 48,
         "fill": "color.surface.raised",
         "radius": 10,
         "stroke": 1
-      },
-      {
-        "name": "st-danger-Unpair this device-label",
-        "x": 40,
-        "y": 657,
-        "width": 111,
-        "height": 16,
-        "fill": "color.danger.red",
-        "radius": 0,
-        "stroke": 0
       },
       {
         "name": "st-danger-Wipe local cache",
         "x": 24,
-        "y": 698,
+        "y": 696,
         "width": 342,
         "height": 48,
         "fill": "color.surface.raised",
@@ -395,84 +185,14 @@
         "stroke": 1
       },
       {
-        "name": "st-danger-Wipe local cache-label",
-        "x": 40,
-        "y": 713,
-        "width": 104,
-        "height": 16,
-        "fill": "color.danger.red",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "st-tabbar",
         "x": 0,
-        "y": 780,
+        "y": 820,
         "width": 390,
         "height": 64,
         "fill": "color.surface.raised",
         "radius": 0,
         "stroke": 1
-      },
-      {
-        "name": "st-tab-0-icon",
-        "x": 56,
-        "y": 794,
-        "width": 18,
-        "height": 18,
-        "fill": "color.ink.muted",
-        "radius": 4,
-        "stroke": 0
-      },
-      {
-        "name": "st-tab-1-icon",
-        "x": 186,
-        "y": 794,
-        "width": 18,
-        "height": 18,
-        "fill": "color.ink.muted",
-        "radius": 4,
-        "stroke": 0
-      },
-      {
-        "name": "st-tab-2-icon",
-        "x": 316,
-        "y": 794,
-        "width": 18,
-        "height": 18,
-        "fill": "color.brand.bright",
-        "radius": 4,
-        "stroke": 0
-      },
-      {
-        "name": "st-tab-0-label",
-        "x": 38.89990234375,
-        "y": 818,
-        "width": 52,
-        "height": 12,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-tab-1-label",
-        "x": 183.39990234375,
-        "y": 818,
-        "width": 30,
-        "height": 12,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "st-tab-2-label",
-        "x": 301.800048828125,
-        "y": 818,
-        "width": 41,
-        "height": 12,
-        "fill": "color.brand.bright",
-        "radius": 0,
-        "stroke": 0
       }
     ],
     "type": [
@@ -525,107 +245,11 @@
         "colour": "color.ink.muted"
       },
       {
-        "role": "st-row-Notifications-label",
-        "family": "Inter",
-        "weight": 400,
-        "size": 13,
-        "lineHeight": 15.732954025268555,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "st-row-Notifications-value",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-Notifications-chev",
-        "family": "Inter",
-        "weight": 400,
-        "size": 14,
-        "lineHeight": 16.94318199157715,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-Appearance-label",
-        "family": "Inter",
-        "weight": 400,
-        "size": 13,
-        "lineHeight": 15.732954025268555,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "st-row-Appearance-value",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-Appearance-chev",
-        "family": "Inter",
-        "weight": 400,
-        "size": 14,
-        "lineHeight": 16.94318199157715,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-Providers-label",
-        "family": "Inter",
-        "weight": 400,
-        "size": 13,
-        "lineHeight": 15.732954025268555,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "st-row-Providers-value",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-Providers-chev",
-        "family": "Inter",
-        "weight": 400,
-        "size": 14,
-        "lineHeight": 16.94318199157715,
-        "colour": "color.ink.muted"
-      },
-      {
         "role": "st-group-AUTOMATION",
         "family": "Inter",
         "weight": 500,
         "size": 10,
         "lineHeight": 12.102272033691406,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-Routines-label",
-        "family": "Inter",
-        "weight": 400,
-        "size": 13,
-        "lineHeight": 15.732954025268555,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "st-row-Routines-value",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-Routines-chev",
-        "family": "Inter",
-        "weight": 400,
-        "size": 14,
-        "lineHeight": 16.94318199157715,
         "colour": "color.ink.muted"
       },
       {
@@ -637,76 +261,12 @@
         "colour": "color.ink.muted"
       },
       {
-        "role": "st-row-Devices-label",
-        "family": "Inter",
-        "weight": 400,
-        "size": 13,
-        "lineHeight": 15.732954025268555,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "st-row-Devices-value",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-Devices-chev",
-        "family": "Inter",
-        "weight": 400,
-        "size": 14,
-        "lineHeight": 16.94318199157715,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-About-label",
-        "family": "Inter",
-        "weight": 400,
-        "size": 13,
-        "lineHeight": 15.732954025268555,
-        "colour": "color.ink.text"
-      },
-      {
-        "role": "st-row-About-value",
-        "family": "Inter",
-        "weight": 400,
-        "size": 11,
-        "lineHeight": 13.3125,
-        "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-row-About-chev",
-        "family": "Inter",
-        "weight": 400,
-        "size": 14,
-        "lineHeight": 16.94318199157715,
-        "colour": "color.ink.muted"
-      },
-      {
         "role": "st-group-danger",
         "family": "Inter",
         "weight": 500,
         "size": 10,
         "lineHeight": 12.102272033691406,
         "colour": "color.ink.muted"
-      },
-      {
-        "role": "st-danger-Unpair this device-label",
-        "family": "Inter",
-        "weight": 400,
-        "size": 13,
-        "lineHeight": 15.732954025268555,
-        "colour": "color.danger.red"
-      },
-      {
-        "role": "st-danger-Wipe local cache-label",
-        "family": "Inter",
-        "weight": 400,
-        "size": 13,
-        "lineHeight": 15.732954025268555,
-        "colour": "color.danger.red"
       },
       {
         "role": "st-tab-0-label",

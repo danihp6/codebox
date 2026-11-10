@@ -606,6 +606,23 @@ describe('projectPage — bands', () => {
     ]);
   });
 
+  it('looks through a band whose SOLID fill is zero-opacity', () => {
+    const body = bandBody();
+    const frame = body.document.children[0].children[0];
+    frame.children[0].fills = [
+      { type: 'SOLID', visible: true, opacity: 0, color: { r: 0, g: 0, b: 0 } },
+    ];
+
+    const snapshot = projectPage(body, 'Page 1', KEY);
+    const { layout } = frameOf(snapshot, '30:100');
+    const names = layout.regions.map((region) => region.name);
+
+    expect(names).toContain('Status right');
+    expect(names).not.toContain('bd-band-status');
+    const projected = snapshot.frames.find((candidate) => candidate.id === '30:100');
+    expect(projected.fills).not.toContain('rgba(0, 0, 0, 0)');
+  });
+
   it('keeps a child frame that paints as one region', () => {
     const snapshot = projectPage(bandBody(), 'Page 1', KEY);
     const { layout } = frameOf(snapshot, '30:100');
@@ -718,6 +735,7 @@ describe('main — measured layout', () => {
       routes: 2,
       screens: 2,
       exports: 0,
+      sheets: 0,
     });
     expect(written.err).toBe('');
 

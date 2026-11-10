@@ -2,9 +2,9 @@
   "screen": "Dashboard",
   "route": "/dashboard",
   "states": {
-    "loading": null,
+    "loading": "05 · Dashboard — loading",
     "empty": "12 · First run — after pairing",
-    "error": null
+    "error": "05 · Dashboard — error"
   },
   "snapshotSha256": "b0d0cc869f618b68b90ff70ebdc104708b033fff1b14049b21e2a75bc982e591",
   "layout": {
@@ -14,7 +14,7 @@
       "width": 390,
       "height": 844
     },
-    "layoutMode": "none",
+    "layoutMode": "vertical",
     "paddingTop": 0,
     "paddingRight": 0,
     "paddingBottom": 0,
@@ -22,7 +22,7 @@
     "itemSpacing": 0,
     "cornerRadius": 0,
     "strokes": 0,
-    "inferred": true,
+    "inferred": false,
     "regions": [
       {
         "name": "db-status-time",
@@ -85,26 +85,6 @@
         "stroke": 0
       },
       {
-        "name": "db-needs-cta",
-        "x": 270,
-        "y": 120,
-        "width": 80,
-        "height": 28,
-        "fill": "color.waiting.bright",
-        "radius": 8,
-        "stroke": 0
-      },
-      {
-        "name": "db-needs-cta-label",
-        "x": 282,
-        "y": 127,
-        "width": 39,
-        "height": 13,
-        "fill": "color.surface.bg",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "db-needs-value",
         "x": 40,
         "y": 134,
@@ -121,6 +101,26 @@
         "width": 140,
         "height": 13,
         "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-needs-cta",
+        "x": 270,
+        "y": 120,
+        "width": 80,
+        "height": 28,
+        "fill": "color.waiting.bright",
+        "radius": 8,
+        "stroke": 0
+      },
+      {
+        "name": "db-needs-cta-label",
+        "x": 282,
+        "y": 127,
+        "width": 39,
+        "height": 13,
+        "fill": "color.surface.bg",
         "radius": 0,
         "stroke": 0
       },
@@ -145,26 +145,6 @@
         "stroke": 1
       },
       {
-        "name": "db-work-1-a",
-        "x": 52,
-        "y": 228,
-        "width": 230,
-        "height": 13,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "db-work-1-time",
-        "x": 300,
-        "y": 238,
-        "width": 38,
-        "height": 13,
-        "fill": "color.brand.bright",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "db-work-1-dot",
         "x": 40,
         "y": 244,
@@ -175,12 +155,32 @@
         "stroke": 0
       },
       {
+        "name": "db-work-1-a",
+        "x": 52,
+        "y": 228,
+        "width": 230,
+        "height": 13,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
         "name": "db-work-1-b",
         "x": 52,
         "y": 246,
         "width": 199,
         "height": 15,
         "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-work-1-time",
+        "x": 300,
+        "y": 238,
+        "width": 38,
+        "height": 13,
+        "fill": "color.brand.bright",
         "radius": 0,
         "stroke": 0
       },
@@ -235,20 +235,20 @@
         "stroke": 0
       },
       {
-        "name": "db-unrev-0-c",
-        "x": 312,
-        "y": 354,
-        "width": 39,
+        "name": "db-unrev-0-m",
+        "x": 38,
+        "y": 363,
+        "width": 131,
         "height": 12,
         "fill": "color.ink.muted",
         "radius": 0,
         "stroke": 0
       },
       {
-        "name": "db-unrev-0-m",
-        "x": 38,
-        "y": 363,
-        "width": 131,
+        "name": "db-unrev-0-c",
+        "x": 312,
+        "y": 354,
+        "width": 39,
         "height": 12,
         "fill": "color.ink.muted",
         "radius": 0,
@@ -275,20 +275,20 @@
         "stroke": 0
       },
       {
-        "name": "db-unrev-1-c",
-        "x": 312,
-        "y": 404,
-        "width": 37,
+        "name": "db-unrev-1-m",
+        "x": 38,
+        "y": 413,
+        "width": 119,
         "height": 12,
         "fill": "color.ink.muted",
         "radius": 0,
         "stroke": 0
       },
       {
-        "name": "db-unrev-1-m",
-        "x": 38,
-        "y": 413,
-        "width": 119,
+        "name": "db-unrev-1-c",
+        "x": 312,
+        "y": 404,
+        "width": 37,
         "height": 12,
         "fill": "color.ink.muted",
         "radius": 0,
@@ -340,7 +340,7 @@
         "y": 520,
         "width": 200,
         "height": 4,
-        "fill": null,
+        "fill": "color.surface.raised",
         "radius": 2,
         "stroke": 0
       },
@@ -355,22 +355,22 @@
         "stroke": 0
       },
       {
-        "name": "db-spark-4",
-        "x": 292,
-        "y": 521,
+        "name": "db-spark-0",
+        "x": 252,
+        "y": 534,
         "width": 6,
-        "height": 31,
+        "height": 18,
         "fill": "color.ink.muted",
         "radius": 2,
         "stroke": 0
       },
       {
-        "name": "db-spark-6",
-        "x": 312,
-        "y": 521,
+        "name": "db-spark-1",
+        "x": 262,
+        "y": 540,
         "width": 6,
-        "height": 31,
-        "fill": "color.brand.bright",
+        "height": 12,
+        "fill": "color.ink.muted",
         "radius": 2,
         "stroke": 0
       },
@@ -380,6 +380,26 @@
         "y": 526,
         "width": 6,
         "height": 26,
+        "fill": "color.ink.muted",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-3",
+        "x": 282,
+        "y": 543,
+        "width": 6,
+        "height": 9,
+        "fill": "color.ink.muted",
+        "radius": 2,
+        "stroke": 0
+      },
+      {
+        "name": "db-spark-4",
+        "x": 292,
+        "y": 521,
+        "width": 6,
+        "height": 31,
         "fill": "color.ink.muted",
         "radius": 2,
         "stroke": 0
@@ -395,12 +415,12 @@
         "stroke": 0
       },
       {
-        "name": "db-spark-0",
-        "x": 252,
-        "y": 534,
+        "name": "db-spark-6",
+        "x": 312,
+        "y": 521,
         "width": 6,
-        "height": 18,
-        "fill": "color.ink.muted",
+        "height": 31,
+        "fill": "color.brand.bright",
         "radius": 2,
         "stroke": 0
       },
@@ -412,26 +432,6 @@
         "height": 12,
         "fill": "color.ink.muted",
         "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "db-spark-1",
-        "x": 262,
-        "y": 540,
-        "width": 6,
-        "height": 12,
-        "fill": "color.ink.muted",
-        "radius": 2,
-        "stroke": 0
-      },
-      {
-        "name": "db-spark-3",
-        "x": 282,
-        "y": 543,
-        "width": 6,
-        "height": 9,
-        "fill": "color.ink.muted",
-        "radius": 2,
         "stroke": 0
       },
       {
@@ -455,36 +455,6 @@
         "stroke": 1
       },
       {
-        "name": "db-health-db-label",
-        "x": 52,
-        "y": 629,
-        "width": 13,
-        "height": 12,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "db-health-opencode-label",
-        "x": 156,
-        "y": 629,
-        "width": 48,
-        "height": 12,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
-        "name": "db-health-disk-label",
-        "x": 260,
-        "y": 629,
-        "width": 20,
-        "height": 12,
-        "fill": "color.ink.muted",
-        "radius": 0,
-        "stroke": 0
-      },
-      {
         "name": "db-health-db-dot",
         "x": 40,
         "y": 634,
@@ -495,23 +465,13 @@
         "stroke": 0
       },
       {
-        "name": "db-health-opencode-dot",
-        "x": 144,
-        "y": 634,
-        "width": 6,
-        "height": 6,
-        "fill": "color.brand.bright",
-        "radius": 3,
-        "stroke": 0
-      },
-      {
-        "name": "db-health-disk-dot",
-        "x": 248,
-        "y": 634,
-        "width": 6,
-        "height": 6,
-        "fill": "color.brand.bright",
-        "radius": 3,
+        "name": "db-health-db-label",
+        "x": 52,
+        "y": 629,
+        "width": 13,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
         "stroke": 0
       },
       {
@@ -525,12 +485,52 @@
         "stroke": 0
       },
       {
+        "name": "db-health-opencode-dot",
+        "x": 144,
+        "y": 634,
+        "width": 6,
+        "height": 6,
+        "fill": "color.brand.bright",
+        "radius": 3,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-opencode-label",
+        "x": 156,
+        "y": 629,
+        "width": 48,
+        "height": 12,
+        "fill": "color.ink.muted",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
         "name": "db-health-opencode-value",
         "x": 144,
         "y": 648,
         "width": 16,
         "height": 16,
         "fill": "color.ink.text",
+        "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-disk-dot",
+        "x": 248,
+        "y": 634,
+        "width": 6,
+        "height": 6,
+        "fill": "color.brand.bright",
+        "radius": 3,
+        "stroke": 0
+      },
+      {
+        "name": "db-health-disk-label",
+        "x": 260,
+        "y": 629,
+        "width": 20,
+        "height": 12,
+        "fill": "color.ink.muted",
         "radius": 0,
         "stroke": 0
       },
@@ -575,26 +575,6 @@
         "stroke": 0
       },
       {
-        "name": "db-tab-1-icon",
-        "x": 186,
-        "y": 794,
-        "width": 18,
-        "height": 18,
-        "fill": "color.ink.muted",
-        "radius": 4,
-        "stroke": 0
-      },
-      {
-        "name": "db-tab-2-icon",
-        "x": 316,
-        "y": 794,
-        "width": 18,
-        "height": 18,
-        "fill": "color.ink.muted",
-        "radius": 4,
-        "stroke": 0
-      },
-      {
         "name": "db-tab-0-label",
         "x": 38.9000244140625,
         "y": 818,
@@ -605,6 +585,16 @@
         "stroke": 0
       },
       {
+        "name": "db-tab-1-icon",
+        "x": 186,
+        "y": 794,
+        "width": 18,
+        "height": 18,
+        "fill": "color.ink.muted",
+        "radius": 4,
+        "stroke": 0
+      },
+      {
         "name": "db-tab-1-label",
         "x": 183.39990234375,
         "y": 818,
@@ -612,6 +602,16 @@
         "height": 12,
         "fill": "color.ink.muted",
         "radius": 0,
+        "stroke": 0
+      },
+      {
+        "name": "db-tab-2-icon",
+        "x": 316,
+        "y": 794,
+        "width": 18,
+        "height": 18,
+        "fill": "color.ink.muted",
+        "radius": 4,
         "stroke": 0
       },
       {

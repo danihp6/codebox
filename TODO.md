@@ -63,6 +63,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 24 | The pipeline's documented guards | 101 | 1 |
 | 25 | The measured spec sees through the bands | 102 | 1 |
 | 26 | Wave 3's two debts: the instance's name and the shell's bar | 103–104 | 2 |
+| 27 | The gate stops reporting (D57 retired) | 105 | 1 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -571,6 +572,29 @@ Task-103 also claims `apps/daemon/src/start.test.ts` (the headless listener the 
 criterion reads) and one summary line in `packages/contracts/src/openapi.ts` (it enumerates the
 payload and would otherwise be false); Task-104 claims `apps/app/src/app/shell/tabs.page.ts` and
 its spec for one `data-testid` on the bar, the stable hook both width measurements read.
+
+**Cut — cycle 2026-11-10, after the L5 re-import and before the L5 tick (one of four slots
+used).** No task branch was alive and `main` was `5e38f32`, which **does not carry the L5
+re-import**: `d31cf6d` (the eleven specs with their states, the schedule-sheet export) lives on
+`l5-reimport` and was local-only until this cycle pushed it. The design check over `main` still
+finds the L6 nulls (`git show main:design/screens/pairing.json` → `loading: null, empty: null`),
+so **Task-105** — the D57 flip — is not legal on `main`. It is legal on `l5-reimport`, where
+`checkDocuments` reports `0 finding(s)` over the committed tree (re-measured 2026-11-10), so the
+batch is cut **from `l5-reimport` at `d31cf6d`**, not from `main`, and its merge target is that
+branch: when the operator walks L5's present mode and opens the L5 PR, Task-105 rides it. This is
+the Batch 23 precedent (the wave was cut from `l7-prototype-restructure` because that is where the
+work lived), applied to a branch rather than a wave. **Hot-file holders in this cut:** Task-105
+holds `docs/decisions.md`; no task holds `package.json`, `package-lock.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`,
+`opencode.json`, `TODO.md` or `CHANGELOG.md`. The three empty slots have no legal candidate:
+Task-99 waits on the L5 tick (its sheet frame exists, but the tick is the operator's present-mode
+pass), Task-32 waits on the blocked Task-31 (#105), and L1/L3/L4/L5 are operator items the driver
+never picks. **Deviation from the batch rule, recorded:** the base is not `main`; cutting from
+`main` would fail the flip's own precondition — an enforced `screen_state_missing` over specs that
+still hold nulls — and merging the re-import early would preempt L5's tick, which the L5 handoff
+forbids. The spec is `.agent_specs/task-105.md`; it freezes `main`'s nulls as the reason, so a
+reader does not re-derive it.
 
 ### Screens awaiting the prototype
 
@@ -2235,6 +2259,51 @@ Orchestrator's.
 
 ---
 
+## Batch 27 — The gate stops reporting
+
+Cut 2026-11-10 from `l5-reimport` (not `main`): the design check reports zero findings only where
+the measured re-import lives, and that is the branch. The task is path-disjoint from Task-99, so
+once L5 is ticked the two can share a batch; before the tick, this is the one legal slot.
+
+**Hot-file holders in this batch:** Task-105 holds `docs/decisions.md`. No task holds
+`package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`packages/contracts/src/index.ts`, `opencode.json`, `TODO.md` or `CHANGELOG.md`.
+
+- [x] **[Task-105]** Retire D57's report-only exception. `screen_state_missing` joins
+      `colour_outside_tokens`, `route_without_component` and `snapshot_hash_mismatch` as an
+      **enforced** design rule: a run whose screen spec is missing `loading`, `empty` or `error`
+      ends `gate_failed`, pushes nothing and opens no PR. The report-only list is declared empty
+      and frozen; the split, the `(report-only)` suffix branch and the `reportOnly` count stay
+      (the count is `0`), and `apps/daemon/src/run/engine.ts` is read-only. `docs/jobs.md` §5
+      stops promising a report-only pass and D57 carries a dated amendment.
+      *Paths:* `packages/core/src/{design-gate.ts,design-gate.test.ts}`,
+      `packages/core/README.md` (two lines), `apps/daemon/src/run/engine.test.ts` (one test),
+      `docs/jobs.md` §5, `docs/decisions.md` (D57).
+      *Dependencies:* none on another task. L5 drew the 29 state frames and the 2026-11-09
+      re-import wrote them into the eleven specs **on `l5-reimport`**; the design check over that
+      tree reports zero findings (measured 2026-11-10). `main` still holds the L6 nulls, which is
+      why the batch is cut from the branch.
+      *Acceptance:* `[unit]` every rule — including `screen_state_missing` — is enforced,
+      `REPORT_ONLY_DESIGN_RULES` is `[]` and frozen, and `classifyDesignFindings` puts every
+      finding in `enforced` with `reportOnly: []`; `[unit]` a run whose spec nulls `states.empty`
+      ends `failed`/`gate_failed`/exit 1 with `design/screens/dashboard.json:1
+      screen_state_missing` in the tail (no `(report-only)`), no push, no PR and one `error`
+      `design_scan_reported` log with `enforced: 1, reportOnly: 0`; `[unit]` the colour-drift,
+      missing-token and git-failure tests pass unchanged; `[unit]` the design gate reports zero
+      findings on the diff; `[live]` one real cycle on the box fails at the gate with the same
+      tail and log — unmeasured on this runner, handed to an `agent-review` issue.
+      **Done — 2026-11-10:** the list is `Object.freeze([])` and the four rules are enforced; the
+      replacement engine test pins the red run (no push, no PR, one `error` log with
+      `enforced: 1, reportOnly: 0`). Measured on the merged tree: `packages/core` 67/67, the
+      design-scan step 6/6, `npm run lint`, `npm run test:guard` and `npm run build` green, the
+      design documents check and the design gate each `0 finding(s)`; the root `npm test` is red
+      on this Windows host only (CRLF `NOTICE` and POSIX/shell suites, none in the diff). Task
+      branch `94c4ee6`, QA `04ed602`, merged into **`l5-reimport`** at `75e5567` and landed on
+      `main` with PR **#127**. The `[live]` box cycle is issue **#126**.
+
+---
+
 ## Local / human (never picked by the driver)
 
 The driver only counts `- [ ] **[Task-NN]**`; these `L<n>` items are outside the queue by
@@ -2317,6 +2386,22 @@ of them.
       `22c`/`L22c` (none: the empty card, `Manual only`, `Create a schedule`) and the 320 twins
       `S4`/`S4b`, mapped in `design/README.md` §2. Nothing about the sheet is still owed to
       Task-99; its export lands with the first re-import after 2026-11-08T03:00Z.
+      **The measured re-import landed (2026-11-09):** `GET /v1/files/:key?depth=6` still
+      answered `429` (`retry-after: 272639`, not before 2026-11-12T15:55Z), so the run read the
+      same document through `GET /v1/files/:key/nodes?ids=0:0&depth=6` and fed it to the
+      unchanged command; a replay of `--check` reports zero drift. All eleven specs carry
+      `layoutMode: vertical` and `inferred: false` and all eleven emit element regions: the three
+      older body columns (`pair-body`, `st-body`, `ab-body`) are `SOLID` paints at zero opacity,
+      and a zero-opacity paint now paints nothing, so those bands are looked through like the
+      other eight and `rgba(0, 0, 0, 0)` no longer enters the colour set. The eleven exports are
+      byte-identical and `design/exports/schedule-sheet.png` (780 × 1688, 80 kB, frame `22b`) is
+      new. Summary: 129 frames, 11 mapped, 117 unmapped, 26 colours, 19 outside the tokens.
+      **Still owed:** the `[live]` present-mode pass — the runner's browser profile is signed out
+      and Figma answers the file URL with `403` and the login dialog — so L5 stays open and
+      Task-99 stays blocked. A live read through the plugin confirms the two flows still resolve
+      (`pair-cta` → `12`, `fr-start-cta` → `02`, `bl-chat` → `03a`, `cf-card-repo` → `04b`,
+      `cx-kind` → `04`, all `ON_CLICK` with a 0.2 s dissolve), but the click-through itself was
+      not walked.
 - [x] **L6 — Design import, measured.** Run `node scripts/design/import.mjs --file
       3HMV2UN6QviuNXe2T3Htsr` with the real `FIGMA_TOKEN`, review the diff, and commit
       `design/routes.json`, `design/screens/*.json` and `design/exports/*.png`. The token is never
