@@ -13,13 +13,27 @@ import { Observable, catchError, map, throwError } from 'rxjs';
 import { ApiError } from '../../core/api/api-client';
 import { API_BASE_URL, API_PREFIX } from '../../core/api/http';
 
-export interface RepoScheduleCreateBody {
-  readonly repoId: string;
+/** The editable half of a schedule: the keys the sheet writes and `PATCH` accepts. */
+export interface ScheduleWrite {
   readonly mode: ScheduleMode;
   readonly timezone: string;
-  readonly cron?: string;
-  readonly windowStart?: string;
-  readonly windowEnd?: string;
+  readonly cron: string | null;
+  readonly windowStart: string | null;
+  readonly windowEnd: string | null;
+  readonly maxFires: number | null;
+  readonly maxCostPerFireUsd: number | null;
+}
+
+export interface RepoScheduleCreateBody extends ScheduleWrite {
+  readonly repoId: string;
+  /**
+   * The create route still requires the two legacy columns D56 retired
+   * (apps/daemon/src/schedules/routes.ts:39-56, docs/api.md §5.10 lines 881-883).
+   * The scheduler never reads them; the sheet sends the repository's identity so the
+   * request is valid. A daemon task drops them and this field with them.
+   */
+  readonly title: string;
+  readonly prompt: string;
 }
 
 /** docs/api.md §5.9/§5.10: the repository's one schedule, answered as the legacy `Schedule`. */
@@ -36,6 +50,10 @@ export class RepoScheduleApi {
 
   create(body: RepoScheduleCreateBody): Observable<Schedule> {
     return this.send(this.http.post<unknown>(this.url('/schedules'), body), parseSchedule);
+  }
+
+  update(id: string, body: ScheduleWrite): Observable<Schedule> {
+    return this.send(this.http.patch<unknown>(this.url(`/schedules/${id}`), body), parseSchedule);
   }
 
   pause(id: string): Observable<Schedule> {

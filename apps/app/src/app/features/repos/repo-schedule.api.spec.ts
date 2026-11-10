@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import type { Run, Schedule } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError } from '../../core/api/api-client';
+import type { ScheduleWrite } from './repo-schedule.api';
 import { RepoScheduleApi } from './repo-schedule.api';
 
 const REPO_ID = 'repo_01JABCDEFGHJKMNPQRSV';
@@ -82,10 +83,21 @@ describe('RepoScheduleApi', () => {
     expect(rows).toEqual([SCHEDULE]);
   });
 
-  it('creates a cron schedule with exactly the documented body', () => {
+  it('creates a cron schedule with exactly the ten-key body', () => {
     let created: Schedule | null = null;
     api
-      .create({ repoId: REPO_ID, mode: 'every', timezone: 'Europe/Madrid', cron: '0 9 * * 1-5' })
+      .create({
+        repoId: REPO_ID,
+        title: 'acme/widgets',
+        prompt: 'acme/widgets',
+        mode: 'every',
+        timezone: 'Europe/Madrid',
+        cron: '0 9 * * 1-5',
+        windowStart: null,
+        windowEnd: null,
+        maxFires: null,
+        maxCostPerFireUsd: null,
+      })
       .subscribe((schedule) => {
         created = schedule;
       });
@@ -93,13 +105,41 @@ describe('RepoScheduleApi', () => {
     const request = http.expectOne({ method: 'POST', url: '/v1/schedules' });
     expect(request.request.body).toEqual({
       repoId: REPO_ID,
+      title: 'acme/widgets',
+      prompt: 'acme/widgets',
       mode: 'every',
       timezone: 'Europe/Madrid',
       cron: '0 9 * * 1-5',
+      windowStart: null,
+      windowEnd: null,
+      maxFires: null,
+      maxCostPerFireUsd: null,
     });
     request.flush(SCHEDULE, { status: 201, statusText: 'Created' });
 
     expect(created).toEqual(SCHEDULE);
+  });
+
+  it('patches the editable fields of one schedule', () => {
+    const body: ScheduleWrite = {
+      mode: 'window',
+      timezone: 'Europe/Madrid',
+      cron: null,
+      windowStart: '09:00',
+      windowEnd: '17:00',
+      maxFires: 4,
+      maxCostPerFireUsd: 2,
+    };
+    let updated: Schedule | null = null;
+    api.update(SCHEDULE.id, body).subscribe((schedule) => {
+      updated = schedule;
+    });
+
+    const request = http.expectOne({ method: 'PATCH', url: `/v1/schedules/${SCHEDULE.id}` });
+    expect(request.request.body).toEqual(body);
+    request.flush(SCHEDULE);
+
+    expect(updated).toEqual(SCHEDULE);
   });
 
   it('pauses and resumes through the two POST routes', () => {
@@ -140,5 +180,38 @@ describe('RepoScheduleApi', () => {
 
     expect(failures[0]).toMatchObject({ status: 409, code: 'conflict' });
     expect(failures[1]).toMatchObject({ status: 200, code: 'contract' });
+  });
+
+  it('maps the 422 envelope of a refused patch, reason and path included', () => {
+    const failures: ApiError[] = [];
+    api
+      .update(SCHEDULE.id, {
+        mode: 'window',
+        timezone: 'Europe/Madrid',
+        cron: null,
+        windowStart: '09:00',
+        windowEnd: '09:00',
+        maxFires: null,
+        maxCostPerFireUsd: null,
+      })
+      .subscribe({ error: (error: ApiError) => failures.push(error) });
+
+    http.expectOne({ method: 'PATCH', url: `/v1/schedules/${SCHEDULE.id}` }).flush(
+      {
+        error: {
+          code: 'validation_failed',
+          message: 'Window',
+          requestId: 'req_01JABCDEFGHJ',
+          details: { path: 'schedule.windowStart', reason: 'window' },
+        },
+      },
+      { status: 422, statusText: 'Unprocessable Content' },
+    );
+
+    expect(failures[0]).toMatchObject({
+      status: 422,
+      code: 'validation_failed',
+      details: { path: 'schedule.windowStart', reason: 'window' },
+    });
   });
 });

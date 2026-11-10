@@ -35,7 +35,7 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/app.component.spec.ts` — the banner reaches the shell and drops out when fresh; the theme attribute is dark, flips to light and survives a remount.
 - `src/app/app.config.ts` — zoneless, Ionic, router, HTTP, service-worker providers.
 - `src/app/app.routes.ts` — every route of `docs/app.md` §4, lazy and guarded.
-- `src/app/app.routes.spec.ts` — the frozen 15-row path table, the guard walk, the three tabs, the `docs/app.md` §4 agreement test and the retired-route guard.
+- `src/app/app.routes.spec.ts` — the frozen 13-row path table, the guard walk, the three tabs, the `docs/app.md` §4 agreement test and the retired-route guard.
 - `src/app/readme.spec.ts` — every `src/app` file appears in this map and every map entry exists.
 - `src/app/shared/offline-banner.ts` — the connectivity signals and the read-only offline banner.
 - `src/app/shared/offline-banner.i18n.ts` — the offline banner dictionary in `en` and `es`.
@@ -81,10 +81,12 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/backlog/backlog.store.spec.ts` — one work then one attempt in order, the navigation, the live work and the screen error.
 - `src/app/features/backlog/dependency-rail.ts` — the pure drawing rule: `railEdges` and `unmetNeeds` over the wire items.
 - `src/app/features/backlog/dependency-rail.spec.ts` — one edge per need, the three kinds, a root with none and every unmet id.
-- `src/app/features/backlog/i18n.ts` — the backlog row states, the summary line, the dependency rail, its node labels and the detail copy, and the new-session sheet dictionary in `en` and `es`.
+- `src/app/features/backlog/i18n.ts` — the backlog row states, the summary line, the dependency rail, its node labels and the detail copy, the schedule sheet and the new-session sheet dictionary in `en` and `es`.
 - `src/app/features/backlog/new-session.sheet.ts` — the four targets, the read-only `repo` entry, the busy guard and one create per tap.
 - `src/app/features/backlog/new-session.sheet.spec.ts` — no request on render, the four buttons, the body without a work id, the 409 and the read-only create.
-- `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog frame: the back link, the slug, the chat button, the summary line, the rows of three lines with their section and their state · runs flow, the dependency rail as the left gutter with one node per row, the detail panel, the run action and the live-work block.
+- `src/app/features/backlog/schedule-sheet.ts` — the schedule sheet over the backlog: the stored mode, window, caps and next fire, the empty card that reveals the create form, the save, the run next and the close.
+- `src/app/features/backlog/schedule-sheet.spec.ts` — the two pure rules over a stored row and every invalid cap, the saved and empty states, the PATCH and create bodies, the run next and its notice, the inline cap refusal and the three closes.
+- `src/app/features/backlog/repo-backlog.page.ts` — the repository backlog frame: the back link, the slug, the schedule door, the chat button, the summary line, the rows of three lines with their section and their state · runs flow, the dependency rail as the left gutter with one node per row, the detail panel, the run action and the live-work block.
 - `src/app/features/backlog/repo-backlog.page.spec.ts` — the row hooks and their three lines, every work state label, the summary line, the needs and unmet ids, the rail edges and nodes, the detail panel, the dictionaries, the run visibility, the live work, the error/retry and the sheet.
 - `src/app/features/credentials/add-credential.sheet.ts` — sheet `19 · Add credential`: the form → review → save card, the env warning and block, the four-character review and the value that never enters the DOM.
 - `src/app/features/credentials/add-credential.sheet.spec.ts` — the `data-step` states, the four-character tail, the env warning/blocked states, the cleared value and the sentinel absent from the form, the review and the save.
@@ -120,17 +122,13 @@ folder ships its own `i18n.ts` with both locales (see `docs/app.md` §9).
 - `src/app/features/repos/repo-picker.spec.ts` — the three states, the unavailable refusal, the picked id and the picker copy.
 - `src/app/features/repos/repo-picker.ts` — the repository picker: one row per repo with `connected`/`cloning`/`unavailable`.
 - `src/app/features/repos/i18n.ts` — the repos dictionary in `en` and `es`, including the count, row and search keys and the four `repoPicker.*` keys.
-- `src/app/features/repos/repo-chrome.i18n.ts` — the repository tabs, schedule and design dictionary in `en` and `es`.
-- `src/app/features/repos/repo-tabs.ts` — the four repository tabs as one source of truth and the tab strip component.
-- `src/app/features/repos/repo-tabs.spec.ts` — the four tabs in order, their links and their labels in both locales.
-- `src/app/features/repos/repo-design.page.ts` — the design tab: the tabs, the honest unavailable block and the design new-session sheet.
-- `src/app/features/repos/repo-design.page.spec.ts` — the unavailable block, no request on render, the preselected design target and one create.
-- `src/app/features/repos/repo-schedule.api.ts` — `/v1/schedules` list, create, pause, resume and `/v1/repos/{id}/run-next`.
-- `src/app/features/repos/repo-schedule.api.spec.ts` — every schedule URL and method, the create body and the error mapping.
-- `src/app/features/repos/repo-schedule.store.ts` — the single row, the optimistic pause/resume, the run-next notice and the create conflict.
-- `src/app/features/repos/repo-schedule.store.spec.ts` — load, the pause rollback, resume, the empty selection, the accepted run and the create flows.
-- `src/app/features/repos/repo-schedule.page.ts` — the schedule tab: the legacy row, its caps and fires, the actions and the create form.
-- `src/app/features/repos/repo-schedule.page.spec.ts` — the mode, the window and the next fire, no unexposed field, the notice and the create.
+- `src/app/features/repos/repo-chrome.i18n.ts` — the two repository tabs dictionary in `en` and `es`.
+- `src/app/features/repos/repo-tabs.ts` — the two repository tabs as one source of truth and the tab strip component.
+- `src/app/features/repos/repo-tabs.spec.ts` — the two tabs in order, their links and their labels in both locales.
+- `src/app/features/repos/repo-schedule.api.ts` — `/v1/schedules` list, create, update, pause, resume and `/v1/repos/{id}/run-next`.
+- `src/app/features/repos/repo-schedule.api.spec.ts` — every schedule URL and method, the ten-key create body, the patch body and the error mapping.
+- `src/app/features/repos/repo-schedule.store.ts` — the single row, the optimistic pause/resume, the run-next notice and the idempotent save.
+- `src/app/features/repos/repo-schedule.store.spec.ts` — load, the pause rollback, resume, the empty selection, the accepted run and the save flows.
 - `src/app/features/sessions/sessions.api.ts` — one session, its transcript, the send, the stop, the merge and the design preview.
 - `src/app/features/sessions/sessions.api.spec.ts` — every session URL and method, the transcript query, the design preview and the error mapping.
 - `src/app/features/sessions/design-preview.card.ts` — the design preview card: the eyebrow and the revision pill, the body with the tokens, routes and screens counts and their rows, one block per screen with its three state chips and the check's line or its findings.

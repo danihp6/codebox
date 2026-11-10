@@ -4,9 +4,9 @@ import type { Run, Schedule } from '@codebox/contracts';
 import { finalize } from 'rxjs';
 import type { ApiError } from '../../core/api/api-client';
 import { RepoScheduleApi } from './repo-schedule.api';
-import type { RepoScheduleCreateBody } from './repo-schedule.api';
+import type { ScheduleWrite } from './repo-schedule.api';
 
-export type RepoScheduleBusy = 'pause' | 'resume' | 'runNext' | 'create';
+export type RepoScheduleBusy = 'pause' | 'resume' | 'runNext' | 'save';
 
 export type RepoScheduleNotice = 'nothing_pending' | 'nothing_runnable';
 
@@ -30,7 +30,6 @@ export class RepoScheduleStore {
   readonly busy = signal<RepoScheduleBusy | null>(null);
   readonly notice = signal<RepoScheduleNotice | null>(null);
   readonly nextRun = signal<Run | null>(null);
-  readonly created = signal(false);
 
   load(repoId: string): void {
     if (this.repoId() !== repoId) {
@@ -39,7 +38,6 @@ export class RepoScheduleStore {
       this.error.set(null);
       this.notice.set(null);
       this.nextRun.set(null);
-      this.created.set(false);
       this.loading.set(true);
     }
     this.fetch(repoId);
@@ -88,22 +86,26 @@ export class RepoScheduleStore {
       });
   }
 
-  create(body: RepoScheduleCreateBody): void {
+  save(
+    identity: { readonly repoId: string; readonly title: string; readonly prompt: string },
+    body: ScheduleWrite,
+  ): void {
     if (this.busy() !== null) return;
     this.error.set(null);
     this.notice.set(null);
-    this.busy.set('create');
-    this.api
-      .create(body)
+    this.busy.set('save');
+    const schedule = this.schedule();
+    const request =
+      schedule === null
+        ? this.api.create({ ...body, ...identity })
+        : this.api.update(schedule.id, body);
+    request
       .pipe(
         takeUntilDestroyed(this.destroy),
         finalize(() => this.busy.set(null)),
       )
       .subscribe({
-        next: (schedule) => {
-          this.schedule.set(schedule);
-          this.created.set(true);
-        },
+        next: (saved) => this.schedule.set(saved),
         error: (error: ApiError) => {
           if (refusalReason(error) === 'schedule_exists') {
             this.reload();

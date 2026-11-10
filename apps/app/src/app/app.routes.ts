@@ -35,7 +35,7 @@ const tabRoutes: readonly Route[] = SHELL_TABS.map((tab) => ({
 }));
 
 /**
- * The route table of `docs/app.md` §4. A repository is a pushed destination with four tabs, so
+ * The route table of `docs/app.md` §4. A repository is a pushed destination with two tabs, so
  * no `repos/:id` route carries `data.tab`; `/pair` is the only unguarded route.
  */
 export const routes: Routes = [
@@ -51,18 +51,6 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/works/repo-workers.page').then((module) => module.RepoWorkersPage),
-  },
-  {
-    path: 'repos/:id/schedule',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/repos/repo-schedule.page').then((module) => module.RepoSchedulePage),
-  },
-  {
-    path: 'repos/:id/design',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/repos/repo-design.page').then((module) => module.RepoDesignPage),
   },
   {
     path: 'repos/:id',
