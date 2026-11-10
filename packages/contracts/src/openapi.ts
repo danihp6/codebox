@@ -703,7 +703,7 @@ const ROUTES: readonly RouteSpec[] = [
     path: '/v1/settings',
     method: 'patch',
     operationId: 'updateSettings',
-    summary: 'Update the keys the schema lists.',
+    summary: "Update the operator's time zone; other keys are host configuration.",
     tag: 'settings',
     status: '200',
     response: 'Settings',

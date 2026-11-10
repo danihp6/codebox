@@ -27,7 +27,8 @@ export type SubsystemName =
   | 'backlog'
   | 'sessions'
   | 'design'
-  | 'repos';
+  | 'repos'
+  | 'admin';
 
 export const SUBSYSTEMS: readonly SubsystemName[] = Object.freeze([
   'auth',
@@ -47,6 +48,7 @@ export const SUBSYSTEMS: readonly SubsystemName[] = Object.freeze([
   'sessions',
   'design',
   'repos',
+  'admin',
 ]);
 
 export type SubsystemFlags = Readonly<Record<SubsystemName, boolean>>;
@@ -69,6 +71,7 @@ export const DEFAULT_SUBSYSTEM_FLAGS: SubsystemFlags = Object.freeze({
   sessions: true,
   design: true,
   repos: true,
+  admin: true,
 });
 
 export function subsystemPath(name: SubsystemName): string {

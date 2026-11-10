@@ -6,6 +6,30 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-10 (Task-106: the operator's runtime stop)
+
+- **The four routes exist.** The new `admin` subsystem (the eighteenth entry; `main.ts` does
+  not move) mounts `GET /v1/settings` (the nine effective keys), `PATCH /v1/settings`
+  (`{ timezone? }` only; any other key is `422`), `POST /v1/admin/brake` and
+  `POST /v1/admin/cache/wipe` (`202`, no body). `cb brake on|off|status` stops answering
+  `unsupported`, and the Settings screen's brake and cache controls stop rendering as
+  unavailable.
+- **The brake is live, not a boot snapshot.** `POST /v1/admin/brake { enabled }` stores
+  `automerge = !enabled`; `liveRunSettings` exposes `automerge` as a getter, so a brake armed
+  after the run engine was built fails the next guardrail evaluation with `automerger_off` and
+  `cb brake off` releases it without a restart. `CB_AUTOMERGE` remains the boot default the
+  stored row overrides. D61 records the rule and the one-writer split (the brake owns
+  `automerge`, the push preferences own quiet hours).
+- **The cache wipe is safe.** It removes only worktrees whose run is `succeeded`, `failed` or
+  `cancelled` (or whose run row is gone); a live run's worktree and an unmarked directory are
+  kept, and the bare clones are never touched.
+- `apps/daemon/README.md` now maps `works/`, `backlog/` and `sessions/` too, closing the README
+  half of issue #76. `docs/api.md` §5.1/§5.7, `docs/operations.md` §6/§9/§10.4/§12,
+  `docs/security.md` §12, `docs/decisions.md` (D61) and the OpenAPI PATCH summary carry the
+  shipped behaviour. Task specs 48/48, lint and build green; the root `npm test` is red on the
+  Windows host only (`test:guard` quoting and the CRLF/POSIX suites, identical on `main`). The
+  `[live]` brake cycle is issue #130.
+
 ### Changed — 2026-11-10 (Task-99: two tabs and the schedule sheet)
 
 - **A repository has two destinations.** `Backlog` and `Workers` are the only tabs

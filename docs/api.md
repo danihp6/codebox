@@ -172,10 +172,10 @@ retained for 24 h.
 | `POST` | `/v1/admin/brake` | `admin` | `{ enabled }` — the global auto-merge brake. |
 | `POST` | `/v1/admin/cache/wipe` | `admin` | Removes finished worktrees; keeps the bare clones. |
 
-`/v1/settings` (§5.7) and the two `admin` routes above are not mounted yet: the daemon has no
-settings or admin subsystem, so each answers `404` and the app renders the control unavailable
-([`operations.md`](operations.md) §6, §9). The paths and payloads are frozen here and in
-`packages/contracts/src/openapi.ts`; no open task in `TODO.md` owns the mount.
+`/v1/settings` (§5.7) and the two `admin` routes above are mounted by the `admin` subsystem
+(D61). The brake writes the stored `automerge` row that the run engine reads at every guardrail
+evaluation, so `cb brake on` takes effect without a restart; the cache wipe answers `202` after
+removing only worktrees whose run is terminal ([`operations.md`](operations.md) §6, §9).
 
 `instance` is `CB_INSTANCE_NAME` ([`providers.md`](providers.md) §2), the same name the log
 base carries; a daemon older than the field omits it, which is why the key is optional.
@@ -714,13 +714,20 @@ agent_unavailable` after the user message is stored. An archived session refuses
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/v1/settings` | `read` | Non-secret settings and their defaults. |
-| `PATCH` | `/v1/settings` | `write` | Only keys listed in the schema. |
+| `PATCH` | `/v1/settings` | `write` | `{ timezone? }`; any other key is refused. |
 | `GET` | `/v1/notifications/preferences` | `read` | Per-event subscriptions and quiet hours. |
 | `PATCH` | `/v1/notifications/preferences` | `write` | Same shape. |
 | `POST` | `/v1/push/subscriptions` | `write` | `{ kind: "web" \| "fcm" \| "apns", endpoint, keys }`. |
 | `DELETE` | `/v1/push/subscriptions/{id}` | `write` | Unsubscribe. |
 
-`GET`/`PATCH /v1/settings` are not mounted yet either; see the note in §5.1.
+`GET /v1/settings` composes the nine keys: `automerge` and `timezone` come from the stored rows
+over `CB_AUTOMERGE`/`CB_TIMEZONE`, `quietHours` is the notification preference, and the rest are
+boot configuration. `PATCH` accepts the strict object `{ timezone? }` and refuses any other key,
+including `automerge`, with `422 validation_failed` and `details.path`; the brake owns that key.
+`POST /v1/admin/brake { enabled }` (§5.1) stores `automerge = !enabled`, and the next guardrail
+evaluation fails G8b with `automerger_off` without a restart. `POST /v1/admin/cache/wipe`
+answers `202` and removes only worktrees whose run is `succeeded`, `failed` or `cancelled`; a
+live run and an unmarked directory are kept.
 
 ### 5.8 Reminders (retired)
 

@@ -140,19 +140,18 @@ Auto-merge has three independent stops:
 
 | Stop | Scope | Command |
 | --- | --- | --- |
-| Global switch | Every repository | `CB_AUTOMERGE=off` in `/etc/codebox/instance.env`, then `systemctl restart codebox.service` |
+| Global brake | Every repository | `cb brake on` (`POST /v1/admin/brake { "enabled": true }`) |
+| Boot switch | Every repository | `CB_AUTOMERGE=off` in `/etc/codebox/instance.env`, then `systemctl restart codebox.service` |
 | Repo policy | One repository | `PATCH /v1/repos/{id} { "policy": "manual" }` |
 | PR label | One pull request | Add `do-not-merge` on the PR (G7). |
 
-`CB_AUTOMERGE` is parsed at boot and the run engine snapshots it when it is first built, so the
-edit needs a `codebox.service` restart; from the first guardrail evaluation after it, every
-evaluation fails G8b with `automerger_off`. The repo policy is served and honoured
+`cb brake on` writes the stored `automerge` row and the run engine reads it at every guardrail
+evaluation (D61), so the next evaluation fails G8b with `automerger_off` and no restart is
+needed; `cb brake off` releases it the same way, and `cb brake status` reads
+`GET /v1/settings`. `CB_AUTOMERGE` is the boot default and only applies while the store has no
+row; a stored switch wins over it. The repo policy is served and honoured
 (`PATCH /v1/repos/{id}`, guardrail G8a `policy_manual`). Neither stop cuts a merge already in
 `merging`: it finishes.
-
-Amended 2026-10-31: `cb brake on|off|status` answers `unsupported` and exit `5` because the daemon
-mounts neither `/v1/settings` nor `/v1/admin/brake`; no open task in `TODO.md` owns those routes.
-The env switch, the repo policy and the label are the stops that ship.
 
 ## 7. `cb doctor`
 
@@ -193,8 +192,10 @@ exists.
 Nothing prunes by age, refuses a run or stops claiming fires at any of these readings: the run
 engine removes a worktree when its run ends unless the failure is inspectable, and those stay
 under `CB_WORKSPACE_ROOT` until they are removed by hand. The dashboard and About show the
-percentage; there is no blocking banner. `POST /v1/admin/cache/wipe` answers `404` because no
-admin route is mounted, and the bare clones are never touched. To stop a repository's schedule,
+percentage; there is no blocking banner. `POST /v1/admin/cache/wipe` (admin scope, `202`)
+removes the worktrees whose run is `succeeded`, `failed` or `cancelled`, keeps a live run's
+worktree and any unmarked directory, and never touches the bare clones. There is no `cb prune`
+command; the app's danger zone is the caller. To stop a repository's schedule,
 `POST /v1/schedules/{id}/pause`.
 
 ## 10. Incidents
@@ -247,10 +248,10 @@ records the failure class, not the upstream body (the daemon logs only the error
 
 ### 10.4 A bad merge landed
 
-1. Turn the global switch off if more merges are in flight: set `CB_AUTOMERGE=off` in
-   `/etc/codebox/instance.env` and `systemctl restart codebox.service`. `cb brake on` answers
-   `unsupported` and exit `5` because the daemon mounts no brake route; the env switch is the
-   stop that ships, and it applies from the next guardrail evaluation after the restart.
+1. Turn the global brake on if more merges are in flight: `cb brake on` writes the stored
+   switch and applies from the next guardrail evaluation, without a restart. If the API is
+   unreachable, set `CB_AUTOMERGE=off` in `/etc/codebox/instance.env` and restart
+   `codebox.service` instead; the boot switch is the floor, and a stored row wins over it.
 2. `cb revert <runId>` — a new run with the revert prompt, the same gate and the same
    guardrails. Expected `run  <newRunId>`.
 3. If the revert cannot merge, revert by hand on GitHub and record why in the run.
@@ -336,12 +337,12 @@ means a row is outside the day list the query walks.
 | Command | Purpose |
 | --- | --- |
 | `cb pair --name <name> [--ttl <seconds>]` | Mint a one-time pairing code (loopback HTTP). |
-| `cb status` | Health, queue and running runs; no brake line while `/v1/settings` is unmounted. |
+| `cb status` | Health, queue, running runs and the brake line from `GET /v1/settings`. |
 | `cb doctor [--json]` | Every dependency, one line each. |
 | `cb run <jobId>` | Trigger a legacy job now (`POST /v1/jobs/{id}/run`). |
 | `cb jobs [--pause <id>] [--resume <id>]` | List, pause or resume legacy jobs. |
 | `cb logs <runId>` / `cb events <runId>` | The persisted event timeline of one run. |
-| `cb brake on\|off\|status` | `unsupported` and exit `5`: no brake route is mounted; use `CB_AUTOMERGE` (§6). |
+| `cb brake on\|off\|status` | The global auto-merge brake; `status` reads `GET /v1/settings` (§6). |
 | `cb update [--rollback]` | `upgrade.sh --rollback`; a forward upgrade is the script directly (note below). |
 | `cb backup [--verify]` | `backup.sh` on the box. |
 | `cb revert <runId> [--job <jobId>]` | Revert a merge through a run. |

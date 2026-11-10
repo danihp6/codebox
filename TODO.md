@@ -2358,7 +2358,7 @@ and the app already call, and the brake becomes effective without a restart.
 **Hot-file holders in this batch:** none. Task-106 holds no hot file, and `TODO.md`/`CHANGELOG.md`
 belong to the Orchestrator.
 
-- [ ] **[Task-106]** Mount the settings and admin routes. Add the `admin` subsystem (appended
+- [x] **[Task-106]** Mount the settings and admin routes. Add the `admin` subsystem (appended
       last to `SUBSYSTEMS`, so `apps/daemon/src/main.ts` does not move) and the
       `settings/effective.ts` projection: `GET /v1/settings` composes the nine keys (stored
       `automerge`/`timezone` over the `CB_*` defaults, `quietHours` from the push preferences);
@@ -2383,6 +2383,17 @@ belong to the Orchestrator.
       the daemon suites and the build pass; `[live]` `cb brake on` then a run ends `pr_open`
       with `automerger_off`, and `cb brake off` releases it without a restart — unmeasured on
       this runner, handed to an `agent-review` issue.
+      **Done — 2026-11-10:** the `admin` subsystem is the eighteenth entry and `main.ts` does not
+      move; `GET /v1/settings` serves the nine effective keys, `PATCH` writes only `timezone`,
+      the brake stores `automerge = !enabled` and `liveRunSettings` exposes it as a getter, and
+      the wipe removes only `succeeded`/`failed`/`cancelled` worktrees and answers `202`. The
+      README half of issue #76 landed with it (`works/`, `backlog/`, `sessions/` now mapped).
+      Dev `d60d130`, QA `ad33eeb` (48/48 targeted, lint and build green; `npm test` cannot run
+      on this Windows host — the single-quoted `test:guard` command and the CRLF/POSIX suites
+      fail identically on `main`). Two recorded deviations: the docs went beyond §6/§9 into
+      §10.4 and §12, which carried the same stale `unsupported` sentences, and the spec named
+      base `f75516a` while the cut landed at `28ae813`. Issues #104 and #76 close; the `[live]`
+      brake cycle is an `agent-review` issue.
 
 ---
 

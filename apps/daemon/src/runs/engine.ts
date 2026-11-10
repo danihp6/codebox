@@ -8,6 +8,7 @@ import type { WorkspaceManager } from '@codebox/workspaces';
 import { runGate } from '../gate/run-gate.js';
 import type { DaemonContext } from '../modules.js';
 import { createRunEngine } from '../run/engine.js';
+import { effectiveAutomerge } from '../settings/effective.js';
 import type { RunEngine, RunPorts, RunSettings } from '../run/ports.js';
 
 const AGENT_REQUEST_TIMEOUT_MS = 30_000;
@@ -70,7 +71,7 @@ export function createDaemonSettings(context: DaemonContext): RunSettings {
     maxConcurrency: config.CB_MAX_CONCURRENCY,
     maxPerRepo: config.CB_MAX_CONCURRENCY_PER_REPO,
     dailyCostUsd: config.CB_DAILY_COST_USD,
-    automerge: config.CB_AUTOMERGE,
+    automerge: effectiveAutomerge(context),
     mergeMethod: config.CB_MERGE_METHOD,
     protectedPaths: config.CB_PROTECTED_PATHS,
     diffMaxFiles: config.CB_DIFF_MAX_FILES,
@@ -80,6 +81,20 @@ export function createDaemonSettings(context: DaemonContext): RunSettings {
     logsDir: join(config.CB_STATE_DIR, 'logs'),
     author: { name: config.CB_GIT_AUTHOR_NAME, email: config.CB_GIT_AUTHOR_EMAIL },
     gitTimeoutMs: config.CB_GIT_HTTP_TIMEOUT_SECONDS * 1000,
+  };
+}
+
+/**
+ * The settings object the engine keeps for its whole life. `automerge` is a getter because the
+ * brake writes the store after the engine exists; every other key is boot configuration (D61).
+ */
+export function liveRunSettings(context: DaemonContext): RunSettings {
+  const base = createDaemonSettings(context);
+  return {
+    ...base,
+    get automerge(): 'on' | 'off' {
+      return effectiveAutomerge(context);
+    },
   };
 }
 
@@ -130,7 +145,7 @@ export function createDaemonPorts(context: DaemonContext): RunPorts {
       logger.debug({ msg: 'run_event', event: record.type, eventId: record.id });
     },
     spentTodayUsd: (): number => store.usage.spendOnDay(clock().toISOString().slice(0, 10)),
-    settings: createDaemonSettings(context),
+    settings: liveRunSettings(context),
   };
 }
 
