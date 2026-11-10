@@ -638,11 +638,11 @@ is a second accessor over the same `schedules` table, and `getByRepo` only sees 
 row with a real `title`/`prompt`, so `apps/daemon/src/schedules/fire.ts` and
 `apps/daemon/src/works/service.ts` always read `null` and fall back to `nextPending`, `[]` and
 `maxAttempts: 2`. The D56 fields are therefore unreachable in production. It is cut as
-**Task-107**. **Hot-file holders in this cut:** Task-107 holds `docs/decisions.md` (a D56
+**Task-107**. **Hot-file holders in this cut:** Task-107 holds
+`packages/contracts/src/index.ts` (the new detail schema export) and `docs/decisions.md` (a D56
 amendment); no task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
 `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`,
-`apps/daemon/src/main.ts`, `packages/contracts/src/index.ts`, `opencode.json`, `TODO.md` or
-`CHANGELOG.md`. The three empty slots have no legal candidate: Task-31 is `[!]` (#105) and
+`apps/daemon/src/main.ts`, `opencode.json`, `TODO.md` or `CHANGELOG.md`. The three empty slots have no legal candidate: Task-31 is `[!]` (#105) and
 Task-32 waits behind it, L1/L3/L4 are operator items, and issues #75 and #110 are decisions
 about wording and the cycle's own trace, not code.
 
@@ -2424,10 +2424,11 @@ legacy row with a real `title`/`prompt`, so `apps/daemon/src/schedules/fire.ts` 
 `maxAttempts: 2`. The D56 selection fields are unreachable in production. This batch makes the
 API write and serve the D56 object.
 
-**Hot-file holders in this batch:** Task-107 holds `docs/decisions.md` (a D56 amendment). No task
-holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+**Hot-file holders in this batch:** Task-107 holds `packages/contracts/src/index.ts` (the new
+detail schema export) and `docs/decisions.md` (a D56 amendment). No task holds `package.json`,
+`package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
 `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
-`packages/contracts/src/index.ts`, `opencode.json`, `TODO.md` or `CHANGELOG.md`.
+`opencode.json`, `TODO.md` or `CHANGELOG.md`.
 
 - [ ] **[Task-107]** Write and serve the D56 schedule. `POST /v1/schedules` requires `repoId`,
       carries `selection`, `refs` and `maxAttempts` (defaults `nextPending`, `[]`, `2`) and no
@@ -2439,8 +2440,8 @@ holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angul
       draws nothing new, because the frame has no selection controls — recorded as a deliberate
       gap for a later L item. `docs/api.md` §5.9, `docs/jobs.md` (schedule execution) and D56
       carry the shape.
-      *Paths:* `packages/contracts/src/{resources.ts,openapi.ts,openapi.test.ts}`,
-      `packages/contracts/README.md` (the two lines that change),
+      *Paths:* `packages/contracts/src/{works.ts,works.test.ts,index.ts}`,
+      `packages/contracts/README.md` (the `works.ts` line),
       `apps/daemon/src/schedules/{service.ts,routes.ts}` + their tests,
       `apps/daemon/README.md` (only if a line changes),
       `apps/app/src/app/features/repos/{repo-schedule.api.ts,repo-schedule.api.spec.ts,repo-schedule.store.ts,repo-schedule.store.spec.ts}`,
