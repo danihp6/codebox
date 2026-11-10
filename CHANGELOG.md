@@ -6,6 +6,29 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-10 (Task-99: two tabs and the schedule sheet)
+
+- **A repository has two destinations.** `Backlog` and `Workers` are the only tabs
+  (`REPO_TABS`); `/repos/:id/schedule` and `/repos/:id/design` are retired and
+  `repo-schedule.page.*` and `repo-design.page.*` are deleted with their specs and dictionary
+  keys. The router serves 14 paths, and the frozen path table proves the two are gone.
+- **The schedule is a sheet over the backlog.** `features/backlog/schedule-sheet.ts` opens from
+  the header's `Schedule` door, renders the saved state (`22b`) or the empty card (`22c`),
+  creates with `POST /v1/schedules` (the ten-key body the daemon still requires, including the
+  legacy `title`/`prompt`), edits with the app's first `PATCH /v1/schedules/{id}` caller, and
+  fires `POST /v1/repos/{id}/run-next`. Escape, the scrim and `×` close it; focus moves to the
+  close button and back to the header door. No focus trap, recorded as a limitation.
+- **The frame's gaps are recorded, not invented:** no `DAYS` row (the contract has none; a
+  `window` is daily), **FIRES** instead of `FIRES / DAY` (`maxFires` caps the whole schedule),
+  `<n> left` instead of “today”, a raw editable cost and no pause UI (the API and its tests stay).
+  The sheet was measured live at 390 × 844 and 320 × 568 against
+  `design/exports/schedule-sheet.png`; the five cosmetic differences and the three positive live
+  legs (create `201`, edit `200`, `run-next` `202`, which need a registered repository) are issue
+  #128.
+- `docs/app.md` §4/§5, `docs/api.md` §11, `design/README.md` §6 and `apps/app/README.md` carry the
+  same two-tab + sheet story. Task specs 68/68, lint and build green, design gate
+  `0 finding(s)`; the root `npm test` is red on the Windows host only. PR #129.
+
 ### Changed — 2026-11-10 (Task-105: the gate stops reporting)
 
 - **The design check enforces every rule.** `screen_state_missing` stops being report-only:

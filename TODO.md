@@ -2107,7 +2107,7 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       offline notice; `[unit]` the design gate reports zero findings; `[live]` the export sits
       beside the screen at 390 × 844 and matches region by region. *Dependencies:* L6, L7.
 
-- [ ] **[Task-99]** Two tabs and the schedule sheet. Retire `/repos/:id/schedule` and
+- [x] **[Task-99]** Two tabs and the schedule sheet. Retire `/repos/:id/schedule` and
       `/repos/:id/design` — the repository has `Backlog` and `Workers` (§2 of `design/README.md`)
       — and move the schedule, which is configuration and not a screen (D56), into a sheet over
       the backlog: window, mode, caps and the manual *Run next*, reading and writing the same
@@ -2126,6 +2126,18 @@ retirements). No other task holds `package.json`, `package-lock.json`, `tsconfig
       saves one and fires *Run next* through the same API the page used; `[unit]` the tab strip
       renders exactly two tabs; `[live]` the sheet sits beside L5's frame at 390 × 844.
       *Dependencies:* L5 (the sheet's frame), L6, L7, Task-92.
+      **Done — 2026-11-10:** the router serves 14 paths and neither retired one; `REPO_TABS` is
+      `['backlog','workers']`; `features/backlog/schedule-sheet.ts` reads, creates (the ten-key
+      body the daemon's legacy `title`/`prompt` still requires), edits with the first
+      `PATCH /v1/schedules/{id}` caller and fires `run-next`. The sheet was measured live beside
+      `design/exports/schedule-sheet.png` at 390 × 844 and 320 × 568 (panel 16 px radius, 24 px
+      inset / 16 at 320, `scrollWidth` 320; saved state via a labelled route stub). Accepted
+      deviations: no `DAYS` row, **FIRES** not `FIRES / DAY`, `<n> left` not “today”, a raw
+      editable cost, no pause UI and one new header door. Task specs 68/68, lint and build green,
+      design gate `0 finding(s)`; the root `npm test` is host-only red (CRLF `NOTICE`, POSIX
+      suites). The three positive live legs (create `201`, edit `200`, `run-next` `202`) need a
+      registered repository and are issue **#128**, with the five cosmetic frame differences.
+      Branch `9f4d96a`, QA `196a0d8`, merged as PR **#129** (`ae0db80`).
 
 ---
 
