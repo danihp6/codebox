@@ -97,7 +97,7 @@ const VALUE_COLUMNS: readonly [keyof RepoSchedulePatch, string][] = [
 ];
 
 export function createRepoScheduleRepository(db: DatabaseSync): RepoScheduleRepository {
-  const selectById = db.prepare(`SELECT ${COLUMNS} FROM schedules WHERE id = ?`);
+  const selectById = db.prepare(`SELECT ${COLUMNS} FROM schedules WHERE id = ? AND title = ?`);
   const selectByRepo = db.prepare(
     `SELECT ${COLUMNS} FROM schedules
      WHERE repo_id = ? AND title = ?
@@ -106,7 +106,7 @@ export function createRepoScheduleRepository(db: DatabaseSync): RepoScheduleRepo
   );
   const selectDue = db.prepare(`
     SELECT ${COLUMNS} FROM schedules
-    WHERE enabled = 1 AND next_fire_at IS NOT NULL AND next_fire_at <= ?
+    WHERE enabled = 1 AND next_fire_at IS NOT NULL AND next_fire_at <= ? AND title = ?
     ORDER BY next_fire_at ASC, created_at ASC, id ASC
     LIMIT ?
   `);
@@ -123,7 +123,7 @@ export function createRepoScheduleRepository(db: DatabaseSync): RepoScheduleRepo
   const remove = db.prepare('DELETE FROM schedules WHERE id = ?');
 
   function findById(id: string): RepoSchedule | null {
-    const value = selectById.get(id);
+    const value = selectById.get(id, LEGACY_DEFAULTS.title);
     return value === undefined ? null : repoScheduleFromRow(row(value));
   }
 
@@ -145,8 +145,8 @@ export function createRepoScheduleRepository(db: DatabaseSync): RepoScheduleRepo
 
     list(filter: RepoScheduleFilter): PageResult<RepoSchedule> {
       const limit = Math.max(1, Math.trunc(filter.limit));
-      const conditions: string[] = [];
-      const parameters: (string | number)[] = [];
+      const conditions: string[] = ['title = ?'];
+      const parameters: (string | number)[] = [LEGACY_DEFAULTS.title];
       if (filter.repoId !== undefined) {
         conditions.push('repo_id = ?');
         parameters.push(filter.repoId);
@@ -278,7 +278,7 @@ export function createRepoScheduleRepository(db: DatabaseSync): RepoScheduleRepo
 
     listDue(at: string, limit: number): RepoSchedule[] {
       return selectDue
-        .all(at, Math.max(1, Math.trunc(limit)))
+        .all(at, LEGACY_DEFAULTS.title, Math.max(1, Math.trunc(limit)))
         .map((value) => repoScheduleFromRow(row(value)));
     },
   };

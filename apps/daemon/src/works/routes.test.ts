@@ -10,7 +10,7 @@ import {
   parseWorkDetail,
   parseRun,
 } from '@codebox/contracts';
-import type { Repo, Scope, Session, Work } from '@codebox/contracts';
+import type { Repo, RepoSchedule, Scope, Session, Work } from '@codebox/contracts';
 import { mintAccessToken, sha256Hex } from '@codebox/security';
 import { openInMemoryStore } from '@codebox/store';
 import type { Store } from '@codebox/store';
@@ -447,6 +447,42 @@ describe('POST /v1/repos/{id}/run-next', () => {
     const work = test.store.works.findByBacklogRef(REPO_ID, 'Task-02');
     expect(work?.origin).toBe('manual');
     expect(test.store.runs.getRecord(run.id)?.workId).toBe(work?.id);
+  });
+
+  it('uses the schedule selection and refs, not nextPending', async () => {
+    const test = harness(BACKLOG);
+    const schedule: RepoSchedule = {
+      id: 'sch_000010',
+      repoId: REPO_ID,
+      mode: 'every',
+      cron: '0 9 * * *',
+      timezone: 'UTC',
+      windowStart: null,
+      windowEnd: null,
+      cooldownMinutes: 0,
+      selection: 'refs',
+      refs: ['Task-03'],
+      maxAttempts: 2,
+      maxFires: null,
+      maxCostPerFireUsd: null,
+      consecutiveFailures: 0,
+      firesCount: 0,
+      spendUsd: 0,
+      enabled: true,
+      nextFireAt: '2026-10-26T09:00:00Z',
+      lastFiredAt: null,
+      createdAt: NOW,
+      updatedAt: NOW,
+    };
+    test.store.repoSchedules.create(schedule);
+
+    const response = await test.call('POST', `/v1/repos/${REPO_ID}/run-next`, {
+      token: test.device(),
+    });
+
+    expect(response.status).toBe(202);
+    expect(test.store.works.findByBacklogRef(REPO_ID, 'Task-03')).not.toBeNull();
+    expect(test.store.works.findByBacklogRef(REPO_ID, 'Task-02')).toBeNull();
   });
 
   it('refuses with nothing_pending when the file has no pending item', async () => {

@@ -1,4 +1,4 @@
-import type { Repo, RepoSchedule } from '@codebox/contracts';
+import type { Repo, RepoSchedule, Schedule } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { StoreError } from './errors.js';
 import { openInMemoryStore, type Store } from './store.js';
@@ -43,6 +43,32 @@ const SCHEDULE: RepoSchedule = {
   updatedAt: NOW,
 };
 
+const LEGACY: Schedule = {
+  id: 'sch_000099',
+  repoId: REPO.id,
+  chatSessionId: null,
+  title: 'Nightly drain',
+  prompt: 'Work the backlog.',
+  mode: 'every',
+  cron: '0 9 * * *',
+  timezone: 'UTC',
+  windowStart: null,
+  windowEnd: null,
+  cooldownMinutes: 0,
+  maxFires: null,
+  maxCostPerFireUsd: null,
+  firePolicy: 'new_chat',
+  consecutiveFailures: 0,
+  firesCount: 0,
+  spendUsd: 0,
+  enabled: true,
+  policy: 'auto',
+  nextFireAt: '2026-10-29T09:00:00Z',
+  lastFiredAt: null,
+  createdAt: NOW,
+  updatedAt: NOW,
+};
+
 function storeErrorOf(run: () => unknown): StoreError | null {
   try {
     run();
@@ -62,6 +88,17 @@ beforeEach(() => {
 
 afterEach(() => {
   store.close();
+});
+
+describe('the D56 accessor', () => {
+  it('hides a row the retired legacy writer left behind', () => {
+    store.schedules.create(LEGACY);
+
+    expect(store.repoSchedules.get(LEGACY.id)).toBeNull();
+    expect(store.repoSchedules.getByRepo(REPO.id)).toBeNull();
+    expect(store.repoSchedules.list({ limit: 10, cursor: null }).data).toEqual([]);
+    expect(store.repoSchedules.listDue('2026-10-30T00:00:00Z', 10)).toEqual([]);
+  });
 });
 
 describe('repoSchedules.create', () => {
