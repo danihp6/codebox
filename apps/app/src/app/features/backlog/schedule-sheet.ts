@@ -222,7 +222,7 @@ function readMaxCost(text: string): number | null {
         gap: 4px;
         min-inline-size: 0;
         margin-block-start: 8px;
-        padding: 10px 12px;
+        padding: 8px 12px;
         border: 1px solid var(--cb-surface);
         border-radius: 8px;
         background: var(--cb-bg);
@@ -266,6 +266,7 @@ function readMaxCost(text: string): number | null {
         margin-block-start: 12px;
       }
       .cb-schedule-foot {
+        margin-block-start: 16px;
         font-size: 12px;
         line-height: 18px;
       }
@@ -296,7 +297,7 @@ function readMaxCost(text: string): number | null {
       }
       .cb-schedule-save,
       .cb-schedule-run-next {
-        min-block-size: 52px;
+        min-block-size: 48px;
         border-radius: 8px;
         font: inherit;
         font-size: 16px;
