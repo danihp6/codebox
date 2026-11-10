@@ -26,7 +26,7 @@ first release exists.
 - `apps/daemon/README.md` now maps `works/`, `backlog/` and `sessions/` too, closing the README
   half of issue #76. `docs/api.md` §5.1/§5.7, `docs/operations.md` §6/§9/§10.4/§12,
   `docs/security.md` §12, `docs/decisions.md` (D61) and the OpenAPI PATCH summary carry the
-  shipped behaviour. Task specs 48/48, lint and build green; the root `npm test` is red on the
+  shipped behaviour. Targeted specs 48/48, lint and build green; the root `npm test` is red on the
   Windows host only (`test:guard` quoting and the CRLF/POSIX suites, identical on `main`). The
   `[live]` brake cycle is issue #130.
 
