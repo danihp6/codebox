@@ -1495,29 +1495,31 @@ describe('run engine — the design scan gate step', () => {
     });
   });
 
-  it('reports a missing screen state without failing the run', async () => {
+  it('fails the run when a screen does not declare its three states', async () => {
     const test = harness();
     writeDesignFixture(test, { empty: null });
     test.agent.script = [busyEvent('ses_fake1'), idleEvent('ses_fake1')];
 
     const outcome = await test.engine.start(runInput());
 
-    expect(outcome.state).toBe('succeeded');
-    expect(outcome.gate?.status).toBe('passed');
-    expect(outcome.gate?.exitCode).toBe(0);
-    expect(outcome.gate?.tail).toContain(
-      'design/screens/dashboard.json:1 screen_state_missing (report-only)',
-    );
-    expect(test.git.opened).toHaveLength(1);
+    expect(outcome.state).toBe('failed');
+    expect(outcome.failure?.code).toBe('gate_failed');
+    expect(outcome.gate?.status).toBe('failed');
+    expect(outcome.gate?.exitCode).toBe(1);
+    expect(outcome.gate?.tail).toContain('design/screens/dashboard.json:1 screen_state_missing');
+    expect(outcome.gate?.tail.join('\n')).not.toContain('(report-only)');
+    expect(test.git.pushes).toEqual([]);
+    expect(test.git.opened).toEqual([]);
+    expect(eventTypes(test.emitted)).not.toContain('run.pr');
     const logs = designLogs(test);
     expect(logs).toHaveLength(1);
     expect(logs[0]).toMatchObject({
-      level: 'info',
+      level: 'error',
       msg: 'design_scan_reported',
       runId: RUN_ID,
       findings: 1,
-      enforced: 0,
-      reportOnly: 1,
+      enforced: 1,
+      reportOnly: 0,
     });
   });
 

@@ -1,7 +1,11 @@
 export type DesignRuleEnforcement = 'enforced' | 'report-only';
 
-/** Exactly one rule is report-only until L5 draws the missing frames (D57). */
-export const REPORT_ONLY_DESIGN_RULES: readonly string[] = Object.freeze(['screen_state_missing']);
+/**
+ * No rule is report-only since 2026-11-10: L5 drew the states and the 2026-11-09 re-import wrote
+ * them, so the design check reports zero findings and D57's exception has nothing to protect.
+ * This frozen list is the one place a future exception is declared.
+ */
+export const REPORT_ONLY_DESIGN_RULES: readonly string[] = Object.freeze([]);
 
 /**
  * A rule this build does not know fails closed: a new rule name in `@codebox/design` turns the

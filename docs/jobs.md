@@ -192,15 +192,16 @@ The gate is the repository's own check, run in the worktree before any PR exists
 - **The design check runs on every run, as the second gate step after the secret scan, and only
   when the command gate and the secret scan are both green.** A patch that trips the secret scan
   is reported by the secret scan alone: no `design_scan` line and no `design_scan_*` log is
-  written for it. The split is three-way. `colour_outside_tokens`, `route_without_component` and
-  `snapshot_hash_mismatch` fail the run. `screen_state_missing` is reported as
-  `<file>:<line> <rule> (report-only)` in the gate tail and its log and never fails the run: the
-  frames the missing state would name do not exist yet (D57). A rule this build does not know is
-  enforced, so a new rule fails closed. A run with an enforced finding ends `gate_failed`, pushes
-  nothing and opens no PR; a run whose only findings are report-only stays `passed` and its tail
-  and log keep the `(report-only)` lines. One `design_scan_reported` line carries the counts
-  (`findings`, `enforced`, `reportOnly`, `oversized`) at `error` when something is enforced and at
-  `info` when nothing is. A diff git cannot produce is `design_scan: git_failed`, logged once as
+  written for it. **All four rules fail the run**: `colour_outside_tokens`,
+  `route_without_component`, `screen_state_missing` and `snapshot_hash_mismatch`. A finding is
+  appended to the gate tail and its log as `<file>:<line> <rule>`, and a run with one ends
+  `gate_failed`, pushes nothing and opens no PR. A rule this build does not know is enforced too,
+  so a new rule fails closed. `screen_state_missing` was report-only until L5 drew the missing
+  frames; the frames exist and the 2026-11-09 re-import wrote them into the eleven specs, so the
+  rule is enforced like the other three (D57, amended 2026-11-10) and the report-only list is
+  empty. One `design_scan_reported` line carries the counts (`findings`, `enforced`,
+  `reportOnly`, `oversized`) at `error` when something is enforced; `reportOnly` is `0` while the
+  list is empty. A diff git cannot produce is `design_scan: git_failed`, logged once as
   `design_scan_failed` with its `code`, and fails the gate closed. A repository without
   `design/tokens.json` skips the step and the run is exactly as before.
 
