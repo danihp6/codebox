@@ -81,10 +81,8 @@ is a bug in one of the two.
 | `/pair` | Pairing | Enter the ten-character code and a device name, submit, see one inline reason when the code is used, expired or unknown, and land on the dashboard; the same screen after a 401. |
 | `/dashboard` | Dashboard | **Running** and **ready** (an open PR), today's spend, health, and **one block per repository**; the start card on a fresh box. |
 | `/repos` | Repos list | The repository list with a **search field and no filters**: name, clone/gate state, `pending · running · merged` counts, and **one amber dot** when something needs the operator (an unreviewed PR or a red run); **add** connects one from the GitHub App installation, showing `connected` / `cloning` / `unavailable` per row. |
-| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; **the chat button** opens a session with four targets (backlog, design, schedule, rework) or `repo` for a read-only chat; tabs **Backlog · Workers · Schedule · Design**. |
+| `/repos/:id` | Repo · backlog | The repository's `TODO.md` in file order: section, checkbox, `Task-NN`, title, runtime chip; `Run` on a pending item; **the chat button** opens a session with four targets (backlog, design, schedule, rework) or `repo` for a read-only chat; tabs **Backlog · Workers**; the **Schedule** door in the header opens the schedule sheet (mode, window, caps, *Run next*) over the backlog. |
 | `/repos/:id/workers` | Repo · workers | The repository's factory: four role rooms (`ORQ`, `ARC`, `DEV`, `QA`), one face and one task chip per subagent, the road in and the belt out, and the four states `queued`, `running`, `needs you`, `asleep`. `needs you` is a badge on the worker whose task is blocked: the orchestrator holds the card and the decision, the builder takes another task. A face opens that agent's log (`/works/:id`); there is no per-agent button. |
-| `/repos/:id/schedule` | Repo · schedule | The one `RepoSchedule`: mode, window, selection, caps, next fire, pause and *Run next* (D56). |
-| `/repos/:id/design` | Repo · design | Screen specs, tokens and snapshots from `design/`, with the state checklist and the preview. |
 | `/works/:id` | Work · run log | Runs, gate and PR cards, context header, cost, and **one action when blocked**: *Resolve doubt*; a merged work offers **Rework**, which opens a session whose proposal is a new run. No composer (D55). |
 | `/sessions/:id` | Session | A chat with one target: thread, the target document, and the **pending proposal** with its files and *Merge*. With no target it is read-only: no proposal panel, just the thread and the repo's context. |
 | `/settings` | Settings | Repository viewers, credentials, provider accounts, devices, notifications, appearance, danger zone. The providers panel renders inside this route and has no route of its own; the notifications panel renders here and at `/settings/notifications`, which mounts the same page. |
@@ -101,12 +99,10 @@ repository is a destination, not a filter; Settings owns the cross-repository li
 screens push onto the stack; deep links (`codebox://works/<id>`,
 `https://cb.example.com/works/<id>`) open the same route.
 
-A repository carries exactly four tabs — **Backlog · Workers · Schedule · Design** — and the tab
-strip is one component, so a tab can never exist on one screen and not another.
-
-Amended 2026-10-31: D59 moves a repository to two tabs (`Backlog · Workers`), the schedule into a
-sheet over the backlog and the design preview into its session; Task-99 (Two tabs and the
-schedule sheet) ships it.
+A repository carries exactly two tabs — **Backlog · Workers** — and the tab strip is one
+component, so a tab can never exist on one screen and not another. The schedule is
+configuration, not a screen (D56): it opens as a sheet over the backlog from the header's
+**Schedule** door, and the design preview lives in its session (`/sessions/:id`).
 
 **The repository is the spine.** A work exists only inside one repository, one per backlog item,
 and never changes (D44). There is no free chat, no scope chip and no promote: the backlog item
@@ -125,7 +121,7 @@ no approval prompt anywhere in this flow (D45).
 - **Schedules refetch on activation.** The schedules list loads on every activation and on
   every `schedule.fired` or `schedule.failed` frame; pause and resume are optimistic with
   rollback. Creation is not optimistic: the row corroborates the new schedule from
-  `GET /v1/schedules`. A schedule belongs to the repository, so the Schedule tab reads the row.
+  `GET /v1/schedules`. A schedule belongs to the repository, so the schedule sheet reads the row.
 - **Caching:** the last successful payload per route in memory; a persisted snapshot of the
   dashboard and the last 50 runs for offline display. No work thread is persisted on the device
   beyond the current session (D28) — it is re-fetched.

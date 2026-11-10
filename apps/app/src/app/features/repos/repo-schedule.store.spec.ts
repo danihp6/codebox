@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import type { Run, Schedule } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { ApiError } from '../../core/api/api-client';
+import type { ScheduleWrite } from './repo-schedule.api';
 import { RepoScheduleStore } from './repo-schedule.store';
 
 const REPO_ID = 'repo_01JABCDEFGHJKMNPQRSV';
@@ -63,6 +64,26 @@ function envelope(code: string, details?: Record<string, unknown>): Record<strin
     },
   };
 }
+
+const WRITE_CRON: ScheduleWrite = {
+  mode: 'every',
+  timezone: 'UTC',
+  cron: '0 9 * * *',
+  windowStart: null,
+  windowEnd: null,
+  maxFires: null,
+  maxCostPerFireUsd: null,
+};
+
+const WRITE_WINDOW: ScheduleWrite = {
+  mode: 'window',
+  timezone: 'Europe/Madrid',
+  cron: null,
+  windowStart: '09:00',
+  windowEnd: '17:00',
+  maxFires: 4,
+  maxCostPerFireUsd: 2,
+};
 
 describe('RepoScheduleStore', () => {
   let http: HttpTestingController;
@@ -152,7 +173,10 @@ describe('RepoScheduleStore', () => {
     store.load(REPO_ID);
     http.expectOne(LIST_URL).flush({ data: [], nextCursor: null });
 
-    store.create({ repoId: REPO_ID, mode: 'every', timezone: 'UTC', cron: '0 9 * * *' });
+    store.save(
+      { repoId: REPO_ID, title: 'acme/widgets', prompt: 'acme/widgets' },
+      WRITE_CRON,
+    );
     http
       .expectOne({ method: 'POST', url: '/v1/schedules' })
       .flush(envelope('conflict', { reason: 'schedule_exists' }), {
@@ -165,11 +189,45 @@ describe('RepoScheduleStore', () => {
     expect(store.error()).toBeNull();
   });
 
+  it('creates the missing row with the repository identity and the write body', () => {
+    store.load(REPO_ID);
+    http.expectOne(LIST_URL).flush({ data: [], nextCursor: null });
+
+    store.save({ repoId: REPO_ID, title: 'acme/widgets', prompt: 'acme/widgets' }, WRITE_CRON);
+    expect(store.busy()).toBe('save');
+
+    const create = http.expectOne({ method: 'POST', url: '/v1/schedules' });
+    expect(create.request.body).toEqual({
+      ...WRITE_CRON,
+      repoId: REPO_ID,
+      title: 'acme/widgets',
+      prompt: 'acme/widgets',
+    });
+    create.flush(SCHEDULE, { status: 201, statusText: 'Created' });
+
+    expect(store.schedule()).toEqual(SCHEDULE);
+    expect(store.busy()).toBeNull();
+    expect(store.error()).toBeNull();
+  });
+
+  it('patches the stored row and keeps the answer', () => {
+    load();
+
+    store.save({ repoId: REPO_ID, title: 'acme/widgets', prompt: 'acme/widgets' }, WRITE_WINDOW);
+
+    const patch = http.expectOne({ method: 'PATCH', url: `/v1/schedules/${SCHEDULE.id}` });
+    expect(patch.request.body).toEqual(WRITE_WINDOW);
+    patch.flush({ ...SCHEDULE, timezone: 'UTC' });
+
+    expect(store.schedule()?.timezone).toBe('UTC');
+    expect(store.busy()).toBeNull();
+  });
+
   it('surfaces any other create failure as the screen error', () => {
     store.load(REPO_ID);
     http.expectOne(LIST_URL).flush({ data: [], nextCursor: null });
 
-    store.create({ repoId: REPO_ID, mode: 'every', timezone: 'UTC', cron: '0 9 * * *' });
+    store.save({ repoId: REPO_ID, title: 'acme/widgets', prompt: 'acme/widgets' }, WRITE_CRON);
     http
       .expectOne({ method: 'POST', url: '/v1/schedules' })
       .flush(envelope('validation_failed'), { status: 422, statusText: 'Unprocessable' });

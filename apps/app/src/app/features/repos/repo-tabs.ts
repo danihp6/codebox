@@ -3,19 +3,15 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { translate } from './repo-chrome.i18n';
 
-export type RepoTabId = 'backlog' | 'workers' | 'schedule' | 'design';
+export type RepoTabId = 'backlog' | 'workers';
 
 export interface RepoTab {
   readonly id: RepoTabId;
   readonly link: (repoId: string) => readonly string[];
-  readonly labelKey:
-    | 'repoTabs.backlog'
-    | 'repoTabs.workers'
-    | 'repoTabs.schedule'
-    | 'repoTabs.design';
+  readonly labelKey: 'repoTabs.backlog' | 'repoTabs.workers';
 }
 
-/** One source of truth for the four repository tabs. Exactly these four, in this order. */
+/** One source of truth for the repository's two tabs. Exactly these two, in this order. */
 export const REPO_TABS: readonly RepoTab[] = Object.freeze([
   {
     id: 'backlog',
@@ -26,16 +22,6 @@ export const REPO_TABS: readonly RepoTab[] = Object.freeze([
     id: 'workers',
     link: (repoId) => ['/repos', repoId, 'workers'],
     labelKey: 'repoTabs.workers',
-  },
-  {
-    id: 'schedule',
-    link: (repoId) => ['/repos', repoId, 'schedule'],
-    labelKey: 'repoTabs.schedule',
-  },
-  {
-    id: 'design',
-    link: (repoId) => ['/repos', repoId, 'design'],
-    labelKey: 'repoTabs.design',
   },
 ]);
 

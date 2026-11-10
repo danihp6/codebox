@@ -20,14 +20,12 @@ function mount(): HTMLElement {
 }
 
 describe('REPO_TABS', () => {
-  it('declares exactly the four tabs of a repository, in order', () => {
-    expect(REPO_TABS.map((tab) => tab.id)).toEqual(['backlog', 'workers', 'schedule', 'design']);
+  it('declares exactly the two tabs of a repository, in order', () => {
+    expect(REPO_TABS.map((tab) => tab.id)).toEqual(['backlog', 'workers']);
     expect(Object.isFrozen(REPO_TABS)).toBe(true);
     expect(REPO_TABS.map((tab) => tab.labelKey)).toEqual([
       'repoTabs.backlog',
       'repoTabs.workers',
-      'repoTabs.schedule',
-      'repoTabs.design',
     ]);
   });
 
@@ -35,8 +33,6 @@ describe('REPO_TABS', () => {
     expect(REPO_TABS.map((tab) => tab.link(REPO_ID))).toEqual([
       ['/repos', REPO_ID],
       ['/repos', REPO_ID, 'workers'],
-      ['/repos', REPO_ID, 'schedule'],
-      ['/repos', REPO_ID, 'design'],
     ]);
   });
 });
@@ -45,7 +41,7 @@ describe('RepoTabs', () => {
   it('renders one link per tab with its hook, href and label', () => {
     const element = mount();
 
-    expect(element.querySelectorAll('[data-testid^="repo-tab-"]')).toHaveLength(4);
+    expect(element.querySelectorAll('[data-testid^="repo-tab-"]')).toHaveLength(2);
     for (const tab of REPO_TABS) {
       const link = element.querySelector<HTMLAnchorElement>(`[data-testid="repo-tab-${tab.id}"]`);
       expect(link, `tab ${tab.id} is missing`).not.toBeNull();

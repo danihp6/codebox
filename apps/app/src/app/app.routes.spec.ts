@@ -16,8 +16,6 @@ const EXPECTED_PATHS = [
   'repos',
   'settings',
   'repos/:id/workers',
-  'repos/:id/schedule',
-  'repos/:id/design',
   'repos/:id',
   'works/:id',
   'sessions/:id',
@@ -186,6 +184,8 @@ describe('app routes', () => {
       'approvals',
       'routines',
       'routines/:id',
+      'repos/:id/schedule',
+      'repos/:id/design',
     ];
     const paths = routes.map((route) => route.path);
     for (const path of retired) expect(paths, path).not.toContain(path);

@@ -1023,10 +1023,8 @@ still renders, and the routes it calls are retained.
 | `/pair` | `POST /v1/pair`, `POST /v1/auth/refresh` |
 | `/dashboard` | `GET /v1/health`, `GET /v1/telemetry`, `GET /v1/runs`, `GET /v1/repos` |
 | `/repos` | `GET /v1/repos`, `POST /v1/repos`, `POST /v1/repos/{id}/verify` |
-| `/repos/:id` | `GET /v1/repos/{id}`, `GET /v1/repos/{id}/backlog`, `POST /v1/works`, `POST /v1/works/{id}/runs`, `POST /v1/sessions` |
+| `/repos/:id` | `GET /v1/repos/{id}`, `GET /v1/repos/{id}/backlog`, `POST /v1/works`, `POST /v1/works/{id}/runs`, `POST /v1/sessions`, `GET /v1/schedules?repoId=`, `POST /v1/schedules`, `PATCH /v1/schedules/{id}`, `POST /v1/repos/{id}/run-next` |
 | `/repos/:id/workers` | `GET /v1/works?repoId=` |
-| `/repos/:id/schedule` | `GET /v1/schedules?repoId=`, `POST /v1/schedules`, `POST /v1/schedules/{id}/pause`, `POST /v1/schedules/{id}/resume`, `POST /v1/repos/{id}/run-next` |
-| `/repos/:id/design` | `POST /v1/sessions` |
 | `/works/:id` | `GET /v1/works/{id}`, `POST /v1/works/{id}/decision`, `POST /v1/works/{id}/runs` |
 | `/sessions/:id` | `GET /v1/sessions/{id}`, `GET /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/messages`, `POST /v1/sessions/{id}/interrupt`, `POST /v1/sessions/{id}/merge`, `GET /v1/repos/{id}/design` |
 | `/settings` | `GET /v1/me`, `GET /v1/version`, `GET /v1/settings`, `PATCH /v1/settings`, `GET /v1/providers`, `GET /v1/notifications/preferences`, `PATCH /v1/notifications/preferences`, `POST /v1/admin/brake`, `POST /v1/admin/cache/wipe` |

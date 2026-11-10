@@ -233,6 +233,9 @@ reserved for fills and dots.
   re-import; a hand edit is drift that `--check` reports.
 - **A screen's spec and its export share one slug**, so a task names one identifier and cannot
   pair the wrong pair of files.
+- **A repository has two tabs and a schedule sheet.** `Backlog` and `Workers` are the only
+  repository destinations; the schedule opens as a sheet over the backlog from its header
+  (D56), and the design preview opens in its session. A repository never grows a third tab.
 
 ## 7. The import map
 

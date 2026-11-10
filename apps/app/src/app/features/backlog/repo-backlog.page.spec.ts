@@ -8,6 +8,7 @@ import type {
   Backlog,
   BacklogItem,
   RepoDetail,
+  Schedule,
   SseStreamEvent,
   WorkState,
 } from '@codebox/contracts';
@@ -22,6 +23,7 @@ const REPO_ID = 'repo_01JABCDEFGHJKMNPQRSV';
 const WORK_ID = 'wrk_01JABCDEFG';
 const BACKLOG_URL = `/v1/repos/${REPO_ID}/backlog`;
 const REPO_URL = `/v1/repos/${REPO_ID}`;
+const SCHEDULE_URL = `/v1/schedules?repoId=${REPO_ID}`;
 
 const REPO: RepoDetail = {
   id: REPO_ID,
@@ -35,8 +37,33 @@ const REPO: RepoDetail = {
   lastRun: null,
 };
 
-const FIXTURE_ITEM: BacklogItem = {
-  ref: 'Task-77',
+const SCHEDULE: Schedule = {
+  id: 'sch_01JABCDEFGHJK',
+  repoId: REPO_ID,
+  chatSessionId: null,
+  title: 'acme/widgets',
+  prompt: 'acme/widgets',
+  mode: 'every',
+  cron: '0 9 * * 1-5',
+  timezone: 'Europe/Madrid',
+  windowStart: null,
+  windowEnd: null,
+  cooldownMinutes: 0,
+  maxFires: null,
+  maxCostPerFireUsd: null,
+  firePolicy: 'new_chat',
+  consecutiveFailures: 0,
+  firesCount: 2,
+  spendUsd: 0.5,
+  enabled: true,
+  policy: 'auto',
+  nextFireAt: '2026-10-30T08:00:00Z',
+  lastFiredAt: '2026-10-29T08:00:00Z',
+  createdAt: '2026-10-28T09:00:00Z',
+  updatedAt: '2026-10-29T08:00:00Z',
+};
+
+const FIXTURE_ITEM: BacklogItem = {  ref: 'Task-77',
   title: "Workers view: the repository's Workers tab",
   checked: false,
   line: 1,
@@ -360,12 +387,80 @@ describe('RepoBacklogPage', () => {
     const { element, http, fixture } = await mount();
 
     expect(hook(element, 'repo-chat-button')).not.toBeNull();
-    expect(element.querySelectorAll('[data-testid^="repo-tab-"]')).toHaveLength(4);
+    expect(element.querySelectorAll('[data-testid^="repo-tab-"]')).toHaveLength(2);
     hook(element, 'repo-chat-button')?.click();
     await fixture.whenStable();
 
     expect(hook(element, 'new-session-sheet')).not.toBeNull();
     http.expectNone({ method: 'POST', url: '/v1/sessions' });
+  });
+
+  it('opens the schedule sheet from its door and reads the one schedule', async () => {
+    const { element, http, fixture } = await mount();
+
+    const door = hook(element, 'bl-schedule');
+    expect(door?.getAttribute('aria-label')).toBe(translate('en', 'backlog.schedule'));
+    expect(door?.textContent?.trim()).toBe(translate('en', 'backlog.schedule'));
+    expect(element.querySelector('app-schedule-sheet')).toBeNull();
+
+    door?.click();
+    await fixture.whenStable();
+
+    expect(element.querySelector('app-schedule-sheet')).not.toBeNull();
+    http.expectOne(SCHEDULE_URL).flush({ data: [SCHEDULE], nextCursor: null });
+    await fixture.whenStable();
+
+    http.expectNone(SCHEDULE_URL);
+    expect(hook(element, 'schedule-sheet')?.getAttribute('data-repo-id')).toBe(REPO_ID);
+    expect(hook(element, 'schedule-sheet-fields')).not.toBeNull();
+  });
+
+  it('closes the new-session sheet when the schedule opens', async () => {
+    const { element, http, fixture } = await mount();
+
+    hook(element, 'repo-chat-button')?.click();
+    await fixture.whenStable();
+    expect(hook(element, 'new-session-sheet')).not.toBeNull();
+
+    hook(element, 'bl-schedule')?.click();
+    await fixture.whenStable();
+
+    expect(hook(element, 'new-session-sheet')).toBeNull();
+    http.expectOne(SCHEDULE_URL).flush({ data: [], nextCursor: null });
+    await fixture.whenStable();
+    expect(hook(element, 'schedule-sheet-empty')).not.toBeNull();
+  });
+
+  it('closes the schedule before the new-session sheet opens', async () => {
+    const { element, http, fixture } = await mount();
+
+    hook(element, 'bl-schedule')?.click();
+    await fixture.whenStable();
+    http.expectOne(SCHEDULE_URL).flush({ data: [SCHEDULE], nextCursor: null });
+    await fixture.whenStable();
+    expect(hook(element, 'schedule-sheet')).not.toBeNull();
+
+    hook(element, 'repo-chat-button')?.click();
+    await fixture.whenStable();
+
+    expect(hook(element, 'schedule-sheet')).toBeNull();
+    expect(hook(element, 'new-session-sheet')).not.toBeNull();
+  });
+
+  it('closes the schedule from its × and returns focus to the door', async () => {
+    const { element, http, fixture } = await mount();
+
+    hook(element, 'bl-schedule')?.click();
+    await fixture.whenStable();
+    http.expectOne(SCHEDULE_URL).flush({ data: [SCHEDULE], nextCursor: null });
+    await fixture.whenStable();
+
+    hook(element, 'schedule-sheet-close')?.click();
+    await fixture.whenStable();
+
+    expect(hook(element, 'schedule-sheet')).toBeNull();
+    expect(document.activeElement).toBe(hook(element, 'bl-schedule'));
+    http.expectNone({ method: 'PATCH', url: `/v1/schedules/${SCHEDULE.id}` });
   });
 
   it('draws one rail edge per dependency and none for a root', async () => {
@@ -496,6 +591,8 @@ describe('RepoBacklogPage', () => {
     expect(Object.keys(STRINGS.es).sort()).toEqual(Object.keys(STRINGS.en).sort());
     for (const key of [
       'backlog.back',
+      'backlog.chat',
+      'backlog.schedule',
       'backlog.summary.next',
       'backlog.summary.waiting',
       'backlog.summary.done',
@@ -514,6 +611,38 @@ describe('RepoBacklogPage', () => {
       'backlog.detail.open',
       'backlog.needs',
       'backlog.unmet',
+      'scheduleSheet.title',
+      'scheduleSheet.lede',
+      'scheduleSheet.close',
+      'scheduleSheet.mode',
+      'scheduleSheet.mode.once',
+      'scheduleSheet.mode.every',
+      'scheduleSheet.mode.window',
+      'scheduleSheet.field.cron',
+      'scheduleSheet.field.start',
+      'scheduleSheet.field.end',
+      'scheduleSheet.field.zone',
+      'scheduleSheet.caps',
+      'scheduleSheet.field.maxFires',
+      'scheduleSheet.field.maxCost',
+      'scheduleSheet.nextFire',
+      'scheduleSheet.left',
+      'scheduleSheet.noCap',
+      'scheduleSheet.save',
+      'scheduleSheet.save.busy',
+      'scheduleSheet.runNext',
+      'scheduleSheet.foot',
+      'scheduleSheet.empty.title',
+      'scheduleSheet.empty.body',
+      'scheduleSheet.create',
+      'scheduleSheet.loading',
+      'scheduleSheet.error',
+      'scheduleSheet.retry',
+      'scheduleSheet.fields',
+      'scheduleSheet.notice.nothing_pending',
+      'scheduleSheet.notice.nothing_runnable',
+      'scheduleSheet.started',
+      'scheduleSheet.never',
     ]) {
       expect(STRINGS.en[key]).toBeTruthy();
       expect(STRINGS.es[key]).toBeTruthy();

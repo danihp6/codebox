@@ -1,12 +1,14 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
   computed,
   effect,
   inject,
   input,
   signal,
   untracked,
+  viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { IonContent } from '@ionic/angular';
@@ -20,6 +22,7 @@ import { railEdges, unmetNeeds } from './dependency-rail';
 import type { RailEdge } from './dependency-rail';
 import { translate } from './i18n';
 import { NewSessionSheet } from './new-session.sheet';
+import { ScheduleSheet } from './schedule-sheet';
 
 type BacklogRowState = WorkState | 'none';
 
@@ -46,7 +49,7 @@ const LIVE_STATES: ReadonlySet<BacklogRowState> = new Set<BacklogRowState>([
 @Component({
   selector: 'app-repo-backlog-page',
   standalone: true,
-  imports: [RouterLink, IonContent, RepoTabs, NewSessionSheet],
+  imports: [RouterLink, IonContent, RepoTabs, NewSessionSheet, ScheduleSheet],
   changeDetection: ChangeDetectionStrategy.OnPush,
   providers: [RepoStore, BacklogStore],
   styles: [
@@ -331,6 +334,16 @@ const LIVE_STATES: ReadonlySet<BacklogRowState> = new Set<BacklogRowState>([
             </span>
           }
           <button
+            #scheduleDoor
+            type="button"
+            class="cb-bl-chat"
+            data-testid="bl-schedule"
+            [attr.aria-label]="t('backlog.schedule')"
+            (click)="openSchedule()"
+          >
+            {{ t('backlog.schedule') }}
+          </button>
+          <button
             type="button"
             class="cb-bl-chat"
             data-testid="repo-chat-button"
@@ -349,6 +362,14 @@ const LIVE_STATES: ReadonlySet<BacklogRowState> = new Set<BacklogRowState>([
             [repoId]="id()"
             (created)="onSessionCreated($event)"
             (cancelled)="closeSheet()"
+          />
+        }
+
+        @if (scheduleOpen()) {
+          <app-schedule-sheet
+            [repoId]="id()"
+            [repoSlug]="repo.repo()?.slug ?? id()"
+            (closed)="closeSchedule()"
           />
         }
 
@@ -537,6 +558,9 @@ export class RepoBacklogPage {
   readonly backlog = inject(BacklogStore);
 
   readonly sheetOpen = signal(false);
+  readonly scheduleOpen = signal(false);
+
+  private readonly scheduleDoor = viewChild<ElementRef<HTMLButtonElement>>('scheduleDoor');
 
   readonly rows = computed<readonly BacklogItem[]>(
     () => this.backlog.backlog()?.sections.flatMap((section) => section.items) ?? [],
@@ -626,11 +650,22 @@ export class RepoBacklogPage {
   }
 
   openSheet(): void {
+    this.scheduleOpen.set(false);
     this.sheetOpen.set(true);
   }
 
   closeSheet(): void {
     this.sheetOpen.set(false);
+  }
+
+  openSchedule(): void {
+    this.sheetOpen.set(false);
+    this.scheduleOpen.set(true);
+  }
+
+  closeSchedule(): void {
+    this.scheduleOpen.set(false);
+    this.scheduleDoor()?.nativeElement.focus();
   }
 
   onSessionCreated(session: Session): void {
