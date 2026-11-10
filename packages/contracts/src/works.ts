@@ -195,6 +195,12 @@ export const repoScheduleSchema = z
   });
 export type RepoSchedule = z.infer<typeof repoScheduleSchema>;
 
+export const repoScheduleDetailSchema: z.ZodType<RepoScheduleDetail> = z.strictObject({
+  schedule: repoScheduleSchema,
+  nextFires: z.array(timestampSchema),
+});
+export type RepoScheduleDetail = { schedule: RepoSchedule; nextFires: string[] };
+
 export function parseBacklog(input: unknown): Backlog {
   return parseOrThrow(backlogSchema, input, 'backlog');
 }
@@ -217,4 +223,8 @@ export function parseSessionMessage(input: unknown): SessionMessage {
 
 export function parseRepoSchedule(input: unknown): RepoSchedule {
   return parseOrThrow(repoScheduleSchema, input, 'repoSchedule');
+}
+
+export function parseRepoScheduleDetail(input: unknown): RepoScheduleDetail {
+  return parseOrThrow(repoScheduleDetailSchema, input, 'repoScheduleDetail');
 }

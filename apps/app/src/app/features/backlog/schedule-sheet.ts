@@ -15,7 +15,7 @@ import {
 } from '@angular/core';
 import type { AfterViewInit } from '@angular/core';
 import { SCHEDULE_MODES } from '@codebox/contracts';
-import type { Schedule, ScheduleMode } from '@codebox/contracts';
+import type { RepoSchedule, ScheduleMode, Selection } from '@codebox/contracts';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { formatFire } from '../../core/util/time-format';
 import { RepoScheduleStore } from '../repos/repo-schedule.store';
@@ -28,6 +28,9 @@ export interface ScheduleFields {
   readonly cron: string;
   readonly windowStart: string;
   readonly windowEnd: string;
+  readonly selection: Selection;
+  readonly refs: readonly string[];
+  readonly maxAttempts: number;
   readonly maxFires: string;
   readonly maxCost: string;
 }
@@ -39,6 +42,9 @@ const DRAFT_FIELDS: ScheduleFields = Object.freeze({
   cron: '0 9 * * 1-5',
   windowStart: '09:00',
   windowEnd: '17:00',
+  selection: 'nextPending',
+  refs: [],
+  maxAttempts: 2,
   maxFires: '',
   maxCost: '',
 });
@@ -48,13 +54,16 @@ const WINDOW_START_FALLBACK = '09:00';
 const WINDOW_END_FALLBACK = '17:00';
 
 /** A stored schedule → the editable draft. Missing values fall back to the create defaults. */
-export function scheduleFields(schedule: Schedule): ScheduleFields {
+export function scheduleFields(schedule: RepoSchedule): ScheduleFields {
   return {
     mode: schedule.mode,
     timezone: schedule.timezone,
     cron: schedule.cron ?? CRON_FALLBACK,
     windowStart: schedule.windowStart ?? WINDOW_START_FALLBACK,
     windowEnd: schedule.windowEnd ?? WINDOW_END_FALLBACK,
+    selection: schedule.selection,
+    refs: [...schedule.refs],
+    maxAttempts: schedule.maxAttempts,
     maxFires: schedule.maxFires === null ? '' : String(schedule.maxFires),
     maxCost: schedule.maxCostPerFireUsd === null ? '' : String(schedule.maxCostPerFireUsd),
   };
@@ -67,6 +76,12 @@ export function scheduleWrite(fields: ScheduleFields): ScheduleWrite | null {
   const maxCost = fields.maxCost === '' ? null : readMaxCost(fields.maxCost);
   if (fields.maxCost !== '' && maxCost === null) return null;
   const timezone = fields.timezone.trim();
+  // The frame draws no selector: the pair and the retry budget travel from the stored row.
+  const policy = {
+    selection: fields.selection,
+    refs: [...fields.refs],
+    maxAttempts: fields.maxAttempts,
+  };
   const caps = { maxFires, maxCostPerFireUsd: maxCost };
   if (fields.mode === 'window') {
     return {
@@ -75,6 +90,7 @@ export function scheduleWrite(fields: ScheduleFields): ScheduleWrite | null {
       cron: null,
       windowStart: fields.windowStart,
       windowEnd: fields.windowEnd,
+      ...policy,
       ...caps,
     };
   }
@@ -84,6 +100,7 @@ export function scheduleWrite(fields: ScheduleFields): ScheduleWrite | null {
     cron: fields.cron.trim(),
     windowStart: null,
     windowEnd: null,
+    ...policy,
     ...caps,
   };
 }
@@ -675,8 +692,7 @@ export class ScheduleSheet implements AfterViewInit, OnDestroy {
       return;
     }
     this.fieldsError.set(false);
-    const slug = this.repoSlug();
-    this.store.save({ repoId: this.repoId(), title: slug, prompt: slug }, body);
+    this.store.save(this.repoId(), body);
   }
 
   runNext(): void {

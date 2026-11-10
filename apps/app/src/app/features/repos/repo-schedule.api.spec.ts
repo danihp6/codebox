@@ -1,7 +1,7 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { Run, Schedule } from '@codebox/contracts';
+import type { RepoSchedule, Run } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError } from '../../core/api/api-client';
 import type { ScheduleWrite } from './repo-schedule.api';
@@ -9,30 +9,41 @@ import { RepoScheduleApi } from './repo-schedule.api';
 
 const REPO_ID = 'repo_01JABCDEFGHJKMNPQRSV';
 
-const SCHEDULE: Schedule = {
+const SCHEDULE: RepoSchedule = {
   id: 'sch_01JABCDEFGHJK',
   repoId: REPO_ID,
-  chatSessionId: null,
-  title: 'Backlog shift',
-  prompt: 'Work the backlog in file order.',
   mode: 'every',
   cron: '0 9 * * 1-5',
   timezone: 'Europe/Madrid',
   windowStart: null,
   windowEnd: null,
   cooldownMinutes: 15,
+  selection: 'nextPending',
+  refs: [],
+  maxAttempts: 2,
   maxFires: null,
   maxCostPerFireUsd: 5,
-  firePolicy: 'new_chat',
   consecutiveFailures: 0,
   firesCount: 3,
   spendUsd: 1.5,
   enabled: true,
-  policy: 'auto',
   nextFireAt: '2026-10-30T08:00:00Z',
   lastFiredAt: '2026-10-29T08:00:00Z',
   createdAt: '2026-10-28T09:00:00Z',
   updatedAt: '2026-10-29T08:00:00Z',
+};
+
+const WRITE: ScheduleWrite = {
+  mode: 'every',
+  timezone: 'Europe/Madrid',
+  cron: '0 9 * * 1-5',
+  windowStart: null,
+  windowEnd: null,
+  selection: 'nextPending',
+  refs: [],
+  maxAttempts: 2,
+  maxFires: null,
+  maxCostPerFireUsd: null,
 };
 
 const RUN: Run = {
@@ -71,7 +82,7 @@ describe('RepoScheduleApi', () => {
   });
 
   it('reads the schedule of one repository', () => {
-    let rows: readonly Schedule[] = [];
+    let rows: readonly RepoSchedule[] = [];
     api.list(REPO_ID).subscribe((page) => {
       rows = page.data;
     });
@@ -83,38 +94,28 @@ describe('RepoScheduleApi', () => {
     expect(rows).toEqual([SCHEDULE]);
   });
 
-  it('creates a cron schedule with exactly the ten-key body', () => {
-    let created: Schedule | null = null;
-    api
-      .create({
-        repoId: REPO_ID,
-        title: 'acme/widgets',
-        prompt: 'acme/widgets',
-        mode: 'every',
-        timezone: 'Europe/Madrid',
-        cron: '0 9 * * 1-5',
-        windowStart: null,
-        windowEnd: null,
-        maxFires: null,
-        maxCostPerFireUsd: null,
-      })
-      .subscribe((schedule) => {
-        created = schedule;
-      });
+  it('creates a cron schedule with exactly the twelve-key body', () => {
+    let created: RepoSchedule | null = null;
+    api.create({ ...WRITE, repoId: REPO_ID }).subscribe((schedule) => {
+      created = schedule;
+    });
 
     const request = http.expectOne({ method: 'POST', url: '/v1/schedules' });
     expect(request.request.body).toEqual({
       repoId: REPO_ID,
-      title: 'acme/widgets',
-      prompt: 'acme/widgets',
       mode: 'every',
       timezone: 'Europe/Madrid',
       cron: '0 9 * * 1-5',
       windowStart: null,
       windowEnd: null,
+      selection: 'nextPending',
+      refs: [],
+      maxAttempts: 2,
       maxFires: null,
       maxCostPerFireUsd: null,
     });
+    expect(request.request.body).not.toHaveProperty('title');
+    expect(request.request.body).not.toHaveProperty('prompt');
     request.flush(SCHEDULE, { status: 201, statusText: 'Created' });
 
     expect(created).toEqual(SCHEDULE);
@@ -127,10 +128,13 @@ describe('RepoScheduleApi', () => {
       cron: null,
       windowStart: '09:00',
       windowEnd: '17:00',
+      selection: 'refs',
+      refs: ['Task-35'],
+      maxAttempts: 3,
       maxFires: 4,
       maxCostPerFireUsd: 2,
     };
-    let updated: Schedule | null = null;
+    let updated: RepoSchedule | null = null;
     api.update(SCHEDULE.id, body).subscribe((schedule) => {
       updated = schedule;
     });
@@ -143,7 +147,7 @@ describe('RepoScheduleApi', () => {
   });
 
   it('pauses and resumes through the two POST routes', () => {
-    const paused: Schedule[] = [];
+    const paused: RepoSchedule[] = [];
     api.pause(SCHEDULE.id).subscribe((schedule) => paused.push(schedule));
     const pause = http.expectOne(`/v1/schedules/${SCHEDULE.id}/pause`);
     expect(pause.request.method).toBe('POST');
@@ -176,10 +180,23 @@ describe('RepoScheduleApi', () => {
     );
 
     api.list(REPO_ID).subscribe({ error: (error: ApiError) => failures.push(error) });
-    http.expectOne(`/v1/schedules?repoId=${REPO_ID}`).flush({ data: [{ id: 'nope' }], nextCursor: null });
+    http.expectOne(`/v1/schedules?repoId=${REPO_ID}`).flush({
+      data: [{ id: 'nope' }],
+      nextCursor: null,
+    });
 
     expect(failures[0]).toMatchObject({ status: 409, code: 'conflict' });
     expect(failures[1]).toMatchObject({ status: 200, code: 'contract' });
+  });
+
+  it('refuses a legacy Schedule answer, which carries a title', () => {
+    const failures: ApiError[] = [];
+    api.list(REPO_ID).subscribe({ error: (error: ApiError) => failures.push(error) });
+    http
+      .expectOne(`/v1/schedules?repoId=${REPO_ID}`)
+      .flush({ data: [{ ...SCHEDULE, title: 'Nightly drain' }], nextCursor: null });
+
+    expect(failures[0]).toMatchObject({ status: 200, code: 'contract' });
   });
 
   it('maps the 422 envelope of a refused patch, reason and path included', () => {
@@ -191,6 +208,9 @@ describe('RepoScheduleApi', () => {
         cron: null,
         windowStart: '09:00',
         windowEnd: '09:00',
+        selection: 'nextPending',
+        refs: [],
+        maxAttempts: 2,
         maxFires: null,
         maxCostPerFireUsd: null,
       })

@@ -1,10 +1,11 @@
 import { randomBytes } from 'node:crypto';
-import type { Schedule } from '@codebox/contracts';
-import { ID_PREFIXES, parseSchedule } from '@codebox/contracts';
+import type { RepoSchedule, Schedule } from '@codebox/contracts';
+import { ID_PREFIXES } from '@codebox/contracts';
 import { isValidTimezone, nextFire, parseCron, resolveMisfire } from '@codebox/core';
 import type { SchedulerDeps, ScheduleFireContext, ScheduleStopReason } from '@codebox/scheduler';
 import { nextWindowOpen, planNextFire } from '@codebox/scheduler';
-import type { PageResult, ScheduleFilter, SchedulePatch, Store } from '@codebox/store';
+import type { PageResult, RepoScheduleFilter, RepoSchedulePatch, Store } from '@codebox/store';
+import { StoreError } from '@codebox/store';
 import { formatInstant, nextFireAt } from '../jobs/service.js';
 import type { DaemonContext } from '../modules.js';
 import { RunApiError } from '../runs/errors.js';
@@ -38,33 +39,46 @@ export interface SchedulesService {
     enabled?: boolean;
     limit: number;
     cursor: string | null;
-  }): PageResult<Schedule>;
-  create(input: CreateScheduleInput): Schedule;
-  get(id: string): { readonly schedule: Schedule; readonly nextFires: string[] };
-  patch(id: string, patch: SchedulePatch): Schedule;
+  }): PageResult<RepoSchedule>;
+  create(input: CreateScheduleInput): RepoSchedule;
+  get(id: string): { readonly schedule: RepoSchedule; readonly nextFires: string[] };
+  patch(id: string, patch: SchedulePatchInput): RepoSchedule;
   remove(id: string): void;
-  pause(id: string): Schedule;
-  resume(id: string): Schedule;
+  pause(id: string): RepoSchedule;
+  resume(id: string): RepoSchedule;
   tick(at?: Date): Promise<ScheduleTickReport>;
   start(): void;
   stop(): void;
 }
 
 export interface CreateScheduleInput {
-  readonly title: string;
-  readonly prompt: string;
+  readonly repoId: string;
   readonly mode: 'once' | 'every' | 'window';
-  readonly cron?: string | null;
   readonly timezone: string;
+  readonly cron?: string | null;
   readonly windowStart?: string | null;
   readonly windowEnd?: string | null;
   readonly cooldownMinutes?: number;
+  readonly selection?: 'nextPending' | 'refs';
+  readonly refs?: readonly string[];
+  readonly maxAttempts?: number;
   readonly maxFires?: number | null;
   readonly maxCostPerFireUsd?: number | null;
-  readonly firePolicy?: 'new_chat' | 'continue';
-  readonly repoId?: string | null;
-  readonly chatSessionId?: string | null;
-  readonly policy?: 'auto' | 'manual';
+}
+
+export interface SchedulePatchInput {
+  readonly mode?: 'once' | 'every' | 'window';
+  readonly cron?: string | null;
+  readonly timezone?: string;
+  readonly windowStart?: string | null;
+  readonly windowEnd?: string | null;
+  readonly cooldownMinutes?: number;
+  readonly selection?: 'nextPending' | 'refs';
+  readonly refs?: readonly string[];
+  readonly maxAttempts?: number;
+  readonly maxFires?: number | null;
+  readonly maxCostPerFireUsd?: number | null;
+  readonly enabled?: boolean;
 }
 
 /** What a test needs beyond the frozen surface: the store, the clock and the fires in flight. */
@@ -105,6 +119,14 @@ function invalid(path: string, reason: string): RunApiError {
   return new RunApiError('validation_failed', 422, { path, reason });
 }
 
+function invalidField(path: string): RunApiError {
+  return new RunApiError('validation_failed', 422, { path });
+}
+
+function conflict(path: string, reason: string): RunApiError {
+  return new RunApiError('conflict', 409, { path, reason });
+}
+
 function minutesField(time: string): { readonly hour: number; readonly minute: number } | null {
   const match = /^([01]\d|2[0-3]):([0-5]\d)$/.exec(time);
   if (match === null) return null;
@@ -117,6 +139,27 @@ interface TimingFields {
   readonly timezone: string;
   readonly windowStart: string | null;
   readonly windowEnd: string | null;
+}
+
+interface FireTiming extends TimingFields {
+  readonly cooldownMinutes: number;
+  readonly maxFires: number | null;
+  readonly maxCostPerFireUsd: number | null;
+  readonly consecutiveFailures: number;
+  readonly firesCount: number;
+  readonly enabled: boolean;
+}
+
+interface PreviewTiming extends FireTiming {
+  readonly nextFireAt: string | null;
+}
+
+/** D56: `refs` needs at least one ref and `nextPending` carries none. */
+function requireSelection(selection: 'nextPending' | 'refs', refs: readonly string[]): void {
+  if (selection === 'refs' && refs.length === 0) {
+    throw invalid('schedule.refs', 'selection_empty');
+  }
+  if (selection === 'nextPending' && refs.length > 0) throw invalidField('schedule.refs');
 }
 
 interface FireOutcome {
@@ -155,14 +198,14 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
     );
   }
 
-  function requireSchedule(id: string): Schedule {
-    const schedule = store.schedules.get(id);
+  function requireSchedule(id: string): RepoSchedule {
+    const schedule = store.repoSchedules.get(id);
     if (schedule === null) throw new RunApiError('not_found', 404, { path: 'schedule.id' });
     return schedule;
   }
 
   function fireContext(
-    schedule: Schedule,
+    schedule: FireTiming,
     finishedAt: string,
     lastCostUsd: number,
   ): ScheduleFireContext {
@@ -208,7 +251,7 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
     return result.nextFireAt;
   }
 
-  function preview(schedule: Schedule): string[] {
+  function preview(schedule: PreviewTiming): string[] {
     if (!schedule.enabled || schedule.nextFireAt === null) return [];
     const fires: string[] = [schedule.nextFireAt];
     let cursor = schedule.nextFireAt;
@@ -221,15 +264,10 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
     return fires;
   }
 
-  function requireTarget(repoId: string | null, chatSessionId: string | null): void {
-    if (repoId !== null && store.repos.get(repoId) === null) {
+  function requireRepo(repoId: string): void {
+    if (store.repos.get(repoId) === null) {
       throw invalid('schedule.repoId', 'repo_missing');
     }
-    if (chatSessionId !== null && store.chats.getSession(chatSessionId) === null) {
-      throw invalid('schedule.chatSessionId', 'repo_missing');
-    }
-    if (repoId === null && chatSessionId === null)
-      throw invalid('schedule.repoId', 'repo_required');
   }
 
   function stopSchedule(schedule: Schedule, reason: ScheduleStopReason): void {
@@ -401,22 +439,20 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
   }
 
   const service: SchedulesService = {
-    list(query): PageResult<Schedule> {
-      const filter: ScheduleFilter = {
+    list(query): PageResult<RepoSchedule> {
+      const filter: RepoScheduleFilter = {
         limit: query.limit,
         cursor: query.cursor,
         ...(query.repoId === undefined ? {} : { repoId: query.repoId }),
         ...(query.enabled === undefined ? {} : { enabled: query.enabled }),
       };
-      return store.schedules.list(filter);
+      return store.repoSchedules.list(filter);
     },
 
-    create(input): Schedule {
+    create(input): RepoSchedule {
       const at = now();
       const timestamp = at.toISOString();
-      const repoId = input.repoId ?? null;
-      const chatSessionId = input.chatSessionId ?? null;
-      requireTarget(repoId, chatSessionId);
+      requireRepo(input.repoId);
       if (input.mode !== 'window' && (input.windowStart != null || input.windowEnd != null)) {
         throw invalid('schedule.windowStart', 'window');
       }
@@ -434,57 +470,54 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
       const cron = input.mode === 'window' ? null : (input.cron ?? null);
       const windowStart = input.mode === 'window' ? (input.windowStart ?? null) : null;
       const windowEnd = input.mode === 'window' ? (input.windowEnd ?? null) : null;
+      const selection = input.selection ?? 'nextPending';
+      const refs = input.refs ?? [];
+      requireSelection(selection, refs);
       const nextFire = nextFireFor(
         { mode: input.mode, cron, timezone: input.timezone, windowStart, windowEnd },
         at,
       );
-      const policy =
-        input.policy ??
-        (repoId === null ? 'manual' : (store.repos.get(repoId)?.policy ?? 'manual'));
-      const schedule = parseSchedule({
+      const schedule: RepoSchedule = {
         id: newScheduleId(),
-        repoId,
-        chatSessionId,
-        title: input.title,
-        prompt: input.prompt,
+        repoId: input.repoId,
         mode: input.mode,
         cron,
         timezone: input.timezone,
         windowStart,
         windowEnd,
         cooldownMinutes: input.cooldownMinutes ?? 0,
+        selection,
+        refs: [...refs],
+        maxAttempts: input.maxAttempts ?? 2,
         maxFires: input.maxFires ?? null,
         maxCostPerFireUsd: input.maxCostPerFireUsd ?? null,
-        firePolicy: input.firePolicy ?? (chatSessionId === null ? 'new_chat' : 'continue'),
         consecutiveFailures: 0,
         firesCount: 0,
         spendUsd: 0,
         enabled: true,
-        policy,
         nextFireAt: nextFire,
         lastFiredAt: null,
         createdAt: timestamp,
         updatedAt: timestamp,
-      });
-      return store.schedules.create(schedule);
+      };
+      try {
+        return store.repoSchedules.create(schedule);
+      } catch (error) {
+        if (error instanceof StoreError && error.code === 'unique_violation') {
+          throw conflict('schedule.repoId', 'schedule_exists');
+        }
+        throw error;
+      }
     },
 
-    get(id): { readonly schedule: Schedule; readonly nextFires: string[] } {
+    get(id): { readonly schedule: RepoSchedule; readonly nextFires: string[] } {
       const schedule = requireSchedule(id);
       return { schedule, nextFires: preview(schedule) };
     },
 
-    patch(id, patch): Schedule {
+    patch(id, patch): RepoSchedule {
       const current = requireSchedule(id);
       const at = now();
-      if (patch.chatSessionId !== undefined) {
-        if (patch.chatSessionId !== null && store.chats.getSession(patch.chatSessionId) === null) {
-          throw invalid('schedule.chatSessionId', 'repo_missing');
-        }
-        if (patch.chatSessionId === null && current.repoId === null) {
-          throw invalid('schedule.chatSessionId', 'repo_required');
-        }
-      }
       if (patch.cooldownMinutes !== undefined && patch.cooldownMinutes < 0) {
         throw invalid('schedule.cooldownMinutes', 'range');
       }
@@ -504,6 +537,10 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
           : null;
       const timezone = patch.timezone ?? current.timezone;
       const enabled = patch.enabled ?? current.enabled;
+      const selection = patch.selection ?? current.selection;
+      const refs = patch.refs === undefined ? current.refs : [...patch.refs];
+      // A patch may change one half of the pair: the stored other half closes it.
+      requireSelection(selection, refs);
       const touchesSchedule =
         patch.mode !== undefined ||
         patch.cron !== undefined ||
@@ -517,31 +554,42 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
       else if (touchesSchedule) {
         nextFire = nextFireFor({ mode, cron, timezone, windowStart, windowEnd }, at);
       }
-      const updated = store.schedules.update(id, {
-        ...patch,
+      const update: RepoSchedulePatch = {
         mode,
         cron,
         windowStart,
         windowEnd,
+        timezone,
+        selection,
+        refs,
         enabled,
+        updatedAt: at.toISOString(),
+        ...(patch.cooldownMinutes === undefined ? {} : { cooldownMinutes: patch.cooldownMinutes }),
+        ...(patch.maxAttempts === undefined ? {} : { maxAttempts: patch.maxAttempts }),
+        ...(patch.maxFires === undefined ? {} : { maxFires: patch.maxFires }),
+        ...(patch.maxCostPerFireUsd === undefined
+          ? {}
+          : { maxCostPerFireUsd: patch.maxCostPerFireUsd }),
         ...(nextFire === undefined ? {} : { nextFireAt: nextFire }),
-      });
-      return parseSchedule(updated);
+      };
+      return store.repoSchedules.update(id, update);
     },
 
     remove(id): void {
       requireSchedule(id);
-      store.schedules.delete(id);
+      store.repoSchedules.delete(id);
     },
 
-    pause(id): Schedule {
+    pause(id): RepoSchedule {
       const current = requireSchedule(id);
-      return parseSchedule(
-        store.schedules.update(current.id, { enabled: false, nextFireAt: null }),
-      );
+      return store.repoSchedules.update(current.id, {
+        enabled: false,
+        nextFireAt: null,
+        updatedAt: now().toISOString(),
+      });
     },
 
-    resume(id): Schedule {
+    resume(id): RepoSchedule {
       const current = requireSchedule(id);
       const nextFire = nextFireFor(
         {
@@ -553,9 +601,11 @@ export function createSchedulesService(options: CreateSchedulesServiceOptions): 
         },
         now(),
       );
-      return parseSchedule(
-        store.schedules.update(current.id, { enabled: true, nextFireAt: nextFire }),
-      );
+      return store.repoSchedules.update(current.id, {
+        enabled: true,
+        nextFireAt: nextFire,
+        updatedAt: now().toISOString(),
+      });
     },
 
     tick,

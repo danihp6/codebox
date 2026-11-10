@@ -2,7 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import type { ComponentFixture } from '@angular/core/testing';
-import type { Run, Schedule } from '@codebox/contracts';
+import type { RepoSchedule, Run } from '@codebox/contracts';
 import { afterEach, describe, expect, it } from 'vitest';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { formatFire } from '../../core/util/time-format';
@@ -15,26 +15,24 @@ const LIST_URL = `/v1/schedules?repoId=${REPO_ID}`;
 const CREATE_URL = '/v1/schedules';
 const PATCH_URL = '/v1/schedules/sch_01JABCDEFGHJK';
 
-const SCHEDULE: Schedule = {
+const SCHEDULE: RepoSchedule = {
   id: 'sch_01JABCDEFGHJK',
   repoId: REPO_ID,
-  chatSessionId: null,
-  title: 'acme/widgets',
-  prompt: 'acme/widgets',
   mode: 'window',
   cron: null,
   timezone: 'Europe/Madrid',
   windowStart: '09:00',
   windowEnd: '17:00',
   cooldownMinutes: 0,
+  selection: 'nextPending',
+  refs: [],
+  maxAttempts: 2,
   maxFires: 4,
   maxCostPerFireUsd: 2,
-  firePolicy: 'new_chat',
   consecutiveFailures: 0,
   firesCount: 3,
   spendUsd: 1.5,
   enabled: true,
-  policy: 'auto',
   nextFireAt: '2026-10-30T09:00:00Z',
   lastFiredAt: '2026-10-29T09:00:00Z',
   createdAt: '2026-10-28T09:00:00Z',
@@ -69,7 +67,7 @@ interface Mounted {
 
 let mounted: ComponentFixture<ScheduleSheet> | null = null;
 
-async function mount(schedule: Schedule | null = SCHEDULE): Promise<Mounted> {
+async function mount(schedule: RepoSchedule | null = SCHEDULE): Promise<Mounted> {
   TestBed.configureTestingModule({
     providers: [
       provideHttpClient(),
@@ -110,13 +108,30 @@ describe('scheduleFields', () => {
       cron: '0 9 * * 1-5',
       windowStart: '09:00',
       windowEnd: '17:00',
+      selection: 'nextPending',
+      refs: [],
+      maxAttempts: 2,
       maxFires: '4',
       maxCost: '2',
     });
   });
 
+  it('copies a stored refs selection so a save cannot fall back to the draft', () => {
+    const refs: RepoSchedule = {
+      ...SCHEDULE,
+      selection: 'refs',
+      refs: ['Task-35', 'Task-36'],
+      maxAttempts: 3,
+    };
+    expect(scheduleFields(refs)).toMatchObject({
+      selection: 'refs',
+      refs: ['Task-35', 'Task-36'],
+      maxAttempts: 3,
+    });
+  });
+
   it('falls back to the create defaults when a value is missing', () => {
-    const cron: Schedule = {
+    const cron: RepoSchedule = {
       ...SCHEDULE,
       mode: 'every',
       cron: '0 6 * * *',
@@ -132,6 +147,9 @@ describe('scheduleFields', () => {
       cron: '0 6 * * *',
       windowStart: '09:00',
       windowEnd: '17:00',
+      selection: 'nextPending',
+      refs: [],
+      maxAttempts: 2,
       maxFires: '',
       maxCost: '',
     });
@@ -145,6 +163,9 @@ describe('scheduleWrite', () => {
     cron: ' 0 9 * * 1-5 ',
     windowStart: '09:00',
     windowEnd: '17:00',
+    selection: 'nextPending' as const,
+    refs: [] as readonly string[],
+    maxAttempts: 2,
     maxFires: '4',
     maxCost: '2.5',
   };
@@ -156,6 +177,9 @@ describe('scheduleWrite', () => {
       cron: null,
       windowStart: '09:00',
       windowEnd: '17:00',
+      selection: 'nextPending',
+      refs: [],
+      maxAttempts: 2,
       maxFires: 4,
       maxCostPerFireUsd: 2.5,
     });
@@ -168,9 +192,18 @@ describe('scheduleWrite', () => {
       cron: '0 9 * * 1-5',
       windowStart: null,
       windowEnd: null,
+      selection: 'nextPending',
+      refs: [],
+      maxAttempts: 2,
       maxFires: 4,
       maxCostPerFireUsd: 2.5,
     });
+  });
+
+  it('emits the hidden selection pair and retry budget unchanged', () => {
+    expect(
+      scheduleWrite({ ...fields, selection: 'refs', refs: ['Task-35'], maxAttempts: 3 }),
+    ).toMatchObject({ selection: 'refs', refs: ['Task-35'], maxAttempts: 3 });
   });
 
   it('reads an empty cap as no cap', () => {
@@ -240,7 +273,7 @@ describe('ScheduleSheet', () => {
     expect(hook(element, 'schedule-sheet-empty')).toBeNull();
   });
 
-  it('saves the stored schedule with a PATCH of exactly the seven keys', async () => {
+  it('saves the stored schedule with a PATCH of exactly the ten keys', async () => {
     const { element, http, fixture } = await mount();
 
     hook(element, 'schedule-sheet-save')?.click();
@@ -253,9 +286,14 @@ describe('ScheduleSheet', () => {
       cron: null,
       windowStart: '09:00',
       windowEnd: '17:00',
+      selection: 'nextPending',
+      refs: [],
+      maxAttempts: 2,
       maxFires: 4,
       maxCostPerFireUsd: 2,
     });
+    expect(patch.request.body).not.toHaveProperty('title');
+    expect(patch.request.body).not.toHaveProperty('prompt');
     patch.flush(SCHEDULE);
     await fixture.whenStable();
 
@@ -263,7 +301,31 @@ describe('ScheduleSheet', () => {
     expect(hook(element, 'schedule-sheet-error')).toBeNull();
   });
 
-  it('renders the empty card, reveals the form and creates with the ten-key body', async () => {
+  it('keeps the stored refs of a refs schedule on save', async () => {
+    const refs: RepoSchedule = {
+      ...SCHEDULE,
+      selection: 'refs',
+      refs: ['Task-35'],
+      maxAttempts: 3,
+    };
+    const { element, http, fixture } = await mount(refs);
+
+    hook(element, 'schedule-sheet-save')?.click();
+    await fixture.whenStable();
+
+    const patch = http.expectOne({ method: 'PATCH', url: PATCH_URL });
+    expect(patch.request.body).toMatchObject({
+      selection: 'refs',
+      refs: ['Task-35'],
+      maxAttempts: 3,
+    });
+    patch.flush(refs);
+    await fixture.whenStable();
+
+    expect(hook(element, 'schedule-sheet-fields-error')).toBeNull();
+  });
+
+  it('renders the empty card, reveals the form and creates with the eleven-key body', async () => {
     const { element, http, fixture } = await mount(null);
 
     expect(hook(element, 'schedule-sheet-empty')?.textContent).toContain(
@@ -296,12 +358,15 @@ describe('ScheduleSheet', () => {
       cron: '0 9 * * 1-5',
       windowStart: null,
       windowEnd: null,
+      selection: 'nextPending',
+      refs: [],
+      maxAttempts: 2,
       maxFires: null,
       maxCostPerFireUsd: null,
       repoId: REPO_ID,
-      title: REPO_SLUG,
-      prompt: REPO_SLUG,
     });
+    expect(create.request.body).not.toHaveProperty('title');
+    expect(create.request.body).not.toHaveProperty('prompt');
     create.flush(SCHEDULE, { status: 201, statusText: 'Created' });
     await fixture.whenStable();
 
