@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-10 (Task-105: the gate stops reporting)
+
+- **The design check enforces every rule.** `screen_state_missing` stops being report-only:
+  `REPORT_ONLY_DESIGN_RULES` is empty and frozen, so a run whose screen spec omits `loading`,
+  `empty` or `error` ends `gate_failed`, pushes nothing and opens no PR — exactly like
+  `colour_outside_tokens`, `route_without_component` and `snapshot_hash_mismatch`. The split, the
+  `(report-only)` suffix branch and the `reportOnly` count stay (the count is `0`), and
+  `apps/daemon/src/run/engine.ts` does not move: the behaviour changes because the constant does.
+  `docs/jobs.md` §5 names the four as enforced, D57 carries the dated amendment, and the
+  replacement engine test pins the red run: no push, no PR, one `error` `design_scan_reported`
+  with `enforced: 1, reportOnly: 0`. The design documents check reports `0 finding(s)` over the
+  eleven specs the 2026-11-09 re-import wrote, which is what made the flip legal. The `[live]`
+  cycle on the box is unmeasured on this runner and is issue #126. Merged into `l5-reimport`
+  (`75e5567`), not `main`: it rides the L5 PR.
+
 ### Changed — 2026-11-09 (L5: the measured re-import)
 
 - **The design specs carry the file's layout.** The re-import wrote all eleven

@@ -2270,7 +2270,7 @@ once L5 is ticked the two can share a batch; before the tick, this is the one le
 `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
 `packages/contracts/src/index.ts`, `opencode.json`, `TODO.md` or `CHANGELOG.md`.
 
-- [ ] **[Task-105]** Retire D57's report-only exception. `screen_state_missing` joins
+- [x] **[Task-105]** Retire D57's report-only exception. `screen_state_missing` joins
       `colour_outside_tokens`, `route_without_component` and `snapshot_hash_mismatch` as an
       **enforced** design rule: a run whose screen spec is missing `loading`, `empty` or `error`
       ends `gate_failed`, pushes nothing and opens no PR. The report-only list is declared empty
@@ -2293,6 +2293,14 @@ once L5 is ticked the two can share a batch; before the tick, this is the one le
       missing-token and git-failure tests pass unchanged; `[unit]` the design gate reports zero
       findings on the diff; `[live]` one real cycle on the box fails at the gate with the same
       tail and log — unmeasured on this runner, handed to an `agent-review` issue.
+      **Done — 2026-11-10:** the list is `Object.freeze([])` and the four rules are enforced; the
+      replacement engine test pins the red run (no push, no PR, one `error` log with
+      `enforced: 1, reportOnly: 0`). Measured on the merged tree: `packages/core` 67/67, the
+      design-scan step 6/6, `npm run lint`, `npm run test:guard` and `npm run build` green, the
+      design documents check and the design gate each `0 finding(s)`; the root `npm test` is red
+      on this Windows host only (CRLF `NOTICE` and POSIX/shell suites, none in the diff). Task
+      branch `94c4ee6`, QA `04ed602`, merged into **`l5-reimport`** at `75e5567` — it rides the L5
+      PR and `main` does not move. The `[live]` box cycle is issue **#126**.
 
 ---
 
