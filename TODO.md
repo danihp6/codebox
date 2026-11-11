@@ -2871,7 +2871,7 @@ writes either file. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
       packages/contracts/src apps/daemon/src` prints nothing, and no `ProviderStatus` or
       `Providers:` registration survives in `openapi.ts`; `[unit]` lint, the contracts suite
       and the CLI suite pass. No `[live]`: the document is built in tests.
-- [ ] **[Task-115]** `docs/app.md` §11 and §12 describe what ships. The Batch 31 cut record left
+- [x] **[Task-115]** `docs/app.md` §11 and §12 describe what ships. The Batch 31 cut record left
       this pass for a later cut, and the sections are false in eight claims: §11 promises a
       `PushManager` subscription the app never makes (no such call exists under `src/`), a
       Capacitor push plugin `apps/app/package.json:12-28` does not depend on, a payload with

@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-115: `docs/app.md` §11 and §12 describe what ships)
+
+- **Push is the daemon's job, and the document says so.** §11 now states the VAPID Web Push per
+  subscription per event with the real payload `{ type, title, body, url, tag, runId?, chatId?,
+  routineId? }` and the seven `NOTIFICATION_TYPES`, the `events`/`quietHours` preference body and
+  the five switches the app draws, and records that the client subscription is not built: no
+  `PushManager` call, no service-worker push handler, no Capacitor push plugin, so
+  `POST /v1/push/subscriptions` has no caller.
+- **Testing states the suite that exists.** §12 lists the Vitest unit suite (including
+  `readme.spec.ts`), the real Playwright flow (pair → add a repository → run a backlog item →
+  merged PR → ticked item, no approval step), accessibility as a rule rather than a gate (no axe
+  run anywhere) and "budgets: none", replacing the false component inventory, the "axe on every
+  route in CI" and the bundle thresholds no configuration declares.
+- Dev `4912116`, QA `960a505`: lint and build green, the diff is `docs/app.md` only, and §1–§10
+  and §13–§14 are byte-identical. No `[live]`: a document is read, not run.
+
 ### Changed — 2026-11-11 (Task-114: the document stops describing the retired provider body)
 
 - **The document says what the daemon answers.** `GET /v1/providers` is `ProvidersResponse`

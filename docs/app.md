@@ -267,26 +267,38 @@ is worse than a disabled button.
 
 ## 11. Push
 
-- **Web/PWA:** `PushManager` subscription with the VAPID public key, stored through
-  `POST /v1/push/subscriptions`.
-- **Native:** Capacitor Push (FCM/APNs) with the same event-to-payload mapping (D30).
-- Payloads carry `{ type, runId?, workId?, scheduleId?, title, body }`; a tap deep-links to the
-  resource.
-- Preferences per event type (`run.finished`, `run.failed`, `approval.created`, `run.merged`,
-  `provider.state`, `schedule`), plus quiet hours evaluated on the daemon, not the device.
+- **Delivery is the daemon's** (`apps/daemon/src/push/**`): one VAPID-signed Web Push per
+  subscription per event, deduplicated by `tag` (`run:<id>`, `approval:<id>`,
+  `routine:<id>:<fire>`), with quiet hours evaluated on the daemon. `approval.created` is the one
+  critical type and is never held.
+- **Payload:** `{ type, title, body, url, tag, runId?, chatId?, routineId? }`
+  (`apps/daemon/src/push/mapping.ts:21-30`); `type` is one of the seven `NOTIFICATION_TYPES`
+  (`mapping.ts:3-11`). There is no `workId` and no `scheduleId` on the wire.
+- **Preferences:** `GET`/`PATCH /v1/notifications/preferences` carry
+  `{ events: SseEventName[], quietHours }` (`packages/contracts/src/resources.ts:325-329`); the app
+  draws five switches — `run.finished`, `run.failed`, `run.merged`, `approval.created`,
+  `routine.fired` — plus the locked `credential.changed` row and the quiet-hours field, in
+  `/settings` and at `/settings/notifications`
+  (`apps/app/src/app/features/settings/notifications.store.ts:11-21`).
+- **Not built yet: the client subscription.** The app makes no `PushManager` call, registers no
+  service-worker `push` handler and depends on no Capacitor push plugin (`apps/app/package.json`
+  has `@capacitor/core`, `@capacitor/android` and `@capacitor/ios` only), so
+  `POST /v1/push/subscriptions` has no caller in the tree.
 
 ## 12. Testing
 
-- **Unit:** feature stores, guards, the SSE reducer and the pairing flow with a mocked API.
-  No test mounts a real `EventSource`.
-- **Component:** the permission card, the cron picker and the run timeline, with fixtures
-  from `packages/contracts`.
-- **E2E (Playwright, Task-26):** pair against a fake daemon, add a repo, run, watch a
-  streamed tool, approve, see the PR and the merge. Fixed clock and seed.
-- **Accessibility:** axe on every route in CI; 44 px touch targets; labels on every icon
-  button.
-- **Budgets:** initial bundle ≤ 350 KB gzipped; lazy feature chunks ≤ 150 KB; LCP < 2.5 s on
-  a throttled mid-range phone.
+- **Unit (Vitest, `ng test`):** feature stores, the `authGuard`, the frozen route table
+  (`src/app/app.routes.spec.ts`), the SSE client and the pairing flow, with fixtures parsed from
+  `packages/contracts`; `src/app/readme.spec.ts` fails when a file under `src/app` is missing from
+  `README.md` or the map names a file that no longer exists.
+- **E2E (Playwright, Task-26, `e2e/**`):** pair against the fake daemon, add a repository, run a
+  backlog item, then read the merged PR and the ticked item from the work's log
+  (`e2e/tests/happy-path.spec.mjs:11-47`), with a fixed clock, a fixed seed, the fake OpenCode and
+  the fake GitHub. The flow has no approval step.
+- **Accessibility is a rule, not a gate:** 44 px touch targets and a label on every icon button,
+  as the frames draw them; there is no axe run, in CI or locally.
+- **Budgets: none.** `apps/app/angular.json` declares no `budgets` block and nothing measures the
+  bundle, a lazy chunk or LCP.
 
 ## 13. Build and release
 
