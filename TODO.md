@@ -67,6 +67,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 28 | The operator's runtime stop | 106 | 1 |
 | 29 | The repository schedule the daemon reads (D56) | 107 | 1 |
 | 30 | Measured debts: OpenAPI, doctor, store, rotate | 108–111 | 4 |
+| 31 | The credentials and provider bodies get one owner | 112–113 | 2 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -678,12 +679,48 @@ Task-109 holds §5.1; `apps/app/README.md` has one writer, Task-111, for its own
 batch and nothing else on the queue is eligible. **One correction to the brief, recorded:** the
 expected "not in the generated document" sentence is not in §5.10 — it is §5.6's
 `POST /v1/repos/{id}/run-next` bullet, and it stays true because that path is still outside
-`openapi.ts`. **Two follow-ups recorded, with no owner:** `apps/app/src/app/features/settings/
-settings.api.ts` still parses `GET /v1/providers` with the retired `parseProviders` — the app half
-of issue #71a, so the Settings provider panel answers a contract error against the shipped
-daemon; and the daemon's `publicCredentialSchema` and the app's `Credential` interface should
-adopt `credentialSummarySchema`/`pageOfCredentialSummary` now that Task-109 gives the fact one
-contract owner. Both are legal work for the next cut.
+`openapi.ts`. **Two follow-ups recorded, then cut as Batch 31 (below):**
+`apps/app/src/app/features/settings/settings.api.ts` still parses `GET /v1/providers` with the
+retired `parseProviders` — the app half of issue #71a, so the Settings provider panel answers a
+contract error against the shipped daemon; and the daemon's `publicCredentialSchema` and the app's
+`Credential` interface should adopt `credentialSummarySchema`/`pageOfCredentialSummary` now that
+Task-109 gives the fact one contract owner. Both are cut there as **Task-112** and **Task-113**.
+
+**Cut — cycle 2026-11-11, after Batch 30 (two of four slots used).** No task branch was alive
+(`git ls-remote origin 'refs/heads/task-*'` prints nothing) and `main` was `c497df9`. The driver
+queue is still dry: Task-32 waits on the blocked Task-31 (#105), and L1, L3 and L4 are operator
+items. The two follow-ups Batch 30 recorded are the whole legal queue — the app half of issue #71a
+is written down in the Batch 30 cut record above and in Task-109's Coordination, and the
+credentials body's second owner is written down there and in Task-111's spec. Both are legal now:
+no unmerged dependency (the contract file, `pageOfCredentialSummary` and the provider route are all
+merged), the two path sets are disjoint, and the batch's one hot file has one holder. **Task-112**
+is `apps/app/src/app/features/settings/settings.api.ts:63-68` parsing the retired §5.1 provider
+body against the shipped D54 answer, with no view schema in `packages/contracts/src/providers.ts`
+to parse it with; it adds the three view schemas, deletes the daemon's local view interfaces and
+rewrites the panel against `label`/`authKind`/`accounts`/`usedToday`, and corrects `docs/api.md`
+§5.9.1's false sample. **Task-113** is the credentials body's second definition — the daemon's
+`publicCredentialSchema`/`PublicCredential` and its two enum copies, the app's `Credential`, its
+two enum arrays and its two parsers, and four `response: null` operations in `openapi.ts` — all
+replaced by the contract that Task-109 created. **Hot-file holder in this cut:** Task-112 holds
+`packages/contracts/src/index.ts` (the provider view exports); no task holds `package.json`,
+`package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`opencode.json`, `TODO.md`, `CHANGELOG.md` or `docs/decisions.md`. Docs are claimed by section
+only: Task-112 holds `docs/api.md` §5.9.1 and no other task writes that file. The two empty slots
+have no legal candidate: Task-32 waits on #105, L1/L3/L4 are operator items, and the
+`docs/app.md` §11/§12 truth pass is deliberately left for a later cut. **Two corrections to the
+brief, recorded.** The Batch 30 text above said the follow-ups had "no owner"; they are now cut as
+Batch 31 and that sentence has been corrected in place. And Task-112's brief stopped at
+`settings.api`/`providers.store`/`providers.page`/`i18n`, but the type change also forces
+`settings.store.ts` (the `providers` signal), `settings.page.ts` (the `configured` counter at
+`:690-692`) and their two specs, which build the retired `Providers` fixture; all four are in its
+exclusive paths and none collides with Task-113. **One debt deliberately deferred:** the generated
+document still describes the retired provider body (`openapi.ts:431-439` → `Providers`/
+`ProviderStatus`, and `ProviderAccount` without `lastFour`), and
+`apps/daemon/src/cli/commands.test.ts:80,177,678` still routes `GET /v1/providers` to that fixture.
+Repointing those and deleting `providersSchema`/`parseProviders` needs `openapi.ts` +
+`openapi.test.ts` + `resources.ts` + `resources.test.ts` + the CLI fixture in one task, and
+`openapi.ts` has one writer per batch (Task-113 here), so it waits for a later cut.
 
 ### Screens awaiting the prototype
 
@@ -2635,6 +2672,100 @@ credential summary's named exports, forced by the CLI's no-`..` guard). No task 
       `readme.spec.ts` passes; `[unit]` lint and build pass; `[live]` the rotate flow next to
       frame `19` at 390 × 844 — unmeasured on this runner (no browser, no sheet export),
       handed to an `agent-review` issue.
+
+---
+
+## Batch 31 — The credentials and provider bodies get one owner
+
+Cut 2026-11-11 from `main` at `c497df9`. Both tasks close a fact that two files define: the
+provider body the daemon answers and the app refuses (`docs/api.md` §5.9.1 was the third, false,
+copy), and the credential body the contract, the daemon and the app each spelled out. Neither
+draws a screen: the Settings panel is not a route of its own
+(`apps/app/src/app/app.routes.spec.ts:38`) and the frame `06 · Settings — mobile dark` has no
+provider rows, while the credentials work moves no page, route, sheet or frame. Neither needs a
+new dependency, migration, decision record or workflow.
+
+**Hot-file holders in this batch:** Task-112 holds `packages/contracts/src/index.ts` (the provider
+view exports). No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`,
+`apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or `docs/decisions.md`.
+Docs are claimed by section only: Task-112 holds `docs/api.md` §5.9.1, and Task-113 does not write
+`docs/api.md` at all. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
+
+- [ ] **[Task-112]** The settings provider panel reads the D54 body (issue #71a, the app half).
+      `apps/app/src/app/features/settings/settings.api.ts:63-68` parses `GET /v1/providers` with
+      `parseProviders` — the retired §5.1 body
+      `{providers:[{provider,configured,mode,lastOkAt,fingerprint}]}`
+      (`packages/contracts/src/resources.ts:79-92`) — while the daemon answers the D54 shape
+      (`apps/daemon/src/providers/service.ts:33-45,304-316`: providers with accounts,
+      `usedToday:{day,usd}` and a string `lastFour`), so a healthy box renders `providers-error`
+      with `data-code="contract"`. `packages/contracts/src/providers.ts` has the stored provider
+      and account but no view: add `providerAccountViewSchema` (the account plus
+      `lastFour: z.string()`), `providerViewSchema` (the provider plus `accounts`),
+      `providersResponseSchema`, `parseProvidersResponse` and the three types — values copied
+      verbatim from the daemon's `view()` — and point `docs/api.md` §5.9.1 at the real body.
+      Delete the daemon's local `ProviderView`/`ProviderAccountView`/`ProvidersResponse`
+      interfaces in `apps/daemon/src/providers/service.ts` (re-export the contract types so
+      `providers/index.ts` does not move), parse with `parseProvidersResponse` in the app, and
+      render the D54 rows: provider `label` + `authKind`, then per account `label`, `state`,
+      `priority`, `usedToday.usd`/`budgetUsd`, `resetAt` and at most four characters of
+      `lastFour` (`lastUsedAt` does not exist — it is not invented, and `credentialId` is not
+      rendered). The Settings row counts a provider as configured when it has at least one
+      account. The prototype draws no provider rows, so the panel keeps its `.cb-provider`
+      treatment, its `<h3>` and its copy: no card, no route, no new frame. It reads
+      `design/screens/settings.json` and `design/exports/settings.png` (frame
+      `06 · Settings — mobile dark`) as the screen's spec and export.
+      *Paths:* `packages/contracts/src/providers.ts` + test, `packages/contracts/src/index.ts`
+      (hot file), `packages/contracts/README.md` (its `providers.ts` line),
+      `apps/daemon/src/providers/service.ts` + test, `apps/app/src/app/features/settings/
+      {settings.api,settings.store,settings.page,providers.store,providers.page,i18n}.ts` + their
+      specs, `docs/api.md` §5.9.1 only.
+      *Dependencies:* none — the route, `providerSchema` and `providerAccountSchema` exist; the
+      `ProviderView` shape is only a daemon-local interface today.
+      *Acceptance:* `[unit]` the D54 fixture parses with `parseProvidersResponse`, an account
+      missing `lastFour` fails at boundary `providers`, and the retired body is a `contract`
+      error in the app; `[unit]` the panel renders one provider row per provider with its label
+      and `authKind` and one account row per account with label, state, priority, spend, reset and
+      a four-character tail, never the full `lastFour` or the `credentialId`; `[unit]` the
+      Settings row reads `1/2` for a two-provider fixture with one account; `[unit]` §5.9.1's
+      sample is the shipped body while `openapi.ts` and its 67-path pin are untouched; `[unit]`
+      lint and the named suites pass; `[live]` the panel next to a seeded provider with two
+      accounts shows no `providers-error` — unmeasured on this runner (no daemon, no browser),
+      handed to an `agent-review` issue.
+- [ ] **[Task-113]** The daemon and the app adopt the credential contract (one owner for the
+      body). `packages/contracts/src/credentials.ts` (`credentialSummarySchema`,
+      `parseCredentialSummary`, `CREDENTIAL_KINDS`, `CREDENTIAL_EXPOSES`) and
+      `pageOfCredentialSummary` exist and are exported (Task-109), yet the daemon still hand-rolls
+      `publicCredentialSchema`/`PublicCredential` and its own `credentialKindSchema`/
+      `exposeKindSchema` (`apps/daemon/src/credentials/schemas.ts:11-47`, wrapped by
+      `routes.ts:14`), the app still hand-rolls `Credential`, both enum arrays and both parsers
+      (`apps/app/src/app/features/credentials/credentials.api.ts:8-47,84-94,196-219`), and the
+      four `/v1/credentials` operations answer `response: null`
+      (`packages/contracts/src/openapi.ts:152-187`). Delete the daemon's schema and type in favour
+      of the contract ones (the create/rotate/integration/stored schemas stay and import the
+      contract enums; `credentials/storage.ts`, `integrations/service.ts` and
+      `providers/credentials.ts` follow the type), re-export the contract names from
+      `credentials.api.ts` so the feature's frozen names (`Credential`, `CredentialKind`,
+      `CredentialExpose`, `CREDENTIAL_KINDS`, `CREDENTIAL_EXPOSES`, `parseCredential`,
+      `parseCredentialPage`) survive without a second definition, and add the
+      `CredentialSummary`/`CredentialSummaryPage` components to `openapi.ts` with
+      `listCredentials`/`createCredential`/`rotateCredential` pointing at them
+      (`deleteCredential` stays `204` with no content). The path pin stays **67**; no payload,
+      page, route, sheet or frame moves.
+      *Paths:* `packages/contracts/src/{openapi.ts,openapi.test.ts}`,
+      `apps/daemon/src/credentials/{schemas,service,routes,storage}.ts` + their tests,
+      `apps/daemon/src/integrations/service.ts`, `apps/daemon/src/providers/credentials.ts`,
+      `apps/app/src/app/features/credentials/{credentials.api,credentials.store}.ts` + their
+      specs.
+      *Dependencies:* none — Task-109's contract file, page schema and named exports are merged,
+      and this task neither writes `index.ts` nor `docs/api.md`.
+      *Acceptance:* `[unit]` no second definition remains under `apps/daemon/src`, `apps/app/src`
+      or `packages/contracts/src` (four greps in the spec); `[unit]` the daemon's four routes
+      answer the same statuses, bodies and error details, and the five credential app specs pass
+      (`credentials.api.spec.ts` gains one identity test, nothing else moves); `[unit]` the
+      document has 67 paths, the three operations `$ref` the two new components and every `$ref`
+      resolves; `[unit]` lint and the named suites pass. No `[live]`: it is a seam refactor and
+      the screen is byte-identical.
 
 ---
 
