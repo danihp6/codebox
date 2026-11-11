@@ -4,20 +4,29 @@ import {
   computed,
   inject,
   input,
+  linkedSignal,
   output,
   signal,
 } from '@angular/core';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { CREDENTIAL_EXPOSES, CREDENTIAL_KINDS } from './credentials.api';
-import type { CreateCredentialBody, CredentialExpose, CredentialKind } from './credentials.api';
+import type {
+  CreateCredentialBody,
+  Credential,
+  CredentialExpose,
+  CredentialKind,
+  RotateCredentialBody,
+} from './credentials.api';
 import { translate } from './i18n';
 
 const NAME_MAX_LENGTH = 120;
 const VALUE_MAX_LENGTH = 16_384;
 
 /**
- * Sheet `19 · Add credential`: form → review → save. The value lives in one signal, one password
- * input and the emitted body; the review step draws four characters and no input (D50).
+ * Sheet `19 · Add credential`: form → review → save, in add mode and in rotate mode (the stored
+ * name, kind and exposure are fixed and only the value is collected). The value lives in one
+ * signal, one password input and the emitted body; the review step draws four characters and no
+ * input (D50).
  */
 @Component({
   selector: 'app-add-credential-sheet',
@@ -150,9 +159,14 @@ const VALUE_MAX_LENGTH = 16_384;
     `,
   ],
   template: `
-    <section class="cb-sheet" data-testid="add-credential-sheet" [attr.data-step]="step()">
+    <section
+      class="cb-sheet"
+      data-testid="add-credential-sheet"
+      [attr.data-mode]="rotating() ? 'rotate' : 'add'"
+      [attr.data-step]="step()"
+    >
       @if (step() === 'form') {
-        <h2 class="cb-sheet-title">{{ t('credentials.action.addOpen') }}</h2>
+        <h2 class="cb-sheet-title">{{ t(title()) }}</h2>
 
         <label class="cb-sheet-field" for="credential-name">
           <span class="cb-sheet-label">{{ t('credentials.name') }}</span>
@@ -163,7 +177,8 @@ const VALUE_MAX_LENGTH = 16_384;
             type="text"
             autocomplete="off"
             [value]="name()"
-            (input)="name.set(valueOf($event))"
+            [attr.readonly]="rotating() ? '' : null"
+            (input)="setName(valueOf($event))"
           />
         </label>
 
@@ -173,6 +188,7 @@ const VALUE_MAX_LENGTH = 16_384;
             id="credential-kind"
             class="cb-sheet-select"
             data-testid="credential-kind"
+            [attr.disabled]="rotating() ? '' : null"
             (change)="setKind(valueOf($event))"
           >
             @for (option of kinds; track option) {
@@ -189,6 +205,7 @@ const VALUE_MAX_LENGTH = 16_384;
             id="credential-expose"
             class="cb-sheet-select"
             data-testid="credential-expose"
+            [attr.disabled]="rotating() ? '' : null"
             (change)="setExpose(valueOf($event))"
           >
             @for (option of exposes; track option) {
@@ -199,7 +216,7 @@ const VALUE_MAX_LENGTH = 16_384;
           </select>
         </label>
 
-        @if (expose() === 'env') {
+        @if (expose() === 'env' && !rotating()) {
           <p class="cb-sheet-warning" data-testid="credential-env-warning">
             {{ t('credentials.expose.envWarning') }}
           </p>
@@ -247,7 +264,7 @@ const VALUE_MAX_LENGTH = 16_384;
           </button>
         </div>
       } @else {
-        <h2 class="cb-sheet-title">{{ t('credentials.action.addOpen') }}</h2>
+        <h2 class="cb-sheet-title">{{ t(title()) }}</h2>
 
         <div class="cb-sheet-review" data-testid="credential-review">
           <p>
@@ -305,17 +322,24 @@ const VALUE_MAX_LENGTH = 16_384;
   `,
 })
 export class AddCredentialSheet {
+  readonly credential = input<Credential | null>(null);
   readonly saving = input<boolean>(false);
   readonly saved = output<CreateCredentialBody>();
+  readonly rotated = output<RotateCredentialBody>();
   readonly closed = output<void>();
 
   readonly kinds = CREDENTIAL_KINDS;
   readonly exposes = CREDENTIAL_EXPOSES;
 
+  readonly rotating = computed(() => this.credential() !== null);
+  readonly title = computed(() =>
+    this.rotating() ? 'credentials.rotate.title' : 'credentials.action.addOpen',
+  );
+
   readonly step = signal<'form' | 'review'>('form');
-  readonly name = signal('');
-  readonly kind = signal<CredentialKind>('api_key');
-  readonly expose = signal<CredentialExpose>('daemon');
+  readonly name = linkedSignal(() => this.credential()?.name ?? '');
+  readonly kind = linkedSignal<CredentialKind>(() => this.credential()?.kind ?? 'api_key');
+  readonly expose = linkedSignal<CredentialExpose>(() => this.credential()?.expose ?? 'daemon');
   readonly value = signal('');
   readonly problem = signal<string | null>(null);
 
@@ -324,16 +348,25 @@ export class AddCredentialSheet {
   readonly locale = this.i18n.locale;
   readonly t = (key: string): string => translate(this.locale(), key);
 
-  readonly envBlocked = computed(() => this.expose() === 'env' && this.kind() !== 'model_key');
+  readonly envBlocked = computed(
+    () => !this.rotating() && this.expose() === 'env' && this.kind() !== 'model_key',
+  );
   readonly reviewTail = computed(() => this.value().slice(-4));
 
+  setName(value: string): void {
+    if (this.rotating()) return;
+    this.name.set(value);
+  }
+
   setKind(value: string): void {
+    if (this.rotating()) return;
     if ((CREDENTIAL_KINDS as readonly string[]).includes(value)) {
       this.kind.set(value as CredentialKind);
     }
   }
 
   setExpose(value: string): void {
+    if (this.rotating()) return;
     if ((CREDENTIAL_EXPOSES as readonly string[]).includes(value)) {
       this.expose.set(value as CredentialExpose);
     }
@@ -356,13 +389,17 @@ export class AddCredentialSheet {
 
   save(): void {
     if (this.envBlocked()) return;
-    const body: CreateCredentialBody = {
-      name: this.name().trim(),
-      kind: this.kind(),
-      expose: this.expose(),
-      value: this.value(),
-    };
-    this.saved.emit(body);
+    if (this.rotating()) {
+      this.rotated.emit({ value: this.value() });
+    } else {
+      const body: CreateCredentialBody = {
+        name: this.name().trim(),
+        kind: this.kind(),
+        expose: this.expose(),
+        value: this.value(),
+      };
+      this.saved.emit(body);
+    }
     this.value.set('');
     this.problem.set(null);
     this.step.set('form');
@@ -376,16 +413,23 @@ export class AddCredentialSheet {
   }
 
   private validationProblem(): string | null {
+    if (this.rotating()) return this.valueProblem();
     const name = this.name().trim();
     if (name.length === 0 || name.length > NAME_MAX_LENGTH) {
       return this.t('credentials.problem.name');
     }
+    const valueProblem = this.valueProblem();
+    if (valueProblem !== null) return valueProblem;
+    if (this.expose() === 'env' && this.kind() !== 'model_key') {
+      return this.t('credentials.problem.env');
+    }
+    return null;
+  }
+
+  private valueProblem(): string | null {
     const value = this.value();
     if (value.length === 0 || value.length > VALUE_MAX_LENGTH) {
       return this.t('credentials.problem.value');
-    }
-    if (this.expose() === 'env' && this.kind() !== 'model_key') {
-      return this.t('credentials.problem.env');
     }
     return null;
   }

@@ -6,6 +6,20 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-111: rotate a credential from the app)
+
+- **A row can be rotated.** `CredentialsApi.rotateCredential` calls the shipped
+  `POST /v1/credentials/{id}/rotate` once with `{ value }`; the store reloads both catalog lists
+  and clears `saving`; the page draws a `Rotate` action on every open row (never on the GitHub
+  App card) and reopens the existing add sheet in rotate mode — name readonly, kind and exposure
+  disabled, value empty, the same review step — so no screen, route or design frame is added.
+- **The workaround copy is gone.** `credentials.writeOnly.rotate` now tells the operator to
+  choose `Rotate` on the row in English and Spanish, and the two dictionaries keep one key set.
+- Dev `1872fc7`, QA `2808354`: the app suite is 567/568 (the one failure is the pre-existing
+  `NOTICE` CRLF spec), the credentials specs 72/72, lint and build green. The `[live]`
+  comparison against frame `19 · Add credential` has no sheet export on this runner and is an
+  `agent-review` issue.
+
 ### Changed — 2026-11-11 (Task-110: the store owns the provider-account delete)
 
 - `ProviderAccountRepository` gains `delete(id)`, and its SQLite implementation maps a missing id

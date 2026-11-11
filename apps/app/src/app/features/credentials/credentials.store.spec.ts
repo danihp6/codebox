@@ -136,6 +136,42 @@ describe('CredentialsStore', () => {
     expect(store.credentials()).toEqual([MODEL_KEY]);
   });
 
+  it('rotates a credential, then reloads both catalog lists', () => {
+    store.rotateCredential(MODEL_KEY.id, { value: 'rotated-sentinel' });
+    expect(store.saving()).toBe(true);
+    expect(store.error()).toBeNull();
+
+    const rotate = http.expectOne({
+      method: 'POST',
+      url: `${CREDENTIALS_URL}/${MODEL_KEY.id}/rotate`,
+    });
+    expect(rotate.request.body).toEqual({ value: 'rotated-sentinel' });
+    rotate.flush({ ...MODEL_KEY, lastFour: 'wxyz' });
+    expect(store.saving()).toBe(false);
+
+    flushCatalog([{ ...MODEL_KEY, lastFour: 'wxyz' }], [INTEGRATION]);
+    expect(store.credentials()).toEqual([{ ...MODEL_KEY, lastFour: 'wxyz' }]);
+    expect(store.integrations()).toEqual([INTEGRATION]);
+  });
+
+  it('keeps both lists and sets the error when the rotate fails', () => {
+    store.load();
+    flushCatalog([MODEL_KEY], [INTEGRATION]);
+
+    store.rotateCredential(MODEL_KEY.id, { value: 'rotated-sentinel' });
+    expect(store.saving()).toBe(true);
+
+    http
+      .expectOne({ method: 'POST', url: `${CREDENTIALS_URL}/${MODEL_KEY.id}/rotate` })
+      .flush(FAILURE, { status: 500, statusText: 'Internal Server Error' });
+
+    expect(store.saving()).toBe(false);
+    expect(store.error()).toBeInstanceOf(ApiError);
+    expect(store.error()?.code).toBe('internal');
+    expect(store.credentials()).toEqual([MODEL_KEY]);
+    expect(store.integrations()).toEqual([INTEGRATION]);
+  });
+
   it('removes a credential, then reloads the catalog', () => {
     store.removeCredential(MODEL_KEY.id);
 

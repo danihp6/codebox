@@ -143,6 +143,54 @@ describe('CredentialsApi', () => {
     expect(result.values).toEqual([CREDENTIAL]);
   });
 
+  it('rotates a credential with POST /v1/credentials/{id}/rotate and the value only', () => {
+    const result = collect(api.rotateCredential(CREDENTIAL.id, { value: 'rotated-sentinel' }));
+    const request = http.expectOne({
+      method: 'POST',
+      url: `${CREDENTIALS_URL}/${CREDENTIAL.id}/rotate`,
+    });
+    expect(request.request.body).toEqual({ value: 'rotated-sentinel' });
+    request.flush(CREDENTIAL);
+
+    expect(result.errors).toEqual([]);
+    expect(result.values).toEqual([CREDENTIAL]);
+  });
+
+  it('maps a 503 secrets_not_configured rotate to provider_unavailable', () => {
+    const result = collect(api.rotateCredential(CREDENTIAL.id, { value: 'rotated-sentinel' }));
+    http
+      .expectOne({ method: 'POST', url: `${CREDENTIALS_URL}/${CREDENTIAL.id}/rotate` })
+      .flush(
+        {
+          error: {
+            code: 'provider_unavailable',
+            message: 'Secrets are not configured',
+            details: { reason: 'secrets_not_configured' },
+            requestId: REQUEST_ID,
+          },
+        },
+        { status: 503, statusText: 'Service Unavailable' },
+      );
+
+    const failure = result.errors[0];
+    expect(failure).toBeInstanceOf(ApiError);
+    const apiError = failure as ApiError;
+    expect(apiError.code).toBe('provider_unavailable');
+    expect(apiError.status).toBe(503);
+    expect(apiError.details).toEqual({ reason: 'secrets_not_configured' });
+  });
+
+  it('surfaces a malformed rotate response as an ApiError with code contract', () => {
+    const result = collect(api.rotateCredential(CREDENTIAL.id, { value: 'rotated-sentinel' }));
+    http
+      .expectOne({ method: 'POST', url: `${CREDENTIALS_URL}/${CREDENTIAL.id}/rotate` })
+      .flush({ id: 'cred_1' });
+
+    const failure = result.errors[0];
+    expect(failure).toBeInstanceOf(ApiError);
+    expect((failure as ApiError).code).toBe('contract');
+  });
+
   it('removes a credential with DELETE /v1/credentials/{id} and maps 204 to void', () => {
     const result = collect(api.removeCredential(CREDENTIAL.id));
     const request = http.expectOne({

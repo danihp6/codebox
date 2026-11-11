@@ -4,10 +4,23 @@ import { TestBed } from '@angular/core/testing';
 import { afterEach, describe, expect, it } from 'vitest';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AddCredentialSheet } from './add-credential.sheet';
-import type { CreateCredentialBody } from './credentials.api';
+import type { CreateCredentialBody, Credential, RotateCredentialBody } from './credentials.api';
 import { STRINGS, translate } from './i18n';
 
+const TS = '2026-10-27T10:00:00Z';
 const SECRET = 'sentinel-value-9876';
+
+const ROTATE_CREDENTIAL = {
+  id: 'cred_01JABCDEFR',
+  name: 'Anthropic',
+  kind: 'api_key',
+  expose: 'env',
+  configured: true,
+  lastFour: '9876',
+  createdAt: TS,
+  updatedAt: TS,
+  lastUsedAt: null,
+} satisfies Credential;
 
 const USED_KEYS: readonly string[] = [
   'credentials.action.addOpen',
@@ -29,6 +42,7 @@ const USED_KEYS: readonly string[] = [
   'credentials.name',
   'credentials.problem.name',
   'credentials.problem.value',
+  'credentials.rotate.title',
   'credentials.value',
 ];
 
@@ -42,12 +56,13 @@ function hook(element: HTMLElement, id: string): HTMLElement | null {
   return element.querySelector<HTMLElement>(`[data-testid="${id}"]`);
 }
 
-async function mount(): Promise<Mounted> {
+async function mount(credential: Credential | null = null): Promise<Mounted> {
   const locale = signal<'en' | 'es'>('en');
   TestBed.configureTestingModule({
     providers: [{ provide: I18nService, useValue: { locale } }],
   });
   const fixture = TestBed.createComponent(AddCredentialSheet);
+  if (credential !== null) fixture.componentRef.setInput('credential', credential);
   await fixture.whenStable();
   fixture.detectChanges();
   return {
@@ -206,6 +221,93 @@ describe('AddCredentialSheet', () => {
       translate('en', 'credentials.problem.value'),
     );
     expect(hook(element, 'credential-review')).toBeNull();
+  });
+
+  it('opens in add mode with editable fields and no credential', async () => {
+    const { element } = await mount();
+
+    expect(hook(element, 'add-credential-sheet')?.getAttribute('data-mode')).toBe('add');
+    expect(hook(element, 'credential-name')?.hasAttribute('readonly')).toBe(false);
+    expect(hook(element, 'credential-kind')?.hasAttribute('disabled')).toBe(false);
+    expect(hook(element, 'credential-expose')?.hasAttribute('disabled')).toBe(false);
+    expect(hook(element, 'add-credential-sheet')?.textContent).toContain(
+      translate('en', 'credentials.action.addOpen'),
+    );
+  });
+
+  it('opens in rotate mode with the stored name, kind and exposure fixed', async () => {
+    const { element } = await mount(ROTATE_CREDENTIAL);
+
+    const sheet = hook(element, 'add-credential-sheet');
+    expect(sheet?.getAttribute('data-mode')).toBe('rotate');
+    expect(sheet?.getAttribute('data-step')).toBe('form');
+    expect(sheet?.textContent).toContain(translate('en', 'credentials.rotate.title'));
+    expect(sheet?.textContent).not.toContain(translate('en', 'credentials.action.addOpen'));
+
+    const name = hook(element, 'credential-name');
+    expect(name?.hasAttribute('readonly')).toBe(true);
+    expect((name as HTMLInputElement).value).toBe(ROTATE_CREDENTIAL.name);
+
+    const kind = hook(element, 'credential-kind');
+    expect(kind?.hasAttribute('disabled')).toBe(true);
+    expect((kind as HTMLSelectElement).value).toBe(ROTATE_CREDENTIAL.kind);
+
+    const expose = hook(element, 'credential-expose');
+    expect(expose?.hasAttribute('disabled')).toBe(true);
+    expect((expose as HTMLSelectElement).value).toBe(ROTATE_CREDENTIAL.expose);
+
+    const value = hook(element, 'credential-value');
+    expect(value?.getAttribute('type')).toBe('password');
+    expect((value as HTMLInputElement).value).toBe('');
+  });
+
+  it('ignores the env warning, the env block and the name in rotate mode', async () => {
+    const { fixture, element } = await mount(ROTATE_CREDENTIAL);
+
+    expect(hook(element, 'credential-env-warning')).toBeNull();
+    expect(hook(element, 'credential-env-blocked')).toBeNull();
+    expect((hook(element, 'credential-continue') as HTMLButtonElement).disabled).toBe(false);
+
+    await click(fixture, element, 'credential-continue');
+
+    expect(hook(element, 'credential-problem')?.textContent).toBe(
+      translate('en', 'credentials.problem.value'),
+    );
+    expect(hook(element, 'credential-review')).toBeNull();
+  });
+
+  it('rotates from the review, emits only rotated and forgets the value', async () => {
+    const { fixture, element, component } = await mount(ROTATE_CREDENTIAL);
+    const rotated: RotateCredentialBody[] = [];
+    const saved: CreateCredentialBody[] = [];
+    component.rotated.subscribe((body) => rotated.push(body));
+    component.saved.subscribe((body) => saved.push(body));
+
+    await fill(fixture, element, 'credential-value', SECRET);
+    expect(element.innerHTML).not.toContain(SECRET);
+
+    await click(fixture, element, 'credential-continue');
+
+    expect(hook(element, 'add-credential-sheet')?.getAttribute('data-step')).toBe('review');
+    expect(hook(element, 'credential-review-name')?.textContent?.trim()).toBe(
+      ROTATE_CREDENTIAL.name,
+    );
+    expect(hook(element, 'credential-review-kind')?.textContent?.trim()).toBe(
+      translate('en', 'credentials.kind.api_key'),
+    );
+    expect(hook(element, 'credential-review-expose')?.textContent?.trim()).toBe(
+      translate('en', 'credentials.expose.env'),
+    );
+    expect(hook(element, 'credential-review-tail')?.textContent).toBe('9876');
+
+    await click(fixture, element, 'credential-save');
+
+    expect(rotated).toEqual([{ value: SECRET }]);
+    expect(saved).toEqual([]);
+    expect(component.value()).toBe('');
+    expect(hook(element, 'add-credential-sheet')?.getAttribute('data-step')).toBe('form');
+    expect(element.textContent).not.toContain(SECRET);
+    expect(element.innerHTML).not.toContain(SECRET);
   });
 
   it('closes without saving and forgets the value', async () => {

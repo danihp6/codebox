@@ -678,7 +678,12 @@ Task-109 holds §5.1; `apps/app/README.md` has one writer, Task-111, for its own
 batch and nothing else on the queue is eligible. **One correction to the brief, recorded:** the
 expected "not in the generated document" sentence is not in §5.10 — it is §5.6's
 `POST /v1/repos/{id}/run-next` bullet, and it stays true because that path is still outside
-`openapi.ts`.
+`openapi.ts`. **Two follow-ups recorded, with no owner:** `apps/app/src/app/features/settings/
+settings.api.ts` still parses `GET /v1/providers` with the retired `parseProviders` — the app half
+of issue #71a, so the Settings provider panel answers a contract error against the shipped
+daemon; and the daemon's `publicCredentialSchema` and the app's `Credential` interface should
+adopt `credentialSummarySchema`/`pageOfCredentialSummary` now that Task-109 gives the fact one
+contract owner. Both are legal work for the next cut.
 
 ### Screens awaiting the prototype
 
@@ -2598,7 +2603,7 @@ credential summary's named exports, forced by the CLI's no-`..` guard). No task 
       refuses the last active account with `409 no_active_account`, and still answers `404` for
       a missing id; `[unit]` `service.ts` no longer contains `store.db.prepare` or
       `DELETE FROM provider_accounts`; `[unit]` lint and the two named suites pass.
-- [ ] **[Task-111]** The app can rotate a credential. The daemon ships
+- [x] **[Task-111]** The app can rotate a credential. The daemon ships
       `POST /v1/credentials/{id}/rotate` (`apps/daemon/src/credentials/routes.ts:43`, strict
       `{ value }`, `200` with the public credential, `503 secrets_not_configured`, never the
       value), but `apps/app/src/app/features/credentials/credentials.api.ts` has no rotate call

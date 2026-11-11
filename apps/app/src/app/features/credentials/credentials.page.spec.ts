@@ -78,6 +78,8 @@ const USED_KEYS: readonly string[] = [
   'credentials.action.confirm',
   'credentials.action.connectService',
   'credentials.action.delete',
+  'credentials.action.rotate',
+  'credentials.rotate.title',
   'credentials.deleteConfirm',
   'credentials.empty',
   'credentials.error',
@@ -107,6 +109,7 @@ interface MountOptions {
   readonly pending?: boolean;
   readonly query?: Readonly<Record<string, string>>;
   readonly completeFail?: boolean;
+  readonly locale?: 'en' | 'es';
 }
 
 interface Mounted {
@@ -144,7 +147,7 @@ function flushCatalog(
 }
 
 async function mount(options: MountOptions = {}): Promise<Mounted> {
-  const locale = signal<'en' | 'es'>('en');
+  const locale = signal<'en' | 'es'>(options.locale ?? 'en');
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -398,6 +401,101 @@ describe('CredentialsPage', () => {
     expect(element.innerHTML).not.toContain(SECRET);
   });
 
+  it('draws the rotate action on every open row and never on the GitHub App card', async () => {
+    const { element } = await mount({
+      credentials: [GITHUB_CREDENTIAL, MODEL_KEY],
+      integrations: [INTEGRATION],
+    });
+
+    const open = hookAll(element, 'credentials-open-row');
+    expect(open).toHaveLength(1);
+    const rotate = open[0]?.querySelector<HTMLElement>('[data-testid="credential-rotate"]');
+    expect(rotate).not.toBeNull();
+    expect(rotate?.textContent?.trim()).toBe(translate('en', 'credentials.action.rotate'));
+    expect(rotate?.getAttribute('type')).toBe('button');
+
+    expect(
+      hook(element, 'credentials-gh')?.querySelector('[data-testid="credential-rotate"]'),
+    ).toBeNull();
+    expect(hookAll(element, 'credential-rotate')).toHaveLength(1);
+  });
+
+  it('rotates the row through the sheet with one POST and then the catalog reload', async () => {
+    const rotated = { ...MODEL_KEY, lastFour: 'efgh', updatedAt: TS };
+    const { fixture, element, http } = await mount({
+      credentials: [MODEL_KEY],
+      integrations: [INTEGRATION],
+    });
+
+    hook(element, 'credential-rotate')?.click();
+    await wait(fixture);
+
+    const sheet = hook(element, 'add-credential-sheet');
+    expect(sheet).not.toBeNull();
+    expect(sheet?.getAttribute('data-mode')).toBe('rotate');
+    expect(sheet?.textContent).toContain(translate('en', 'credentials.rotate.title'));
+
+    const name = hook(element, 'credential-name');
+    expect(name?.hasAttribute('readonly')).toBe(true);
+    expect((name as HTMLInputElement).value).toBe(MODEL_KEY.name);
+    expect(hook(element, 'credential-kind')?.hasAttribute('disabled')).toBe(true);
+    expect(hook(element, 'credential-expose')?.hasAttribute('disabled')).toBe(true);
+    expect((hook(element, 'credential-value') as HTMLInputElement).value).toBe('');
+    expect(hook(element, 'connect-service-sheet')).toBeNull();
+
+    await fillField(fixture, element, 'credential-value', SECRET);
+    expect(element.innerHTML).not.toContain(SECRET);
+
+    hook(element, 'credential-continue')?.click();
+    await wait(fixture);
+    expect(hook(element, 'credential-review')).not.toBeNull();
+    expect(hook(element, 'credential-review-tail')?.textContent).toBe('6789');
+
+    hook(element, 'credential-save')?.click();
+    await wait(fixture);
+
+    const rotate = http.expectOne({
+      method: 'POST',
+      url: `${CREDENTIALS_URL}/${MODEL_KEY.id}/rotate`,
+    });
+    expect(rotate.request.body).toEqual({ value: SECRET });
+    expect(hook(element, 'add-credential-sheet')).toBeNull();
+
+    rotate.flush(rotated);
+    flushCatalog(http, { reloadedCredentials: [rotated], integrations: [INTEGRATION] }, 'reload');
+    await wait(fixture);
+
+    expect(hook(element, 'add-credential-sheet')).toBeNull();
+    expect(hook(element, 'credentials-last-four')?.textContent?.trim()).toBe('••••efgh');
+    expect(element.innerHTML).not.toContain(SECRET);
+  });
+
+  it('renders the rotate note in English and drops the add-again workaround', async () => {
+    const { element } = await mount({ credentials: [MODEL_KEY], integrations: [] });
+
+    const note = hookAll(element, 'credentials-note').find(
+      (candidate) => candidate.getAttribute('data-note') === '2',
+    );
+    expect(note?.textContent?.trim()).toBe(translate('en', 'credentials.writeOnly.rotate'));
+    expect(note?.textContent).not.toContain('add it again');
+    expect(note?.textContent).not.toContain('delete the old row');
+  });
+
+  it('renders the rotate note in Spanish and drops the add-again workaround', async () => {
+    const { element } = await mount({
+      credentials: [MODEL_KEY],
+      integrations: [],
+      locale: 'es',
+    });
+
+    const note = hookAll(element, 'credentials-note').find(
+      (candidate) => candidate.getAttribute('data-note') === '2',
+    );
+    expect(note?.textContent?.trim()).toBe(translate('es', 'credentials.writeOnly.rotate'));
+    expect(note?.textContent).not.toContain('vuelve a añadirlo');
+    expect(note?.textContent).not.toContain('elimina la fila antigua');
+  });
+
   it('asks twice before deleting a credential', async () => {
     const { fixture, element, http } = await mount({
       credentials: [MODEL_KEY],
@@ -473,6 +571,8 @@ describe('CredentialsPage', () => {
       'credentials.service.how',
       'credentials.writeOnly',
       'credentials.writeOnly.rotate',
+      'credentials.action.rotate',
+      'credentials.rotate.title',
     ]) {
       expect(translate('en', key), key).not.toBe(key);
       expect(translate('es', key), key).not.toBe(key);

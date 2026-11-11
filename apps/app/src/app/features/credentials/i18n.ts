@@ -20,10 +20,13 @@ export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>>
     'credentials.service.how': 'Base URL',
     'credentials.writeOnly':
       'A value is never shown again: only its last four characters are kept in view.',
-    'credentials.writeOnly.rotate': 'To rotate one, add it again and delete the old row.',
+    'credentials.writeOnly.rotate':
+      'To rotate one, choose Rotate on its row; the name, kind and exposure stay.',
+    'credentials.rotate.title': 'Rotate credential',
     'credentials.action.connectService': 'Connect a service',
     'credentials.action.addOpen': 'Add a credential',
     'credentials.action.delete': 'Delete',
+    'credentials.action.rotate': 'Rotate',
     'credentials.action.confirm': 'Confirm',
     'credentials.action.cancel': 'Cancel',
     'credentials.action.continue': 'Continue',
@@ -91,10 +94,13 @@ export const STRINGS: Readonly<Record<Locale, Readonly<Record<string, string>>>>
     'credentials.service.how': 'URL base',
     'credentials.writeOnly':
       'Un valor no se vuelve a mostrar: solo se conservan a la vista sus cuatro últimos caracteres.',
-    'credentials.writeOnly.rotate': 'Para rotarlo, vuelve a añadirlo y elimina la fila antigua.',
+    'credentials.writeOnly.rotate':
+      'Para rotarla, elige Rotar en su fila; el nombre, el tipo y la exposición se conservan.',
+    'credentials.rotate.title': 'Rotar credencial',
     'credentials.action.connectService': 'Conectar un servicio',
     'credentials.action.addOpen': 'Añadir una credencial',
     'credentials.action.delete': 'Eliminar',
+    'credentials.action.rotate': 'Rotar',
     'credentials.action.confirm': 'Confirmar',
     'credentials.action.cancel': 'Cancelar',
     'credentials.action.continue': 'Continuar',
