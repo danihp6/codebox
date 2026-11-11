@@ -2890,7 +2890,7 @@ writes either file. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
       sentences are gone (the spec lists both sets verbatim); `[unit]` a diff of `docs/app.md`
       against `main` changes nothing outside the §11–§12 block (the spec carries the check);
       `[unit]` lint and `npm run build` pass. No `[live]`: the doc is read, not run.
-- [ ] **[Task-116]** `docs/architecture.md` §2 names every table the store creates. The
+- [x] **[Task-116]** `docs/architecture.md` §2 names every table the store creates. The
       `packages/store` block (`docs/architecture.md:120-146`) says `0001_init.sql` "creates the
       ten v1 tables below" while the table lists eighteen rows, and its prose names three of the
       seven migrations in `packages/store/migrations/`: `0002_routines.sql` creates `routines` and

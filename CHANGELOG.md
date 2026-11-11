@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-116: the store block names every table and migration)
+
+- **The migration prose is the real history.** `docs/architecture.md` §2 no longer says
+  `0001_init.sql` "creates the ten v1 tables below" over an eighteen-row table: it names all
+  seven migrations — `0001_init.sql`, `0002_routines.sql`, `0003_chat_scope.sql`,
+  `0004_schedules.sql`, `0005_chat_free.sql`, `0006_works.sql`, `0007_providers.sql` — and what
+  each one creates.
+- **The two routine tables have rows.** `routines` and `routine_fires`, created by
+  `0002_routines.sql`, are listed between `runs` and `works` with their purpose and idempotency
+  key, so the table and the migrations agree (21 created tables, 21 rows).
+- Dev `598860a`, QA `a9256a8`: the outside-block suffix and prefix are byte-identical to `main`,
+  lint and build green, and the diff is `docs/architecture.md` only.
+
 ### Changed — 2026-11-11 (Task-115: `docs/app.md` §11 and §12 describe what ships)
 
 - **Push is the daemon's job, and the document says so.** §11 now states the VAPID Web Push per
