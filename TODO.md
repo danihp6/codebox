@@ -2905,7 +2905,7 @@ writes either file. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
       existing migration file (the spec carries the script); `[unit]` the two routine rows and the
       seven-migration sentence are present and "ten v1 tables below" is gone; `[unit]` no byte of
       the file outside §2's store block changes. No `[live]`.
-- [ ] **[Task-117]** The schedule sheet keeps keyboard focus inside the dialog. `ScheduleSheet`
+- [x] **[Task-117]** The schedule sheet keeps keyboard focus inside the dialog. `ScheduleSheet`
       declares `role="dialog" aria-modal="true"`
       (`apps/app/src/app/features/backlog/schedule-sheet.ts:381-388`) but its one keydown handler
       answers only Escape (`:640-642`), so Tab walks out of the panel into the page behind it —

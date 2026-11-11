@@ -443,6 +443,58 @@ describe('ScheduleSheet', () => {
     http.expectNone({ method: 'POST', url: `/v1/repos/${REPO_ID}/run-next` });
   });
 
+  it('wraps Tab from the last control to the close button', async () => {
+    const { element } = await mount();
+    const close = hook(element, 'schedule-sheet-close');
+    const last = hook(element, 'schedule-sheet-run-next');
+    expect(close).not.toBeNull();
+    expect(last).not.toBeNull();
+    last?.focus();
+    expect(document.activeElement).toBe(last);
+
+    const event = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(close);
+  });
+
+  it('wraps Shift+Tab from the close button to the last control', async () => {
+    const { element } = await mount();
+    const close = hook(element, 'schedule-sheet-close');
+    const last = hook(element, 'schedule-sheet-run-next');
+    expect(document.activeElement).toBe(close);
+
+    const event = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    document.dispatchEvent(event);
+
+    expect(event.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(last);
+  });
+
+  it('leaves Tab alone in the middle and pulls an outside focus in', async () => {
+    const { element } = await mount();
+    const middle = hook(element, 'schedule-sheet-max-fires');
+    const close = hook(element, 'schedule-sheet-close');
+    middle?.focus();
+
+    const inside = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(inside);
+    expect(inside.defaultPrevented).toBe(false);
+    expect(document.activeElement).toBe(middle);
+
+    (document.activeElement as HTMLElement | null)?.blur();
+    const outside = new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true });
+    document.dispatchEvent(outside);
+    expect(outside.defaultPrevented).toBe(true);
+    expect(document.activeElement).toBe(close);
+  });
+
   it('ships both locales key-for-key, in the same order', () => {
     expect(Object.keys(STRINGS.es)).toEqual(Object.keys(STRINGS.en));
     for (const key of Object.keys(STRINGS.en)) {

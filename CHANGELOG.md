@@ -6,6 +6,19 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-117: the schedule sheet keeps keyboard focus inside the dialog)
+
+- **The modal traps Tab.** `ScheduleSheet` now cycles its own focusables in document order: Tab on
+  the last control wraps to the close button, Shift+Tab on the first wraps to the last, a Tab in
+  the middle is left to the browser, and a Tab while focus sits outside the panel pulls it back to
+  the first control. `Escape` and the initial focus on the close button are unchanged, and the
+  query is scoped to the dialog's `#sheet` root, never the document.
+- **Hidden controls are not stops.** `FOCUSABLE_SELECTOR` skips any control inside an
+  `[aria-hidden="true"]` subtree, so the wrap cannot land on a control the dialog hides.
+- Dev `fc20303`, QA `55ae139`: the sheet spec is 20/20 — the three new cases plus the 17 existing
+  ones — and lint, build and the coverage guard are green; the app suite's only red is the
+  pre-existing `NOTICE` CRLF spec. No `[live]`: jsdom dispatches the same keydown the browser does.
+
 ### Changed — 2026-11-11 (Task-116: the store block names every table and migration)
 
 - **The migration prose is the real history.** `docs/architecture.md` §2 no longer says
