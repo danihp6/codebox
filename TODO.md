@@ -2923,6 +2923,19 @@ writes either file. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
       `[unit]` lint, the app suite and `npm run test:guard` pass; `[unit]` no file under `src/app`
       is added or deleted, so `readme.spec.ts` and `apps/app/README.md` do not move.
 
+**Shipped 2026-11-11.** `main` moved `438797a` → `7ac9a95` in four `--no-ff` merges — 114
+`b330981`, 115 `8daade0`, 116 `0a433c7`, 117 `7ac9a95` — after Integration QA on the rehearsal
+tree `4d0b99a`. Verdicts: 114 `be67ecb`, 115 `960a505`, 116 `a9256a8`, 117 `55ae139`; no path
+shared by two tasks, one hot-file holder (114 on `packages/contracts/src/index.ts`), and
+`TODO.md`/`CHANGELOG.md` stayed with the Orchestrator. Every merge re-ran lint, build and the
+coverage guard plus the suites its task names; the app suite is 65 of 66 files with only the
+pre-existing `NOTICE` red. **Two debts this cycle measured and did not own:** the `NOTICE` spec
+compares an LF constant to a file read raw, so a `core.autocrlf=true` checkout is red and the
+`test:*` scripts' single-quoted `node -e` is not Windows-portable; and the daemon, packages and
+`ops` suites carry 48 environment failures on this box (reproduced identically on a clean
+`main`), so the local gate is lint + build + guard + the named suites and the full `npm test` is
+CI's. Both are candidates for the next cut.
+
 ---
 
 ## Local / human (never picked by the driver)
