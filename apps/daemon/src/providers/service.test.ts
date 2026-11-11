@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -498,6 +498,27 @@ describe('patchAccount and removeAccount', () => {
     expect(target.beginTurn('opencode-go').accountId).toBe(second.id);
   });
 
+  it('leaves the row and the credential in place when a removal is refused', () => {
+    const h = fixture();
+    const target = service(h);
+    const only = add(target, 'go · main', 1);
+    const before = h.store.providerAccounts.get(only.id);
+
+    expect(thrownBy(() => target.removeAccount(only.id))).toMatchObject({
+      status: 409,
+      details: { reason: 'no_active_account' },
+    });
+    expect(h.store.providerAccounts.get(only.id)).toEqual(before);
+    expect(h.removed).toEqual([]);
+
+    const missing = 'acct_missing000' as ProviderAccountId;
+    expect(thrownBy(() => target.removeAccount(missing))).toMatchObject({
+      status: 404,
+      details: { path: 'providerAccount.id' },
+    });
+    expect(h.removed).toEqual([]);
+  });
+
   it('answers 404 for an account that does not exist', () => {
     const h = fixture();
     const target = service(h);
@@ -507,6 +528,15 @@ describe('patchAccount and removeAccount', () => {
     });
     expect(thrownBy(() => target.removeAccount(missing))).toMatchObject({ status: 404 });
     expect(() => target.beginTurn('opencode-go')).toThrow(ProviderExhaustedError);
+  });
+});
+
+describe('store ownership of the provider-account delete', () => {
+  it('prepares no statement and deletes through the repository', () => {
+    const source = readFileSync(new URL('./service.ts', import.meta.url), 'utf8');
+    expect(source).not.toContain('store.db.prepare');
+    expect(source).not.toContain('DELETE FROM provider_accounts');
+    expect(source).toContain('store.providerAccounts.delete(id)');
   });
 });
 

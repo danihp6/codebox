@@ -6,6 +6,16 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-110: the store owns the provider-account delete)
+
+- `ProviderAccountRepository` gains `delete(id)`, and its SQLite implementation maps a missing id
+  to `StoreError('not_found', 'provider account not found')`; the daemon no longer prepares
+  `DELETE FROM provider_accounts`, so the store is the only owner of the SQL.
+- `DELETE /v1/provider-accounts/{id}` keeps its behaviour: `204`, `404` at
+  `providerAccount.id` for a missing row, `409 no_active_account` for the last active account,
+  the row deleted before its credential, and a refused delete leaves the credential in place.
+- Dev `a817c6f`, QA `49d2bdd` (34/34 named plus 15/15 route tests, lint and build green).
+
 ### Changed — 2026-11-11 (Task-109: `cb doctor` reads the credentials surface)
 
 - **The GitHub check stops parsing a retired body.** `cb doctor` reads `GET /v1/credentials`

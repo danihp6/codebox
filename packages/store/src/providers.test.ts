@@ -193,6 +193,30 @@ describe('providerAccounts.list and selectActive', () => {
   });
 });
 
+describe('providerAccounts.delete', () => {
+  it('removes the row and maps a second delete to not_found', () => {
+    store.providerAccounts.create(ACCOUNT);
+    store.providerAccounts.create({
+      ...ACCOUNT,
+      id: 'acct_000013',
+      label: 'go · spare',
+      credentialId: 'cred_000013',
+      priority: 2,
+    });
+
+    store.providerAccounts.delete(ACCOUNT.id);
+
+    expect(store.providerAccounts.get(ACCOUNT.id)).toBeNull();
+    expect(
+      store.providerAccounts.list({ providerId: PROVIDER.id }).map((account) => account.id),
+    ).toEqual(['acct_000013']);
+
+    const error = storeErrorOf(() => store.providerAccounts.delete(ACCOUNT.id));
+    expect(error?.code).toBe('not_found');
+    expect(error?.message).toBe('provider account not found');
+  });
+});
+
 describe('providerAccounts.listDueResets', () => {
   it('returns only the exhausted accounts whose reset instant has passed', () => {
     store.providerAccounts.create({

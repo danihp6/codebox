@@ -2580,7 +2580,7 @@ credential summary's named exports, forced by the CLI's no-`..` guard). No task 
       `skip missing_route`, both with `ok: true`; `[unit]` the eight checks keep their order and
       a healthy box still exits 0; `[unit]` the CLI import guard is green (no `..` specifier);
       `[unit]` §5.1's row names the D54 accounts shape; `[unit]` lint and the named suites pass.
-- [ ] **[Task-110]** The store owns the provider-account delete (issue #71b).
+- [x] **[Task-110]** The store owns the provider-account delete (issue #71b).
       `packages/store/src/providers.ts:29-38` (`ProviderAccountRepository`) has
       `get/list/create/update/selectActive/listDueResets` but no `delete`, so
       `apps/daemon/src/providers/service.ts:161-163` prepares
