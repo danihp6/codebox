@@ -68,6 +68,8 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 29 | The repository schedule the daemon reads (D56) | 107 | 1 |
 | 30 | Measured debts: OpenAPI, doctor, store, rotate | 108–111 | 4 |
 | 31 | The credentials and provider bodies get one owner | 112–113 | 2 |
+| 32 | Measured debts: the document, the docs, the sheet's trap | 114–117 | 4 |
+| 32 | Measured debts: the document, the docs, the sheet's trap | 114–117 | 4 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -721,6 +723,56 @@ document still describes the retired provider body (`openapi.ts:431-439` → `Pr
 Repointing those and deleting `providersSchema`/`parseProviders` needs `openapi.ts` +
 `openapi.test.ts` + `resources.ts` + `resources.test.ts` + the CLI fixture in one task, and
 `openapi.ts` has one writer per batch (Task-113 here), so it waits for a later cut.
+
+**Cut — cycle 2026-11-11, after Batch 31 (four of four slots used).** No unmerged `task-*` branch
+was alive (the Orchestrator's ref sweep found every `task-108`…`task-113` local tip an ancestor of
+`main`) and `main` was `438797a`. The driver
+queue is dry: Task-31 is `[!]` (issue #105), Task-32 waits behind it, and L1, L3 and L4 are
+operator items. Four measured debts are the whole legal queue and none of them draws a screen,
+so none waits for the design track. **Task-114** is the generated document still describing the
+retired §5.1 provider body — `openapi.ts:433-441` maps `GET /v1/providers` to `Providers` with
+the stale summary and tag `health`, `:913-914` registers `ProviderStatus`/`Providers`, the three
+account writes answer the stored `ProviderAccount` although the daemon returns
+`ProviderAccountView` (`providers/service.ts:72-77`), and four list operations borrow `Page`,
+which is `pageOfRun` (`:940`), for repositories, jobs, approvals and devices — the deferred note
+from the Batch 31 cut record (which pinned `:431-439` before Task-113 shifted the file), now with
+a free writer.
+**Task-115** is the `docs/app.md` §11/§12 truth pass Batch 31 deliberately left: a `PushManager`
+subscription the app never makes, a Capacitor push plugin it does not depend on, a payload with
+`workId`/`scheduleId` the daemon does not send (`push/mapping.ts:21-30`), an "axe on every route
+in CI" that exists nowhere, an e2e flow that ends in an approval step the suite never takes, and
+bundle budgets `apps/app/angular.json` does not declare. **Task-116** is
+`docs/architecture.md:120-146`: the store block says "ten v1 tables below" over eighteen rows and
+omits `routines`/`routine_fires`, which `0002_routines.sql:6,24` creates, while
+`packages/store/README.md:17-23` already maps all seven migrations. **Task-117** is the schedule
+sheet's keyboard trap: it declares `role="dialog" aria-modal="true"`
+(`schedule-sheet.ts:381-388`) and its one keydown handler answers only Escape (`:640-642`), a
+limitation the Task-99 entry recorded. **Hot-file holders in this cut:** Task-114 holds
+`packages/contracts/src/index.ts`; no task holds `package.json`, `package-lock.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or
+`docs/decisions.md`. Docs are claimed by file, not shared: Task-115 holds `docs/app.md` §11–§12
+and Task-116 holds `docs/architecture.md` §2; no other task writes either file, and
+`docs/api.md` is not touched at all because §5.1 and §5.9.1 already carry the D54 body
+(`docs/api.md:171`, `:810`). No task writes `apps/app/README.md`: none of the four adds, renames
+or deletes a file under `src/app`. **No empty slot:** 114–117 are the batch and nothing else on
+the queue is eligible. **Recorded, not cut:** `docs/api.md:489-493` carries the same "no daemon
+code creates an approval row" sentence twice, `docs/app.md` §1 and §3 are stale too (`native
+push` at `:13`, `core/push/` at `:54` and `features/providers/` at `:62`, none of which exists
+under `apps/app/src/app` — §3 needs the whole tree frozen rather than two sections, so it is the
+next docs debt), and `apps/daemon/src/cli/doctor.test.ts:70,91` keeps a dead `/v1/providers`
+option in its fake transport; the `docs/api.md` duplicate and the doctor harness are leftovers
+smaller than a task, and none of the three is a path this batch owns. **One item is a question,
+not a task:**
+`readBuildInfo` (`apps/daemon/src/config.ts:109-115`) returns `builtAt: null` unconditionally, so
+the About build row can never show the value `docs/app.md` §13 says is injected at build time;
+stamping it (a build-time `CB_*` key) or dropping the row is the operator's call, and Task-115
+does not touch §13. **One correction at Task-114's QA:** the item's first acceptance grep carried
+`\bProviders\b` and its second pinned `ProviderStatus` at count `0` in `openapi.test.ts`; both
+contradicted the source the same item mandates — the D54 summary begins "Providers with their
+accounts…" and the mirrored negative assertion spells the retired name. The two criteria are
+narrowed to the retired schema tokens and to `openapi.ts`, which is what they meant; the contract
+suite proves both absences.
 
 ### Screens awaiting the prototype
 
@@ -2766,6 +2818,110 @@ Docs are claimed by section only: Task-112 holds `docs/api.md` §5.9.1, and Task
       document has 67 paths, the three operations `$ref` the two new components and every `$ref`
       resolves; `[unit]` lint and the named suites pass. No `[live]`: it is a seam refactor and
       the screen is byte-identical.
+
+---
+
+## Batch 32 — Measured debts: the document, the docs, the sheet's trap
+
+Cut 2026-11-11 from `main` at `438797a`. The queue holds no eligible driver task, so the batch is
+filled with debts the last cuts measured and did not own: a generated document that still
+describes a retired body and borrows a page of runs for four other resources, two `docs/app.md`
+sections and a store table that are false against the code, and a modal that declares itself
+modal and lets Tab escape. None draws a page, needs a frame or reads a build artifact; two are
+verified by grep, one by the contracts suite and one by the sheet's own spec.
+
+**Hot-file holders in this batch:** Task-114 holds `packages/contracts/src/index.ts`. No task
+holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`opencode.json`, `TODO.md`, `CHANGELOG.md` or `docs/decisions.md`. Docs are claimed by file:
+Task-115 holds `docs/app.md` §11–§12 and Task-116 holds `docs/architecture.md` §2; no other task
+writes either file. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
+
+- [ ] **[Task-114]** The generated document stops describing the retired provider body. `GET
+      /v1/providers` is the retired §5.1 shape in `packages/contracts/src/openapi.ts:433-441`
+      (`Providers`, "configured, mode, last success and fingerprint", tag `health`) and
+      `:913-914` registers `ProviderStatus`/`Providers` from `resources.ts:79-92`, although
+      `providersResponseSchema`/`parseProvidersResponse` own the D54 body
+      (`packages/contracts/src/providers.ts:62-80`) and the daemon answers it
+      (`apps/daemon/src/providers/routes.ts:17`). Four list operations borrow `Page`, which is
+      `pageOfRun` (`openapi.ts:940`), so repositories, jobs, approvals and devices are documented
+      as pages of runs while their routes parse `pageOfRepo` (`repos/routes.ts:55`), `pageOfJob`
+      (`jobs/routes.ts:80`), `pageOfApproval` (`runs/approvals.ts:40`) and `pageOfDevice`
+      (`auth/routes.ts:197-202`); the three account writes answer `ProviderAccount`, the stored
+      shape without `lastFour`, while the daemon returns `ProviderAccountView`
+      (`providers/service.ts:72-77`); and the `chat` and `routines` tags (`:1103`, `:1110`) are
+      declared with no operation carrying them. Repoint `getProviders` to `ProvidersResponse`
+      under the `providers` tag, register `ProviderAccountView`/`RepoPage`/`JobPage`/
+      `ApprovalPage`/`DevicePage` and drop the now-unreferenced `ProviderAccount`, delete
+      `providerNameSchema`/`providerModeSchema`/`providerStatusSchema`/`providersSchema`/
+      `Providers`/`parseProviders` with their six exports, and drop the `Providers` fixture from
+      the CLI's `successRoutes`. The path pin stays **67**; `listRuns` keeps `Page` because
+      `pageOfRun` is right there, and `listRunEvents` keeps it because no run-event schema exists
+      (recorded for a later contract task).
+      *Paths:* `packages/contracts/src/{openapi.ts,openapi.test.ts,resources.ts,resources.test.ts}`
+      + `packages/contracts/src/index.ts` (hot file), `apps/daemon/src/cli/commands.test.ts`.
+      *Dependencies:* none — Task-112 and Task-113 are merged and the four page schemas already
+      ship.
+      *Acceptance:* `[unit]` `buildOpenApiDocument()` keeps 67 paths, every `$ref` resolves,
+      `/v1/providers` is `ProvidersResponse` under the `providers` tag, the three account writes
+      are `ProviderAccountView`, the four list operations `$ref` their own page components and
+      `listRuns` keeps `Page`; `[unit]` every declared tag is used by at least one operation and
+      `chat`/`routines` are gone; `[unit]`
+      `grep -rnE "providerStatusSchema|providersSchema|parseProviders\("
+      packages/contracts/src apps/daemon/src` prints nothing, and no `ProviderStatus` or
+      `Providers:` registration survives in `openapi.ts`; `[unit]` lint, the contracts suite
+      and the CLI suite pass. No `[live]`: the document is built in tests.
+- [ ] **[Task-115]** `docs/app.md` §11 and §12 describe what ships. The Batch 31 cut record left
+      this pass for a later cut, and the sections are false in eight claims: §11 promises a
+      `PushManager` subscription the app never makes (no such call exists under `src/`), a
+      Capacitor push plugin `apps/app/package.json:12-28` does not depend on, a payload with
+      `workId`/`scheduleId` that `apps/daemon/src/push/mapping.ts:21-30` does not send, and a
+      preference set (`provider.state`, `schedule`) that is not the daemon's seven
+      `NOTIFICATION_TYPES` (`mapping.ts:3-11`); §12 promises "axe on every route in CI" (no axe
+      in the tree), a permission card and a cron picker no file implements, an e2e flow that ends
+      in an approval step (`e2e/tests/happy-path.spec.mjs:11-47` ends in the merged PR and the
+      ticked backlog item) and bundle budgets `apps/app/angular.json` does not declare. Rewrite
+      the two sections to the shipped facts, keep the heading numbering, and leave §1–§10 and
+      §13–§14 byte-identical.
+      *Paths:* `docs/app.md` (§11 *Push* and §12 *Testing* only).
+      *Dependencies:* none — the daemon push subsystem, the notifications panel and the e2e suite
+      are merged.
+      *Acceptance:* `[unit]` the frozen replacement text is in the file and the eight false
+      sentences are gone (the spec lists both sets verbatim); `[unit]` a diff of `docs/app.md`
+      against `main` changes nothing outside the §11–§12 block (the spec carries the check);
+      `[unit]` lint and `npm run build` pass. No `[live]`: the doc is read, not run.
+- [ ] **[Task-116]** `docs/architecture.md` §2 names every table the store creates. The
+      `packages/store` block (`docs/architecture.md:120-146`) says `0001_init.sql` "creates the
+      ten v1 tables below" while the table lists eighteen rows, and its prose names three of the
+      seven migrations in `packages/store/migrations/`: `0002_routines.sql` creates `routines` and
+      `routine_fires` (`packages/store/migrations/0002_routines.sql:6,24`) and neither has a row,
+      while `0003_chat_scope.sql` and `0005_chat_free.sql` are missing from the prose.
+      `packages/store/README.md:17-23` already maps the seven files correctly. Rewrite the prose
+      and add the two rows.
+      *Paths:* `docs/architecture.md` (§2's `packages/store` block only).
+      *Dependencies:* none — the tables and the migrations are merged.
+      *Acceptance:* `[unit]` every table the migrations create, except the transient
+      `chat_sessions_new` of the 0005 rebuild, has a row in the block and every row names an
+      existing migration file (the spec carries the script); `[unit]` the two routine rows and the
+      seven-migration sentence are present and "ten v1 tables below" is gone; `[unit]` no byte of
+      the file outside §2's store block changes. No `[live]`.
+- [ ] **[Task-117]** The schedule sheet keeps keyboard focus inside the dialog. `ScheduleSheet`
+      declares `role="dialog" aria-modal="true"`
+      (`apps/app/src/app/features/backlog/schedule-sheet.ts:381-388`) but its one keydown handler
+      answers only Escape (`:640-642`), so Tab walks out of the panel into the page behind it —
+      recorded as a limitation in the Task-99 entry. Add the `Tab`/`Shift+Tab` wrap over the
+      dialog's own focusables in document order, keep Escape and the close button as the first
+      focus, and prove it in the sheet's own spec. No route, frame, copy or request moves.
+      *Paths:* `apps/app/src/app/features/backlog/schedule-sheet.ts`,
+      `apps/app/src/app/features/backlog/schedule-sheet.spec.ts`.
+      *Dependencies:* none — the sheet and its spec are merged.
+      *Acceptance:* `[unit]` Tab on the last focusable focuses the first and prevents the default,
+      Shift+Tab on the first focuses the last and prevents the default, Tab in the middle is
+      untouched, and Tab while the focus sits outside the dialog moves it to the first control;
+      `[unit]` the existing sheet tests pass unchanged, including the initial focus on the close
+      button and the Escape close;
+      `[unit]` lint, the app suite and `npm run test:guard` pass; `[unit]` no file under `src/app`
+      is added or deleted, so `readme.spec.ts` and `apps/app/README.md` do not move.
 
 ---
 
