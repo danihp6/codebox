@@ -1,17 +1,59 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { Providers } from '@codebox/contracts';
+import type { ProvidersResponse } from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ProvidersStore } from './providers.store';
+import type { ProviderRow } from './providers.store';
 
-const TS = '2026-10-24T18:03:11Z';
+const TS = '2026-10-28T09:12:00Z';
 
-const PROVIDERS: Providers = {
+function account(id: string, label: string, priority: number): ProviderRow['accounts'][number] {
+  return {
+    id,
+    providerId: 'opencode-go',
+    label,
+    credentialId: `cred_${id}`,
+    priority,
+    state: 'active',
+    resetAt: null,
+    budgetUsd: null,
+    usedToday: { day: '2026-10-28', usd: 0 },
+    createdAt: TS,
+    updatedAt: TS,
+    lastFour: 'a91f',
+  };
+}
+
+const PROVIDERS: ProvidersResponse = {
   providers: [
-    { provider: 'github', configured: true, mode: 'app', lastOkAt: TS, fingerprint: 'abcd1234' },
-    { provider: 'opencode', configured: false, mode: 'none', lastOkAt: null, fingerprint: null },
-    { provider: 'push', configured: true, mode: 'key', lastOkAt: null, fingerprint: null },
+    {
+      id: 'opencode-go',
+      label: 'OpenCode Go',
+      authKind: 'oauth',
+      baseUrl: 'https://opencode.ai',
+      createdAt: TS,
+      updatedAt: TS,
+      accounts: [account('acct_01JABCDEFG', 'go · one', 1), account('acct_01JABCDEFH', 'go · two', 2)],
+    },
+    {
+      id: 'anthropic',
+      label: 'Anthropic',
+      authKind: 'token',
+      baseUrl: null,
+      createdAt: TS,
+      updatedAt: TS,
+      accounts: [],
+    },
+    {
+      id: 'openai',
+      label: 'OpenAI',
+      authKind: 'token',
+      baseUrl: null,
+      createdAt: TS,
+      updatedAt: TS,
+      accounts: [],
+    },
   ],
 };
 
@@ -34,7 +76,7 @@ describe('ProvidersStore', () => {
     TestBed.resetTestingModule();
   });
 
-  it('renders one row per provider from the response, in order', () => {
+  it('keeps the D54 rows from the response, in order', () => {
     store.load();
     expect(store.loading()).toBe(true);
 
@@ -42,7 +84,8 @@ describe('ProvidersStore', () => {
 
     expect(store.loading()).toBe(false);
     expect(store.providers()).toEqual(PROVIDERS.providers);
-    expect(store.providers().map((row) => row.provider)).toEqual(['github', 'opencode', 'push']);
+    expect(store.providers().map((row) => row.id)).toEqual(['opencode-go', 'anthropic', 'openai']);
+    expect(store.providers()[0]?.accounts.map((row) => row.priority)).toEqual([1, 2]);
     expect(store.unavailable()).toBe(false);
     expect(store.error()).toBeNull();
   });
@@ -90,6 +133,19 @@ describe('ProvidersStore', () => {
     expect(store.unavailable()).toBe(false);
     expect(store.providers()).toEqual([]);
     expect(store.loading()).toBe(false);
+  });
+
+  it('still reports a retired body as a contract error', () => {
+    store.load();
+    http.expectOne({ method: 'GET', url: PROVIDERS_URL }).flush({
+      providers: [
+        { provider: 'github', configured: true, mode: 'app', lastOkAt: null, fingerprint: 'abcd' },
+      ],
+    });
+
+    expect(store.error()).toMatchObject({ status: 200, code: 'contract' });
+    expect(store.unavailable()).toBe(false);
+    expect(store.providers()).toEqual([]);
   });
 
   it('clears the unavailable mark when a retry succeeds', () => {

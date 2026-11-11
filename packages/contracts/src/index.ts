@@ -383,6 +383,10 @@ export {
   providerAccountStateSchema,
   accountDaySchema,
   providerAccountSchema,
+  providerAccountViewSchema,
+  providerViewSchema,
+  providersResponseSchema,
+  parseProvidersResponse,
   parseProvider,
   parseProviderAccount,
 } from './providers.js';
@@ -392,6 +396,9 @@ export type {
   Provider,
   ProviderAccountState,
   ProviderAccount,
+  ProviderAccountView,
+  ProviderView,
+  ProvidersResponse,
 } from './providers.js';
 
 // Config: the CB_* table of docs/providers.md §2–§11.

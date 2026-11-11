@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-112: the settings panel reads the D54 provider body)
+
+- **The provider body has a contract owner.** `packages/contracts/src/providers.ts` gains
+  `providerAccountViewSchema`, `providerViewSchema`, `providersResponseSchema` and
+  `parseProvidersResponse` with their three types, copied verbatim from the daemon's `view()`;
+  the daemon's local `ProviderView`/`ProviderAccountView`/`ProvidersResponse` interfaces are
+  deleted and re-exported from the contract, so `providers/index.ts` does not move.
+- **Settings draws the rows the daemon answers.** One row per provider with `label` and
+  `authKind`, then one row per account with label, state, priority, `usedToday.usd`/`budgetUsd`,
+  `resetAt` and at most four characters of `lastFour`; `credentialId` and the full `lastFour`
+  never reach the DOM, and a provider counts as configured when it has at least one account
+  (`1/2` in the Settings row). The retired `configured`/`mode`/`lastOkAt`/`fingerprint` body is a
+  `contract` error instead of a silent `providers-error`.
+- `docs/api.md` §5.9.1's sample is now the shipped body; `openapi.ts` and its 67-path pin are
+  untouched. Dev `26e58f6`, QA `9b0de4b` (contracts 121/121, the settings and providers specs
+  green, lint and build green). The `[live]` daemon-plus-browser read of `/settings` is a
+  `[live]` criterion unmeasured on this runner and is an `agent-review` issue.
+
 ### Changed — 2026-11-11 (Task-111: rotate a credential from the app)
 
 - **A row can be rotated.** `CredentialsApi.rotateCredential` calls the shipped

@@ -687,7 +687,9 @@ export class SettingsPage {
   readonly preferences: Signal<NotificationPreferences | null> = this.store.preferences;
 
   readonly providerConfigured = computed(
-    () => this.store.providers()?.providers.filter((provider) => provider.configured).length ?? 0,
+    () =>
+      this.store.providers()?.providers.filter((provider) => provider.accounts.length > 0).length ??
+      0,
   );
   readonly providerTotal = computed(() => this.store.providers()?.providers.length ?? 0);
 

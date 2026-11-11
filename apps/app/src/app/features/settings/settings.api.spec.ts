@@ -1,7 +1,14 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import type { Device, Me, NotificationPreferences, Providers, Settings, Version } from '@codebox/contracts';
+import type {
+  Device,
+  Me,
+  NotificationPreferences,
+  ProvidersResponse,
+  Settings,
+  Version,
+} from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { ApiError } from '../../core/api/api-client';
 import { SettingsApi } from './settings.api';
@@ -33,10 +40,32 @@ const SETTINGS: Settings = {
   quietHours: null,
 };
 
-const PROVIDERS: Providers = {
+const PROVIDERS: ProvidersResponse = {
   providers: [
-    { provider: 'github', configured: true, mode: 'app', lastOkAt: null, fingerprint: 'abcd1234' },
-    { provider: 'opencode', configured: false, mode: 'none', lastOkAt: null, fingerprint: null },
+    {
+      id: 'opencode-go',
+      label: 'OpenCode Go',
+      authKind: 'oauth',
+      baseUrl: 'https://opencode.ai',
+      createdAt: TS,
+      updatedAt: TS,
+      accounts: [
+        {
+          id: 'acct_01JABCDEFG',
+          providerId: 'opencode-go',
+          label: 'go · dani',
+          credentialId: 'cred_01JABCDEFG',
+          priority: 1,
+          state: 'active',
+          resetAt: null,
+          budgetUsd: 20,
+          usedToday: { day: '2026-10-28', usd: 2.4 },
+          createdAt: TS,
+          updatedAt: TS,
+          lastFour: 'a91f',
+        },
+      ],
+    },
   ],
 };
 
@@ -138,7 +167,7 @@ describe('SettingsApi', () => {
   });
 
   it('emits null instead of throwing when /v1/providers is missing', () => {
-    let providers: Providers | null = PROVIDERS;
+    let providers: ProvidersResponse | null = PROVIDERS;
     let failure: ApiError | null = null;
     api.providers().subscribe({
       next: (value) => {
@@ -155,14 +184,32 @@ describe('SettingsApi', () => {
     expect(failure).toBeNull();
   });
 
-  it('reads the provider status', () => {
-    let providers: Providers | null = null;
+  it('reads the D54 provider body unchanged', () => {
+    const seen: { value: ProvidersResponse | null } = { value: null };
     api.providers().subscribe((value) => {
-      providers = value;
+      seen.value = value;
     });
     http.expectOne('/v1/providers').flush(PROVIDERS);
 
-    expect(providers).toEqual(PROVIDERS);
+    expect(seen.value).toEqual(PROVIDERS);
+    expect(seen.value?.providers[0]?.accounts[0]?.lastFour).toBe('a91f');
+  });
+
+  it('turns the retired §5.1 provider body into a contract error', () => {
+    let failure: ApiError | null = null;
+    api.providers().subscribe({
+      error: (error: ApiError) => {
+        failure = error;
+      },
+    });
+
+    http.expectOne('/v1/providers').flush({
+      providers: [
+        { provider: 'github', configured: true, mode: 'app', lastOkAt: null, fingerprint: 'abcd' },
+      ],
+    });
+
+    expect(failure).toMatchObject({ status: 200, code: 'contract' });
   });
 
   it('sets the brake with a JSON body and reads the applied state', () => {

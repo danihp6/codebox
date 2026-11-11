@@ -2692,7 +2692,7 @@ view exports). No task holds `package.json`, `package-lock.json`, `tsconfig.base
 Docs are claimed by section only: Task-112 holds `docs/api.md` §5.9.1, and Task-113 does not write
 `docs/api.md` at all. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
 
-- [ ] **[Task-112]** The settings provider panel reads the D54 body (issue #71a, the app half).
+- [x] **[Task-112]** The settings provider panel reads the D54 body (issue #71a, the app half).
       `apps/app/src/app/features/settings/settings.api.ts:63-68` parses `GET /v1/providers` with
       `parseProviders` — the retired §5.1 body
       `{providers:[{provider,configured,mode,lastOkAt,fingerprint}]}`

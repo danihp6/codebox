@@ -3,11 +3,11 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { formatFire } from '../../core/util/time-format';
 import { translate } from './i18n';
 import { ProvidersStore } from './providers.store';
-
-/** docs/app.md §9: a fingerprint is a label, never a secret; four characters is the whole hint. */
-const FINGERPRINT_PREFIX = 4;
+import type { ProviderRow } from './providers.store';
 
 const FALLBACK_TIME_ZONE = 'UTC';
+
+const LAST_FOUR_LIMIT = 4;
 
 @Component({
   selector: 'app-providers-panel',
@@ -31,6 +31,22 @@ const FALLBACK_TIME_ZONE = 'UTC';
         align-items: baseline;
         border-block-end: 1px solid var(--cb-surface);
         padding-block: calc(var(--cb-space) * 2);
+        overflow-wrap: anywhere;
+      }
+      .cb-provider-accounts {
+        display: flex;
+        flex-direction: column;
+        flex-basis: 100%;
+        gap: calc(var(--cb-space) * 2);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .cb-provider-account {
+        display: flex;
+        flex-wrap: wrap;
+        gap: calc(var(--cb-space) * 2);
+        align-items: baseline;
         overflow-wrap: anywhere;
       }
       .cb-muted {
@@ -86,41 +102,68 @@ const FALLBACK_TIME_ZONE = 'UTC';
 
       @if (store.providers().length > 0) {
         <ul class="cb-providers">
-          @for (provider of store.providers(); track provider.provider) {
+          @for (provider of store.providers(); track provider.id) {
             <li
               class="cb-provider"
               data-testid="provider-row"
-              [attr.data-provider]="provider.provider"
-              [attr.data-configured]="provider.configured"
-              [attr.data-mode]="provider.mode"
+              [attr.data-provider]="provider.id"
+              [attr.data-auth-kind]="provider.authKind"
+              [attr.data-accounts]="provider.accounts.length"
             >
-              <span class="cb-mono">{{ provider.provider }}</span>
-              <span>
-                {{
-                  provider.configured
-                    ? t('settings.provider.configured')
-                    : t('settings.provider.missing')
-                }}
-              </span>
-              <span class="cb-muted">
-                {{ t('settings.provider.mode') }}:
-                <span class="cb-mono">{{ provider.mode }}</span>
-              </span>
-              <span class="cb-muted">
-                {{ t('settings.provider.lastOk') }}:
-                @if (provider.lastOkAt; as at) {
-                  <span class="cb-mono" data-testid="provider-last-ok">{{ lastOk(at) }}</span>
-                } @else {
-                  {{ t('settings.provider.never') }}
-                }
-              </span>
-              @if (provider.fingerprint; as fingerprint) {
-                <span class="cb-muted">
-                  {{ t('settings.provider.fingerprint') }}:
-                  <span class="cb-mono" data-testid="provider-fingerprint">
-                    {{ shortFingerprint(fingerprint) }}
-                  </span>
-                </span>
+              <span class="cb-mono" data-testid="provider-label">{{ provider.label }}</span>
+              <span class="cb-muted" data-testid="provider-auth-kind">{{ provider.authKind }}</span>
+              @if (provider.accounts.length === 0) {
+                <p class="cb-muted" data-testid="provider-account-empty">
+                  {{ t('settings.provider.account.empty') }}
+                </p>
+              } @else {
+                <p class="cb-muted" data-testid="provider-accounts-count">
+                  {{ provider.accounts.length }} {{ t('settings.provider.accounts') }}
+                </p>
+                <ul class="cb-provider-accounts">
+                  @for (account of provider.accounts; track account.id) {
+                    <li
+                      class="cb-provider-account"
+                      data-testid="provider-account-row"
+                      [attr.data-account]="account.id"
+                      [attr.data-state]="account.state"
+                      [attr.data-priority]="account.priority"
+                    >
+                      <span data-testid="provider-account-label">{{ account.label }}</span>
+                      <span class="cb-mono" data-testid="provider-account-state">
+                        {{ account.state }}
+                      </span>
+                      <span>
+                        {{ t('settings.provider.account.priority') }}:
+                        <span class="cb-mono" data-testid="provider-account-priority">
+                          {{ account.priority }}
+                        </span>
+                      </span>
+                      <span>
+                        {{ t('settings.provider.account.spend') }}:
+                        <span class="cb-mono" data-testid="provider-account-spend">
+                          {{ spend(account) }}
+                        </span>
+                      </span>
+                      <span>
+                        {{ t('settings.provider.account.reset') }}:
+                        @if (account.resetAt; as at) {
+                          <span class="cb-mono" data-testid="provider-account-reset">
+                            {{ instant(at) }}
+                          </span>
+                        } @else {
+                          {{ t('settings.value.none') }}
+                        }
+                      </span>
+                      <span>
+                        {{ t('settings.provider.account.lastFour') }}:
+                        <span class="cb-mono" data-testid="provider-account-last-four">
+                          {{ shortLastFour(account.lastFour) }}
+                        </span>
+                      </span>
+                    </li>
+                  }
+                </ul>
               }
             </li>
           }
@@ -143,6 +186,11 @@ export class ProvidersPanel {
 
   readonly t: (key: string) => string = (key) => translate(this.i18n.locale(), key);
 
+  readonly spend = (account: ProviderRow['accounts'][number]): string =>
+    account.budgetUsd === null
+      ? `$${account.usedToday.usd.toFixed(2)}`
+      : `$${account.usedToday.usd.toFixed(2)} / $${account.budgetUsd.toFixed(2)}`;
+
   readonly empty = computed(
     () =>
       !this.store.loading() &&
@@ -155,12 +203,12 @@ export class ProvidersPanel {
     this.store.load();
   }
 
-  lastOk(iso: string): string {
+  instant(iso: string): string {
     return formatFire(iso, this.timeZone, this.i18n.locale());
   }
 
-  shortFingerprint(fingerprint: string): string {
-    return fingerprint.slice(0, FINGERPRINT_PREFIX);
+  shortLastFour(value: string): string {
+    return value.slice(0, LAST_FOUR_LIMIT);
   }
 
   close(): void {

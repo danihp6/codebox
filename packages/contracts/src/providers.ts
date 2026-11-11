@@ -26,33 +26,58 @@ export type ProviderAccountState = z.infer<typeof providerAccountStateSchema>;
 /** `usedToday` is the account's own daily rollup; `day` is UTC, `YYYY-MM-DD` (D54 budget). */
 export const accountDaySchema: z.ZodString = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 
-export const providerAccountSchema = z
-  .strictObject({
-    id: ProviderAccountId,
-    providerId: providerIdSchema,
-    label: z.string().min(1).max(80),
-    credentialId: z.string().min(1),
-    priority: z.number().int().min(0),
-    state: providerAccountStateSchema,
-    resetAt: timestampSchema.nullable(),
-    budgetUsd: z.number().nonnegative().nullable(),
-    usedToday: z.strictObject({
-      day: accountDaySchema,
-      usd: z.number().nonnegative(),
-    }),
-    createdAt: timestampSchema,
-    updatedAt: timestampSchema,
-  })
-  .superRefine((value, ctx) => {
-    if (value.state === 'exhausted' && value.resetAt === null) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['resetAt'],
-        message: 'an exhausted account carries the instant it may be used again',
-      });
-    }
-  });
+const providerAccountFields = z.strictObject({
+  id: ProviderAccountId,
+  providerId: providerIdSchema,
+  label: z.string().min(1).max(80),
+  credentialId: z.string().min(1),
+  priority: z.number().int().min(0),
+  state: providerAccountStateSchema,
+  resetAt: timestampSchema.nullable(),
+  budgetUsd: z.number().nonnegative().nullable(),
+  usedToday: z.strictObject({
+    day: accountDaySchema,
+    usd: z.number().nonnegative(),
+  }),
+  createdAt: timestampSchema,
+  updatedAt: timestampSchema,
+});
+
+const exhaustedNeedsReset = (
+  value: { state: string; resetAt: string | null },
+  ctx: z.RefinementCtx,
+): void => {
+  if (value.state === 'exhausted' && value.resetAt === null) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['resetAt'],
+      message: 'an exhausted account carries the instant it may be used again',
+    });
+  }
+};
+
+export const providerAccountSchema = providerAccountFields.superRefine(exhaustedNeedsReset);
 export type ProviderAccount = z.infer<typeof providerAccountSchema>;
+
+/** `GET /v1/providers`: the stored account plus at most the last four characters. */
+export const providerAccountViewSchema = providerAccountFields
+  .extend({ lastFour: z.string() })
+  .superRefine(exhaustedNeedsReset);
+export type ProviderAccountView = z.infer<typeof providerAccountViewSchema>;
+
+export const providerViewSchema = providerSchema.extend({
+  accounts: z.array(providerAccountViewSchema),
+});
+export type ProviderView = z.infer<typeof providerViewSchema>;
+
+export const providersResponseSchema = z.strictObject({
+  providers: z.array(providerViewSchema),
+});
+export type ProvidersResponse = z.infer<typeof providersResponseSchema>;
+
+export function parseProvidersResponse(input: unknown): ProvidersResponse {
+  return parseOrThrow(providersResponseSchema, input, 'providers');
+}
 
 export function parseProvider(input: unknown): Provider {
   return parseOrThrow(providerSchema, input, 'provider');

@@ -1,12 +1,12 @@
 import { DestroyRef, Injectable, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import type { Providers } from '@codebox/contracts';
+import type { ProvidersResponse } from '@codebox/contracts';
 import { finalize } from 'rxjs';
 import type { ApiError } from '../../core/api/api-client';
 import { SettingsApi } from './settings.api';
 
 /** One row of `GET /v1/providers`, derived from the contract, never hand-written. */
-export type ProviderStatus = Providers['providers'][number];
+export type ProviderRow = ProvidersResponse['providers'][number];
 
 /** docs/api.md §5.1: a route this build does not ship is unavailable, not an empty list. */
 const UNAVAILABLE_STATUSES: ReadonlySet<number> = new Set<number>([404, 503]);
@@ -16,7 +16,7 @@ export class ProvidersStore {
   private readonly api = inject(SettingsApi);
   private readonly destroy = inject(DestroyRef);
 
-  readonly providers = signal<readonly ProviderStatus[]>([]);
+  readonly providers = signal<readonly ProviderRow[]>([]);
   readonly unavailable = signal(false);
   readonly loading = signal(true);
   readonly error = signal<ApiError | null>(null);
@@ -37,7 +37,7 @@ export class ProvidersStore {
       });
   }
 
-  private apply(value: Providers | null): void {
+  private apply(value: ProvidersResponse | null): void {
     if (value === null) {
       this.markUnavailable();
       return;

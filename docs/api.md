@@ -817,17 +817,35 @@ characters or the sealed envelope.
 
 ```json
 {
-  "id": "prv_01JABCDEFG",
-  "name": "opencode-go",
-  "authKinds": ["oauth", "token"],
-  "accounts": [
-    { "id": "acc_01J...", "label": "go · dani", "priority": 1, "state": "active",
-      "lastFour": "a91f", "spentTodayUsd": 2.4, "resetAt": null, "lastUsedAt": "2026-10-28T07:12:00Z" },
-    { "id": "acc_01J...", "label": "go · spare", "priority": 2, "state": "exhausted",
-      "lastFour": null, "spentTodayUsd": 0, "resetAt": "2026-10-28T15:00:00Z", "lastUsedAt": null }
+  "providers": [
+    {
+      "id": "opencode-go",
+      "label": "OpenCode Go",
+      "authKind": "oauth",
+      "baseUrl": "https://opencode.ai",
+      "createdAt": "2026-10-27T10:00:00Z",
+      "updatedAt": "2026-10-27T10:00:00Z",
+      "accounts": [
+        { "id": "acct_01JABCDEFG", "providerId": "opencode-go", "label": "go · dani",
+          "credentialId": "cred_01JABCDEFG", "priority": 1, "state": "active",
+          "resetAt": null, "budgetUsd": 20, "usedToday": { "day": "2026-10-28", "usd": 2.4 },
+          "createdAt": "2026-10-27T10:00:00Z", "updatedAt": "2026-10-28T09:12:00Z",
+          "lastFour": "a91f" },
+        { "id": "acct_01JABCDEFH", "providerId": "opencode-go", "label": "go · spare",
+          "credentialId": "cred_01JABCDEFH", "priority": 2, "state": "exhausted",
+          "resetAt": "2026-10-28T15:00:00Z", "budgetUsd": null,
+          "usedToday": { "day": "2026-10-28", "usd": 0 },
+          "createdAt": "2026-10-27T10:00:00Z", "updatedAt": "2026-10-28T09:12:00Z",
+          "lastFour": "b2c3" }
+      ]
+    }
   ]
 }
 ```
+
+Every account row is the stored account plus `lastFour` (at most four characters; `''` when the
+seal is unknown); the value, the sealed envelope and `credentialId`'s secret never cross this
+boundary.
 
 `state` is `active`, `exhausted`, `invalid` or `disabled`; it is written by the daemon from
 classified provider errors (D54), never by a client — a client can only `enabled` an account

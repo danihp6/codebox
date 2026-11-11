@@ -7,7 +7,7 @@ import type {
   Device,
   Me,
   NotificationPreferences,
-  Providers,
+  ProvidersResponse,
   Settings,
   Version,
 } from '@codebox/contracts';
@@ -46,10 +46,41 @@ const SETTINGS: Settings = {
   quietHours: null,
 };
 
-const PROVIDERS: Providers = {
+const PROVIDERS: ProvidersResponse = {
   providers: [
-    { provider: 'github', configured: true, mode: 'app', lastOkAt: null, fingerprint: 'abcd1234' },
-    { provider: 'opencode', configured: false, mode: 'none', lastOkAt: null, fingerprint: null },
+    {
+      id: 'opencode-go',
+      label: 'OpenCode Go',
+      authKind: 'oauth',
+      baseUrl: 'https://opencode.ai',
+      createdAt: TS,
+      updatedAt: TS,
+      accounts: [
+        {
+          id: 'acct_01JABCDEFG',
+          providerId: 'opencode-go',
+          label: 'go · dani',
+          credentialId: 'cred_01JABCDEFG',
+          priority: 1,
+          state: 'active',
+          resetAt: null,
+          budgetUsd: 20,
+          usedToday: { day: '2026-10-28', usd: 2.4 },
+          createdAt: TS,
+          updatedAt: TS,
+          lastFour: 'a91f',
+        },
+      ],
+    },
+    {
+      id: 'anthropic',
+      label: 'Anthropic',
+      authKind: 'token',
+      baseUrl: null,
+      createdAt: TS,
+      updatedAt: TS,
+      accounts: [],
+    },
   ],
 };
 
@@ -99,6 +130,12 @@ const USED_KEYS: readonly string[] = [
   'settings.timezone.save',
   'settings.notifications.open',
   'settings.providers.open',
+  'settings.provider.accounts',
+  'settings.provider.account.empty',
+  'settings.provider.account.priority',
+  'settings.provider.account.spend',
+  'settings.provider.account.reset',
+  'settings.provider.account.lastFour',
   'settings.brake.on',
   'settings.brake.off',
   'settings.brake.confirm',
