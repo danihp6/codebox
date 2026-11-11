@@ -121,14 +121,18 @@ Every function here is deterministic and unit-tested. It does no I/O and knows n
 
 SQLite schema, numbered migrations, repositories. One connection in the daemon; WAL; a
 single writer. Migrations are forward-only SQL files pinned by checksum: `0001_init.sql`
-creates the ten v1 tables below, `0006_works.sql` adds the work model and `0007_providers.sql`
-the provider accounts. Tables:
+creates the ten v1 tables, `0002_routines.sql` the two routine tables, `0003_chat_scope.sql`
+the legacy chat's scope and usage columns, `0004_schedules.sql` the schedule and its fires,
+`0005_chat_free.sql` the twelve-step rebuild that makes `chat_sessions.repo_id` nullable,
+`0006_works.sql` the work model and `0007_providers.sql` the provider accounts. Tables:
 
 | Table | Purpose | Migration |
 | --- | --- | --- |
 | `repos` | Registered repositories and per-repo policy. | `0001_init.sql` |
 | `jobs` | Retired by D44; kept only for the migration history. | `0001_init.sql` |
 | `runs` | One execution: trigger, state, branch, worktree, session, PR, gate, cost. | `0001_init.sql` |
+| `routines` | A chat schedule: `prompt` or `reminder`, cron in an IANA zone, its target and next fire (D38). Retired by D56; the push pump still resolves an existing row. | `0002_routines.sql` |
+| `routine_fires` | One fire per routine; `(routine_id, scheduled_for)` is the idempotency key. | `0002_routines.sql` |
 | `works` | One backlog item: repository, title, prompt, state, backlog ref, origin, attempts. | `0006_works.sql` |
 | `sessions` | A chat with one target (`backlog`/`design`/`schedule`/`work:<id>`/`repo`), its branch and pending proposal. | `0006_works.sql` |
 | `session_messages` | One thread per session; user/assistant/tool messages. | `0006_works.sql` |
