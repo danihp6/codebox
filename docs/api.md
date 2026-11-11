@@ -168,7 +168,7 @@ retained for 24 h.
 | `GET` | `/v1/health` | none | `{ status, db, opencode, disk, queue, version }` — no secrets, no paths. |
 | `GET` | `/v1/version` | none | `{ version, commit, builtAt, node, instance }`. |
 | `GET` | `/v1/telemetry?range=24h` | `read` | Spend, runs, failures, disk, queue depth. |
-| `GET` | `/v1/providers` | `read` | Per provider: `configured`, `mode`, `lastOkAt`, `fingerprint`. |
+| `GET` | `/v1/providers` | `read` | Providers with their accounts, states, priorities and spend today (D54; §5.9.1). |
 | `POST` | `/v1/admin/brake` | `admin` | `{ enabled }` — the global auto-merge brake. |
 | `POST` | `/v1/admin/cache/wipe` | `admin` | Removes finished worktrees; keeps the bare clones. |
 

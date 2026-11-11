@@ -20,6 +20,7 @@ not exist. No I/O, no logger, no `Date.now()`; `zod` is the only runtime depende
 - `errors.ts` — the `docs/api.md` §3 error envelope and its status map.
 - `pagination.ts` — the §4 limits, the page envelope and the idempotent routes.
 - `resources.ts` — every resource of `docs/api.md` §5 with one `parse*` helper each.
+- `credentials.ts` — §5.9: the credential summary (kind, expose, metadata only) and `parseCredentialSummary`.
 - `works.ts` — §5.6/§5.6.1/§5.10: the parsed backlog, `Work`, `Session`, `SessionMessage` and the repository schedule.
 - `design.ts` — §5.2: the design preview at a commit, its tokens, routes, declared states, findings and `parseDesignPreview`.
 - `design.test.ts` — the preview fixture round-trip and each refused shape: revision, rule, line, snapshot hash and unknown key.

@@ -109,10 +109,22 @@ export {
   pageOfSession,
   pageOfSessionMessage,
   pageOfRepoSchedule,
+  pageOfCredentialSummary,
   parsePage,
   IDEMPOTENT_ROUTES,
 } from './pagination.js';
 export type { PaginationQuery, Page } from './pagination.js';
+
+// Credentials: docs/api.md §5.9.
+export {
+  CREDENTIAL_EXPOSES,
+  CREDENTIAL_KINDS,
+  credentialExposeSchema,
+  credentialKindSchema,
+  credentialSummarySchema,
+  parseCredentialSummary,
+} from './credentials.js';
+export type { CredentialExpose, CredentialKind, CredentialSummary } from './credentials.js';
 
 // Resources: docs/api.md §5.
 export {

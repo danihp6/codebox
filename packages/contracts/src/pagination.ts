@@ -1,4 +1,6 @@
 import { z } from 'zod';
+import { credentialSummarySchema } from './credentials.js';
+import type { CredentialSummary } from './credentials.js';
 import { parseOrThrow } from './parse.js';
 import {
   approvalSchema,
@@ -54,6 +56,8 @@ export const pageOfSession: z.ZodType<Page<Session>> = pageSchema(sessionSchema)
 export const pageOfSessionMessage: z.ZodType<Page<SessionMessage>> =
   pageSchema(sessionMessageSchema);
 export const pageOfRepoSchedule: z.ZodType<Page<RepoSchedule>> = pageSchema(repoScheduleSchema);
+export const pageOfCredentialSummary: z.ZodType<Page<CredentialSummary>> =
+  pageSchema(credentialSummarySchema);
 
 export function parsePage<T>(item: z.ZodType<T>, input: unknown, boundary: string): Page<T> {
   return parseOrThrow(pageSchema(item), input, boundary);

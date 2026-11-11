@@ -6,6 +6,21 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-109: `cb doctor` reads the credentials surface)
+
+- **The GitHub check stops parsing a retired body.** `cb doctor` reads `GET /v1/credentials`
+  instead of `GET /v1/providers`, so it no longer answers `invalid daemon response`/exit 3
+  against the D54 provider list: a configured `github_app` credential reports `ok configured
+  (github_app)`, none reports `warn not configured`, and a 404 keeps `skip missing_route`. The
+  eight checks keep their names and order, and the exit codes and `--json` line do not move.
+- **The credentials body has a contract owner.** New `packages/contracts/src/credentials.ts`
+  (`credentialSummarySchema`, `parseCredentialSummary`) and `pageOfCredentialSummary` in
+  `pagination.ts`; the CLI imports them from `@codebox/contracts`, so the guard that forbids any
+  `..` specifier in `apps/daemon/src/cli/**` stays true. The daemon's `publicCredentialSchema`
+  and the app's `Credential` interface are untouched; adopting the schema is a later task.
+- `docs/api.md` §5.1's `GET /v1/providers` row now describes the D54 body. Dev `054932a`, QA
+  `022bfac` (52/52 named, including the CLI import guard; lint and build green).
+
 ### Changed — 2026-11-11 (Task-108: the schedules in the generated document)
 
 - **Seven operations, four paths.** `buildOpenApiDocument()` now carries `GET/POST

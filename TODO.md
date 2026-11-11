@@ -2551,7 +2551,7 @@ credential summary's named exports, forced by the CLI's no-`..` guard). No task 
       same paths and every `$ref` resolves; `[unit]` the seven `operationId`s are
       `listSchedules`, `createSchedule`, `getSchedule`, `updateSchedule`, `deleteSchedule`,
       `pauseSchedule`, `resumeSchedule`; `[unit]` lint and the contracts build pass.
-- [ ] **[Task-109]** `cb doctor` stops failing its `github` check (issue #71a).
+- [x] **[Task-109]** `cb doctor` stops failing its `github` check (issue #71a).
       `apps/daemon/src/cli/doctor.ts:136-143` parses the retired §5.1 body
       (`{ providers: [{ provider, configured, mode, lastOkAt, fingerprint }] }`) from
       `GET /v1/providers`, but the daemon answers the D54 shape
