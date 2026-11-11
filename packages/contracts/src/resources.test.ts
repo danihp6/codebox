@@ -16,7 +16,6 @@ import {
   parseJob,
   parseMe,
   parseNotificationPreferences,
-  parseProviders,
   parsePushSubscription,
   parseRepo,
   parseRepoDetail,
@@ -245,22 +244,6 @@ const fixtures: ReadonlyArray<{
     parse: parseTelemetry,
   },
   {
-    name: 'Providers',
-    fixture: {
-      providers: [
-        {
-          provider: 'github',
-          configured: true,
-          mode: 'app',
-          lastOkAt: ts,
-          fingerprint: '…a1b2',
-        },
-        { provider: 'push', configured: false, mode: 'none', lastOkAt: null, fingerprint: null },
-      ],
-    },
-    parse: parseProviders,
-  },
-  {
     name: 'Settings',
     fixture: {
       automerge: true,
@@ -326,7 +309,6 @@ const documentedResources = [
   'Health',
   'Version',
   'Telemetry',
-  'Providers',
   'Settings',
   'NotificationPreferences',
   'PushSubscription',
@@ -594,8 +576,6 @@ function boundaryOf(name: string): string {
       return 'version';
     case 'Telemetry':
       return 'telemetry';
-    case 'Providers':
-      return 'providers';
     case 'Settings':
       return 'settings';
     case 'NotificationPreferences':

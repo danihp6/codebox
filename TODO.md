@@ -2837,7 +2837,7 @@ holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angul
 Task-115 holds `docs/app.md` §11–§12 and Task-116 holds `docs/architecture.md` §2; no other task
 writes either file. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
 
-- [ ] **[Task-114]** The generated document stops describing the retired provider body. `GET
+- [x] **[Task-114]** The generated document stops describing the retired provider body. `GET
       /v1/providers` is the retired §5.1 shape in `packages/contracts/src/openapi.ts:433-441`
       (`Providers`, "configured, mode, last success and fingerprint", tag `health`) and
       `:913-914` registers `ProviderStatus`/`Providers` from `resources.ts:79-92`, although

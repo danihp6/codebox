@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { Health, Job, Providers, Run, Settings, Telemetry } from '@codebox/contracts';
+import type { Health, Job, Run, Settings, Telemetry } from '@codebox/contracts';
 import { idempotencyKeySchema } from '@codebox/contracts';
 import { BACKUP_SCRIPT, UPGRADE_SCRIPT } from './commands.js';
 import type { CommandRunner } from './commands.js';
@@ -75,12 +75,6 @@ const TELEMETRY: Telemetry = {
   runs: { total: 3, succeeded: 2, failed: 1, cancelled: 0 },
   disk: HEALTH.disk,
   queueDepth: 0,
-};
-
-const PROVIDERS: Providers = {
-  providers: [
-    { provider: 'github', configured: true, mode: 'app', lastOkAt: null, fingerprint: '1234' },
-  ],
 };
 
 const EVENTS: readonly unknown[] = [
@@ -174,7 +168,6 @@ function successRoutes(): Record<string, CliResponse | (() => CliResponse)> {
     'POST /v1/jobs/job_ABC123/resume': { status: 200, body: JOB },
     'POST /v1/admin/brake': { status: 200, body: { enabled: true } },
     'POST /v1/runs/run_ABC123/revert': { status: 202, body: RUN },
-    'GET /v1/providers': { status: 200, body: PROVIDERS },
     'GET /v1/telemetry': { status: 200, body: TELEMETRY },
   };
 }
@@ -675,7 +668,6 @@ describe('never prints a token', () => {
       if (request.path === '/v1/jobs/job_ABC123/run') return { status: 202, body: RUN };
       if (request.path === '/v1/jobs/job_ABC123/pause') return { status: 200, body: JOB };
       if (request.path === '/v1/runs/run_ABC123/revert') return { status: 202, body: RUN };
-      if (request.path === '/v1/providers') return { status: 200, body: PROVIDERS };
       if (request.path === '/v1/telemetry') return { status: 200, body: TELEMETRY };
       return NOT_FOUND;
     },

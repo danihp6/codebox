@@ -136,10 +136,6 @@ export {
   TELEMETRY_RANGES,
   telemetryRangeSchema,
   telemetrySchema,
-  providerNameSchema,
-  providerModeSchema,
-  providerStatusSchema,
-  providersSchema,
   brakeSchema,
   repoSchema,
   repoDetailSchema,
@@ -199,7 +195,6 @@ export {
   parseHealth,
   parseVersion,
   parseTelemetry,
-  parseProviders,
   parseSettings,
   parseNotificationPreferences,
   parsePushSubscription,
@@ -231,7 +226,6 @@ export type {
   Health,
   Version,
   Telemetry,
-  Providers,
   Brake,
 } from './resources.js';
 

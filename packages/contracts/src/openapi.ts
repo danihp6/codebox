@@ -4,7 +4,11 @@ import { credentialSummarySchema } from './credentials.js';
 import { errorEnvelopeSchema } from './errors.js';
 import { sseEventSchema } from './events.js';
 import {
+  pageOfApproval,
   pageOfCredentialSummary,
+  pageOfDevice,
+  pageOfJob,
+  pageOfRepo,
   pageOfRepoSchedule,
   pageOfRun,
   pageOfSession,
@@ -12,7 +16,11 @@ import {
   pageOfWork,
 } from './pagination.js';
 import { designPreviewSchema } from './design.js';
-import { providerAccountSchema, providerAccountStateSchema } from './providers.js';
+import {
+  providerAccountStateSchema,
+  providerAccountViewSchema,
+  providersResponseSchema,
+} from './providers.js';
 import { routineSchema } from './routines.js';
 import {
   backlogSchema,
@@ -33,8 +41,6 @@ import {
   jobSchema,
   meSchema,
   notificationPreferencesSchema,
-  providerStatusSchema,
-  providersSchema,
   pushSubscriptionSchema,
   repoDetailSchema,
   repoSchema,
@@ -113,7 +119,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'The approval inbox.',
     tag: 'approvals',
     status: '200',
-    response: 'Page',
+    response: 'ApprovalPage',
   },
   {
     path: '/v1/approvals/{id}',
@@ -194,7 +200,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Paired devices, last seen and scopes.',
     tag: 'auth',
     status: '200',
-    response: 'Page',
+    response: 'DevicePage',
   },
   {
     path: '/v1/devices/{id}',
@@ -284,7 +290,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Jobs with their next fire.',
     tag: 'jobs',
     status: '200',
-    response: 'Page',
+    response: 'JobPage',
   },
   {
     path: '/v1/jobs',
@@ -410,7 +416,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Label, priority, enabled state and budget of one account.',
     tag: 'providers',
     status: '200',
-    response: 'ProviderAccount',
+    response: 'ProviderAccountView',
   },
   {
     path: '/v1/provider-accounts/{id}',
@@ -434,10 +440,10 @@ const ROUTES: readonly RouteSpec[] = [
     path: '/v1/providers',
     method: 'get',
     operationId: 'getProviders',
-    summary: 'Per provider: configured, mode, last success and fingerprint.',
-    tag: 'health',
+    summary: 'Providers with their accounts, states, priorities and spend today.',
+    tag: 'providers',
     status: '200',
-    response: 'Providers',
+    response: 'ProvidersResponse',
   },
   {
     path: '/v1/providers/{id}/accounts',
@@ -446,7 +452,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Seal a token as a new account of the provider.',
     tag: 'providers',
     status: '201',
-    response: 'ProviderAccount',
+    response: 'ProviderAccountView',
   },
   {
     path: '/v1/providers/{id}/oauth/complete',
@@ -455,7 +461,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Exchange the code for the account; a replay is 422 state_invalid.',
     tag: 'providers',
     status: '201',
-    response: 'ProviderAccount',
+    response: 'ProviderAccountView',
   },
   {
     path: '/v1/providers/{id}/oauth/start',
@@ -491,7 +497,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Registered repositories.',
     tag: 'repos',
     status: '200',
-    response: 'Page',
+    response: 'RepoPage',
   },
   {
     path: '/v1/repos',
@@ -910,8 +916,7 @@ const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
   Health: healthSchema,
   Version: versionSchema,
   Telemetry: telemetrySchema,
-  ProviderStatus: providerStatusSchema,
-  Providers: providersSchema,
+  ProvidersResponse: providersResponseSchema,
   PushSubscription: pushSubscriptionSchema,
   Settings: settingsSchema,
   NotificationPreferences: notificationPreferencesSchema,
@@ -930,7 +935,11 @@ const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
   WorkPage: pageOfWork,
   SessionPage: pageOfSession,
   SessionMessagePage: pageOfSessionMessage,
-  ProviderAccount: providerAccountSchema,
+  RepoPage: pageOfRepo,
+  JobPage: pageOfJob,
+  ApprovalPage: pageOfApproval,
+  DevicePage: pageOfDevice,
+  ProviderAccountView: providerAccountViewSchema,
   ProviderOauthStart: providerOauthStartSchema,
   ProviderAccountTest: providerAccountTestSchema,
   CredentialSummary: credentialSummarySchema,
@@ -1100,14 +1109,12 @@ export function buildOpenApiDocument(): OpenApiDocument {
       { name: 'admin', description: 'Admin-only brake and cache controls.' },
       { name: 'approvals', description: 'Permission requests.' },
       { name: 'auth', description: 'Pairing, tokens and devices.' },
-      { name: 'chat', description: 'Persistent chat sessions.' },
       { name: 'credentials', description: 'Runtime credentials and outbound integrations.' },
       { name: 'events', description: 'The SSE stream of docs/api.md §6.' },
       { name: 'health', description: 'Health, version and telemetry.' },
       { name: 'jobs', description: 'Saved intentions and their schedule.' },
       { name: 'providers', description: 'Provider adapters and their failover accounts (D54).' },
       { name: 'repos', description: 'Registered repositories.' },
-      { name: 'routines', description: 'Chat schedules: reminders and prompts.' },
       { name: 'runs', description: 'Executions, gate, PR and guardrails.' },
       { name: 'schedules', description: 'A repository recurrence (D56); no work and no prompt.' },
       { name: 'sessions', description: 'Editor sessions with one target.' },

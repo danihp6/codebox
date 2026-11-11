@@ -6,6 +6,23 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-114: the document stops describing the retired provider body)
+
+- **The document says what the daemon answers.** `GET /v1/providers` is `ProvidersResponse`
+  under the `providers` tag with the D54 summary; the three provider-account writes `$ref`
+  `ProviderAccountView`, which carries `lastFour`; repositories, jobs, approvals and devices
+  `$ref` their own `RepoPage`/`JobPage`/`ApprovalPage`/`DevicePage` instead of borrowing the page
+  of runs, while `listRuns` keeps `Page`.
+- **The retired §5.1 shape is gone.** `providerNameSchema`, `providerModeSchema`,
+  `providerStatusSchema`, `providersSchema`, the `Providers` type and `parseProviders` are
+  deleted with their six exports, the four `openapi.ts` components they fed are removed, the two
+  tags no operation carried (`chat`, `routines`) go with them, and the CLI's dead
+  `GET /v1/providers` fixture is deleted. The path pin stays **67**; `listRunEvents` keeps `Page`
+  until a run-event schema exists.
+- Dev `925da81`, QA `be67ecb`: contracts 123/123, CLI 90/90, lint and build green. The item's two
+  greps were unsatisfiable against the source it also mandated and are narrowed in the item and
+  the spec (retired schema tokens; `openapi.ts` only).
+
 ### Changed — 2026-11-11 (Task-113: one owner for the credential body)
 
 - **The daemon stops hand-rolling the body.** `publicCredentialSchema`/`PublicCredential` and the
