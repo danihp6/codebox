@@ -53,6 +53,15 @@ const CRON_FALLBACK = '0 9 * * 1-5';
 const WINDOW_START_FALLBACK = '09:00';
 const WINDOW_END_FALLBACK = '17:00';
 
+const FOCUSABLE_SELECTOR = [
+  'a[href]',
+  'button:not([disabled])',
+  'input:not([disabled])',
+  'select:not([disabled])',
+  'textarea:not([disabled])',
+  '[tabindex]:not([tabindex="-1"])',
+].join(', ');
+
 /** A stored schedule → the editable draft. Missing values fall back to the create defaults. */
 export function scheduleFields(schedule: RepoSchedule): ScheduleFields {
   return {
@@ -379,6 +388,7 @@ function readMaxCost(text: string): number | null {
   ],
   template: `
     <section
+      #sheet
       class="cb-schedule-overlay"
       data-testid="schedule-sheet"
       role="dialog"
@@ -610,6 +620,7 @@ export class ScheduleSheet implements AfterViewInit, OnDestroy {
   readonly revealing = signal(false);
 
   private readonly closeButton = viewChild<ElementRef<HTMLButtonElement>>('closeButton');
+  private readonly sheet = viewChild<ElementRef<HTMLElement>>('sheet');
   private readonly i18n = inject(I18nService);
   private readonly document = inject(DOCUMENT);
   private dismissed = false;
@@ -637,8 +648,38 @@ export class ScheduleSheet implements AfterViewInit, OnDestroy {
       : `${label} · ${formatted} · ${left} ${this.t('scheduleSheet.left')}`;
   });
 
+  /** The dialog's own focusables, in document order; anything marked hidden is skipped. */
+  private focusables(): HTMLElement[] {
+    const root = this.sheet()?.nativeElement;
+    if (root === undefined) return [];
+    return [...root.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)].filter(
+      (element) => element.closest('[aria-hidden="true"]') === null,
+    );
+  }
+
   private readonly onKeydown = (event: KeyboardEvent): void => {
-    if (event.key === 'Escape') this.close();
+    if (event.key === 'Escape') {
+      this.close();
+      return;
+    }
+    if (event.key !== 'Tab') return;
+    const items = this.focusables();
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (first === undefined || last === undefined) return;
+    const active = this.document.activeElement;
+    const inside = active instanceof HTMLElement && items.includes(active);
+    if (event.shiftKey) {
+      if (!inside || active === first) {
+        event.preventDefault();
+        last.focus();
+      }
+      return;
+    }
+    if (!inside || active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   };
 
   constructor() {
