@@ -66,6 +66,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 27 | The gate stops reporting (D57 retired) | 105 | 1 |
 | 28 | The operator's runtime stop | 106 | 1 |
 | 29 | The repository schedule the daemon reads (D56) | 107 | 1 |
+| 30 | Measured debts: OpenAPI, doctor, store, rotate | 108–111 | 4 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -645,6 +646,39 @@ amendment); no task holds `package.json`, `package-lock.json`, `tsconfig.base.js
 `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md` or `CHANGELOG.md`. The three empty slots have no legal candidate: Task-31 is `[!]` (#105) and
 Task-32 waits behind it, L1/L3/L4 are operator items, and issues #75 and #110 are decisions
 about wording and the cycle's own trace, not code.
+
+**Cut — cycle 2026-11-11, after Task-107 (four of four slots used).** No task branch was alive
+(`git ls-remote origin 'refs/heads/task-*'` prints nothing) and `main` was `53313cf`. The driver
+queue is dry: Task-32 waits on the blocked Task-31 (#105), and L1, L3 and L4 are operator items.
+Four measured code debts shipped with no owner, and all four are legal now — no unmerged
+dependency, disjoint paths, and the batch's one hot file has one holder. **Task-108** is the
+OpenAPI document missing the seven
+`/v1/schedules` routes `apps/daemon/src/schedules/routes.ts:84-158` mounts while
+`openapi.test.ts:114` pins 63 paths. **Task-109** is `cb doctor`'s `github` check parsing the
+retired §5.1 provider body from `GET /v1/providers` (`apps/daemon/src/cli/doctor.ts:136-143`,
+issue #71a), while the daemon answers the D54 shape and the GitHub App is a `github_app`
+credential, not an integration row. The CLI's guard
+(`apps/daemon/src/cli/commands.test.ts:500-533`) forbids a `..` specifier under
+`apps/daemon/src/cli/**`, so the fix adds the credential summary the API never had in
+`packages/contracts` (`credentials.ts`, `pageOfCredentialSummary`) and the CLI reads it from
+`@codebox/contracts`. **Task-110** is `ProviderAccountRepository` missing `delete`
+(`packages/store/src/providers.ts:29-38`), which is why
+`apps/daemon/src/providers/service.ts:161-163` prepares SQL in the daemon (issue #71b).
+**Task-111** is `CredentialsApi` missing `rotate` while `POST /v1/credentials/{id}/rotate` is
+documented and shipped (`apps/daemon/src/credentials/routes.ts:43`), so the app still tells the
+operator to add it again and delete the old row (`i18n.ts`, `credentials.writeOnly.rotate`).
+**Hot-file holders in this cut:** Task-109 holds `packages/contracts/src/index.ts` (the
+credential summary's named exports; the CLI's no-`..` guard makes the contract the only legal
+owner). No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`,
+`apps/app/angular.json`, `apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`,
+`apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or
+`docs/decisions.md`. Docs are claimed by section only: Task-108 holds `docs/api.md` §5.10 and
+Task-109 holds §5.1; `apps/app/README.md` has one writer, Task-111, for its own
+`features/credentials` lines. The four slots are full, so no empty slot exists: 108–111 are the
+batch and nothing else on the queue is eligible. **One correction to the brief, recorded:** the
+expected "not in the generated document" sentence is not in §5.10 — it is §5.6's
+`POST /v1/repos/{id}/run-next` bullet, and it stays true because that path is still outside
+`openapi.ts`.
 
 ### Screens awaiting the prototype
 
@@ -2473,6 +2507,129 @@ detail schema export) and `docs/decisions.md` (a D56 amendment). No task holds `
       lint and build green; the root `npm test` still cannot run on this Windows host). One
       out-of-spec file is fixture-only: `repo-backlog.page.spec.ts`. Issue #79 closes; the
       `[live]` box flow is issue #131.
+
+---
+
+## Batch 30 — Measured debts: OpenAPI, doctor, store, rotate
+
+Cut 2026-11-11 from `main` at `53313cf`. Four debts that already shipped with no owner, each
+written down where it hurts: the generated document stops at 63 paths although the daemon mounts
+seven schedule routes; `cb doctor` fails its GitHub check against a body the daemon retired with
+D54; the store has no provider-account delete, so the daemon prepares SQL (issue #71b); and the
+app has no rotate call although the daemon ships the endpoint, so its own copy tells the
+operator to delete and re-add. None draws a screen and none reads a frame that does not exist,
+so none waits for the design track.
+
+**Hot-file holders in this batch:** Task-109 holds `packages/contracts/src/index.ts` (the
+credential summary's named exports, forced by the CLI's no-`..` guard). No task holds
+`package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`opencode.json`, `TODO.md`, `CHANGELOG.md` or `docs/decisions.md`. Task-108 holds `docs/api.md`
+§5.10 and Task-109 holds §5.1; Task-111 alone writes `apps/app/README.md`, for its own
+`features/credentials` lines. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
+
+- [ ] **[Task-108]** The OpenAPI document describes the seven schedule routes.
+      `apps/daemon/src/schedules/routes.ts:84-158` mounts `GET/POST /v1/schedules`,
+      `GET/PATCH/DELETE /v1/schedules/{id}`, `POST /v1/schedules/{id}/pause` and
+      `POST /v1/schedules/{id}/resume`; `docs/api.md` §5.10 documents them as bullets and
+      `packages/contracts/src/openapi.ts` has no schedule path, so the executable contract stops
+      at the 63 paths `openapi.test.ts:114` pins while Task-107's D56 surface is absent from the
+      generated document. Add the seven operations with their statuses and the three components
+      they need (`RepoSchedule`, `RepoScheduleDetail`, `RepoSchedulePage`) plus the `schedules`
+      tag, turn §5.10's seven bullets into the `Method | Path` table the documents test reads,
+      and pin **67** paths (seven operations, four unique paths — `/v1/schedules`,
+      `/v1/schedules/{id}`, `…/{id}/pause`, `…/{id}/resume` — so `63 + 4`) with a test that
+      names the seven operation ids.
+      *Paths:* `packages/contracts/src/openapi.ts`, `packages/contracts/src/openapi.test.ts`,
+      `docs/api.md` §5.10.
+      *Dependencies:* none — Task-107 already exported `repoScheduleSchema`,
+      `pageOfRepoSchedule` and `repoScheduleDetailSchema`, and the routes already ship.
+      *Acceptance:* `[unit]` `buildOpenApiDocument()` has 67 paths (seven operations, four
+      unique paths, so `63 + 4`) and the seven schedule
+      operations with `200/201/200/200/204/200/200` and the matching `RepoSchedulePage`,
+      `RepoSchedule`, `RepoScheduleDetail` refs; `[unit]` `docsPaths()` and the document name the
+      same paths and every `$ref` resolves; `[unit]` the seven `operationId`s are
+      `listSchedules`, `createSchedule`, `getSchedule`, `updateSchedule`, `deleteSchedule`,
+      `pauseSchedule`, `resumeSchedule`; `[unit]` lint and the contracts build pass.
+- [ ] **[Task-109]** `cb doctor` stops failing its `github` check (issue #71a).
+      `apps/daemon/src/cli/doctor.ts:136-143` parses the retired §5.1 body
+      (`{ providers: [{ provider, configured, mode, lastOkAt, fingerprint }] }`) from
+      `GET /v1/providers`, but the daemon answers the D54 shape
+      (`apps/daemon/src/providers/service.ts:43-45`: providers with accounts), so a healthy box
+      becomes `bad_response` and exit 3. The GitHub App is a `github_app` credential created by
+      the manifest flow (`apps/daemon/src/integrations/service.ts:363-371`), not an integration
+      row: the check reads `GET /v1/credentials` (the §5.9 page), reports `ok
+      configured (github_app)` when a `github_app` credential has `configured: true`, `warn
+      not configured` when none does, and `skip missing_route` on a 404 from an older daemon.
+      The CLI's import guard (`apps/daemon/src/cli/commands.test.ts:500-533`) allows no `..`
+      specifier, so the credential summary becomes a contract fact:
+      `packages/contracts/src/credentials.ts` (`credentialSummarySchema`,
+      `parseCredentialSummary`) plus `pageOfCredentialSummary` in `pagination.ts`, exported from
+      `index.ts`. Correct §5.1's false `/v1/providers` row; leave §5.9.1, the daemon's
+      `publicCredentialSchema` and the app's `Credential` interface alone.
+      *Paths:* `packages/contracts/src/credentials.ts`,
+      `packages/contracts/src/credentials.test.ts`, `packages/contracts/src/pagination.ts`,
+      `packages/contracts/src/index.ts` (hot file), `packages/contracts/README.md` (its
+      `credentials.ts` line), `apps/daemon/src/cli/doctor.ts`,
+      `apps/daemon/src/cli/doctor.test.ts`, `docs/api.md` §5.1.
+      *Dependencies:* none — `GET /v1/credentials` and its page already ship.
+      *Acceptance:* `[unit]` the new schema parses a valid summary and rejects an unknown key or
+      wrong `kind` at boundary `credential`; `[unit]` a configured `github_app` credential
+      yields `ok configured (github_app)` and the doctor never requests `/v1/providers`;
+      `[unit]` an unconfigured or absent one yields `warn not configured` and a 404 yields
+      `skip missing_route`, both with `ok: true`; `[unit]` the eight checks keep their order and
+      a healthy box still exits 0; `[unit]` the CLI import guard is green (no `..` specifier);
+      `[unit]` §5.1's row names the D54 accounts shape; `[unit]` lint and the named suites pass.
+- [ ] **[Task-110]** The store owns the provider-account delete (issue #71b).
+      `packages/store/src/providers.ts:29-38` (`ProviderAccountRepository`) has
+      `get/list/create/update/selectActive/listDueResets` but no `delete`, so
+      `apps/daemon/src/providers/service.ts:161-163` prepares
+      `DELETE FROM provider_accounts WHERE id = ?` in the daemon. Add `delete(id: string): void`
+      to the interface and the SQLite implementation with the house
+      `StoreError('not_found', …)` discipline (`repos.ts:155-169`, `schedules.ts:260-263`),
+      and call it from `removeAccount` in place of the prepared statement. The route must keep
+      today's behaviour: `204`, `404 providerAccount.id` for a missing id, `409
+      no_active_account` for the last active account, row deleted before its credential.
+      *Paths:* `packages/store/src/providers.ts`, `packages/store/src/providers.test.ts`,
+      `apps/daemon/src/providers/service.ts`, `apps/daemon/src/providers/service.test.ts`.
+      *Dependencies:* none — the table and every reader exist; no migration.
+      *Acceptance:* `[unit]` `delete` removes the row and maps a second delete to `not_found`;
+      `[unit]` `removeAccount` still removes a non-active account and its credential, still
+      refuses the last active account with `409 no_active_account`, and still answers `404` for
+      a missing id; `[unit]` `service.ts` no longer contains `store.db.prepare` or
+      `DELETE FROM provider_accounts`; `[unit]` lint and the two named suites pass.
+- [ ] **[Task-111]** The app can rotate a credential. The daemon ships
+      `POST /v1/credentials/{id}/rotate` (`apps/daemon/src/credentials/routes.ts:43`, strict
+      `{ value }`, `200` with the public credential, `503 secrets_not_configured`, never the
+      value), but `apps/app/src/app/features/credentials/credentials.api.ts` has no rotate call
+      and `i18n.ts:23`/`:94` tells the user to add it again and delete the old row
+      (`credentials.writeOnly.rotate`), which `credentials.page.ts:592-594` renders. Add
+      `rotateCredential(id, body)` with the `createCredential` parse/catchError path, a per-row
+      Rotate action that reopens the existing add sheet in rotate mode (name, kind and exposure
+      read-only from the credential; value empty; the same review step), a single rotate call
+      followed by the catalog reload, and replace the workaround copy in EN and ES. The
+      prototype draws no rotate action, so the action reuses sheet `19 · Add credential` and
+      adds no route, screen or frame.
+      *Paths:* `apps/app/src/app/features/credentials/credentials.api.ts`,
+      `apps/app/src/app/features/credentials/credentials.api.spec.ts`,
+      `apps/app/src/app/features/credentials/credentials.store.ts`,
+      `apps/app/src/app/features/credentials/credentials.store.spec.ts`,
+      `apps/app/src/app/features/credentials/add-credential.sheet.ts`,
+      `apps/app/src/app/features/credentials/add-credential.sheet.spec.ts`,
+      `apps/app/src/app/features/credentials/credentials.page.ts`,
+      `apps/app/src/app/features/credentials/credentials.page.spec.ts`,
+      `apps/app/src/app/features/credentials/i18n.ts`, `apps/app/README.md` (its own
+      `features/credentials` lines only).
+      *Dependencies:* none — the endpoint and `parseCredential` already exist.
+      *Acceptance:* `[unit]` `POST /v1/credentials/{id}/rotate` is called once with `{ value }`
+      and its `200` parses as `Credential`; `[unit]` the sheet's rotate mode shows the stored
+      name/kind/exposure read-only, an empty value and the add flow's review, and emits
+      `{ value }` and never `saved`; `[unit]` the page's Rotate action opens the sheet for that
+      row, the save reloads the catalog and the sentinel never reaches the DOM; `[unit]` note 2
+      carries the new copy in both locales, the dictionaries share one key set, and
+      `readme.spec.ts` passes; `[unit]` lint and build pass; `[live]` the rotate flow next to
+      frame `19` at 390 × 844 — unmeasured on this runner (no browser, no sheet export),
+      handed to an `agent-review` issue.
 
 ---
 
