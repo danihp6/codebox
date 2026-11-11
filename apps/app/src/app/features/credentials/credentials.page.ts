@@ -15,7 +15,12 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { AddCredentialSheet } from './add-credential.sheet';
 import { ConnectServiceSheet } from './connect-service.sheet';
 import { CredentialsApi } from './credentials.api';
-import type { CreateCredentialBody, CreateIntegrationBody, Credential } from './credentials.api';
+import type {
+  CreateCredentialBody,
+  CreateIntegrationBody,
+  Credential,
+  RotateCredentialBody,
+} from './credentials.api';
 import { CredentialsStore } from './credentials.store';
 import { translate } from './i18n';
 
@@ -317,7 +322,8 @@ import { translate } from './i18n';
       }
       .cb-cred-delete,
       .cb-cred-delete-confirm,
-      .cb-cred-delete-cancel {
+      .cb-cred-delete-cancel,
+      .cb-cred-rotate {
         min-block-size: 32px;
         padding-inline: 6px;
         border: 0;
@@ -334,6 +340,9 @@ import { translate } from './i18n';
       }
       .cb-cred-delete-cancel {
         color: var(--cb-muted);
+      }
+      .cb-cred-rotate {
+        color: var(--cb-accent);
       }
       .cb-cred-confirm {
         display: flex;
@@ -530,6 +539,14 @@ import { translate } from './i18n';
                     [attr.data-expose]="credential.expose"
                     >{{ credential.expose }}</span
                   >
+                  <button
+                    type="button"
+                    class="cb-cred-rotate"
+                    data-testid="credential-rotate"
+                    (click)="askRotate(credential)"
+                  >
+                    {{ t('credentials.action.rotate') }}
+                  </button>
                   @if (confirming() === credential.id) {
                     <div class="cb-cred-confirm" data-testid="credential-delete-confirm-block">
                       <button
@@ -571,7 +588,7 @@ import { translate } from './i18n';
             type="button"
             class="cb-cred-action cb-cred-action-primary"
             data-testid="credentials-add-open"
-            (click)="adding.set(true)"
+            (click)="openAdd()"
           >
             {{ t('credentials.action.addOpen') }}
           </button>
@@ -610,6 +627,15 @@ import { translate } from './i18n';
             (closed)="adding.set(false)"
           />
         }
+
+        @if (rotating(); as target) {
+          <app-add-credential-sheet
+            [credential]="target"
+            [saving]="store.saving()"
+            (rotated)="rotate($event)"
+            (closed)="rotating.set(null)"
+          />
+        }
       </div>
     </ion-content>
   `,
@@ -618,6 +644,7 @@ export class CredentialsPage {
   readonly store = inject(CredentialsStore);
   readonly connecting = signal(false);
   readonly adding = signal(false);
+  readonly rotating = signal<Credential | null>(null);
   readonly confirming = signal<string | null>(null);
   readonly completionError = signal<ApiError | null>(null);
   readonly failure = computed(() => this.completionError() ?? this.store.error());
@@ -648,6 +675,22 @@ export class CredentialsPage {
 
   masked(lastFour: string): string {
     return `••••${lastFour.slice(-4)}`;
+  }
+
+  openAdd(): void {
+    this.adding.set(true);
+    this.rotating.set(null);
+  }
+
+  askRotate(credential: Credential): void {
+    this.rotating.set(credential);
+    this.adding.set(false);
+  }
+
+  rotate(body: RotateCredentialBody): void {
+    const target = this.rotating();
+    this.rotating.set(null);
+    if (target !== null) this.store.rotateCredential(target.id, body);
   }
 
   askDelete(id: string): void {

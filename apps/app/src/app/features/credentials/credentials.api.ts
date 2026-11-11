@@ -56,6 +56,10 @@ export interface CreateCredentialBody {
   readonly value: string;
 }
 
+export interface RotateCredentialBody {
+  readonly value: string;
+}
+
 export interface CreateIntegrationBody {
   readonly name: string;
   readonly baseUrl: string;
@@ -115,6 +119,13 @@ export class CredentialsApi {
 
   createCredential(body: CreateCredentialBody): Observable<Credential> {
     return this.request(this.http.post<unknown>(this.url('/credentials'), body), parseCredential);
+  }
+
+  rotateCredential(id: string, body: RotateCredentialBody): Observable<Credential> {
+    return this.request(
+      this.http.post<unknown>(this.url(`/credentials/${id}/rotate`), body),
+      parseCredential,
+    );
   }
 
   removeCredential(id: string): Observable<void> {

@@ -11,6 +11,7 @@ import type {
   Credential,
   GithubManifestStart,
   Integration,
+  RotateCredentialBody,
 } from './credentials.api';
 
 @Injectable()
@@ -60,6 +61,21 @@ export class CredentialsStore {
     this.error.set(null);
     this.api
       .createCredential(body)
+      .pipe(
+        takeUntilDestroyed(this.destroy),
+        finalize(() => this.saving.set(false)),
+      )
+      .subscribe({
+        next: () => this.load(),
+        error: (failure: ApiError) => this.error.set(failure),
+      });
+  }
+
+  rotateCredential(id: string, body: RotateCredentialBody): void {
+    this.saving.set(true);
+    this.error.set(null);
+    this.api
+      .rotateCredential(id, body)
       .pipe(
         takeUntilDestroyed(this.destroy),
         finalize(() => this.saving.set(false)),
