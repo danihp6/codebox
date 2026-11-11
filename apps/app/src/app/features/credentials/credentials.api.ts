@@ -1,31 +1,32 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { Injectable } from '@angular/core';
-import { ContractParseError, errorEnvelopeSchema } from '@codebox/contracts';
+import {
+  CREDENTIAL_EXPOSES,
+  CREDENTIAL_KINDS,
+  ContractParseError,
+  errorEnvelopeSchema,
+  pageOfCredentialSummary,
+  parseCredentialSummary,
+  parseOrThrow,
+} from '@codebox/contracts';
+import type {
+  CredentialExpose,
+  CredentialKind,
+  CredentialSummary,
+  Page,
+} from '@codebox/contracts';
 import { Observable, catchError, map, throwError } from 'rxjs';
 import { ApiError } from '../../core/api/api-client';
 import { API_BASE_URL, API_PREFIX } from '../../core/api/http';
 
-export const CREDENTIAL_KINDS = ['api_key', 'bearer', 'basic', 'github_app', 'model_key'] as const;
-export type CredentialKind = (typeof CREDENTIAL_KINDS)[number];
-
-export const CREDENTIAL_EXPOSES = ['daemon', 'tool', 'env'] as const;
-export type CredentialExpose = (typeof CREDENTIAL_EXPOSES)[number];
+export { CREDENTIAL_EXPOSES, CREDENTIAL_KINDS };
+export type { CredentialExpose, CredentialKind };
 
 export const INTEGRATION_AUTHS = ['none', 'bearer', 'header', 'basic'] as const;
 export type IntegrationAuth = (typeof INTEGRATION_AUTHS)[number];
 
 /** docs/api.md §5.9. A credential is metadata only: it never carries the value. */
-export interface Credential {
-  readonly id: string;
-  readonly name: string;
-  readonly kind: CredentialKind;
-  readonly expose: CredentialExpose;
-  readonly configured: boolean;
-  readonly lastFour: string;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  readonly lastUsedAt: string | null;
-}
+export type Credential = CredentialSummary;
 
 export interface Integration {
   readonly id: string;
@@ -39,10 +40,7 @@ export interface Integration {
   readonly updatedAt: string;
 }
 
-export interface CredentialPage {
-  readonly data: readonly Credential[];
-  readonly nextCursor: string | null;
-}
+export type CredentialPage = Page<CredentialSummary>;
 
 export interface IntegrationPage {
   readonly data: readonly Integration[];
@@ -80,18 +78,6 @@ export interface GithubManifestComplete {
   readonly appId: number;
   readonly credentialId: string;
 }
-
-const CREDENTIAL_KEYS = [
-  'id',
-  'name',
-  'kind',
-  'expose',
-  'configured',
-  'lastFour',
-  'createdAt',
-  'updatedAt',
-  'lastUsedAt',
-] as const;
 
 const INTEGRATION_KEYS = [
   'id',
@@ -193,29 +179,10 @@ export class CredentialsApi {
   }
 }
 
-export function parseCredential(input: unknown): Credential {
-  const record = recordOf(input, 'credential');
-  rejectUnknown(record, CREDENTIAL_KEYS, 'credential');
-  return {
-    id: text(record, 'id', 'credential'),
-    name: text(record, 'name', 'credential'),
-    kind: oneOf(record, 'kind', CREDENTIAL_KINDS, 'credential'),
-    expose: oneOf(record, 'expose', CREDENTIAL_EXPOSES, 'credential'),
-    configured: boolean(record, 'configured', 'credential'),
-    lastFour: optionalText(record, 'lastFour', 'credential'),
-    createdAt: text(record, 'createdAt', 'credential'),
-    updatedAt: text(record, 'updatedAt', 'credential'),
-    lastUsedAt: nullableText(record, 'lastUsedAt', 'credential'),
-  };
-}
+export const parseCredential = parseCredentialSummary;
 
 export function parseCredentialPage(input: unknown): CredentialPage {
-  const record = recordOf(input, 'credential');
-  rejectUnknown(record, PAGE_KEYS, 'credential');
-  return {
-    data: pageItems(record['data'], 'credential', parseCredential),
-    nextCursor: nullableText(record, 'nextCursor', 'credential'),
-  };
+  return parseOrThrow(pageOfCredentialSummary, input, 'credential');
 }
 
 export function parseIntegration(input: unknown): Integration {
@@ -295,12 +262,6 @@ function text(record: Record<string, unknown>, key: string, boundary: string): s
   return value;
 }
 
-function optionalText(record: Record<string, unknown>, key: string, boundary: string): string {
-  const value = record[key];
-  if (typeof value !== 'string') throw issue(boundary, `${boundary}.${key}`, 'expected a string');
-  return value;
-}
-
 function nullableText(
   record: Record<string, unknown>,
   key: string,
@@ -310,14 +271,6 @@ function nullableText(
   if (value === null) return null;
   if (typeof value !== 'string') {
     throw issue(boundary, `${boundary}.${key}`, 'expected a string or null');
-  }
-  return value;
-}
-
-function boolean(record: Record<string, unknown>, key: string, boundary: string): boolean {
-  const value = record[key];
-  if (typeof value !== 'boolean') {
-    throw issue(boundary, `${boundary}.${key}`, 'expected a boolean');
   }
   return value;
 }

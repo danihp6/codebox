@@ -9,8 +9,8 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
+import type { CredentialExpose, CredentialKind } from '@codebox/contracts';
 import type { SealedSecret } from '@codebox/security';
-import type { CredentialKind, ExposeKind } from './schemas.js';
 import { storedCredentialSchema } from './schemas.js';
 
 export const SECRETS_DIRECTORY = 'secrets';
@@ -25,7 +25,7 @@ export interface StoredCredential {
   readonly id: string;
   readonly name: string;
   readonly kind: CredentialKind;
-  readonly expose: ExposeKind;
+  readonly expose: CredentialExpose;
   readonly sealed: SealedSecret;
   readonly createdAt: string;
   readonly updatedAt: string;

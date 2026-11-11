@@ -1,24 +1,22 @@
-import { pageSchema, parseOrThrow } from '@codebox/contracts';
+import { pageOfCredentialSummary, parseOrThrow } from '@codebox/contracts';
 import { API_PREFIX } from '../app.js';
 import type { DaemonApp } from '../modules.js';
 import { handle, json, readJson, requireScope } from '../runs/errors.js';
-import {
-  createCredentialSchema,
-  publicCredentialSchema,
-  rotateCredentialSchema,
-} from './schemas.js';
+import { createCredentialSchema, rotateCredentialSchema } from './schemas.js';
 import type { CredentialsService } from './service.js';
 
 const CREDENTIALS_PATH = `${API_PREFIX}/credentials`;
-
-const pageOfCredential = pageSchema(publicCredentialSchema);
 
 export function registerCredentialRoutes(app: DaemonApp, service: CredentialsService): void {
   app.get(CREDENTIALS_PATH, (c) =>
     handle(c, 'credentials', () =>
       json(
         c,
-        parseOrThrow(pageOfCredential, { data: service.list(), nextCursor: null }, 'credential'),
+        parseOrThrow(
+          pageOfCredentialSummary,
+          { data: service.list(), nextCursor: null },
+          'credential',
+        ),
         200,
       ),
     ),

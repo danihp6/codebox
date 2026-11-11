@@ -1,3 +1,5 @@
+import { parseCredentialSummary } from '@codebox/contracts';
+import type { CredentialExpose, CredentialSummary } from '@codebox/contracts';
 import { decodeMasterKey, lastFour, openSecret, sealSecret } from '@codebox/security';
 import type { DaemonContext } from '../modules.js';
 import { RunApiError } from '../runs/errors.js';
@@ -9,12 +11,9 @@ import type {
 } from '../integrations/service.js';
 import { createFileIntegrationStorage, integrationsDirectory } from '../integrations/storage.js';
 import { newCredentialId } from './ids.js';
-import { publicCredentialSchema } from './schemas.js';
 import type {
   CreateCredentialInput,
   CreateIntegrationInput,
-  ExposeKind,
-  PublicCredential,
   PublicIntegration,
   RotateCredentialInput,
 } from './schemas.js';
@@ -23,9 +22,9 @@ import type { CredentialStorage, StoredCredential } from './storage.js';
 
 export interface CredentialsService {
   readonly storage: CredentialStorage;
-  list(): readonly PublicCredential[];
-  create(input: CreateCredentialInput): PublicCredential;
-  rotate(id: string, input: RotateCredentialInput): PublicCredential;
+  list(): readonly CredentialSummary[];
+  create(input: CreateCredentialInput): CredentialSummary;
+  rotate(id: string, input: RotateCredentialInput): CredentialSummary;
   remove(id: string): void;
   /** The plaintext of one credential; the caller never logs or returns it. */
   open(id: string): string;
@@ -61,7 +60,7 @@ function masterKeyOf(config: DaemonContext['config']): Uint8Array | null {
   }
 }
 
-function envExposureAllowed(expose: ExposeKind, kind: string): boolean {
+function envExposureAllowed(expose: CredentialExpose, kind: string): boolean {
   return expose !== 'env' || kind === 'model_key';
 }
 
@@ -91,8 +90,8 @@ export function createCredentialsService(
     return credential;
   }
 
-  function toPublic(credential: StoredCredential): PublicCredential {
-    return publicCredentialSchema.parse({
+  function toPublic(credential: StoredCredential): CredentialSummary {
+    return parseCredentialSummary({
       id: credential.id,
       name: credential.name,
       kind: credential.kind,
@@ -116,7 +115,7 @@ export function createCredentialsService(
     return masterKey;
   }
 
-  function create(input: CreateCredentialInput): PublicCredential {
+  function create(input: CreateCredentialInput): CredentialSummary {
     if (!envExposureAllowed(input.expose, input.kind)) {
       throw new RunApiError('validation_failed', 422, {
         path: 'credential.expose',
@@ -148,7 +147,7 @@ export function createCredentialsService(
     return toPublic(credential);
   }
 
-  function rotate(id: string, input: RotateCredentialInput): PublicCredential {
+  function rotate(id: string, input: RotateCredentialInput): CredentialSummary {
     requireConfigured();
     const current = requireCredential(id);
     const at = now().toISOString();
@@ -194,7 +193,7 @@ export function createCredentialsService(
 
   const service: CredentialsService = {
     storage,
-    list(): readonly PublicCredential[] {
+    list(): readonly CredentialSummary[] {
       return storage.list().map(toPublic);
     },
     create,
