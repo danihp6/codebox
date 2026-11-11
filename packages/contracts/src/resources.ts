@@ -76,21 +76,6 @@ export const telemetrySchema = z.strictObject({
   queueDepth: z.number().int().nonnegative(),
 });
 
-export const providerNameSchema = z.enum(['github', 'opencode', 'push', 'tunnel']);
-export const providerModeSchema = z.enum(['app', 'pat', 'key', 'none']);
-
-export const providerStatusSchema = z.strictObject({
-  provider: providerNameSchema,
-  configured: z.boolean(),
-  mode: providerModeSchema,
-  lastOkAt: timestampSchema.nullable(),
-  fingerprint: z.string().min(1).nullable(),
-});
-
-export const providersSchema = z.strictObject({
-  providers: z.array(providerStatusSchema),
-});
-
 export const brakeSchema = z.strictObject({ enabled: z.boolean() });
 
 // §5.2 Repositories
@@ -457,7 +442,6 @@ export type Repo = z.infer<typeof repoSchema>;
 export type Health = z.infer<typeof healthSchema>;
 export type Version = z.infer<typeof versionSchema>;
 export type Telemetry = z.infer<typeof telemetrySchema>;
-export type Providers = z.infer<typeof providersSchema>;
 export type Brake = z.infer<typeof brakeSchema>;
 export type JobNext = z.infer<typeof jobNextSchema>;
 
@@ -511,10 +495,6 @@ export function parseVersion(input: unknown): Version {
 
 export function parseTelemetry(input: unknown): Telemetry {
   return parseOrThrow(telemetrySchema, input, 'telemetry');
-}
-
-export function parseProviders(input: unknown): Providers {
-  return parseOrThrow(providersSchema, input, 'providers');
 }
 
 export function parseSettings(input: unknown): Settings {

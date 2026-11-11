@@ -22,7 +22,7 @@ const requiredComponents = [
   'Health',
   'Version',
   'Telemetry',
-  'ProviderStatus',
+  'ProvidersResponse',
   'PushSubscription',
   'Settings',
   'NotificationPreferences',
@@ -39,7 +39,11 @@ const requiredComponents = [
   'RepoSchedulePage',
   'SessionPage',
   'SessionMessagePage',
-  'ProviderAccount',
+  'RepoPage',
+  'JobPage',
+  'ApprovalPage',
+  'DevicePage',
+  'ProviderAccountView',
   'ProviderOauthStart',
   'ProviderAccountTest',
   'CredentialSummary',
@@ -233,6 +237,51 @@ describe('openapi', () => {
     expect(refOf(create, '201')).toBe('#/components/schemas/CredentialSummary');
     expect(refOf(rotate, '200')).toBe('#/components/schemas/CredentialSummary');
     expect(remove?.responses['204']).toEqual({ description: 'No content' });
+  });
+
+  it('documents the D54 provider body and the four list pages', () => {
+    const document = buildOpenApiDocument();
+    const providers = document.paths['/v1/providers']?.get;
+    expect(providers?.tags).toEqual(['providers']);
+    expect(providers?.summary).toBe(
+      'Providers with their accounts, states, priorities and spend today.',
+    );
+    expect(refOf(providers, '200')).toBe('#/components/schemas/ProvidersResponse');
+    expect(refOf(document.paths['/v1/repos']?.get, '200')).toBe('#/components/schemas/RepoPage');
+    expect(refOf(document.paths['/v1/jobs']?.get, '200')).toBe('#/components/schemas/JobPage');
+    expect(
+      refOf(document.paths['/v1/approvals']?.get, '200'),
+    ).toBe('#/components/schemas/ApprovalPage');
+    expect(refOf(document.paths['/v1/devices']?.get, '200')).toBe('#/components/schemas/DevicePage');
+    expect(refOf(document.paths['/v1/runs']?.get, '200')).toBe('#/components/schemas/Page');
+    expect(refOf(document.paths['/v1/provider-accounts/{id}']?.patch, '200')).toBe(
+      '#/components/schemas/ProviderAccountView',
+    );
+    expect(refOf(document.paths['/v1/providers/{id}/accounts']?.post, '201')).toBe(
+      '#/components/schemas/ProviderAccountView',
+    );
+    expect(refOf(document.paths['/v1/providers/{id}/oauth/complete']?.post, '201')).toBe(
+      '#/components/schemas/ProviderAccountView',
+    );
+    const names = Object.keys(document.components.schemas);
+    expect(names).not.toContain('Providers');
+    expect(names).not.toContain('ProviderStatus');
+    expect(names).not.toContain('ProviderAccount');
+    expect(parseOpenApiDocument(document)).toEqual(document);
+  });
+
+  it('declares only the tags its operations carry', () => {
+    const document = buildOpenApiDocument();
+    const used = new Set<string>();
+    for (const item of Object.values(document.paths)) {
+      for (const method of ['get', 'post', 'put', 'patch', 'delete'] as const) {
+        const operation = item[method];
+        for (const tag of operation?.tags ?? []) used.add(tag);
+      }
+    }
+    expect([...used].sort()).toEqual(document.tags.map((tag) => tag.name).sort());
+    expect(document.tags.map((tag) => tag.name)).not.toContain('chat');
+    expect(document.tags.map((tag) => tag.name)).not.toContain('routines');
   });
 
   it('retires the chat and routine paths', () => {
