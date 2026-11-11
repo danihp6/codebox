@@ -1,5 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import type { Health, Providers, Telemetry } from '@codebox/contracts';
+import type { CredentialSummary, Health, Page, Telemetry } from '@codebox/contracts';
 import { CHECK_NAMES, doctorChecks, formatDoctor } from './doctor.js';
 import { run } from './main.js';
 import type { CliIo } from './main.js';
@@ -22,7 +23,33 @@ const HEALTHY: Health = {
   version: '0.0.0',
 };
 
-const PROVIDERS: Providers = {
+const GITHUB_APP: CredentialSummary = {
+  id: 'cred_github',
+  name: 'GitHub App',
+  kind: 'github_app',
+  expose: 'daemon',
+  configured: true,
+  lastFour: 'a1b2',
+  createdAt: '2026-10-24T18:03:11Z',
+  updatedAt: '2026-10-24T18:03:11Z',
+  lastUsedAt: null,
+};
+
+const MODEL_KEY: CredentialSummary = {
+  id: 'cred_model',
+  name: 'OpenAI',
+  kind: 'model_key',
+  expose: 'env',
+  configured: true,
+  lastFour: '9f8e',
+  createdAt: '2026-10-24T18:03:11Z',
+  updatedAt: '2026-10-24T18:03:11Z',
+  lastUsedAt: null,
+};
+
+const CREDENTIALS: Page<CredentialSummary> = { data: [GITHUB_APP], nextCursor: null };
+
+const RETIRED_PROVIDERS = {
   providers: [
     { provider: 'github', configured: true, mode: 'app', lastOkAt: null, fingerprint: '1234' },
   ],
@@ -39,20 +66,31 @@ const TELEMETRY: Telemetry = {
 
 interface Routes {
   readonly health?: CliResponse | (() => Promise<CliResponse>);
+  readonly credentials?: CliResponse;
   readonly providers?: CliResponse;
   readonly telemetry?: CliResponse;
 }
 
-function fakeTransport(routes: Routes = {}): CliTransport {
+interface RecordingTransport extends CliTransport {
+  readonly paths: string[];
+}
+
+function fakeTransport(routes: Routes = {}): RecordingTransport {
+  const paths: string[] = [];
   return {
+    paths,
     async send(request: CliRequest): Promise<CliResponse> {
-      const route = request.path;
-      if (route === '/v1/health') {
+      paths.push(request.path);
+      if (request.path === '/v1/health') {
         if (typeof routes.health === 'function') return await routes.health();
         return routes.health ?? { status: 200, body: HEALTHY };
       }
-      if (route === '/v1/providers') return routes.providers ?? { status: 200, body: PROVIDERS };
-      if (route === '/v1/telemetry') return routes.telemetry ?? { status: 200, body: TELEMETRY };
+      if (request.path === '/v1/credentials') {
+        return routes.credentials ?? { status: 200, body: CREDENTIALS };
+      }
+      if (request.path === '/v1/providers') return routes.providers ?? NOT_FOUND;
+      if (request.path === '/v1/telemetry')
+        return routes.telemetry ?? { status: 200, body: TELEMETRY };
       return NOT_FOUND;
     },
   };
@@ -93,7 +131,7 @@ describe('doctor', () => {
   it('reports exactly eight checks in the documented order', async () => {
     const transport = fakeTransport({
       health: { status: 503, body: downHealth() },
-      providers: NOT_FOUND,
+      credentials: NOT_FOUND,
       telemetry: NOT_FOUND,
     });
 
@@ -118,7 +156,7 @@ describe('doctor', () => {
   it('marks db and disk as fail when the daemon says so', async () => {
     const transport = fakeTransport({
       health: { status: 503, body: downHealth() },
-      providers: NOT_FOUND,
+      credentials: NOT_FOUND,
       telemetry: NOT_FOUND,
     });
 
@@ -151,7 +189,7 @@ describe('doctor', () => {
 
   it('skips the routes that do not exist yet instead of failing them', async () => {
     const report = await doctorChecks(
-      fakeTransport({ providers: NOT_FOUND, telemetry: NOT_FOUND }),
+      fakeTransport({ credentials: NOT_FOUND, telemetry: NOT_FOUND }),
       { now: NOW, token: TOKEN },
     );
     const byName = new Map(report.checks.map((check) => [check.name, check]));
@@ -170,30 +208,64 @@ describe('doctor', () => {
     expect(report.ok).toBe(true);
   });
 
-  it('warns for a github provider that is not configured', async () => {
-    const report = await doctorChecks(
-      fakeTransport({
-        providers: {
-          status: 200,
-          body: {
-            providers: [
-              {
-                provider: 'github',
-                configured: false,
-                mode: 'none',
-                lastOkAt: null,
-                fingerprint: null,
-              },
-            ],
-          },
-        },
-      }),
-      { now: NOW, token: TOKEN },
-    );
+  it('reads the github app from /v1/credentials and never /v1/providers', async () => {
+    const transport = fakeTransport();
+
+    const report = await doctorChecks(transport, { now: NOW, token: TOKEN });
     const github = report.checks.find((check) => check.name === 'github');
 
-    expect(github?.status).toBe('warn');
+    expect(github).toEqual({ name: 'github', status: 'ok', detail: 'configured (github_app)' });
+    expect(transport.paths).toContain('/v1/credentials');
+    expect(transport.paths).not.toContain('/v1/providers');
     expect(report.ok).toBe(true);
+  });
+
+  it('warns when no github_app credential is configured', async () => {
+    const pages: readonly Page<CredentialSummary>[] = [
+      { data: [{ ...GITHUB_APP, configured: false }], nextCursor: null },
+      { data: [MODEL_KEY], nextCursor: null },
+    ];
+
+    for (const page of pages) {
+      const report = await doctorChecks(
+        fakeTransport({ credentials: { status: 200, body: page } }),
+        { now: NOW, token: TOKEN },
+      );
+      const github = report.checks.find((check) => check.name === 'github');
+
+      expect(github).toEqual({ name: 'github', status: 'warn', detail: 'not configured' });
+      expect(report.ok).toBe(true);
+    }
+  });
+
+  it('exits 3 when /v1/credentials answers the retired provider object', async () => {
+    const { io, out, err } = capture();
+    const code = await run({
+      argv: ['doctor'],
+      io,
+      env: { CODEBOX_TOKEN: TOKEN },
+      transport: fakeTransport({
+        credentials: { status: 200, body: RETIRED_PROVIDERS },
+      }),
+    });
+
+    expect(code).toBe(3);
+    expect(out).toEqual([]);
+    expect(err.join('\n')).toContain('invalid daemon response');
+  });
+
+  it('documents the D54 providers row in §5.1 and retires the old fields', () => {
+    const document = readFileSync(new URL('../../../../docs/api.md', import.meta.url), 'utf8');
+    const row = document
+      .split(/\r?\n/)
+      .find((line) => line.startsWith('| `GET` | `/v1/providers` | `read` |'));
+
+    expect(row).toBe(
+      '| `GET` | `/v1/providers` | `read` | Providers with their accounts, states, priorities and spend today (D54; §5.9.1). |',
+    );
+    expect(document).not.toContain(
+      '| `GET` | `/v1/providers` | `read` | Per provider: `configured`, `mode`, `lastOkAt`, `fingerprint`. |',
+    );
   });
 
   it('applies the disk, queue and cost thresholds', async () => {
@@ -261,7 +333,7 @@ describe('doctor', () => {
       env: { CODEBOX_TOKEN: TOKEN },
       transport: fakeTransport({
         health: { status: 503, body: downHealth() },
-        providers: NOT_FOUND,
+        credentials: NOT_FOUND,
         telemetry: NOT_FOUND,
       }),
     });
@@ -290,7 +362,7 @@ describe('doctor', () => {
       argv: ['doctor', '--json'],
       io,
       env: { CODEBOX_TOKEN: TOKEN },
-      transport: fakeTransport({ providers: NOT_FOUND, telemetry: NOT_FOUND }),
+      transport: fakeTransport({ credentials: NOT_FOUND, telemetry: NOT_FOUND }),
     });
 
     expect(code).toBe(0);

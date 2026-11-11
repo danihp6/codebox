@@ -1,5 +1,5 @@
-import { healthSchema, providersSchema, telemetrySchema } from '@codebox/contracts';
-import type { Health, Providers, Telemetry } from '@codebox/contracts';
+import { healthSchema, pageOfCredentialSummary, telemetrySchema } from '@codebox/contracts';
+import type { CredentialSummary, Health, Page, Telemetry } from '@codebox/contracts';
 import { TransportError, apiErrorFrom, isSuccessStatus } from './transport.js';
 import type { CliTransport } from './transport.js';
 
@@ -54,12 +54,12 @@ export async function doctorChecks(
   options: DoctorOptions,
 ): Promise<DoctorReport> {
   const health = await readHealth(transport, options.token);
-  const providers = await readOptional(
+  const credentials = await readOptional(
     transport,
     options.token,
-    '/v1/providers',
+    '/v1/credentials',
     undefined,
-    providersSchema,
+    pageOfCredentialSummary,
   );
   const telemetry = await readOptional(
     transport,
@@ -76,7 +76,7 @@ export async function doctorChecks(
       status: componentStatus(health.status),
       detail: `reached ${baseUrlOf(transport)}, health.status = ${health.status}`,
     },
-    githubCheck(providers),
+    githubCheck(credentials),
     diskCheck(health.disk.usedPercent),
     queueCheck(health.queue),
     costCheck(telemetry),
@@ -133,13 +133,14 @@ function baseUrlOf(transport: CliTransport): string {
   return 'the configured URL';
 }
 
-function githubCheck(providers: Providers | null): CheckResult {
-  if (providers === null) return { name: 'github', status: 'skip', detail: MISSING_ROUTE };
-  const github = providers.providers.find((provider) => provider.provider === 'github');
-  if (github === undefined) return { name: 'github', status: 'warn', detail: 'not reported' };
-  return github.configured
-    ? { name: 'github', status: 'ok', detail: `configured (${github.mode})` }
-    : { name: 'github', status: 'warn', detail: `not configured (${github.mode})` };
+function githubCheck(credentials: Page<CredentialSummary> | null): CheckResult {
+  if (credentials === null) return { name: 'github', status: 'skip', detail: MISSING_ROUTE };
+  const configured = credentials.data.some(
+    (credential) => credential.kind === 'github_app' && credential.configured,
+  );
+  return configured
+    ? { name: 'github', status: 'ok', detail: 'configured (github_app)' }
+    : { name: 'github', status: 'warn', detail: 'not configured' };
 }
 
 function diskCheck(usedPercent: number): CheckResult {
