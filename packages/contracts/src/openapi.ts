@@ -2,12 +2,20 @@ import { z } from 'zod';
 import { parseOrThrow } from './parse.js';
 import { errorEnvelopeSchema } from './errors.js';
 import { sseEventSchema } from './events.js';
-import { pageOfRun, pageOfSession, pageOfSessionMessage, pageOfWork } from './pagination.js';
+import {
+  pageOfRepoSchedule,
+  pageOfRun,
+  pageOfSession,
+  pageOfSessionMessage,
+  pageOfWork,
+} from './pagination.js';
 import { designPreviewSchema } from './design.js';
 import { providerAccountSchema, providerAccountStateSchema } from './providers.js';
 import { routineSchema } from './routines.js';
 import {
   backlogSchema,
+  repoScheduleDetailSchema,
+  repoScheduleSchema,
   sessionMessageSchema,
   sessionSchema,
   workDetailSchema,
@@ -610,6 +618,69 @@ const ROUTES: readonly RouteSpec[] = [
     response: 'Run',
   },
   {
+    path: '/v1/schedules',
+    method: 'get',
+    operationId: 'listSchedules',
+    summary: 'Repository schedules, newest first.',
+    tag: 'schedules',
+    status: '200',
+    response: 'RepoSchedulePage',
+  },
+  {
+    path: '/v1/schedules',
+    method: 'post',
+    operationId: 'createSchedule',
+    summary: 'Create the repository schedule from the D56 object.',
+    tag: 'schedules',
+    status: '201',
+    response: 'RepoSchedule',
+  },
+  {
+    path: '/v1/schedules/{id}',
+    method: 'get',
+    operationId: 'getSchedule',
+    summary: 'The schedule and up to five next fires.',
+    tag: 'schedules',
+    status: '200',
+    response: 'RepoScheduleDetail',
+  },
+  {
+    path: '/v1/schedules/{id}',
+    method: 'patch',
+    operationId: 'updateSchedule',
+    summary: 'Edit the D56 fields; the repository is immutable.',
+    tag: 'schedules',
+    status: '200',
+    response: 'RepoSchedule',
+  },
+  {
+    path: '/v1/schedules/{id}',
+    method: 'delete',
+    operationId: 'deleteSchedule',
+    summary: 'Delete the schedule and its fire rows.',
+    tag: 'schedules',
+    status: '204',
+    response: null,
+  },
+  {
+    path: '/v1/schedules/{id}/pause',
+    method: 'post',
+    operationId: 'pauseSchedule',
+    summary: 'Disable the schedule and clear its next fire.',
+    tag: 'schedules',
+    status: '200',
+    response: 'RepoSchedule',
+  },
+  {
+    path: '/v1/schedules/{id}/resume',
+    method: 'post',
+    operationId: 'resumeSchedule',
+    summary: 'Enable the schedule and recompute its next fire.',
+    tag: 'schedules',
+    status: '200',
+    response: 'RepoSchedule',
+  },
+  {
     path: '/v1/sessions',
     method: 'get',
     operationId: 'listSessions',
@@ -848,6 +919,9 @@ const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
   Work: workSchema,
   WorkDetail: workDetailSchema,
   Backlog: backlogSchema,
+  RepoSchedule: repoScheduleSchema,
+  RepoScheduleDetail: repoScheduleDetailSchema,
+  RepoSchedulePage: pageOfRepoSchedule,
   DesignPreview: designPreviewSchema,
   Session: sessionSchema,
   SessionMessage: sessionMessageSchema,
@@ -1031,6 +1105,7 @@ export function buildOpenApiDocument(): OpenApiDocument {
       { name: 'repos', description: 'Registered repositories.' },
       { name: 'routines', description: 'Chat schedules: reminders and prompts.' },
       { name: 'runs', description: 'Executions, gate, PR and guardrails.' },
+      { name: 'schedules', description: 'A repository recurrence (D56); no work and no prompt.' },
       { name: 'sessions', description: 'Editor sessions with one target.' },
       { name: 'settings', description: 'Settings, notifications and push.' },
       { name: 'works', description: 'Backlog items bound to a repository, and their runs.' },

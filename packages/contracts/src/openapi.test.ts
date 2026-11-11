@@ -33,6 +33,9 @@ const requiredComponents = [
   'Session',
   'SessionMessage',
   'WorkPage',
+  'RepoSchedule',
+  'RepoScheduleDetail',
+  'RepoSchedulePage',
   'SessionPage',
   'SessionMessagePage',
   'ProviderAccount',
@@ -111,7 +114,83 @@ describe('openapi', () => {
   it('docs/api.md routes match the OpenAPI paths', () => {
     const document = buildOpenApiDocument();
     expect(Object.keys(document.paths).sort()).toEqual(docsPaths());
-    expect(Object.keys(document.paths)).toHaveLength(63);
+    // 63 before D56 plus the four unique schedule paths behind the seven operations.
+    expect(Object.keys(document.paths)).toHaveLength(67);
+  });
+
+  it('documents the seven schedule paths of D56', () => {
+    const document = buildOpenApiDocument();
+    const expected = [
+      {
+        path: '/v1/schedules',
+        method: 'get',
+        operationId: 'listSchedules',
+        status: '200',
+        response: 'RepoSchedulePage',
+      },
+      {
+        path: '/v1/schedules',
+        method: 'post',
+        operationId: 'createSchedule',
+        status: '201',
+        response: 'RepoSchedule',
+      },
+      {
+        path: '/v1/schedules/{id}',
+        method: 'get',
+        operationId: 'getSchedule',
+        status: '200',
+        response: 'RepoScheduleDetail',
+      },
+      {
+        path: '/v1/schedules/{id}',
+        method: 'patch',
+        operationId: 'updateSchedule',
+        status: '200',
+        response: 'RepoSchedule',
+      },
+      {
+        path: '/v1/schedules/{id}',
+        method: 'delete',
+        operationId: 'deleteSchedule',
+        status: '204',
+        response: null,
+      },
+      {
+        path: '/v1/schedules/{id}/pause',
+        method: 'post',
+        operationId: 'pauseSchedule',
+        status: '200',
+        response: 'RepoSchedule',
+      },
+      {
+        path: '/v1/schedules/{id}/resume',
+        method: 'post',
+        operationId: 'resumeSchedule',
+        status: '200',
+        response: 'RepoSchedule',
+      },
+    ] as const;
+
+    for (const spec of expected) {
+      const label = `${spec.method} ${spec.path}`;
+      const item = document.paths[spec.path];
+      expect(item, label).toBeDefined();
+      const operation = item?.[spec.method];
+      expect(operation, label).toBeDefined();
+      expect(operation?.operationId, label).toBe(spec.operationId);
+      expect(operation?.tags, label).toEqual(['schedules']);
+      const success = operation?.responses[spec.status] as
+        | { content?: Record<string, { schema?: { $ref?: string } }> }
+        | undefined;
+      expect(success, label).toBeDefined();
+      const ref = success?.content?.['application/json']?.schema?.['$ref'] ?? null;
+      const wanted = spec.response === null ? null : `#/components/schemas/${spec.response}`;
+      expect(ref, label).toBe(wanted);
+    }
+
+    expect(document.tags.map((tag) => tag.name)).toContain('schedules');
+    expect(parseOpenApiDocument(document)).toEqual(document);
   });
 
   it('documents the eight credential and integration paths', () => {
