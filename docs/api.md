@@ -842,19 +842,15 @@ It has no work and no prompt of its own — each fire takes the next eligible ba
 opens a run of it. This subsection is the API object; [`docs/jobs.md`](jobs.md) §16 owns the
 field table, the selection rule, the three modes, the claim and the tick.
 
-- `GET /v1/schedules` (`read`) — the §4 page, newest first, narrowed by `repoId` and `enabled`;
-  `{ data, nextCursor }` with a cursor stable under inserts; every entry is a `RepoSchedule`.
-- `POST /v1/schedules` (`write`) — creates the schedule and answers `201` with the stored
-  `RepoSchedule`.
-- `GET /v1/schedules/{id}` (`read`) — answers `{ schedule, nextFires }` (`RepoScheduleDetail`, up
-  to five preview instants).
-- `PATCH /v1/schedules/{id}` (`write`) — the editable fields; answers `200` with the
-  `RepoSchedule`.
-- `DELETE /v1/schedules/{id}` (`write`) — deletes the schedule and its fire rows; `204`.
-- `POST /v1/schedules/{id}/pause` (`write`) — `enabled: false` and `nextFireAt: null`; answers
-  `200` with the `RepoSchedule`.
-- `POST /v1/schedules/{id}/resume` (`write`) — `enabled: true` and the next fire recomputed
-  from now; answers `200` with the `RepoSchedule`.
+| Method | Path | Auth | Purpose |
+| --- | --- | --- | --- |
+| `GET` | `/v1/schedules` | `read` | The §4 page, newest first, narrowed by `repoId` and `enabled`; `{ data, nextCursor }` with a cursor stable under inserts; every entry is a `RepoSchedule`. |
+| `POST` | `/v1/schedules` | `write` | Creates the schedule and answers `201` with the stored `RepoSchedule`. |
+| `GET` | `/v1/schedules/{id}` | `read` | Answers `{ schedule, nextFires }` (`RepoScheduleDetail`, up to five preview instants). |
+| `PATCH` | `/v1/schedules/{id}` | `write` | The editable fields; answers `200` with the `RepoSchedule`. |
+| `DELETE` | `/v1/schedules/{id}` | `write` | Deletes the schedule and its fire rows; `204`. |
+| `POST` | `/v1/schedules/{id}/pause` | `write` | Stores `enabled: false` and `nextFireAt: null`; answers `200` with the `RepoSchedule`. |
+| `POST` | `/v1/schedules/{id}/resume` | `write` | Stores `enabled: true` and recomputes the next fire from now; answers `200` with the `RepoSchedule`. |
 - `POST /v1/repos/{id}/run-next` (`runs`) — the same selection, once, outside any schedule:
   answers `202` with the created `Run`, or `409 nothing_pending`.
 

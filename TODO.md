@@ -2528,7 +2528,7 @@ credential summary's named exports, forced by the CLI's no-`..` guard). No task 
 §5.10 and Task-109 holds §5.1; Task-111 alone writes `apps/app/README.md`, for its own
 `features/credentials` lines. `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
 
-- [ ] **[Task-108]** The OpenAPI document describes the seven schedule routes.
+- [x] **[Task-108]** The OpenAPI document describes the seven schedule routes.
       `apps/daemon/src/schedules/routes.ts:84-158` mounts `GET/POST /v1/schedules`,
       `GET/PATCH/DELETE /v1/schedules/{id}`, `POST /v1/schedules/{id}/pause` and
       `POST /v1/schedules/{id}/resume`; `docs/api.md` §5.10 documents them as bullets and

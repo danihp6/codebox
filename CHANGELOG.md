@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-108: the schedules in the generated document)
+
+- **Seven operations, four paths.** `buildOpenApiDocument()` now carries `GET/POST
+  /v1/schedules`, `GET/PATCH/DELETE /v1/schedules/{id}` and
+  `POST /v1/schedules/{id}/{pause,resume}`, with the `RepoSchedule`, `RepoScheduleDetail` and
+  `RepoSchedulePage` components and the `schedules` tag, so the executable document matches the
+  routes `apps/daemon/src/schedules/routes.ts` mounts and the `docs/api.md` §5.10 table.
+- **The pin is 67, not 70.** `document.paths` is keyed by unique path, so the seven operations
+  add four (`63 + 4`); `openapi.test.ts` pins 67 with the arithmetic in a comment, and a new
+  test proves the seven operation ids, their `schedules` tag, the statuses
+  `200/201/200/200/204/200/200` and the success `$ref`s.
+- `docs/api.md` §5.10's bullets became the seven-row `Method | Path | Auth | Purpose` table the
+  documents test reads; §5.6, §5.9 and the run-next bullet are byte-identical. Dev `d44d27c`,
+  QA `82d3187` (29/29 named, contracts 112/112, lint and build green); batch QA `920957e`
+  (24 files / 235 tests).
+
 ### Changed — 2026-11-10 (Task-107: the repository schedule the daemon reads)
 
 - **The API writes the D56 row.** `POST /v1/schedules` requires `repoId`, carries `selection`,
