@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { ProviderAccountId } from '@codebox/contracts';
+import { parseProvidersResponse } from '@codebox/contracts';
 import { AgentError } from '@codebox/opencode';
 import type { ModelRef } from '@codebox/opencode';
 import { openInMemoryStore } from '@codebox/store';
@@ -556,5 +557,22 @@ describe('list', () => {
     expect(accounts.map((account) => account.id)).toEqual([first.id, third.id]);
     expect(accounts[0]?.lastFour).toBe('8wT3');
     expect(JSON.stringify(list)).not.toContain(TOKEN);
+  });
+
+  it('answers exactly the body the contract parses', () => {
+    const h = fixture();
+    const target = service(h);
+    add(target, 'go · one', 1);
+    const list = target.list();
+    expect(() => parseProvidersResponse(list)).not.toThrow();
+    expect(parseProvidersResponse(list)).toEqual(list);
+    expect(parseProvidersResponse(list).providers).toHaveLength(3);
+  });
+
+  it('declares no private copy of the D54 view types', () => {
+    const source = readFileSync(new URL('./service.ts', import.meta.url), 'utf8');
+    expect(source).not.toContain('interface ProviderView');
+    expect(source).not.toContain('interface ProviderAccountView');
+    expect(source).not.toContain('interface ProvidersResponse');
   });
 });

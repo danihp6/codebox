@@ -8,7 +8,7 @@ import {
 import type {
   Me,
   NotificationPreferences,
-  Providers,
+  ProvidersResponse,
   Settings,
   Version,
 } from '@codebox/contracts';
@@ -39,7 +39,7 @@ export class SettingsStore {
   readonly version = signal<Version | null>(null);
   readonly settings = signal<Settings | null>(null);
   readonly settingsUnavailable = signal(false);
-  readonly providers = signal<Providers | null>(null);
+  readonly providers = signal<ProvidersResponse | null>(null);
   readonly providersUnavailable = signal(false);
   readonly preferences = signal<NotificationPreferences | null>(null);
   readonly brakeAvailable = signal(true);
@@ -186,7 +186,7 @@ export class SettingsStore {
     this.settings.set(value);
   }
 
-  private applyProviders(value: Providers | null): void {
+  private applyProviders(value: ProvidersResponse | null): void {
     if (value === null) {
       this.providersUnavailable.set(true);
       return;

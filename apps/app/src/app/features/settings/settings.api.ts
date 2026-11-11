@@ -8,7 +8,7 @@ import {
   parseMe,
   parseNotificationPreferences,
   parsePage,
-  parseProviders,
+  parseProvidersResponse,
   parseSettings,
   parseVersion,
 } from '@codebox/contracts';
@@ -17,7 +17,7 @@ import type {
   Me,
   NotificationPreferences,
   Page,
-  Providers,
+  ProvidersResponse,
   Settings,
   Version,
 } from '@codebox/contracts';
@@ -60,9 +60,9 @@ export class SettingsApi {
     return this.send(this.http.patch<unknown>(this.url('/settings'), body), parseSettings);
   }
 
-  providers(): Observable<Providers | null> {
+  providers(): Observable<ProvidersResponse | null> {
     return this.absentOn404(
-      this.send(this.http.get<unknown>(this.url('/providers')), parseProviders),
+      this.send(this.http.get<unknown>(this.url('/providers')), parseProvidersResponse),
       null,
     );
   }

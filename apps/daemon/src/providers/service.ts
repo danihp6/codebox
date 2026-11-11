@@ -3,7 +3,9 @@ import type {
   ProviderAccount,
   ProviderAccountId,
   ProviderAccountState,
+  ProviderAccountView,
   ProviderId,
+  ProvidersResponse,
 } from '@codebox/contracts';
 import {
   AgentError,
@@ -30,19 +32,7 @@ import type {
   StartOauthInput,
 } from './schemas.js';
 
-export interface ProviderAccountView extends ProviderAccount {
-  /** At most the last four characters of the sealed value; `''` when unknown. */
-  readonly lastFour: string;
-}
-
-export interface ProviderView extends Provider {
-  readonly accounts: readonly ProviderAccountView[];
-}
-
-/** `GET /v1/providers` — the only body the app reads for `/settings/providers`. */
-export interface ProvidersResponse {
-  readonly providers: readonly ProviderView[];
-}
+export type { ProviderAccountView, ProviderView, ProvidersResponse } from '@codebox/contracts';
 
 export interface AccountTestResult {
   readonly ok: boolean;
