@@ -158,10 +158,6 @@ export function createProvidersService(options: CreateProvidersServiceOptions): 
 
   let runtime: Pick<AgentRuntime, 'listModels'> | null = options.runtime ?? null;
 
-  // `ProviderAccountRepository` (Task-70) exposes no delete, and packages/store is outside this
-  // task's paths: the single statement is prepared here, never built from input.
-  const removeRow = store.db.prepare('DELETE FROM provider_accounts WHERE id = ?');
-
   function agent(): Pick<AgentRuntime, 'listModels'> {
     if (runtime === null) {
       runtime = createAgentRuntime({
@@ -358,7 +354,7 @@ export function createProvidersService(options: CreateProvidersServiceOptions): 
       if (account.state === 'active' && activeCount(account.providerId) <= 1) {
         throw new RunApiError('conflict', 409, { reason: NO_ACTIVE_ACCOUNT });
       }
-      removeRow.run(id);
+      store.providerAccounts.delete(id);
       credentials.remove(account.credentialId);
     },
 

@@ -35,6 +35,8 @@ export interface ProviderAccountRepository {
   selectActive(providerId: string): ProviderAccount | null;
   /** `exhausted` accounts whose `reset_at <= at`, for the daemon's reset sweep. */
   listDueResets(at: string): ProviderAccount[];
+  /** Deletes one row; a missing id is `StoreError('not_found', …)`. */
+  delete(id: string): void;
 }
 
 const PROVIDER_COLUMNS = 'id, label, auth_kind, base_url, created_at, updated_at';
@@ -117,6 +119,7 @@ export function createProviderAccountRepository(db: DatabaseSync): ProviderAccou
   const insert = db.prepare(
     `INSERT INTO provider_accounts (${ACCOUNT_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   );
+  const remove = db.prepare('DELETE FROM provider_accounts WHERE id = ?');
 
   function findById(id: string): ProviderAccount | null {
     const value = selectById.get(id);
@@ -238,6 +241,11 @@ export function createProviderAccountRepository(db: DatabaseSync): ProviderAccou
 
     listDueResets(at: string): ProviderAccount[] {
       return selectDueResets.all(at).map((value) => providerAccountFromRow(row(value)));
+    },
+
+    delete(id: string): void {
+      if (findById(id) === null) throw new StoreError('not_found', 'provider account not found');
+      remove.run(id);
     },
   };
 }
