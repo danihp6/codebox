@@ -1,11 +1,18 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { ContractParseError } from '@codebox/contracts';
+import {
+  CREDENTIAL_EXPOSES as CONTRACT_CREDENTIAL_EXPOSES,
+  CREDENTIAL_KINDS as CONTRACT_CREDENTIAL_KINDS,
+  ContractParseError,
+  parseCredentialSummary,
+} from '@codebox/contracts';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { Observable } from 'rxjs';
 import { ApiError } from '../../core/api/api-client';
 import {
+  CREDENTIAL_EXPOSES,
+  CREDENTIAL_KINDS,
   CredentialsApi,
   parseCredential,
   parseCredentialPage,
@@ -328,6 +335,12 @@ describe('credential parsers', () => {
     expect(boundaryOf(() => parseCredential({ ...CREDENTIAL, expose: 'world' }))).toBe(
       'credential',
     );
+  });
+
+  it('re-exports the contract enums and parser instead of copying them', () => {
+    expect(CREDENTIAL_KINDS).toBe(CONTRACT_CREDENTIAL_KINDS);
+    expect(CREDENTIAL_EXPOSES).toBe(CONTRACT_CREDENTIAL_EXPOSES);
+    expect(parseCredential).toBe(parseCredentialSummary);
   });
 });
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { CredentialSummary } from '@codebox/contracts';
 import { checkIntegrationUrl } from '@codebox/security';
 import type { DaemonContext } from '../modules.js';
 import type { CredentialStorage } from '../credentials/storage.js';
@@ -10,7 +11,6 @@ import {
 } from '../credentials/schemas.js';
 import type {
   CreateIntegrationInput,
-  PublicCredential,
   PublicIntegration,
 } from '../credentials/schemas.js';
 import { RunApiError } from '../runs/errors.js';
@@ -41,7 +41,7 @@ export interface IntegrationCredentialSource {
     readonly kind: 'github_app';
     readonly expose: 'daemon';
     readonly value: string;
-  }): PublicCredential;
+  }): CredentialSummary;
 }
 
 export interface IntegrationRequestInput {

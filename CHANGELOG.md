@@ -6,6 +6,25 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-11 (Task-113: one owner for the credential body)
+
+- **The daemon stops hand-rolling the body.** `publicCredentialSchema`/`PublicCredential` and the
+  private `credentialKindSchema`/`exposeKindSchema` are gone; `credentials/{schemas,service,routes,
+  storage}.ts`, `integrations/service.ts` and `providers/credentials.ts` use
+  `credentialSummarySchema` and the `CREDENTIAL_KINDS`/`CREDENTIAL_EXPOSES` enums from
+  `@codebox/contracts`. The four routes keep their statuses, bodies and error details
+  (`201`/`200` with the summary, `403 insufficient_scope`, `422 credential.password`,
+  `503 secrets_not_configured`, `204` then `404 credential.id`).
+- **The app re-exports instead of redefining.** `credentials.api.ts` aliases
+  `Credential = CredentialSummary` and `parseCredential = parseCredentialSummary` and re-exports
+  the two enum arrays, so the feature's eight consumers keep their frozen names with no second
+  definition anywhere under `apps/` or `packages/contracts`.
+- **The document carries the body.** `openapi.ts` gains the `CredentialSummary` and
+  `CredentialSummaryPage` components; `listCredentials` (`200`), `createCredential` (`201`) and
+  `rotateCredential` (`200`) `$ref` them, `deleteCredential` stays `204` with no content, and the
+  path pin stays **67**. Dev `91493db`, QA `8bd85f0` (contracts 15/15, credentials routes and
+  service 20/20, the five app credential specs 73/73, lint and build green).
+
 ### Changed — 2026-11-11 (Task-112: the settings panel reads the D54 provider body)
 
 - **The provider body has a contract owner.** `packages/contracts/src/providers.ts` gains

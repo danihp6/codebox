@@ -2732,7 +2732,7 @@ Docs are claimed by section only: Task-112 holds `docs/api.md` §5.9.1, and Task
       lint and the named suites pass; `[live]` the panel next to a seeded provider with two
       accounts shows no `providers-error` — unmeasured on this runner (no daemon, no browser),
       handed to an `agent-review` issue.
-- [ ] **[Task-113]** The daemon and the app adopt the credential contract (one owner for the
+- [x] **[Task-113]** The daemon and the app adopt the credential contract (one owner for the
       body). `packages/contracts/src/credentials.ts` (`credentialSummarySchema`,
       `parseCredentialSummary`, `CREDENTIAL_KINDS`, `CREDENTIAL_EXPOSES`) and
       `pageOfCredentialSummary` exist and are exported (Task-109), yet the daemon still hand-rolls

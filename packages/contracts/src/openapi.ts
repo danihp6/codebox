@@ -1,8 +1,10 @@
 import { z } from 'zod';
 import { parseOrThrow } from './parse.js';
+import { credentialSummarySchema } from './credentials.js';
 import { errorEnvelopeSchema } from './errors.js';
 import { sseEventSchema } from './events.js';
 import {
+  pageOfCredentialSummary,
   pageOfRepoSchedule,
   pageOfRun,
   pageOfSession,
@@ -156,7 +158,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Configured credentials, without a value.',
     tag: 'credentials',
     status: '200',
-    response: null,
+    response: 'CredentialSummaryPage',
   },
   {
     path: '/v1/credentials',
@@ -165,7 +167,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Seal one credential and report only its last four.',
     tag: 'credentials',
     status: '201',
-    response: null,
+    response: 'CredentialSummary',
   },
   {
     path: '/v1/credentials/{id}',
@@ -183,7 +185,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Replace the value and keep the identity.',
     tag: 'credentials',
     status: '200',
-    response: null,
+    response: 'CredentialSummary',
   },
   {
     path: '/v1/devices',
@@ -931,6 +933,8 @@ const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
   ProviderAccount: providerAccountSchema,
   ProviderOauthStart: providerOauthStartSchema,
   ProviderAccountTest: providerAccountTestSchema,
+  CredentialSummary: credentialSummarySchema,
+  CredentialSummaryPage: pageOfCredentialSummary,
   SseEvent: sseEventSchema,
   Error: errorEnvelopeSchema,
   Page: pageOfRun,

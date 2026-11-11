@@ -8,6 +8,7 @@ import {
   openApiDocumentSchema,
   parseOpenApiDocument,
 } from './openapi.js';
+import type { OpenApiOperation } from './openapi.js';
 
 const requiredComponents = [
   'Repo',
@@ -41,6 +42,8 @@ const requiredComponents = [
   'ProviderAccount',
   'ProviderOauthStart',
   'ProviderAccountTest',
+  'CredentialSummary',
+  'CredentialSummaryPage',
   'SseEvent',
   'Error',
   'Page',
@@ -58,6 +61,13 @@ function collectRefs(value: unknown, refs: string[] = []): string[] {
     }
   }
   return refs;
+}
+
+function refOf(operation: OpenApiOperation | undefined, status: string): string | null {
+  const success = operation?.responses[status] as
+    | { content?: Record<string, { schema?: { $ref?: string } }> }
+    | undefined;
+  return success?.content?.['application/json']?.schema?.['$ref'] ?? null;
 }
 
 function docsPaths(): string[] {
@@ -214,6 +224,15 @@ describe('openapi', () => {
       .filter((operation) => operation?.tags.includes('credentials') ?? false);
     expect(operations).toHaveLength(10);
     for (const operation of operations) expect(operation?.operationId).toBeTruthy();
+
+    const list = document.paths['/v1/credentials']?.get;
+    const create = document.paths['/v1/credentials']?.post;
+    const rotate = document.paths['/v1/credentials/{id}/rotate']?.post;
+    const remove = document.paths['/v1/credentials/{id}']?.delete;
+    expect(refOf(list, '200')).toBe('#/components/schemas/CredentialSummaryPage');
+    expect(refOf(create, '201')).toBe('#/components/schemas/CredentialSummary');
+    expect(refOf(rotate, '200')).toBe('#/components/schemas/CredentialSummary');
+    expect(remove?.responses['204']).toEqual({ description: 'No content' });
   });
 
   it('retires the chat and routine paths', () => {

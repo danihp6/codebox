@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
+import { pageOfCredentialSummary } from '@codebox/contracts';
 import type { Scope } from '@codebox/contracts';
 import { mintAccessToken, sha256Hex } from '@codebox/security';
 import { openInMemoryStore } from '@codebox/store';
@@ -493,6 +494,12 @@ describe('no route returns the value', () => {
       }),
     );
     await collect(await app.call('GET', '/v1/integrations', { token: admin }));
+    const page = pageOfCredentialSummary.parse(
+      await (await app.call('GET', '/v1/credentials', { token: admin })).json(),
+    );
+    expect(page.nextCursor).toBeNull();
+    expect(page.data.map((entry) => entry.id)).toEqual([credential.id]);
+    expect(JSON.stringify(page)).not.toContain(sealed);
     const createdIntegration = await app.call('POST', '/v1/integrations', {
       token: admin,
       body: {

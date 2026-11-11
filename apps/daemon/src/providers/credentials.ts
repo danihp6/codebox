@@ -1,6 +1,6 @@
+import type { CredentialSummary } from '@codebox/contracts';
 import { createCredentialsService } from '../credentials/service.js';
 import { CREDENTIAL_NAME_MAX_LENGTH } from '../credentials/schemas.js';
-import type { PublicCredential } from '../credentials/schemas.js';
 import type { CredentialsService } from '../credentials/index.js';
 import type { DaemonContext } from '../modules.js';
 
@@ -27,7 +27,7 @@ function atMostFour(value: string): string {
   return value.length > 4 ? value.slice(-4) : value;
 }
 
-function fourOf(credential: PublicCredential): string {
+function fourOf(credential: CredentialSummary): string {
   return atMostFour(credential.lastFour);
 }
 
