@@ -69,7 +69,7 @@ A phase is "done" when every box in it is ticked and its exit criterion is met.
 | 30 | Measured debts: OpenAPI, doctor, store, rotate | 108–111 | 4 |
 | 31 | The credentials and provider bodies get one owner | 112–113 | 2 |
 | 32 | Measured debts: the document, the docs, the sheet's trap | 114–117 | 4 |
-| 32 | Measured debts: the document, the docs, the sheet's trap | 114–117 | 4 |
+| 33 | Measured debts: the event page, the Windows gate, the NOTICE, the app tree | 118–121 | 4 |
 
 **Priority override — 2026-10-26.** The host track (Batches 10–12) is pulled **ahead of 7–9**.
 OCI Always Free capacity has no date and the box cannot be deployed until it lands. Terraform
@@ -773,6 +773,58 @@ contradicted the source the same item mandates — the D54 summary begins "Provi
 accounts…" and the mirrored negative assertion spells the retired name. The two criteria are
 narrowed to the retired schema tokens and to `openapi.ts`, which is what they meant; the contract
 suite proves both absences.
+
+**Cut — cycle 2026-11-13, after Batch 32 (four of four slots used).** No `task-*` branch was
+alive and `main` was `32eb17b`. The driver queue is dry — Task-31 is `[!]` on the live ten-run
+measurement (issue #105), Task-32 waits behind it, and L1, L3 and L4 are operator items — so the
+batch is four debts that shipped with no owner, all `[unit]`, and none draws a page or reads a
+frame, so none waits for the design track. **Task-118** is the run-event page with three owners
+and a false document: `apps/daemon/src/runs/routes.ts:51-63` declares a strict local
+`eventPageSchema`, `apps/daemon/src/runs/service.ts:22-33` declares `EventPageItem`/`EventPage`,
+`apps/app/src/app/core/api/api-client.ts:54-65,260-315` declares
+`RunEventItem`/`RunEventPage`/`parseRunEventPage` with the comment "the daemon builds this page
+locally", and `packages/contracts/src/openapi.ts:611-617` maps `listRunEvents` to `Page`, which
+is `pageOfRun` (`:949`) — so the generated document says a run's events are a page of runs.
+**Task-119** is the root gate's `test:guard`: `package.json:25` holds a twenty-line program in
+single quotes, `cmd.exe` does not treat single quotes as quotes, and `npm test` dies with
+`SyntaxError: Invalid or unexpected token` before any suite (`node.exe : file:///…/[eval1]:1`,
+reproduced on this runner). **Task-120** is the `NOTICE` spec comparing an LF constant against a
+raw file read (`apps/app/src/app/features/about/notice.spec.ts:10`): green on Linux, red on a
+checkout that materialises `NOTICE` with CRLF — the one failing file in `npm run test:app` on
+this host. **Task-121** is the `docs/app.md` §1/§3 pass Batch 32 left: §1 sells "native push",
+"Keychain/Keystore" and "deep links" that `apps/app/package.json` and `core/auth/secure-store.ts`
+do not ship, and its UI row names `@ionic/angular/standalone`, which no file imports; §3 lists
+`core/push/` and `features/providers/`, calls `shared/` "cards, chips, empty states, log viewer,
+diff stat" and puts `theme/` inside `app/` while it lives at `src/theme/`. **Hot-file holders in
+this cut:** Task-118 holds `packages/contracts/src/index.ts` (the run-event exports) and
+Task-119 holds `package.json` (the `test:guard` line). No task holds `package-lock.json`,
+`tsconfig.base.json`, `apps/app/angular.json`, `apps/app/src/app/app.routes.ts`,
+`apps/app/src/main.ts`, `apps/daemon/src/main.ts`, `opencode.json`, `TODO.md`, `CHANGELOG.md` or
+`docs/decisions.md`; `package-lock.json` does not move at all. Docs are claimed by file and by
+section: Task-118 holds `docs/api.md` §5.4, Task-121 holds `docs/app.md` §1 and §3, Task-119
+holds `scripts/README.md`, `packages/contracts/README.md` has one writer (Task-118, its own two
+lines), and `apps/app/README.md` moves in no task because none of the four adds, renames or
+deletes a file under `src/app`. **No empty slot:** 118–121 are the batch and nothing else on the
+queue is eligible — Task-31 is `[!]` (#105), Task-32 depends on it, and L1/L3/L4 need a local
+key, an external tool or a store account. **Deviations from the brief, recorded.** (a) The brief
+said the app has no consumer of the event route; measured, `ApiClient.runEvents` exists and
+parses the page locally with the same five keys, so Task-118 takes
+`apps/app/src/app/core/api/api-client.ts` — leaving it would ship the new contract and a second
+owner of the same fact in the same batch — and its app-suite criterion allows the single
+pre-existing `NOTICE` red that Task-120 fixes. (b) §1's "Native shell" row is false in three
+claims, not one, so it is rewritten once; the "UI" row is corrected with it because the tree
+imports `@ionic/angular` and never the `/standalone` subpath; §1's other seven rows, §2 and
+§4–§14 stay byte-identical, which leaves §6's Keychain/Keystore sentence and §4's `codebox://`
+claim as measured debts of a later docs cut. (c) The batch-plan table repeated its Batch 32 row;
+the duplicate is removed in place. (d) Task-119 sorts the workspace list by `dir` before it
+reports, so the printed line no longer depends on the filesystem's `readdir` order; on this host
+the line is unchanged, and the sort is what makes it pinnable. **Recorded, not cut — each a
+later cut:** `POST /v1/repos/{id}/run-next` is still absent from
+`packages/contracts/src/openapi.ts` although §5.6 (`docs/api.md:621`), §5.10 (`:872`) and §11
+(`:1053`) document it; `docs/api.md:489-493` carries the "no daemon code creates an approval
+row" sentence twice; `apps/daemon/src/cli/doctor.test.ts:91` keeps a dead `/v1/providers` branch
+in its fake transport that `:219` already proves is never taken; and `readBuildInfo`'s
+`builtAt: null` (`apps/daemon/src/config.ts:109-115`) is the operator's decision, not a task.
 
 ### Screens awaiting the prototype
 
@@ -2935,6 +2987,122 @@ compares an LF constant to a file read raw, so a `core.autocrlf=true` checkout i
 `ops` suites carry 48 environment failures on this box (reproduced identically on a clean
 `main`), so the local gate is lint + build + guard + the named suites and the full `npm test` is
 CI's. Both are candidates for the next cut.
+
+---
+
+## Batch 33 — Measured debts: the event page, the Windows gate, the NOTICE, the app tree
+
+Cut 2026-11-13 from `main` at `32eb17b`. The driver queue holds nothing: Task-31 is `[!]`
+(issue #105), Task-32 waits behind it and L1/L3/L4 are operator items. The batch is the four
+debts the last cuts measured and did not own, and each one is verified on this host before it is
+planned: a replay page the daemon, the app and the contract each spell out while the generated
+document calls it a page of runs; a root gate whose quoting kills `npm test` on Windows before
+the first suite; a `NOTICE` comparison that is red only because a checkout chose CRLF; and the
+`docs/app.md` tree pass Batch 32 left. None draws a page, needs a frame, a migration, a new
+dependency or a decision record.
+
+**Hot-file holders in this batch:** Task-118 holds `packages/contracts/src/index.ts` (the
+run-event exports) and Task-119 holds `package.json` (the `test:guard` line). No task holds
+`package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`opencode.json`, `TODO.md`, `CHANGELOG.md` or `docs/decisions.md`. Docs are claimed by file and
+section: Task-118 holds `docs/api.md` §5.4, Task-121 holds `docs/app.md` §1 and §3, Task-119
+holds `scripts/README.md`, and `packages/contracts/README.md` has one writer (Task-118).
+`TODO.md` and `CHANGELOG.md` are the Orchestrator's.
+
+- [ ] **[Task-118]** The run-event page has one owner. `GET /v1/runs/{id}/events` is documented
+      in `docs/api.md` §5.4 (sample `id` 1842, `seq` 17, `type` `run.output`, `nextCursor`
+      "1842") but the record is declared three times —
+      `apps/daemon/src/runs/routes.ts:51-63` (`eventPageSchema`, strict, five keys),
+      `apps/daemon/src/runs/service.ts:22-33` (`EventPageItem`/`EventPage`) and
+      `apps/app/src/app/core/api/api-client.ts:54-65,260-315`
+      (`RunEventItem`/`RunEventPage`/`parseRunEventPage`, whose comment reads "the daemon builds
+      this page locally") — while `packages/contracts/src/openapi.ts:611-617` maps
+      `listRunEvents` to `Page`, which is `pageOfRun` (`:949`), so the generated document says a
+      run's events are a page of runs. Add `packages/contracts/src/run-events.ts`
+      (`runEventRecordSchema`, `runEventPageSchema` built with the frozen `pageSchema`,
+      `RunEventRecord`, `RunEventPage`, `parseRunEventPage` at boundary `run.events`), export the
+      five names from `index.ts`, delete the daemon's schema and interfaces and the app's types
+      and parsers, register `RunEventRecord`/`RunEventPage` in `openapi.ts`, point
+      `listRunEvents` at the page (`Page` stays registered for `listRuns`) and name the owner in
+      §5.4 with one paragraph. The path pin stays **67**.
+      *Paths:* `packages/contracts/src/{run-events.ts,run-events.test.ts,openapi.ts,openapi.test.ts}`
+      + `packages/contracts/src/index.ts` (hot file), `packages/contracts/README.md` (its own two
+      `src/` lines), `apps/daemon/src/runs/{routes.ts,service.ts,routes.test.ts}`,
+      `apps/app/src/app/core/api/api-client.ts`, `docs/api.md` §5.4.
+      *Dependencies:* none — Task-03 wrote `packages/contracts` (`pageSchema`, `parseOrThrow`,
+      `sseEventNameSchema`, `timestampSchema`), Task-15 wrote `apps/daemon/src/runs/**` and §5.4,
+      Task-18 wrote the app's `ApiClient` and Task-114 last held `openapi.ts`; every one is
+      merged.
+      *Acceptance:* `[unit]` a page with `seq: null` parses, an unknown event name fails at
+      `run.events.data.0.type`, an extra record key fails, `{ data: [], nextCursor: null }`
+      parses and a non-string `nextCursor` fails; `[unit]` the document keeps 67 paths,
+      `listRunEvents` answers `#/components/schemas/RunEventPage` and not `Page`, `listRuns`
+      still answers `Page`, both new components are registered and every `$ref` resolves;
+      `[unit]` the named greps find no `eventPageSchema`/`EventPage` in the daemon and no
+      `RunEventItem`/`parseRunEventItem` in the app; `[unit]` the daemon replay test parses its
+      own body with `parseRunEventPage`; `[unit]` lint, the contracts and `src/runs/` suites, the
+      app suite (its one allowed red is Task-120's `NOTICE` case) and the build pass.
+- [ ] **[Task-119]** The root gate runs on Windows. `package.json:25` defines `test:guard` as
+      `node --input-type=module -e '<a twenty-line program in single quotes>'`; `cmd.exe` does
+      not treat single quotes as quotes, so `npm test` dies before any suite with
+      `node.exe : file:///C:/…/[eval1]:1 … SyntaxError: Invalid or unexpected token` (reproduced
+      on this runner). The program's checks: every workspace that declares a `test` script is
+      run exactly once by the gate (`scripts.test` + `scripts["test:app"]` against
+      `vitest.config.ts`), and it prints `test:guard: N workspace(s) covered — …`. Move it to
+      `scripts/test-guard.mjs` with the checks and the output byte-identical, keep the decision
+      in a pure exported `auditWorkspaces({ gate, vitest, workspaces })` with a `listWorkspaces`
+      reader sorted by `dir`, prove it in `scripts/test-guard.test.mjs` over an injected
+      workspace list (covered by `-w`, covered by the vitest project, in neither, counted twice,
+      no `test` script, the `@codebox/app` vs `@codebox/application` lookahead), make
+      `"test:guard"` read `node scripts/test-guard.mjs` and add the two files to
+      `scripts/README.md`. No dependency, no lockfile change.
+      *Paths:* `scripts/test-guard.mjs`, `scripts/test-guard.test.mjs` (both new),
+      `package.json` (hot file, the one `test:guard` line), `scripts/README.md` (a new
+      `## scripts` block near the top).
+      *Dependencies:* none — the root gate and `vitest.config.ts` are merged (the repository
+      bootstrap) and `scripts/dev-local.test.mjs` is the merged house style for a `.mjs` test in
+      the `scripts` project.
+      *Acceptance:* `[unit]` `node scripts/test-guard.mjs` exits 0 and prints exactly
+      `test:guard: 2 workspace(s) covered — apps/app (npm --workspace), apps/daemon (vitest project)`;
+      `[unit]` the six pure cases pass; `[unit]` `git diff -U0 main...task-119 -- package.json`
+      shows one removed and one added line and nothing else; `[unit]` lint, the `scripts` project
+      filtered to `test-guard` and the build pass.
+- [ ] **[Task-120]** The app's `NOTICE` spec is line-ending agnostic.
+      `apps/app/src/app/features/about/notice.spec.ts:10` compares `NOTICE_TEXT.trim()` with
+      `readFileSync(<repo>/NOTICE, 'utf8').trim()`, so a checkout that materialises `NOTICE` with
+      CRLF differs on every interior `\r` — the one red file in `npm run test:app` on this
+      host, and the only failure the app suite has. Add `normaliseEol` (CRLF → LF) to
+      `notice.ts`, normalise **both** sides of the comparison, normalise once at the top of
+      `parseNotice`, and add the CRLF-vs-LF twin case plus a case pinning the helper. `NOTICE`
+      and `scripts/legal/notice.mjs` are untouched.
+      *Paths:* `apps/app/src/app/features/about/{notice.ts,notice.spec.ts}`.
+      *Dependencies:* none — Task-69 produced `NOTICE` and its generator, the About screen
+      produced the two files.
+      *Acceptance:* `[unit]` `npm run test:app` is 100 % green, zero failed files and zero failed
+      tests; `[unit]` `parseNotice` returns the same list for a CRLF document and its LF twin;
+      `[unit]` `git diff --name-only main...task-120` lists the two files and `NOTICE` is not one
+      of them; `[unit]` lint and the build pass.
+- [ ] **[Task-121]** `docs/app.md` §1 and §3 describe what ships. §1's Capacitor row promises
+      "native push", "Keychain/Keystore" and "deep links" while `apps/app/package.json` depends
+      on no plugin beyond `@capacitor/{core,android,ios,cli}`, `core/auth/secure-store.ts` is an
+      IndexedDB + AES-GCM store, and §11 — rewritten by Task-115 — records that the client makes
+      no push subscription; §1's UI row names `@ionic/angular/standalone`, which no file under
+      `src/app` imports. §3 lists `core/push/`, `features/providers/` and a `shared/` of cards,
+      chips, empty states, log viewer and diff stat — none of which exists — and puts `theme/`
+      inside `app/` while it lives at `src/theme/`. Rewrite those two rows and the tree to the
+      shipped `apps/app/src`, keep §2 and §4–§14 byte-identical and the heading numbers fixed.
+      No file under `src/app` is added or deleted, so `readme.spec.ts` and `apps/app/README.md`
+      do not move.
+      *Paths:* `docs/app.md` (§1's two rows and §3's fenced block only).
+      *Dependencies:* none — §11/§12 are merged (Task-115) and the tree is the shipped
+      `apps/app/src/app` (Task-18 and the feature tasks).
+      *Acceptance:* `[unit]` every path the §3 tree prints exists and every depth-1 and depth-2
+      directory under `apps/app/src/app` is named by it (the spec carries the command);
+      `[unit]` §2 and §4–§14 are byte-identical to `main` and §1 differs in exactly two lines
+      (the spec carries the command); `[unit]` the four false tokens are gone and the frozen
+      rows and tree are present; `[unit]` `git diff --name-only main...task-121` prints only
+      `docs/app.md`; `[unit]` lint and the build pass.
 
 ---
 
