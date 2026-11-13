@@ -3,6 +3,13 @@
 Local scripts. `## scripts/agent` maps the pipeline's deterministic half; `## Local development`
 is the loop that builds and runs the app and the daemon on this machine.
 
+## scripts
+
+| File | What it is |
+| --- | --- |
+| `test-guard.mjs` | The root gate's coverage check: every workspace that declares a `test` script is run exactly once by `npm test`, and the line it prints names each one. |
+| `test-guard.test.mjs` | Unit tests for the pure decision: covered by the npm gate, covered by the vitest project, covered by neither, and counted twice. |
+
 ## Local development
 
 | File | What it is |
