@@ -28,6 +28,7 @@ list or a clone URL, because the URL carries the installation token.
 - `paths.ts` — the branch prefix, the marker filename, the slug rules and the cache/worktree path builders; pure.
 - `diff.ts` — `parseNumstat`, `parseNameStatus` and `buildRunDiff`; pure.
 - `clone.ts` — `ensureClone`: clone into a temporary directory, rename into place, fetch instead of re-cloning.
+- `local.ts` — `initLocal` creates a repository from a name alone (no remote, no network) and `createLocalWorktree` cuts a run from it.
 - `worktree.ts` — the shared fs helpers plus worktree create/remove/list and the run marker at the git path.
 - `status.ts` — the five status commands, the normalised diff and the protected-path scan.
 - `cleanup.ts` — retention cleanup and `diskUsage`.
@@ -35,6 +36,7 @@ list or a clone URL, because the URL carries the installation token.
 - `paths.test.ts` — slugification, branch names, cache and worktree paths, the hostile title.
 - `diff.test.ts` — numstat and name-status parsing, both rename forms, binary lines and the sorted diff.
 - `clone.test.ts` — the cache lifecycle, `--depth`, the failed clone, the rename race and the leak guard.
+- `local.test.ts` — `localRepoPath` refusals, the `initLocal` sequence, the seeded backlog and the local worktree.
 - `worktree.test.ts` — creation, the two-worktree rule, removal, listing and the marker round-trip.
 - `status.test.ts` — command order, the recorded base, the rename, normalisation and the protected hits.
 - `cleanup.test.ts` — TTL removal, orphans, dot directories, the untouched cache and disk usage.
