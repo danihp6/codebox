@@ -431,7 +431,9 @@ describe('integration routes', () => {
     const started = await app.call('POST', '/v1/integrations/github/manifest', { token });
     expect(started.status).toBe(200);
     const start = await body(started);
-    expect(start.action).toBe('https://github.com/settings/apps/new');
+    expect(start.action).toBe(
+      `https://github.com/settings/apps/new?state=${encodeURIComponent(String(start.state))}`,
+    );
     expect(typeof start.manifest).toBe('object');
     expect(typeof start.state).toBe('string');
 
