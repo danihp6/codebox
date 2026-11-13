@@ -325,6 +325,38 @@ describe('openapi', () => {
     expect(paths).toContain('/v1/sessions');
   });
 
+  it('documents a repository with a source, a name and a nullable slug', () => {
+    const document = buildOpenApiDocument();
+    const repo = document.components.schemas['Repo'] as {
+      properties: Record<string, unknown>;
+      required: string[];
+    };
+    expect(Object.keys(document.paths)).toHaveLength(67);
+    expect(repo.properties['source']).toEqual({ type: 'string', enum: ['local', 'github'] });
+    expect(repo.properties['name']).toMatchObject({ type: 'string' });
+    expect(repo.required).not.toContain('source');
+    expect(repo.required).not.toContain('name');
+    expect(repo.required).toContain('slug');
+    expect(JSON.stringify(repo.properties['slug'])).toContain('null');
+
+    const page = document.components.schemas['RepoPage'] as {
+      properties: { data: { items: { properties: Record<string, unknown> } } };
+    };
+    expect(page.properties.data.items.properties['source']).toEqual({
+      type: 'string',
+      enum: ['local', 'github'],
+    });
+    expect(JSON.stringify(page.properties.data.items.properties['slug'])).toContain('null');
+
+    const names = Object.keys(document.components.schemas);
+    for (const ref of collectRefs(document)) {
+      const match = /^#\/components\/schemas\/([A-Za-z0-9_]+)$/.exec(ref);
+      expect(match, ref).not.toBeNull();
+      expect(names).toContain(match?.[1] ?? '');
+    }
+    expect(parseOpenApiDocument(document)).toEqual(document);
+  });
+
   it('the OpenAPI document lists the three routine events', () => {
     const document = buildOpenApiDocument();
     const schemas = JSON.stringify(document.components.schemas);

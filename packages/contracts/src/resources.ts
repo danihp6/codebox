@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { parseOrThrow } from './parse.js';
+import type { RepoPolicy } from './primitives.js';
 import {
   ApprovalId,
   ChatId,
@@ -13,6 +14,7 @@ import {
   branchSchema,
   cronSchema,
   globSchema,
+  nameSchema,
   repoPolicySchema,
   runModeSchema,
   runStateSchema,
@@ -86,9 +88,20 @@ const repoCountsSchema = z.strictObject({
   merged: z.number().int().nonnegative(),
 });
 
-export const repoSchema = z.strictObject({
+export const REPO_SOURCES = ['local', 'github'] as const;
+export const repoSourceSchema = z.enum(REPO_SOURCES);
+export type RepoSource = z.infer<typeof repoSourceSchema>;
+
+/**
+ * The repository object without the cross-field rule: `openapi.ts` compiles it with
+ * `z.toJSONSchema`, and the D62 rule (`a github repository has a slug`) is a refinement.
+ */
+export const repoObjectSchema = z.strictObject({
   id: RepoId,
-  slug: slugSchema,
+  // Optional only so fixtures that predate D62 keep parsing; the daemon always sets both.
+  source: repoSourceSchema.optional(),
+  name: nameSchema.optional(),
+  slug: slugSchema.nullable(),
   defaultBranch: branchSchema,
   gate: z.string().min(1),
   policy: repoPolicySchema,
@@ -98,6 +111,24 @@ export const repoSchema = z.strictObject({
   // Optional only so fixtures that predate D59 keep parsing; the daemon always sets it.
   counts: repoCountsSchema.optional(),
 });
+export type Repo = z.infer<typeof repoObjectSchema>;
+
+/** D62: `source !== 'local'` is a github repository, an absent `source` included. */
+function githubNeedsSlug(
+  value: { readonly source?: RepoSource | undefined; readonly slug: string | null },
+  ctx: z.RefinementCtx,
+): void {
+  if (value.source !== 'local' && value.slug === null) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['slug'],
+      message: 'a github repository needs a slug',
+    });
+  }
+}
+
+/** `docs/api.md` §5.2. A `github` repository without a slug is refused. */
+export const repoSchema: z.ZodType<Repo> = repoObjectSchema.superRefine(githubNeedsSlug);
 
 export const repoVerifySchema = z.strictObject({
   ok: z.boolean(),
@@ -110,6 +141,68 @@ export const repoVerifySchema = z.strictObject({
     }),
   ),
 });
+
+/** `docs/api.md` §5.2. One strict body whose `mode` decides which of `name`/`slug` is required. */
+export type CreateRepoBody = {
+  readonly mode?: 'local' | 'connect' | undefined;
+  readonly name?: string | undefined;
+  readonly slug?: string | undefined;
+  readonly defaultBranch?: string | undefined;
+  readonly gate?: string | undefined;
+  readonly policy?: RepoPolicy | undefined;
+  readonly protectedPaths?: readonly string[] | undefined;
+};
+
+const createRepoObjectSchema = z.strictObject({
+  mode: z.enum(['local', 'connect']).optional(),
+  name: nameSchema.optional(),
+  slug: slugSchema.optional(),
+  defaultBranch: branchSchema.optional(),
+  gate: z.string().min(1).optional(),
+  policy: repoPolicySchema.optional(),
+  protectedPaths: z.array(globSchema).optional(),
+});
+
+/**
+ * D62: one body, two sources. A union would report `invalid_union` at the empty path and the
+ * route owes `422` with `details.path`; `mode` is never defaulted so the service can tell an
+ * explicit `connect` from the legacy `{ slug }` body.
+ */
+export const createRepoBodySchema: z.ZodType<CreateRepoBody> = createRepoObjectSchema.superRefine(
+  (value, ctx) => {
+    if (value.mode === 'local') {
+      if (value.slug !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['slug'],
+          message: 'a local repository has no remote',
+        });
+      }
+      if (value.name === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['name'],
+          message: 'a local repository needs a name',
+        });
+      }
+      return;
+    }
+    if (value.slug === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['slug'],
+        message: 'a github repository needs a slug',
+      });
+    }
+    if (value.name !== undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['name'],
+        message: 'a github repository takes its name from the slug',
+      });
+    }
+  },
+);
 
 // §5.3 Jobs
 export const jobSchema = z.strictObject({
@@ -226,8 +319,10 @@ export const runSchema = z.strictObject({
 });
 export type Run = z.infer<typeof runSchema>;
 
-export const repoDetailSchema = repoSchema.extend({ lastRun: runSchema.nullable() });
-export type RepoDetail = z.infer<typeof repoDetailSchema>;
+export const repoDetailSchema: z.ZodType<RepoDetail> = repoObjectSchema
+  .extend({ lastRun: runSchema.nullable() })
+  .superRefine(githubNeedsSlug);
+export type RepoDetail = Repo & { readonly lastRun: Run | null };
 
 // §5.5 Approvals
 export const APPROVAL_STATES = ['pending', 'allowed', 'denied', 'expired'] as const;
@@ -438,7 +533,6 @@ export type ScheduleDetail = z.infer<typeof scheduleDetailSchema>;
 export type RepoVerify = z.infer<typeof repoVerifySchema>;
 
 export type Job = z.infer<typeof jobSchema>;
-export type Repo = z.infer<typeof repoSchema>;
 export type Health = z.infer<typeof healthSchema>;
 export type Version = z.infer<typeof versionSchema>;
 export type Telemetry = z.infer<typeof telemetrySchema>;
