@@ -20,6 +20,8 @@ import type { ManifestStateStore } from '../credentials/manifest.js';
 import type { IntegrationStorage, StoredIntegration } from './storage.js';
 
 export const GITHUB_MANIFEST_ACTION = 'https://github.com/settings/apps/new';
+/** Where GitHub sends the browser back: the screen that reads `code` and `state`. */
+export const GITHUB_MANIFEST_REDIRECT_PATH = '/settings/credentials';
 export const ALLOWED_REQUEST_HEADERS: readonly string[] = Object.freeze(['accept', 'content-type']);
 
 const TRAILING_SLASHES = /\/+$/;
@@ -167,7 +169,7 @@ export function createIntegrationsService(
     };
     if (url !== null) {
       manifest.url = url;
-      manifest.redirect_url = `${url.replace(TRAILING_SLASHES, '')}/providers/github/callback`;
+      manifest.redirect_url = `${url.replace(TRAILING_SLASHES, '')}${GITHUB_MANIFEST_REDIRECT_PATH}`;
     }
     return manifest;
   }

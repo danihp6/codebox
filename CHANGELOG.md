@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Fixed — 2026-11-13 (the GitHub App manifest flow reaches GitHub and returns to the app)
+
+- **The CSP allows the one cross-origin form the product needs.** `form-action 'self'` refused
+  the manifest POST to `https://github.com/settings/apps/new`, so `Settings → Credentials →
+  Connect a service → GitHub` died in the browser before GitHub saw it. The header becomes
+  `form-action 'self' https://github.com` in `apps/daemon/src/app.ts`, pinned by
+  `app.test.ts` and stated with its reason in `docs/security.md`; every other directive still
+  keeps the app on its own origin.
+- **GitHub returns to the screen that completes the app.** `manifest.redirect_url` pointed at
+  `/providers/github/callback`, a path no route serves: the wildcard rendered About and dropped
+  `code` and `state`, so the exchange never ran. It is now
+  `<CB_PUBLIC_URL>/settings/credentials`, where the page already reads both parameters; the new
+  `GITHUB_MANIFEST_REDIRECT_PATH` names it, `service.test.ts` asserts it with the trailing slash
+  trimmed, and `docs/api.md` §5.9 and `docs/app.md` §4 name the return route.
+- Lint and the daemon build are green and the two touched suites pass 44/44. The daemon suite
+  keeps 23 failures in 6 files on this Windows host, identical on `main` (POSIX modes, shell and
+  git behaviour).
+
 ### Changed — 2026-11-13 (Task-121: the app document describes the shipped tree)
 
 - **§1 stops promising plugins that do not ship.** The UI row names `@ionic/angular` (no file
