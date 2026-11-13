@@ -3010,7 +3010,7 @@ section: Task-118 holds `docs/api.md` §5.4, Task-121 holds `docs/app.md` §1 an
 holds `scripts/README.md`, and `packages/contracts/README.md` has one writer (Task-118).
 `TODO.md` and `CHANGELOG.md` are the Orchestrator's.
 
-- [ ] **[Task-118]** The run-event page has one owner. `GET /v1/runs/{id}/events` is documented
+- [x] **[Task-118]** The run-event page has one owner. `GET /v1/runs/{id}/events` is documented
       in `docs/api.md` §5.4 (sample `id` 1842, `seq` 17, `type` `run.output`, `nextCursor`
       "1842") but the record is declared three times —
       `apps/daemon/src/runs/routes.ts:51-63` (`eventPageSchema`, strict, five keys),

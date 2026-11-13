@@ -310,6 +310,10 @@ export {
 } from './events.js';
 export type { SseEvent, SseEventData, SseStreamEvent } from './events.js';
 
+// Run events: docs/api.md §5.4.
+export { parseRunEventPage, runEventPageSchema, runEventRecordSchema } from './run-events.js';
+export type { RunEventPage, RunEventRecord } from './run-events.js';
+
 // Works, backlog, sessions and the repository schedule: docs/api.md §5.6, §5.6.1, §5.10.
 export {
   backlogWorkRefSchema,

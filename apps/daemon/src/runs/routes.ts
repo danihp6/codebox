@@ -6,14 +6,13 @@ import {
   RepoId,
   branchSchema,
   parsePage,
+  parseOrThrow,
   parseRun,
   parseRunDiff,
-  parseOrThrow,
+  parseRunEventPage,
   runModeSchema,
   runSchema,
   runStateSchema,
-  sseEventNameSchema,
-  timestampSchema,
 } from '@codebox/contracts';
 import { API_PREFIX } from '../app.js';
 import type { DaemonApp } from '../modules.js';
@@ -21,7 +20,7 @@ import { RunApiError, handle, json, queryInput, readJson, requireScope } from '.
 import type { AppContext } from './errors.js';
 import { requireIdempotencyKey } from './idempotency.js';
 import { runsServiceInternals } from './service.js';
-import type { EventPage, RunsService } from './service.js';
+import type { RunsService } from './service.js';
 
 const PROMPT_MAX_LENGTH = 8_000;
 const EVENTS_DEFAULT_LIMIT = 200;
@@ -46,20 +45,6 @@ const createRunSchema = z.strictObject({
 const runEventsQuerySchema = z.strictObject({
   after: z.coerce.number().int().min(0).default(0),
   limit: z.coerce.number().int().min(1).max(200).default(EVENTS_DEFAULT_LIMIT),
-});
-
-/** The contract has no event-page schema yet; this is the strict local shape of §5.4. */
-const eventPageSchema = z.strictObject({
-  data: z.array(
-    z.strictObject({
-      id: z.number().int().positive(),
-      seq: z.number().int().min(1).nullable(),
-      type: sseEventNameSchema,
-      data: z.record(z.string(), z.unknown()),
-      ts: timestampSchema,
-    }),
-  ),
-  nextCursor: z.string().nullable(),
 });
 
 function idempotencyHeader(c: AppContext): string {
@@ -134,8 +119,11 @@ export function registerRunsRoutes(app: DaemonApp, runs: RunsService): void {
   app.get(`${API_PREFIX}/runs/:id/events`, (c) =>
     handle(c, 'runs', () => {
       const query = parseOrThrow(runEventsQuerySchema, queryInput(c, 'runs'), 'run.events');
-      const page: EventPage = runs.events(c.req.param('id'), query.after, query.limit);
-      return json(c, parseOrThrow(eventPageSchema, page, 'run.events'), 200);
+      return json(
+        c,
+        parseRunEventPage(runs.events(c.req.param('id'), query.after, query.limit)),
+        200,
+      );
     }),
   );
 

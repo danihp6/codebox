@@ -11,6 +11,7 @@ import {
   parseJob,
   parseRun,
   parseRunDiff,
+  parseRunEventPage,
   runDiffSchema,
 } from '@codebox/contracts';
 import type { Repo, Scope } from '@codebox/contracts';
@@ -560,6 +561,7 @@ describe('the runs event replay', () => {
     const items = pageBody['data'] as Record<string, unknown>[];
     expect(items.map((item) => item['id'])).toEqual([2, 3]);
     expect(Object.keys(items[0] ?? {})).toEqual(['id', 'seq', 'type', 'data', 'ts']);
+    expect(parseRunEventPage(pageBody)).toEqual(pageBody);
 
     const empty = await test.call('GET', `/v1/runs/${run.id}/events?after=3`, { token });
     expect(await body(empty)).toEqual({ data: [], nextCursor: null });

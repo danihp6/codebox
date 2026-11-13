@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-13 (Task-118: one owner for the run-event page)
+
+- **The contract owns the record.** New `packages/contracts/src/run-events.ts` declares
+  `runEventRecordSchema`, `runEventPageSchema`, `parseRunEventPage` and their two types (boundary
+  `run.events`), built on the frozen `pageSchema`; both are exported from
+  `packages/contracts/src/index.ts`. The daemon's `eventPageSchema`, `EventPage` and `EventPageItem`
+  and the app's `RunEventItem`/`RunEventPage`/parser are deleted, so the stored row has one
+  definition under `packages/contracts`.
+- **The generated document stops calling it a page of runs.** `openapi.ts` registers
+  `RunEventRecord` and `RunEventPage`, and `GET /v1/runs/{id}/events` `$ref`s
+  `RunEventPage` instead of `Page` (`pageOfRun`); the 67-path pin is unchanged, and the contract
+  suite proves `RunEventPage` is registered and `Page` is not the response. `docs/api.md` §5.4
+  names the owner.
+- Dev `0bc916d`, QA `2253169`: contracts 130/130, the daemon `src/runs/` project 60/60, task QA
+  and integration QA green, Linux CI `43395262985` and batch CI `43401953249` success (contracts
+  203 files / 2 026 tests on the combined tree; the app suite 66 files / 579 tests). No `[live]`:
+  the page is built and parsed in tests.
+
 ### Changed — 2026-11-11 (Task-117: the schedule sheet keeps keyboard focus inside the dialog)
 
 - **The modal traps Tab.** `ScheduleSheet` now cycles its own focusables in document order: Tab on
