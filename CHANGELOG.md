@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-13 (Task-123: the store keeps a repository with no remote)
+
+- **`0008_repo_source.sql` makes the remote optional in SQLite.** The `repos` table is rebuilt
+  (SQLite cannot drop a `NOT NULL`): `source` (`local`/`github`, default `github`, with its
+  `CHECK`), `name` (the folder-safe identity, `NOT NULL`), `slug` nullable, and a
+  `CHECK (source <> 'github' OR slug IS NOT NULL)`; `repos_slug` stays unique (many NULLs
+  coexist) and the new partial `repos_local_name` refuses two local repositories with the same
+  name while a local `widgets` and a github `acme/widgets` coexist. `name` is backfilled from
+  the slug (`Acme/Widget.Kit` → `widget.kit`, cut at 64) for every row that predates D62, and
+  the seven children keep their `repo_id` (proven on a v7 database with rows in all of them).
+- **`store.repos` reads and writes both shapes.** `getLocalByName` finds a local row by name,
+  a legacy fixture derives `github` and its name, and a local row without a name or a github row
+  without a slug is `invalid_row` before any statement runs. `RepoPatch` does not move.
+- Dev `2c330f9`, QA `1e5712b`: store 154/154, contracts 137/137, app 579/579, lint and build
+  green, and an independent SQL pass (58/58) over fresh, partial and legacy databases. Two
+  test-only paths outside the item's list were forced by the change and are recorded in
+  `TODO.md`; the daemon's 23 red tests on this host are identical at `b5ba864`.
+
 ### Changed — 2026-11-13 (Task-122: the contract admits a repository with no remote)
 
 - **A repository is local first in the contract (D62).** `repoSchema` gains `source`

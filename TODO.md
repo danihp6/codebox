@@ -3179,7 +3179,7 @@ No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/a
       cannot start a run or a session yet — `run/engine.ts` still prepares a bare cache from a
       slug and Task-124's `createLocalWorktree` has no caller, so the local run path needs its
       own task after Batch 35.
-- [ ] **[Task-123]** The store keeps a repository that has no remote. A numbered migration adds
+- [x] **[Task-123]** The store keeps a repository that has no remote. A numbered migration adds
       `source` (`'local' | 'github'`, default `'github'`) and `name` to `repos`, makes `slug`
       nullable while keeping its unique index, and backfills `name` from the slug for the rows
       that predate D62; `store.repos` reads and writes both shapes. A local name is unique, a
@@ -3191,6 +3191,19 @@ No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/a
       reach the new version; two local repos with the same name are refused, two github repos
       with the same slug too, and a local plus a github repo never collide; a legacy row answers
       `source: 'github'` and a non-null `name`; `[unit]` lint, the store suite and the build pass.
+      LANDED AS: the new migration is `packages/store/migrations/0008_repo_source.sql` — the item
+      names `src/migrations/<next>.sql` and `src/schema.ts`, neither of which exists — and it is
+      the twelve-step rebuild `0005` established, because SQLite cannot drop `slug`'s `NOT NULL`
+      in place: `source TEXT NOT NULL DEFAULT 'github'` with its `CHECK`, `name TEXT NOT NULL`,
+      `slug TEXT` nullable, plus `CHECK (source <> 'github' OR slug IS NOT NULL)`; the unique
+      index `repos_slug` (many NULLs coexist) and the partial `repos_local_name` over
+      `source = 'local'`. `name` is backfilled from the slug with the same rule `create` derives
+      for a legacy row. Two test-only forced additions the item's path list missed:
+      `packages/store/src/schedules.test.ts` (a sixth `schemaVersion` pin, 7 → 8) and
+      `apps/daemon/src/design/routes.test.ts` (two fields on the `REPO` fixture its strict
+      `toEqual` compares). Recorded for Task-125: a github slug whose tail starts with `.`, `_`
+      or `-` (`org/.github`) derives a `name` that `nameSchema` refuses; the contract rule and
+      that edge meet in the create route.
 - [ ] **[Task-124]** A local repository is born offline. `packages/workspaces` gains
       `initLocal({ name, defaultBranch })`: a normal repository under `CB_REPO_ROOT/<name>` with
       `git init -b <defaultBranch>`, one initial commit that carries a minimal `TODO.md` (the

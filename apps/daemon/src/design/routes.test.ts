@@ -30,6 +30,8 @@ const SCREEN =
 
 const REPO: Repo = {
   id: 'repo_routes79',
+  source: 'github',
+  name: 'widgets',
   slug: 'acme/widgets',
   defaultBranch: 'main',
   gate: 'npm test',

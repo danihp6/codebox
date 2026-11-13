@@ -21,6 +21,7 @@ before `npm run build`.
 - `migrations/0005_chat_free.sql` — the twelve-step rebuild that makes `chat_sessions.repo_id` nullable.
 - `migrations/0006_works.sql` — the work model (`works`, `sessions`, `session_messages`), the D44 read-only marker and the additive columns on `runs`, `run_events` and `schedules`.
 - `migrations/0007_providers.sql` — the provider adapters and their failover accounts and indexes.
+- `migrations/0008_repo_source.sql` — the twelve-step rebuild that gives `repos` a `source` and a `name`, makes `slug` nullable and backfills the name from the slug.
 
 ## `src/`
 

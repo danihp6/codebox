@@ -1,4 +1,4 @@
-import type { Repo } from '@codebox/contracts';
+import type { Repo, RepoSource } from '@codebox/contracts';
 import type { DatabaseSync } from 'node:sqlite';
 import { isForeignKeyViolation, isUniqueViolation } from './db.js';
 import { StoreError } from './errors.js';
@@ -22,12 +22,45 @@ export interface RepoPatch {
 
 export interface RepoRepository {
   get(id: string): Repo | null;
+  /** A github repository's remote coordinate. */
   getBySlug(slug: string): Repo | null;
+  /** D62: a local repository's identity. Only ever matches `source = 'local'`. */
+  getLocalByName(name: string): Repo | null;
   list(): Repo[];
   create(repo: Repo): Repo;
   update(id: string, patch: RepoPatch): Repo;
   delete(id: string): void;
 }
+
+// D62: the folder-safe identity of a repository that predates `name`. The `INSERT … SELECT` of
+// 0008_repo_source.sql applies the identical rule and a test pins the two together.
+function nameFromSlug(slug: string): string {
+  const separator = slug.indexOf('/');
+  const tail = separator === -1 ? slug : slug.slice(separator + 1);
+  return tail.toLowerCase().slice(0, 64);
+}
+
+interface NormalisedRepo {
+  readonly source: RepoSource;
+  readonly name: string;
+  readonly slug: string | null;
+}
+
+// `create` normalises, it never guesses: a fixture written before D62 has neither `source` nor
+// `name` and must keep working, so a github row derives its name from the slug and a row that
+// cannot answer either question is refused before the statement runs.
+function normaliseRepo(repo: Repo): NormalisedRepo {
+  const source: RepoSource = repo.source ?? 'github';
+  const slug = repo.slug;
+  const name = repo.name ?? (slug === null ? null : nameFromSlug(slug));
+  if (name === null) throw new StoreError('invalid_row', 'a repository needs a name');
+  if (source !== 'local' && slug === null) {
+    throw new StoreError('invalid_row', 'a github repository needs a slug');
+  }
+  return { source, name, slug };
+}
+
+const UNIQUE_VIOLATION_MESSAGE = 'a repository with that slug or name already exists';
 
 // D59: the three counts are read in the same statement that loads the row, so the daemon never
 // assembles a repository from two queries and no client ever counts works.
@@ -35,7 +68,7 @@ const COUNTS_SQL = `(SELECT COUNT(*) FROM works w WHERE w.repo_id = repos.id AND
   (SELECT COUNT(*) FROM works w WHERE w.repo_id = repos.id AND w.state = 'running') AS running_count,
   (SELECT COUNT(*) FROM works w WHERE w.repo_id = repos.id AND w.state = 'merged') AS merged_count`;
 
-const COLUMNS = `id, slug, default_branch, gate, policy, protected_paths, enabled, created_at, ${COUNTS_SQL}`;
+const COLUMNS = `id, source, name, slug, default_branch, gate, policy, protected_paths, enabled, created_at, ${COUNTS_SQL}`;
 
 function repoOf(value: Parameters<typeof row>[0]): Repo {
   const record = row(value);
@@ -52,10 +85,14 @@ function repoOf(value: Parameters<typeof row>[0]): Repo {
 export function createRepoRepository(db: DatabaseSync): RepoRepository {
   const selectById = db.prepare(`SELECT ${COLUMNS} FROM repos WHERE id = ?`);
   const selectBySlug = db.prepare(`SELECT ${COLUMNS} FROM repos WHERE slug = ?`);
+  const selectLocalByName = db.prepare(
+    `SELECT ${COLUMNS} FROM repos WHERE source = 'local' AND name = ?`,
+  );
   const selectAll = db.prepare(`SELECT ${COLUMNS} FROM repos ORDER BY created_at DESC, id DESC`);
   const insert = db.prepare(`
-    INSERT INTO repos (id, slug, default_branch, gate, policy, protected_paths, enabled, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO repos (id, source, name, slug, default_branch, gate, policy, protected_paths,
+                       enabled, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const countLiveRuns = db.prepare(
     `SELECT COUNT(*) AS live FROM runs WHERE repo_id = ? AND state IN (${LIVE_RUN_STATES_SQL})`,
@@ -77,15 +114,23 @@ export function createRepoRepository(db: DatabaseSync): RepoRepository {
       return value === undefined ? null : repoOf(value);
     },
 
+    getLocalByName(name: string): Repo | null {
+      const value = selectLocalByName.get(name);
+      return value === undefined ? null : repoOf(value);
+    },
+
     list(): Repo[] {
       return selectAll.all().map((value) => repoOf(value));
     },
 
     create(repo: Repo): Repo {
+      const { source, name, slug } = normaliseRepo(repo);
       try {
         insert.run(
           repo.id,
-          repo.slug,
+          source,
+          name,
+          slug,
           repo.defaultBranch,
           repo.gate,
           repo.policy,
@@ -95,7 +140,7 @@ export function createRepoRepository(db: DatabaseSync): RepoRepository {
         );
       } catch (error) {
         if (isUniqueViolation(error)) {
-          throw new StoreError('unique_violation', 'repo slug already exists');
+          throw new StoreError('unique_violation', UNIQUE_VIOLATION_MESSAGE);
         }
         if (isForeignKeyViolation(error)) {
           throw new StoreError('foreign_key_violation', 'repo reference is missing');
@@ -142,7 +187,7 @@ export function createRepoRepository(db: DatabaseSync): RepoRepository {
           );
         } catch (error) {
           if (isUniqueViolation(error)) {
-            throw new StoreError('unique_violation', 'repo slug already exists');
+            throw new StoreError('unique_violation', UNIQUE_VIOLATION_MESSAGE);
           }
           throw error;
         }

@@ -66,6 +66,8 @@ const INDEXES = [
   'provider_accounts_credential',
   'provider_accounts_selection',
   'provider_accounts_reset',
+  'repos_slug',
+  'repos_local_name',
 ];
 
 const FIXED_NOW = '2026-10-24T18:03:11.000Z';
@@ -82,6 +84,15 @@ function storeErrorCode(run: () => unknown): string {
     run();
   } catch (error) {
     return error instanceof StoreError ? error.code : 'unexpected-error';
+  }
+  return 'no-error';
+}
+
+function driverErrorMessage(run: () => unknown): string {
+  try {
+    run();
+  } catch (error) {
+    return error instanceof Error ? error.message : 'unexpected-error';
   }
   return 'no-error';
 }
@@ -169,11 +180,11 @@ describe('migrations', () => {
   it('migrations apply to an empty database and are idempotent', () => {
     const files = loadMigrationsFromDisk(MIGRATIONS_DIRECTORY);
     expect(files.length).toBeGreaterThanOrEqual(1);
-    expect(files.map((file) => file.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(files.map((file) => file.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
 
     const first = runMigrations(db, files, () => FIXED_NOW);
-    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-    expect(first.currentVersion).toBe(7);
+    expect(first.applied.map((migration) => migration.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+    expect(first.currentVersion).toBe(8);
     expect(first.applied.map((migration) => migration.name)).toEqual([
       '0001_init.sql',
       '0002_routines.sql',
@@ -182,10 +193,11 @@ describe('migrations', () => {
       '0005_chat_free.sql',
       '0006_works.sql',
       '0007_providers.sql',
+      '0008_repo_source.sql',
     ]);
 
     const userVersion = db.prepare('PRAGMA user_version').get()?.['user_version'];
-    expect(Number(userVersion)).toBe(7);
+    expect(Number(userVersion)).toBe(8);
 
     const tables = names(db, 'table');
     for (const table of TABLES) expect(tables).toContain(table);
@@ -206,7 +218,7 @@ describe('migrations', () => {
 
     const second = runMigrations(db, files, () => FIXED_NOW);
     expect(second.applied).toEqual([]);
-    expect(second.currentVersion).toBe(7);
+    expect(second.currentVersion).toBe(8);
 
     const tampered = files.map((file) =>
       file.version === 2 ? { ...file, checksum: 'deadbeef' } : file,
@@ -231,8 +243,8 @@ describe('migrations', () => {
     seedChildren(db);
 
     const applied = runMigrations(db, files, () => FIXED_NOW);
-    expect(applied.applied.map((migration) => migration.version)).toEqual([5, 6, 7]);
-    expect(applied.currentVersion).toBe(7);
+    expect(applied.applied.map((migration) => migration.version)).toEqual([5, 6, 7, 8]);
+    expect(applied.currentVersion).toBe(8);
 
     const sessions = db
       .prepare(
@@ -304,6 +316,71 @@ describe('migrations', () => {
     expect(indexes).toContain('chat_sessions_kind');
     expect(Number(db.prepare('PRAGMA foreign_keys').get()?.['foreign_keys'])).toBe(1);
     expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+  });
+
+  it('backfills source and name for a legacy repos row and keeps its children', () => {
+    const files = loadMigrationsFromDisk(MIGRATIONS_DIRECTORY);
+    const before = runMigrations(
+      db,
+      files.filter((file) => file.version < 8),
+      () => FIXED_NOW,
+    );
+    expect(before.currentVersion).toBe(7);
+
+    db.exec(`
+      INSERT INTO repos (id, slug, default_branch, gate, policy, protected_paths, enabled, created_at)
+      VALUES ('repo_000001', 'dani/example', 'main', 'npm test', 'auto', '[]', 1, '${FIXED_NOW}');
+      INSERT INTO repos (id, slug, default_branch, gate, policy, protected_paths, enabled, created_at)
+      VALUES ('repo_000002', 'Acme/Widget.Kit', 'main', 'npm test', 'auto', '[]', 1, '${FIXED_NOW}');
+
+      INSERT INTO runs (id, repo_id, state, "trigger", branch, base_ref, prompt, agent, created_at)
+      VALUES ('run_0000001', 'repo_000001', 'queued', 'manual', 'cb/run-0000001-work', 'main',
+              'do the work', 'build', '${FIXED_NOW}');
+    `);
+
+    const applied = runMigrations(db, files, () => FIXED_NOW);
+    expect(applied.applied.map((migration) => migration.version)).toEqual([8]);
+    expect(applied.currentVersion).toBe(8);
+
+    expect(db.prepare('SELECT id, source, name, slug FROM repos ORDER BY id').all()).toEqual([
+      { id: 'repo_000001', source: 'github', name: 'example', slug: 'dani/example' },
+      { id: 'repo_000002', source: 'github', name: 'widget.kit', slug: 'Acme/Widget.Kit' },
+    ]);
+    expect(db.prepare('SELECT repo_id FROM runs').all()).toEqual([{ repo_id: 'repo_000001' }]);
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+    expect(Number(db.prepare('PRAGMA foreign_keys').get()?.['foreign_keys'])).toBe(1);
+
+    const indexes = names(db, 'index');
+    expect(indexes).toContain('repos_slug');
+    expect(indexes).toContain('repos_local_name');
+  });
+
+  it('keeps the name unique among local repositories and refuses a github row with no slug', () => {
+    const files = loadMigrationsFromDisk(MIGRATIONS_DIRECTORY);
+    runMigrations(db, files, () => FIXED_NOW);
+
+    const insert = `INSERT INTO repos (id, source, name, slug, default_branch, gate, policy,
+      protected_paths, enabled, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    const rest = ['main', 'npm test', 'auto', '[]', 1, FIXED_NOW];
+    db.prepare(insert).run('repo_local_000001', 'local', 'widgets', null, ...rest);
+    db.prepare(insert).run('repo_local_000002', 'local', 'gadgets', null, ...rest);
+    db.prepare(insert).run('repo_000001', 'github', 'widgets', 'acme/widgets', ...rest);
+
+    expect(
+      driverErrorMessage(() =>
+        db.prepare(insert).run('repo_local_000003', 'local', 'widgets', null, ...rest),
+      ),
+    ).toContain('UNIQUE constraint failed: repos.name');
+    expect(
+      driverErrorMessage(() =>
+        db.prepare(insert).run('repo_000002', 'github', 'example', null, ...rest),
+      ),
+    ).toContain('CHECK constraint failed');
+    expect(
+      driverErrorMessage(() =>
+        db.prepare(insert).run('repo_000003', 'local', 'gadgets', null, ...rest),
+      ),
+    ).toContain('UNIQUE constraint failed: repos.name');
   });
 
   it('hashes the file bytes and sorts by version', () => {

@@ -41,6 +41,7 @@ const RUN_STATES = [
 const RUN_TRIGGERS = ['schedule', 'manual', 'promote', 'revert', 'retry'] as const;
 const RUN_MODES = ['work'] as const;
 const REPO_POLICIES = ['auto', 'manual'] as const;
+const REPO_SOURCES = ['local', 'github'] as const;
 const RUN_STATE_LIVE = ['queued', 'preparing', 'running', 'gating', 'pr_open', 'merging'] as const;
 const APPROVAL_STATES = ['pending', 'allowed', 'denied', 'expired'] as const;
 const CHAT_STATUSES = ['idle', 'working', 'archived'] as const;
@@ -313,7 +314,9 @@ function diffColumn(rowValue: Row): Run['diff'] {
 export function repoFromRow(rowValue: Row): Repo {
   return {
     id: textColumn(rowValue, 'id'),
-    slug: textColumn(rowValue, 'slug'),
+    source: enumColumn(rowValue, 'source', REPO_SOURCES),
+    name: textColumn(rowValue, 'name'),
+    slug: nullableTextColumn(rowValue, 'slug'),
     defaultBranch: textColumn(rowValue, 'default_branch'),
     gate: textColumn(rowValue, 'gate'),
     policy: enumColumn(rowValue, 'policy', REPO_POLICIES),
