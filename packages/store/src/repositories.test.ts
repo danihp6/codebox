@@ -16,6 +16,8 @@ import { openInMemoryStore, type Store } from './store.js';
 
 const REPO: Repo = {
   id: 'repo_000001',
+  source: 'github',
+  name: 'hello',
   slug: 'octo/hello',
   defaultBranch: 'main',
   gate: 'npm test',
@@ -29,9 +31,41 @@ const REPO: Repo = {
 const OTHER_REPO: Repo = {
   ...REPO,
   id: 'repo_000002',
+  name: 'other',
   slug: 'octo/other',
   createdAt: '2026-01-02T00:00:00.000Z',
 };
+
+/** A repository that has no remote: it is a folder on the box (D62). */
+function localRepo(id: string, name: string): Repo {
+  return {
+    id,
+    source: 'local',
+    name,
+    slug: null,
+    defaultBranch: 'main',
+    gate: 'npm test',
+    policy: 'auto',
+    protectedPaths: [],
+    enabled: true,
+    createdAt: '2026-01-03T00:00:00.000Z',
+    counts: { pending: 0, running: 0, merged: 0 },
+  };
+}
+
+/** A fixture written before D62: neither `source` nor `name`, and the slug is the identity. */
+function legacyRepo(id: string, slug: string, createdAt: string): Repo {
+  return {
+    id,
+    slug,
+    defaultBranch: 'main',
+    gate: 'npm test',
+    policy: 'auto',
+    protectedPaths: [],
+    enabled: true,
+    createdAt,
+  };
+}
 
 function job(id: string, repoId: string, createdAt: string, overrides: Partial<Job> = {}): Job {
   return {
@@ -276,6 +310,105 @@ describe('repos', () => {
       { pending: 0, running: 0, merged: 0 },
       counts,
     ]);
+  });
+
+  it('round-trips a local repository with a null slug', () => {
+    const local = store.repos.create(localRepo('repo_local_000001', 'widgets'));
+    expect(local.slug).toBeNull();
+    expect(local.source).toBe('local');
+    expect(local.name).toBe('widgets');
+    expect(store.repos.get('repo_local_000001')).toEqual(local);
+    expect(store.repos.list().filter((repo) => repo.slug === null)).toEqual([local]);
+    expect(store.repos.getBySlug('widgets')).toBeNull();
+    expect(store.repos.getBySlug('')).toBeNull();
+    expect(store.repos.getBySlug(REPO.slug)).toEqual(REPO);
+  });
+
+  it('refuses two local repositories with the same name', () => {
+    store.repos.create(localRepo('repo_local_000001', 'widgets'));
+    expect(
+      storeErrorCode(() => store.repos.create(localRepo('repo_local_000002', 'widgets'))),
+    ).toBe('unique_violation');
+    expect(() => store.repos.create(localRepo('repo_local_000002', 'widgets'))).toThrowError(
+      'a repository with that slug or name already exists',
+    );
+    expect(store.repos.getLocalByName('widgets')?.id).toBe('repo_local_000001');
+  });
+
+  it('refuses two github repositories with the same slug, on create and on update', () => {
+    expect(storeErrorCode(() => store.repos.create({ ...OTHER_REPO, id: 'repo_000003' }))).toBe(
+      'unique_violation',
+    );
+    expect(() => store.repos.create({ ...OTHER_REPO, id: 'repo_000003' })).toThrowError(
+      'a repository with that slug or name already exists',
+    );
+    expect(storeErrorCode(() => store.repos.update(OTHER_REPO.id, { slug: REPO.slug }))).toBe(
+      'unique_violation',
+    );
+  });
+
+  it('keeps a local name and a github slug that share the folder name apart', () => {
+    const local = store.repos.create(localRepo('repo_local_000001', 'widgets'));
+    const remote = store.repos.create(
+      legacyRepo('repo_000003', 'acme/widgets', '2026-01-03T00:00:00.000Z'),
+    );
+    expect(remote.source).toBe('github');
+    expect(remote.name).toBe('widgets');
+    expect(store.repos.get(local.id)).toEqual(local);
+    expect(store.repos.get(remote.id)).toEqual(remote);
+    expect(store.repos.getBySlug('acme/widgets')?.id).toBe(remote.id);
+    expect(store.repos.getLocalByName('widgets')?.id).toBe(local.id);
+
+    const second = store.repos.create(localRepo('repo_local_000002', 'gadgets'));
+    expect(store.repos.get(second.id)?.slug).toBeNull();
+    expect(
+      store.repos
+        .list()
+        .filter((repo) => repo.slug === null)
+        .map((repo) => repo.name)
+        .sort(),
+    ).toEqual(['gadgets', 'widgets']);
+  });
+
+  // The slug is the one migrate.test.ts applies 0008 to: `create` and the migration backfill must
+  // derive the same name, so both tests assert `dani/example` → `example`.
+  it('derives the source and the name of a fixture written before D62', () => {
+    const legacy = store.repos.create(
+      legacyRepo('repo_000003', 'dani/example', '2026-01-03T00:00:00.000Z'),
+    );
+    expect(legacy.source).toBe('github');
+    expect(legacy.name).toBe('example');
+    expect(legacy.slug).toBe('dani/example');
+    expect(store.repos.getLocalByName('example')).toBeNull();
+  });
+
+  it('refuses a local repository with no name and a github repository with no slug', () => {
+    const nameless: Repo = {
+      id: 'repo_local_000001',
+      source: 'local',
+      slug: null,
+      defaultBranch: 'main',
+      gate: 'npm test',
+      policy: 'auto',
+      protectedPaths: [],
+      enabled: true,
+      createdAt: '2026-01-03T00:00:00.000Z',
+    };
+    expect(storeErrorCode(() => store.repos.create(nameless))).toBe('invalid_row');
+    expect(() => store.repos.create(nameless)).toThrowError('a repository needs a name');
+
+    expect(storeErrorCode(() => store.repos.create({ ...REPO, slug: null }))).toBe('invalid_row');
+    expect(() => store.repos.create({ ...REPO, slug: null })).toThrowError(
+      'a github repository needs a slug',
+    );
+    expect(store.repos.list()).toHaveLength(2);
+  });
+
+  it('finds a local repository by name and answers null for anything else', () => {
+    const local = store.repos.create(localRepo('repo_local_000001', 'widgets'));
+    expect(store.repos.getLocalByName('widgets')).toEqual(local);
+    expect(store.repos.getLocalByName('hello')).toBeNull();
+    expect(store.repos.getLocalByName('missing')).toBeNull();
   });
 });
 
