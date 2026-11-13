@@ -9,8 +9,8 @@ speaks to OpenCode, GitHub or a model provider (D4).
 | Piece | Choice | Why |
 | --- | --- | --- |
 | Framework | Angular 22, standalone components, signals, `provideRouter` | Current major; no NgModules. |
-| UI | Ionic Angular 9 (`@ionic/angular/standalone`) | Native-feeling navigation, safe areas, hardware back. |
-| Native shell | Capacitor (iOS + Android) | One codebase, native push, Keychain/Keystore, deep links. |
+| UI | Ionic Angular 9 (standalone components and `provideIonicAngular`, imported from `@ionic/angular`) | Native-feeling navigation, safe areas, hardware back. |
+| Native shell | Capacitor (iOS + Android) | One codebase and one web build (`capacitor.config.ts`); no native plugin ships, so push delivery stays the daemon's (§11). |
 | Web | `@angular/service-worker` PWA | Installed on desktop and Android without a store. |
 | State | Signals + small stores; no NgRx | The daemon is the state; the app caches views, not truth. |
 | HTTP | `HttpClient` + `withFetch()` behind a typed `ApiClient` written against `packages/contracts` parse helpers; one source of truth for payloads. | One source of truth for payloads. |
@@ -44,26 +44,41 @@ app fights the safe areas and the router.
 ```
 apps/app/src/
   main.ts                     # bootstrapApplication, providers
+  index.html
+  styles.css
+  manifest.webmanifest
   app/
-    app.routes.ts             # every route, lazy, declared by Task-18
+    app.routes.ts             # every route, lazy
     app.config.ts             # router, http, i18n, sw, error handler
+    app.component.ts          # IonApp and the router outlet
     core/
-      api/                    # generated client + typed wrappers
-      auth/                  # pairing, tokens, secure storage, guards
-      events/                # SSE service, reconnect, event bus
-      push/                  # web push + Capacitor push registration
-      settings/              # local preferences (theme, locale)
-      util/                  # time, formatting, result types
+      api/                    # the typed client over /v1
+      auth/                   # pairing, tokens, secure storage, guards
+      events/                 # SSE client, reconnect, event bus
+      i18n/                   # dictionary loading and the locale signal
+      settings/               # local preferences (theme, locale)
+      util/                   # time and formatting
     features/
-      dashboard/
-      repos/
+      about/
       backlog/
-      works/
-      providers/
+      credentials/
+      dashboard/
+      pairing/
+      repos/
+      sessions/
       settings/
-    shared/                   # cards, chips, empty states, log viewer, diff stat
-    theme/                    # tokens, dark/light, Ionic variables
-  assets/i18n/{en,es}.json
+      works/
+    shared/
+      offline-banner.ts       # the stale-data banner
+    shell/
+      tabs.page.ts            # the bottom tab bar
+      shell-tabs.ts           # the route to tab map
+  theme/
+    tokens.ts                 # THEME_TOKENS, mirrors design/tokens.json
+    variables.css             # the --cb-* variables
+  assets/i18n/
+    en.json
+    es.json
 ```
 
 One feature folder owns its routes, components and store. A shared component moves to
