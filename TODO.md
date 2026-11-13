@@ -3043,7 +3043,7 @@ holds `scripts/README.md`, and `packages/contracts/README.md` has one writer (Ta
       `RunEventItem`/`parseRunEventItem` in the app; `[unit]` the daemon replay test parses its
       own body with `parseRunEventPage`; `[unit]` lint, the contracts and `src/runs/` suites, the
       app suite (its one allowed red is Task-120's `NOTICE` case) and the build pass.
-- [ ] **[Task-119]** The root gate runs on Windows. `package.json:25` defines `test:guard` as
+- [x] **[Task-119]** The root gate runs on Windows. `package.json:25` defines `test:guard` as
       `node --input-type=module -e '<a twenty-line program in single quotes>'`; `cmd.exe` does
       not treat single quotes as quotes, so `npm test` dies before any suite with
       `node.exe : file:///C:/…/[eval1]:1 … SyntaxError: Invalid or unexpected token` (reproduced

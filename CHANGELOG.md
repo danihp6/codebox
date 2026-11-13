@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-13 (Task-119: the root gate runs on Windows)
+
+- **The coverage guard is a file, not a quoted program.** `package.json`'s `test:guard` becomes
+  `node scripts/test-guard.mjs`; the twenty-line inline `node -e` died under `cmd.exe` (single
+  quotes are literal there), so `npm test` failed with a `SyntaxError` before any suite on
+  Windows. `scripts/test-guard.mjs` keeps the decision in a pure `auditWorkspaces` and reads the
+  workspace list in `listWorkspaces` (now sorted by `dir`, so the line is deterministic), and the
+  CLI keeps the same stdout line, stderr problems and exit codes byte-for-byte.
+- **The decision has its own suite.** `scripts/test-guard.test.mjs` covers npm-covered,
+  vitest-covered, neither, both, a workspace without a `test` script and the
+  `@codebox/app`/`@codebox/application` lookahead, over injected fixtures;
+  `scripts/README.md` maps both files.
+- Dev `33f7e5e`, QA `7f54b95`: 6/6 guard tests, task and integration QA green, Linux CI
+  `43395268154` and batch CI `43401953249` success; on Windows `npm test` now reaches the
+  suites instead of dying at the guard. No `[live]`: the guard is a command and a pinned line.
+
 ### Changed — 2026-11-13 (Task-118: one owner for the run-event page)
 
 - **The contract owns the record.** New `packages/contracts/src/run-events.ts` declares
