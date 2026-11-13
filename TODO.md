@@ -3204,7 +3204,7 @@ No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/a
       `toEqual` compares). Recorded for Task-125: a github slug whose tail starts with `.`, `_`
       or `-` (`org/.github`) derives a `name` that `nameSchema` refuses; the contract rule and
       that edge meet in the create route.
-- [ ] **[Task-124]** A local repository is born offline. `packages/workspaces` gains
+- [x] **[Task-124]** A local repository is born offline. `packages/workspaces` gains
       `initLocal({ name, defaultBranch })`: a normal repository under `CB_REPO_ROOT/<name>` with
       `git init -b <defaultBranch>`, one initial commit that carries a minimal `TODO.md` (the
       backlog root, D51) and nothing else, and a `worktree()` that adds a worktree from its
@@ -3220,6 +3220,16 @@ No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/a
       name fails without touching the tree, `worktree()` yields a directory whose `HEAD` is the
       initial commit; `[unit]` no git invocation carries a URL or a token; `[unit]` lint, the
       workspaces suite and the build pass.
+      LANDED AS: `local.ts` exports `localRepoPath`, `initLocal`, `createLocalWorktree` and
+      `INITIAL_BACKLOG`; the worktree half is `createLocalWorktree` rather than a `worktree()`
+      overload, because the clone path's signature carries a `cloneUrl` a local repository does
+      not have. One forced test addition: `packages/workspaces/src/index.test.ts` pins the
+      package's whole export surface, so the four new names are added there. The real-git case
+      is `skipIf(win32)` (the host's `GIT_ENV.PATH` is POSIX) and is measured on Linux CI
+      `43431953344`; its first version joined an absolute `git rev-parse --git-path` onto the
+      worktree and went red only on Linux — QA caught it, the dev fixed it with the
+      `git-real.test.ts` house pattern, and the re-run executed 18/18. `createLocalWorktree`
+      ships with no caller by design: the local run path is a later cut.
 - [ ] **[Task-125]** The daemon creates a local repository. `POST /v1/repos` takes the Task-122
       union: `mode: 'local'` validates the name, calls `initLocal`, writes the row and answers the
       repo with `source: 'local'`, `slug: null`; `mode: 'connect'` (or the old body) keeps the

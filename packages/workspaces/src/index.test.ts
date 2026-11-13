@@ -42,6 +42,7 @@ describe('the public surface', () => {
       [
         'BRANCH_PREFIX',
         'GIT_ENV',
+        'INITIAL_BACKLOG',
         'RUN_MARKER_FILENAME',
         'SLUG_MAX_LENGTH',
         'WorkspaceError',
@@ -49,7 +50,10 @@ describe('the public surface', () => {
         'buildRunDiff',
         'clonePath',
         'createGitRunner',
+        'createLocalWorktree',
         'createWorkspaceManager',
+        'initLocal',
+        'localRepoPath',
         'parseNameStatus',
         'parseNumstat',
         'slugifyTitle',

@@ -51,6 +51,9 @@ export {
 export { parseNumstat, parseNameStatus, buildRunDiff } from './diff.js';
 export type { NumstatEntry, NameStatusEntry } from './diff.js';
 
+export { INITIAL_BACKLOG, initLocal, localRepoPath, createLocalWorktree } from './local.js';
+export type { InitLocalOptions, LocalRepo, CreateLocalWorktreeOptions } from './local.js';
+
 export function createWorkspaceManager(options: WorkspaceManagerOptions): WorkspaceManager {
   assertRoots(options.repoRoot, options.workspaceRoot);
   const context = createWorkspaceContext(options);

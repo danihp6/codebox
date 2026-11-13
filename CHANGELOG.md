@@ -6,6 +6,24 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-13 (Task-124: a local repository is born offline)
+
+- **`packages/workspaces` can create a repository from a name alone.** `localRepoPath` validates
+  the name (the `nameSchema` rule, an absolute root, no separator, no traversal) before any I/O;
+  `initLocal` runs `git init -b <defaultBranch>`, one commit and nothing else — `TODO.md` with
+  `INITIAL_BACKLOG` is the only tracked file, there is no remote and no network — and refuses a
+  second call without touching the tree. `createLocalWorktree` cuts a worktree from the local
+  default branch with the same run marker `createWorktree` writes; it ships with no caller until
+  the local run path is cut.
+- `INITIAL_BACKLOG` is `# Backlog` plus the one instruction line (78 bytes, one trailing
+  newline); the item's "25 + newline" count was wrong and the fenced block is the authority.
+- Dev `0e8f8d1`, QA `6aba70c`: Linux CI `43431953344` success — 204 files, 2062 passed, 2
+  skipped, `local.test.ts` 18/18 — with lint and build green. The first version of the real-git
+  case joined an absolute `git rev-parse --git-path` onto the worktree and failed only on Linux;
+  QA caught it and the fix re-used the `git-real.test.ts` pattern. The ten `packages/workspaces`
+  reds on this Windows host are the host's (`GIT_ENV.PATH`, win32 `join`), identical at
+  `b5ba864`.
+
 ### Changed — 2026-11-13 (Task-123: the store keeps a repository with no remote)
 
 - **`0008_repo_source.sql` makes the remote optional in SQLite.** The `repos` table is rebuilt
@@ -22,7 +40,8 @@ first release exists.
 - Dev `2c330f9`, QA `1e5712b`: store 154/154, contracts 137/137, app 579/579, lint and build
   green, and an independent SQL pass (58/58) over fresh, partial and legacy databases. Two
   test-only paths outside the item's list were forced by the change and are recorded in
-  `TODO.md`; the daemon's 23 red tests on this host are identical at `b5ba864`.
+  `TODO.md`; the daemon's 23 red tests on this host are identical at `b5ba864`. Linux CI
+  `43431964080` success.
 
 ### Changed — 2026-11-13 (Task-122: the contract admits a repository with no remote)
 
