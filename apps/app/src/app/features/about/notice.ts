@@ -53,9 +53,18 @@ Copyleft exceptions
 (none)
 `;
 
+/**
+ * CRLF → LF, nothing else: a lone `\r` is left alone and an LF document is returned unchanged.
+ * The checkout decides a file's line endings, never the content, so every comparison and every
+ * parse of a file on disk goes through this first.
+ */
+export function normaliseEol(text: string): string {
+  return text.replaceAll('\r\n', '\n');
+}
+
 export function parseNotice(text: string): readonly ThirdPartyNotice[] {
   const notices: ThirdPartyNotice[] = [];
-  for (const line of text.split('\n')) {
+  for (const line of normaliseEol(text).split('\n')) {
     if (line.startsWith(END_OF_PACKAGES)) break;
     if (!line.startsWith(BULLET)) continue;
 

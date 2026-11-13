@@ -1,13 +1,15 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { NOTICE_TEXT, THIRD_PARTY_NOTICES, parseNotice } from './notice';
+import { NOTICE_TEXT, THIRD_PARTY_NOTICES, normaliseEol, parseNotice } from './notice';
 
 const REPOSITORY_NOTICE = resolve(process.cwd(), '../../NOTICE');
 
 describe('notice', () => {
   it('ships the repository NOTICE verbatim', () => {
-    expect(NOTICE_TEXT.trim()).toBe(readFileSync(REPOSITORY_NOTICE, 'utf8').trim());
+    expect(normaliseEol(NOTICE_TEXT).trim()).toBe(
+      normaliseEol(readFileSync(REPOSITORY_NOTICE, 'utf8')).trim(),
+    );
   });
 
   it('derives the shipped list from the shipped text', () => {
@@ -24,6 +26,20 @@ describe('notice', () => {
       { name: 'hono', version: '4.13.13', licence: 'MIT', label: 'hono@4.13.13' },
       { name: 'rxjs', version: '7.8.2', licence: 'Apache-2.0', label: 'rxjs@7.8.2' },
     ]);
+  });
+
+  it('normalises CRLF to LF and leaves everything else alone', () => {
+    expect(normaliseEol('a\r\nb\r\n')).toBe('a\nb\n');
+    expect(normaliseEol('a\nb\n')).toBe('a\nb\n');
+    expect(normaliseEol('a\rb')).toBe('a\rb');
+  });
+
+  it('parses a CRLF document and its LF twin to the same list', () => {
+    const lf = '- hono@4.13.13 — MIT\n- rxjs@7.8.2 — Apache-2.0\n';
+    const crlf = lf.replaceAll('\n', '\r\n');
+
+    expect(parseNotice(crlf)).toEqual(parseNotice(lf));
+    expect(parseNotice(crlf)).toHaveLength(2);
   });
 
   it('keeps a scoped name and splits the label at the last @', () => {
