@@ -3083,7 +3083,7 @@ holds `scripts/README.md`, and `packages/contracts/README.md` has one writer (Ta
       tests; `[unit]` `parseNotice` returns the same list for a CRLF document and its LF twin;
       `[unit]` `git diff --name-only main...task-120` lists the two files and `NOTICE` is not one
       of them; `[unit]` lint and the build pass.
-- [ ] **[Task-121]** `docs/app.md` §1 and §3 describe what ships. §1's Capacitor row promises
+- [x] **[Task-121]** `docs/app.md` §1 and §3 describe what ships. §1's Capacitor row promises
       "native push", "Keychain/Keystore" and "deep links" while `apps/app/package.json` depends
       on no plugin beyond `@capacitor/{core,android,ios,cli}`, `core/auth/secure-store.ts` is an
       IndexedDB + AES-GCM store, and §11 — rewritten by Task-115 — records that the client makes

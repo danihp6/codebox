@@ -6,6 +6,22 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-13 (Task-121: the app document describes the shipped tree)
+
+- **§1 stops promising plugins that do not ship.** The UI row names `@ionic/angular` (no file
+  imports `@ionic/angular/standalone`), and the Native shell row says what Capacitor gives — one
+  codebase and one web build — with no plugin, so push delivery stays the daemon's (§11).
+- **§3 is the real tree.** `core/` is `api`, `auth`, `events`, `i18n`, `settings`, `util`; the
+  nine feature folders are `about`, `backlog`, `credentials`, `dashboard`, `pairing`, `repos`,
+  `sessions`, `settings`, `works`; `shared/` holds the offline banner, `shell/` the tab bar, and
+  `theme/` lives at `src/theme`. There is no `core/push/` and no `features/providers/`. §2 and
+  §4–§14 are byte-identical and no heading moved.
+- Dev `9c7db57`, QA `6394108`: Checks A–C green, lint and build green, task and integration QA
+  green, Linux CI `43395279552` and batch CI `43401953249` success. The spec's Check A one-liner
+  kept a directory's trailing slash when composing child paths (`apps/app/src//app/...`) and
+  reported every directory unnamed; the Orchestrator corrected the check before QA and the
+  correction is recorded here, not in the deliverable. No `[live]`: the document is read.
+
 ### Changed — 2026-11-13 (Task-120: the NOTICE spec ignores line endings)
 
 - **The verbatim comparison normalises EOLs.** `notice.ts` gains `normaliseEol` (CRLF and lone
