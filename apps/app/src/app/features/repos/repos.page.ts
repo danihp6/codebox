@@ -590,7 +590,7 @@ export class ReposPage {
     const query = this.searchQuery().trim().toLowerCase();
     const repos = this.store.repos();
     if (query === '') return repos;
-    return repos.filter((repo) => repo.slug.toLowerCase().includes(query));
+    return repos.filter((repo) => (repo.slug ?? repo.name ?? '').toLowerCase().includes(query));
   });
 
   readonly t: (key: string) => string = (key) => translate(this.i18n.locale(), key);

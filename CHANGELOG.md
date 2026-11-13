@@ -6,6 +6,30 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-13 (Task-122: the contract admits a repository with no remote)
+
+- **A repository is local first in the contract (D62).** `repoSchema` gains `source`
+  (`local`/`github`) and `name` (the folder-safe identity, `^[a-z0-9][a-z0-9._-]{0,63}$`),
+  `slug` becomes nullable, and `createRepoBodySchema` is one strict body whose `mode`
+  (`local`/`connect`, never defaulted) decides which of `name`/`slug` is required; a `github`
+  repository without a slug is refused. `source`/`name` are optional on the type so the
+  fixtures that predate D62 keep parsing (the `Repo.counts` precedent, D59); the daemon always
+  sets both. D62 is written in `docs/decisions.md`, and `docs/api.md` §5.2 stays with
+  Task-125, the batch's one writer of that section.
+- **One coordinate builder.** `repoRefOf(repo, repoRoot)` in `apps/daemon/src/run/engine.ts` is
+  the only place a repository becomes a path or a URL: `github` answers today's
+  `https://github.com/<slug>.git` byte for byte; `local` answers `join(repoRoot, name)` and
+  never a `github.com` URL. The backlog and design readers run their two git commands in the
+  local repository's own folder without cloning; a local session answers the existing
+  `503 workspace_unavailable` and a local merge port `502 provider_unavailable` until Batch 35
+  wires the worktree and the local merge. A local run is **recorded, not cut**: `prepare()`
+  still needs the bare cache, so a local repository cannot start a run yet.
+- Dev `aa55fa3`, QA `d95fa84`: 12 of 12 `[unit]` criteria green; contracts 137/137, the four
+  targeted daemon suites 60/60, app 579/579, lint and build green. The daemon's nine red tests
+  on this Windows host are proven identical at `b454d07` (POSIX modes and `git` on `PATH`). The
+  `[live]` criterion (a local backlog read with no outbound request) is unmeasured without a VM
+  and rides an `agent-review` issue. Linux CI `43426539931` success.
+
 ### Fixed — 2026-11-13 (the GitHub App manifest flow reaches GitHub and returns to the app)
 
 - **The CSP allows the one cross-origin form the product needs.** `form-action 'self'` refused

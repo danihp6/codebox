@@ -3137,7 +3137,7 @@ No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/a
 `opencode.json`, `TODO.md` or `CHANGELOG.md`. `docs/api.md` §5.2 has one writer (Task-125), and
 `docs/security.md` is untouched: no rule here moves a secret.
 
-- [ ] **[Task-122]** The contract admits a repository with no remote, and nothing changes yet.
+- [x] **[Task-122]** The contract admits a repository with no remote, and nothing changes yet.
       D62: a repository is local first; `slug` is the remote coordinate and may be null; a remote
       is added, never required. `repoSchema` gains `source: 'local' | 'github'` and `name` (the
       folder-safe identity, `^[a-z0-9][a-z0-9._-]{0,63}$`, unique per instance) and `slug`
@@ -3166,6 +3166,19 @@ No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/a
       never contain
       `https://github.com/` outside `repoRefOf`; `[unit]` the document keeps 67 paths and the
       `Repo` component carries `source` and a nullable `slug`; `[unit]` lint and the build pass.
+      LANDED AS: `source` and `name` are **optional on the type** (the daemon and the store
+      always set both) so the fixtures that predate D62 keep parsing — the house precedent is
+      `Repo.counts` (D59). `createRepoBodySchema` never defaults `mode`: an absent `mode` is
+      today's `{ slug }` body, which lets Task-125 tell a legacy create from an explicit
+      `connect`. `docs/api.md` §5.2 stays with Task-125 (the batch's one writer) and the
+      generated document keeps 67 paths. Two forced lines: the `slug === null` guard in
+      `apps/daemon/src/repos/service.ts` and one expression in
+      `apps/app/src/app/features/repos/repos.page.ts`, both replaced by their wave's owner.
+      The `[live]` criterion is unmeasured on this runner (no VM) and waits for Task-125's first
+      local row; an `agent-review` issue carries it. **Recorded, not cut:** a local repository
+      cannot start a run or a session yet — `run/engine.ts` still prepares a bare cache from a
+      slug and Task-124's `createLocalWorktree` has no caller, so the local run path needs its
+      own task after Batch 35.
 - [ ] **[Task-123]** The store keeps a repository that has no remote. A numbered migration adds
       `source` (`'local' | 'github'`, default `'github'`) and `name` to `repos`, makes `slug`
       nullable while keeping its unique index, and backfills `name` from the slug for the rows

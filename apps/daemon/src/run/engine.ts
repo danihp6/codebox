@@ -4,7 +4,7 @@ import type { RunPatch, RunRecord, EventRecord } from '@codebox/store';
 import type { PullRequest, CheckRun, MergeReason } from '@codebox/git-provider';
 import { toPullRequestRef } from '@codebox/git-provider';
 import { GitProviderError } from '@codebox/git-provider';
-import type { RunState, RunDiff } from '@codebox/contracts';
+import type { Repo, RunState, RunDiff } from '@codebox/contracts';
 import {
   canAdmitRun,
   canCancel,
@@ -207,6 +207,46 @@ function appendToGateLog(logFile: string, lines: readonly string[]): void {
   } catch {
     // Swallowed on purpose: the gate tail already carries the same lines.
   }
+}
+
+/**
+ * A repository as the box addresses it: a folder under `CB_REPO_ROOT`, or a clone of its remote.
+ * The two arms share no field, so a caller must branch on `source` before it reads one.
+ */
+export type DaemonRepoRef =
+  | {
+      readonly source: 'local';
+      readonly name: string;
+      readonly defaultBranch: string;
+      /** `join(repoRoot, name)`: the folder the box owns. Never a URL. */
+      readonly path: string;
+    }
+  | {
+      readonly source: 'github';
+      readonly slug: string;
+      readonly defaultBranch: string;
+      /** The remote clone URL, byte for byte today's value. */
+      readonly cloneUrl: string;
+    };
+
+/**
+ * D62. The only place in apps/daemon that knows how a repository is addressed. `repoRoot` is an
+ * argument rather than `CB_REPO_ROOT` so the rule is testable without the environment.
+ */
+export function repoRefOf(repo: Repo, repoRoot: string): DaemonRepoRef {
+  const defaultBranch = repo.defaultBranch;
+  if (repo.source === 'local') {
+    const name = repo.name;
+    if (name === undefined) {
+      throw new WorkspaceError('invalid_root', 'a local repository needs a name', null, null);
+    }
+    return { source: 'local', name, defaultBranch, path: join(repoRoot, name) };
+  }
+  const slug = repo.slug;
+  if (slug === null) {
+    throw new WorkspaceError('invalid_root', 'a github repository needs a slug', null, null);
+  }
+  return { source: 'github', slug, defaultBranch, cloneUrl: `https://github.com/${slug}.git` };
 }
 
 export function createRunEngine(ports: RunPorts): RunEngine {

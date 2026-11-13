@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { ContractParseError } from './parse.js';
+import { ContractParseError, parseOrThrow } from './parse.js';
+import { nameSchema } from './primitives.js';
 import {
   GUARDRAIL_IDS,
   blockerCodeSchema,
   chatMessageSchema,
   chatSessionSchema,
+  createRepoBodySchema,
   guardrailIdSchema,
   jobSchema,
   parseApproval,
@@ -541,6 +543,102 @@ describe('resources', () => {
     expect(chatSessionSchema.safeParse({ ...chatSession, repoId: 'not-a-repo-id' }).success).toBe(
       false,
     );
+  });
+});
+
+describe('D62: a repository with no remote', () => {
+  const local = { ...repo, source: 'local', name: 'widgets', slug: null };
+  const legacy = ((): Record<string, unknown> => {
+    const copy: Record<string, unknown> = { ...repo };
+    delete copy['source'];
+    delete copy['name'];
+    return copy;
+  })();
+
+  it('parses a local repository with a null slug and one that carries a slug', () => {
+    const parsed = parseRepo(local);
+    expect(parsed.slug).toBeNull();
+    expect(parsed.source).toBe('local');
+    expect(parsed.name).toBe('widgets');
+    expect(parseRepo({ ...local, slug: 'acme/widgets' }).slug).toBe('acme/widgets');
+    expect(repoSchema.safeParse(local).success).toBe(true);
+  });
+
+  it('demands a slug for anything that is not local, an absent source included', () => {
+    const github = parseRepo({ ...repo, source: 'github', name: 'example' });
+    expect(github.slug).toBe('dani/example');
+    expect(github.name).toBe('example');
+
+    const missing = parseError(() => parseRepo({ ...repo, source: 'github', slug: null }));
+    expect(missing).toBeInstanceOf(ContractParseError);
+    expect(missing instanceof ContractParseError ? missing.first.path : null).toBe('repo.slug');
+
+    const legacyWithoutSlug = parseError(() => parseRepo({ ...legacy, slug: null }));
+    expect(
+      legacyWithoutSlug instanceof ContractParseError ? legacyWithoutSlug.first.path : null,
+    ).toBe('repo.slug');
+    expect(parseRepo(legacy)).toEqual(legacy);
+  });
+
+  it('refuses a github repository with no slug on the detail object too', () => {
+    const detail = parseError(() =>
+      parseRepoDetail({ ...repo, source: 'github', slug: null, lastRun: null }),
+    );
+    expect(detail instanceof ContractParseError ? detail.first.path : null).toBe('repoDetail.slug');
+    expect(parseRepoDetail({ ...local, lastRun: null }).lastRun).toBeNull();
+  });
+
+  it('bounds the folder-safe name', () => {
+    for (const rejected of ['../x', 'A/B', '', 'a'.repeat(65), '-lead']) {
+      expect(nameSchema.safeParse(rejected).success, JSON.stringify(rejected)).toBe(false);
+    }
+    for (const accepted of ['widgets', 'a', 'my.repo_2-x']) {
+      expect(nameSchema.safeParse(accepted).success, accepted).toBe(true);
+    }
+  });
+});
+
+describe('D62: the create body', () => {
+  it('accepts a local create and a connect, and keeps a legacy body undecided', () => {
+    expect(createRepoBodySchema.parse({ mode: 'local', name: 'widgets' })).toEqual({
+      mode: 'local',
+      name: 'widgets',
+    });
+    expect(createRepoBodySchema.parse({ mode: 'connect', slug: 'acme/widgets' })).toEqual({
+      mode: 'connect',
+      slug: 'acme/widgets',
+    });
+    const legacy = createRepoBodySchema.parse({ slug: 'acme/widgets' });
+    expect(legacy.slug).toBe('acme/widgets');
+    expect(legacy.mode).toBeUndefined();
+    expect(
+      createRepoBodySchema.parse({ mode: 'local', name: 'widgets', gate: 'npm test' }),
+    ).toEqual({ mode: 'local', name: 'widgets', gate: 'npm test' });
+  });
+
+  it('names the field a bad body fails at', () => {
+    const body = (input: unknown): unknown => parseOrThrow(createRepoBodySchema, input, 'repo');
+
+    const localWithSlug = parseError(() => body({ mode: 'local', name: 'widgets', slug: 'a/b' }));
+    expect(localWithSlug instanceof ContractParseError ? localWithSlug.first.path : null).toBe(
+      'repo.slug',
+    );
+
+    const localWithoutName = parseError(() => body({ mode: 'local' }));
+    expect(
+      localWithoutName instanceof ContractParseError ? localWithoutName.first.path : null,
+    ).toBe('repo.name');
+
+    const connectWithoutSlug = parseError(() => body({ mode: 'connect' }));
+    expect(
+      connectWithoutSlug instanceof ContractParseError ? connectWithoutSlug.first.path : null,
+    ).toBe('repo.slug');
+
+    const both = parseError(() => body({ slug: 'acme/widgets', name: 'widgets' }));
+    expect(both instanceof ContractParseError ? both.first.path : null).toBe('repo.name');
+
+    const extra = parseError(() => body({ mode: 'local', name: 'widgets', owner: 'acme' }));
+    expect(extra instanceof ContractParseError ? extra.first.path : null).toBe('repo.owner');
   });
 });
 

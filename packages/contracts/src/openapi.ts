@@ -9,12 +9,12 @@ import {
   pageOfCredentialSummary,
   pageOfDevice,
   pageOfJob,
-  pageOfRepo,
   pageOfRepoSchedule,
   pageOfRun,
   pageOfSession,
   pageOfSessionMessage,
   pageOfWork,
+  pageSchema,
 } from './pagination.js';
 import { designPreviewSchema } from './design.js';
 import {
@@ -44,7 +44,7 @@ import {
   notificationPreferencesSchema,
   pushSubscriptionSchema,
   repoDetailSchema,
-  repoSchema,
+  repoObjectSchema,
   runSchema,
   settingsSchema,
   telemetrySchema,
@@ -906,7 +906,7 @@ const providerAccountTestSchema = z.strictObject({
 });
 
 const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
-  Repo: repoSchema,
+  Repo: repoObjectSchema,
   RepoDetail: repoDetailSchema,
   Job: jobSchema,
   Run: runSchema,
@@ -936,7 +936,7 @@ const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
   WorkPage: pageOfWork,
   SessionPage: pageOfSession,
   SessionMessagePage: pageOfSessionMessage,
-  RepoPage: pageOfRepo,
+  RepoPage: pageSchema(repoObjectSchema),
   JobPage: pageOfJob,
   ApprovalPage: pageOfApproval,
   DevicePage: pageOfDevice,

@@ -20,6 +20,7 @@ export {
   RequestId,
   timestampSchema,
   slugSchema,
+  nameSchema,
   branchSchema,
   cronSchema,
   timezoneSchema,
@@ -69,6 +70,7 @@ export type {
   SessionStatus,
   Selection,
   BacklogRef,
+  RepoName,
   SseEventName,
 } from './primitives.js';
 
@@ -137,9 +139,13 @@ export {
   telemetryRangeSchema,
   telemetrySchema,
   brakeSchema,
+  REPO_SOURCES,
+  repoSourceSchema,
+  repoObjectSchema,
   repoSchema,
   repoDetailSchema,
   repoVerifySchema,
+  createRepoBodySchema,
   jobSchema,
   jobNextSchema,
   guardrailIdSchema,
@@ -202,6 +208,8 @@ export {
   parseBrake,
 } from './resources.js';
 export type {
+  RepoSource,
+  CreateRepoBody,
   Repo,
   RepoDetail,
   RepoVerify,

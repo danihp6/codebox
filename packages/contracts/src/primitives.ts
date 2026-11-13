@@ -77,6 +77,10 @@ export const timestampSchema: z.ZodISODateTime = z.iso.datetime();
 
 export const slugSchema: z.ZodString = z.string().regex(/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/);
 
+/** D62: the folder-safe identity of a repository. No separator, no traversal, 1–64 chars. */
+export const nameSchema: z.ZodString = z.string().regex(/^[a-z0-9][a-z0-9._-]{0,63}$/);
+export type RepoName = z.infer<typeof nameSchema>;
+
 export const branchSchema: z.ZodString = z
   .string()
   .min(1)

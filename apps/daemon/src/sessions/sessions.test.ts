@@ -88,6 +88,9 @@ interface Harness {
   readonly app: DaemonApp;
   readonly store: Store;
   readonly merges: { worktrees: string[]; proposals: string[] };
+  /** Every `ensureClone` and `createWorktree` the sessions service asked for, in order. */
+  readonly workspaceCalls: string[];
+  readonly logs: Record<string, unknown>[];
   paths: string[];
   device(scopes?: readonly Scope[]): string;
   call(
@@ -97,7 +100,7 @@ interface Harness {
   ): Promise<Response>;
 }
 
-function harness(input: { paths?: string[]; reply?: string } = {}): Harness {
+function harness(input: { paths?: string[]; reply?: string; repo?: Repo } = {}): Harness {
   const directory = mkdtempSync(join(tmpdir(), 'cb-72-sessions-'));
   directories.push(directory);
   const config = loadConfig({
@@ -110,12 +113,31 @@ function harness(input: { paths?: string[]; reply?: string } = {}): Harness {
   const store = openInMemoryStore();
   stores.push(store);
   store.repos.create(REPO);
-  const logger = createLogger({ level: 'error', sink: () => undefined });
+  const override: Repo | null = input.repo ?? null;
+  if (override !== null) {
+    // `repos.slug` is still NOT NULL until the D62 migration: the row carries a placeholder so
+    // the session's foreign key holds, and the lookup answers the local object instead.
+    store.repos.create({ ...override, slug: `acme/${override.name ?? 'local'}-placeholder` });
+  }
+  const repos =
+    override === null
+      ? store.repos
+      : {
+          ...store.repos,
+          get: (id: string): Repo | null => (id === override.id ? override : store.repos.get(id)),
+        };
+  const logs: Record<string, unknown>[] = [];
+  const logger = createLogger({
+    level: 'warn',
+    sink: (line) => {
+      logs.push(JSON.parse(line) as Record<string, unknown>);
+    },
+  });
   // Every read advances a second: a frozen clock ties the user and assistant rows of one turn.
   let clockMs = Date.parse(NOW);
   const context: DaemonContext = {
     config,
-    store,
+    store: { ...store, repos },
     logger,
     clock: () => {
       clockMs += 1000;
@@ -134,6 +156,8 @@ function harness(input: { paths?: string[]; reply?: string } = {}): Harness {
     app,
     store,
     merges: { worktrees: [], proposals: [] },
+    workspaceCalls: [],
+    logs,
     paths: input.paths ?? [],
     device(scopes: readonly Scope[] = ['read', 'write']): string {
       devices += 1;
@@ -173,19 +197,25 @@ function harness(input: { paths?: string[]; reply?: string } = {}): Harness {
   };
 
   const workspaces: SessionWorkspaces = {
-    ensureClone: async () => ({
-      path: join(directory, 'repos'),
-      created: false,
-      headSha: BASE_SHA,
-    }),
-    createWorktree: async (worktreeInput) => ({
-      runId: worktreeInput.runId,
-      repoSlug: worktreeInput.repo.slug,
-      path: join(directory, 'worktrees', worktreeInput.runId),
-      branch: `cb/${worktreeInput.runId}`,
-      baseRef: worktreeInput.baseRef,
-      baseSha: BASE_SHA,
-    }),
+    ensureClone: async () => {
+      state.workspaceCalls.push('ensureClone');
+      return {
+        path: join(directory, 'repos'),
+        created: false,
+        headSha: BASE_SHA,
+      };
+    },
+    createWorktree: async (worktreeInput) => {
+      state.workspaceCalls.push('createWorktree');
+      return {
+        runId: worktreeInput.runId,
+        repoSlug: worktreeInput.repo.slug,
+        path: join(directory, 'worktrees', worktreeInput.runId),
+        branch: `cb/${worktreeInput.runId}`,
+        baseRef: worktreeInput.baseRef,
+        baseSha: BASE_SHA,
+      };
+    },
   };
   const git: GitRunner = {
     run: async (command) => {
@@ -333,6 +363,31 @@ describe('POST /v1/sessions', () => {
     });
     expect(response.status).toBe(422);
     expect(await detailsOf(response)).toMatchObject({ path: 'session.workId' });
+  });
+});
+
+describe('a local repository', () => {
+  const LOCAL_REPO: Repo = {
+    ...REPO,
+    id: 'repo_sess02',
+    slug: null,
+    source: 'local',
+    name: 'widgets',
+  };
+
+  it('answers 503 workspace_unavailable and touches no workspace', async () => {
+    const test = harness({ repo: LOCAL_REPO });
+    const response = await test.call('POST', '/v1/sessions', {
+      token: test.device(),
+      body: { repoId: LOCAL_REPO.id, target: 'backlog' },
+    });
+
+    expect(response.status).toBe(503);
+    expect(await detailsOf(response)).toEqual({ reason: 'workspace_unavailable' });
+    expect(test.workspaceCalls).toEqual([]);
+    expect(test.logs).toContainEqual(
+      expect.objectContaining({ msg: 'session_workspace_unavailable', reason: 'local_repo' }),
+    );
   });
 });
 

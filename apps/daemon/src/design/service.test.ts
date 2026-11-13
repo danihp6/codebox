@@ -52,6 +52,7 @@ interface ScriptedCall {
 interface FakeGit {
   readonly git: GitRunner;
   readonly calls: readonly (readonly string[])[];
+  readonly cwds: readonly string[];
 }
 
 /**
@@ -60,11 +61,14 @@ interface FakeGit {
  */
 function fakeGit(calls: readonly ScriptedCall[]): FakeGit {
   const seen: (readonly string[])[] = [];
+  const cwds: string[] = [];
   return {
     calls: seen,
+    cwds,
     git: {
       async run(input: GitCommandInput): Promise<GitResult> {
         seen.push([...input.args]);
+        cwds.push(input.cwd);
         const match = calls.find(
           (call) =>
             call.args.length === input.args.length &&
@@ -317,6 +321,35 @@ describe('createDesignRuntime', () => {
     expect((error as DesignReadError).command).toBe('fetch');
     expect((error as DesignReadError).code).toBe(0);
     expect(fake.calls).toEqual([]);
+  });
+
+  it('reads a local repository in its own folder and never clones', async () => {
+    const fake = fakeGit([
+      { args: ['rev-parse', 'refs/heads/main'], stdout: `${FULL}\n` },
+      { args: ['show', `${FULL}:design/tokens.json`], stdout: TOKENS },
+      { args: ['show', `${FULL}:design/routes.json`], stdout: ROUTES },
+      { args: ['ls-tree', '--name-only', '-r', FULL, '--', 'design/screens'], stdout: '' },
+    ]);
+    const clones: string[] = [];
+    const runtime = createDesignRuntime({
+      git: fake.git,
+      repoRoot: REPO_ROOT,
+      timeoutMs: 5_000,
+      ensureClone: async (repo: Repo): Promise<void> => {
+        clones.push(repo.id);
+      },
+    });
+
+    const snapshot = await runtime.readDesign(
+      { ...REPO, source: 'local', name: 'widgets', slug: null },
+      null,
+    );
+
+    expect(clones).toEqual([]);
+    expect(snapshot.revision).toBe(FULL);
+    expect(snapshot.source.tokens).toBe(TOKENS);
+    expect(fake.cwds).toHaveLength(4);
+    expect(new Set(fake.cwds)).toEqual(new Set([join(REPO_ROOT, 'widgets')]));
   });
 
   it('refreshes the clone before reading when ensureClone is given', async () => {

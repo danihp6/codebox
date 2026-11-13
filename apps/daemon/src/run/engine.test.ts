@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { GUARDRAIL_IDS, parseSseEvent } from '@codebox/contracts';
-import type { RunState } from '@codebox/contracts';
+import type { RunState, Repo } from '@codebox/contracts';
 import type {
   CheckSummary,
   MergePullRequestInput,
@@ -24,10 +24,11 @@ import type {
 import type { EventRecord, RunPatch, RunRecord, Store } from '@codebox/store';
 import { openInMemoryStore } from '@codebox/store';
 import type { GitRunner, RunMarker, Worktree, WorkspaceStatus } from '@codebox/workspaces';
+import { WorkspaceError } from '@codebox/workspaces';
 import { runGate } from '../gate/run-gate.js';
 import { MAX_SECRET_SCAN_BYTES } from '../gate/secret-scan.js';
 import { createLogger } from '../logger.js';
-import { createRunEngine, permissionPath } from './engine.js';
+import { createRunEngine, permissionPath, repoRefOf } from './engine.js';
 import type { RunOutcome, RunPorts, RunSettings, RunStartInput } from './ports.js';
 
 const NOW = Date.parse('2026-10-25T10:00:00.000Z');
@@ -1723,5 +1724,58 @@ describe('run engine — one transport retry', () => {
     expect(test.agent.created).toHaveLength(1);
     expect(eventTypes(test.emitted)).toContain('run.tool');
     expect(test.workspaces.calls).not.toContain('removeWorktree');
+  });
+});
+
+describe('repoRefOf', () => {
+  const REPO_ROOT = '/srv/codebox/repos';
+  const GITHUB_REPO: Repo = {
+    id: 'repo_engine02',
+    slug: 'acme/widgets',
+    defaultBranch: 'main',
+    gate: 'npm test',
+    policy: 'auto',
+    protectedPaths: [],
+    enabled: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  };
+  const LOCAL_REPO: Repo = { ...GITHUB_REPO, source: 'local', name: 'widgets', slug: null };
+
+  function codeOf(run: () => unknown): string | null {
+    try {
+      run();
+    } catch (error) {
+      return error instanceof WorkspaceError ? error.code : 'not_a_workspace_error';
+    }
+    return null;
+  }
+
+  it('addresses a github repository by its remote', () => {
+    expect(repoRefOf(GITHUB_REPO, REPO_ROOT)).toEqual({
+      source: 'github',
+      slug: 'acme/widgets',
+      defaultBranch: 'main',
+      cloneUrl: 'https://github.com/acme/widgets.git',
+    });
+  });
+
+  it('addresses a local repository by its folder and builds no URL', () => {
+    const ref = repoRefOf(LOCAL_REPO, REPO_ROOT);
+    expect(ref.source).toBe('local');
+    if (ref.source !== 'local') return;
+    expect(ref.name).toBe('widgets');
+    expect(ref.defaultBranch).toBe('main');
+    expect(ref.path).toBe(join(REPO_ROOT, 'widgets'));
+    expect(ref).not.toHaveProperty('cloneUrl');
+    expect(JSON.stringify(ref)).not.toContain('github.com');
+  });
+
+  it('refuses a coordinate it cannot build', () => {
+    expect(codeOf(() => repoRefOf({ ...GITHUB_REPO, slug: null }, REPO_ROOT))).toBe('invalid_root');
+    expect(
+      codeOf(() =>
+        repoRefOf({ ...GITHUB_REPO, source: 'local', name: undefined, slug: null }, REPO_ROOT),
+      ),
+    ).toBe('invalid_root');
   });
 });

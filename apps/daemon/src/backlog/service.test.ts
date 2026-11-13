@@ -6,11 +6,18 @@ import type { Repo } from '@codebox/contracts';
 import { parseBacklog as parseBacklogMarkdown } from '@codebox/backlog';
 import { openInMemoryStore } from '@codebox/store';
 import type { Store } from '@codebox/store';
+import { clonePath } from '@codebox/workspaces';
+import type { GitCommandInput, GitResult, GitRunner } from '@codebox/workspaces';
 import { loadConfig, readBuildInfo, resolvePaths } from '../config.js';
 import { createLogger } from '../logger.js';
 import { DEFAULT_SUBSYSTEM_FLAGS, createShutdownRegistry } from '../modules.js';
 import type { DaemonContext } from '../modules.js';
-import { BacklogMissingError, BacklogRefError, createBacklogService } from './service.js';
+import {
+  BacklogMissingError,
+  BacklogRefError,
+  createBacklogRuntime,
+  createBacklogService,
+} from './service.js';
 import type { BacklogRuntime, BacklogService } from './service.js';
 
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
@@ -271,5 +278,87 @@ describe('tick', () => {
     const directory = mkdtempSync(join(tmpdir(), 'cb-72-tick-empty-'));
     directories.push(directory);
     await expect(service.tick(directory, 'Task-02')).resolves.toEqual({ kind: 'missing' });
+  });
+});
+
+describe('createBacklogRuntime', () => {
+  const REPO_ROOT = '/srv/codebox/repos';
+  const LOCAL_REPO: Repo = { ...REPO, source: 'local', name: 'widgets', slug: null };
+  const MARKDOWN = ['## Batch', '', '- [ ] **[Task-01]** Local item.'].join('\n');
+
+  interface RecordingGit {
+    readonly git: GitRunner;
+    readonly calls: { readonly cwd: string; readonly args: readonly string[] }[];
+  }
+
+  function recordingGit(): RecordingGit {
+    const calls: { cwd: string; args: readonly string[] }[] = [];
+    return {
+      calls,
+      git: {
+        async run(input: GitCommandInput): Promise<GitResult> {
+          calls.push({ cwd: input.cwd, args: [...input.args] });
+          const command = input.args.join(' ');
+          if (command === 'rev-parse refs/heads/main') {
+            return { code: 0, stdout: `${REVISION}\n`, stderr: '' };
+          }
+          if (command === 'show refs/heads/main:TODO.md') {
+            return { code: 0, stdout: MARKDOWN, stderr: '' };
+          }
+          return { code: 1, stdout: '', stderr: 'unexpected call' };
+        },
+      },
+    };
+  }
+
+  it('reads a local repository in its own folder and never clones', async () => {
+    const recorder = recordingGit();
+    const clones: string[] = [];
+    const runtime = createBacklogRuntime({
+      git: recorder.git,
+      repoRoot: REPO_ROOT,
+      timeoutMs: 5_000,
+      ensureClone: async (repo: Repo): Promise<void> => {
+        clones.push(repo.id);
+      },
+    });
+
+    const snapshot = await runtime.readSnapshot(LOCAL_REPO);
+
+    expect(snapshot.markdown).toBe(MARKDOWN);
+    expect(snapshot.revision).toBe(REVISION);
+    expect(parseBacklogMarkdown(snapshot.markdown).items.map((item) => item.ref)).toEqual([
+      'Task-01',
+    ]);
+    expect(recorder.calls.map((call) => [...call.args])).toEqual([
+      ['rev-parse', 'refs/heads/main'],
+      ['show', 'refs/heads/main:TODO.md'],
+    ]);
+    expect(recorder.calls.map((call) => call.cwd)).toEqual([
+      join(REPO_ROOT, 'widgets'),
+      join(REPO_ROOT, 'widgets'),
+    ]);
+    expect(clones).toEqual([]);
+  });
+
+  it('keeps the bare cache for a github repository', async () => {
+    const recorder = recordingGit();
+    const clones: string[] = [];
+    const runtime = createBacklogRuntime({
+      git: recorder.git,
+      repoRoot: REPO_ROOT,
+      timeoutMs: 5_000,
+      ensureClone: async (repo: Repo): Promise<void> => {
+        clones.push(repo.id);
+      },
+    });
+
+    await runtime.readSnapshot(REPO);
+
+    expect(clones).toEqual([REPO.id]);
+    expect(recorder.calls.map((call) => call.cwd)).toEqual([
+      clonePath(REPO_ROOT, 'acme/widgets'),
+      clonePath(REPO_ROOT, 'acme/widgets'),
+    ]);
   });
 });

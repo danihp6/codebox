@@ -7,6 +7,7 @@ import { GIT_ENV, clonePath, createGitRunner } from '@codebox/workspaces';
 import type { GitRunner } from '@codebox/workspaces';
 import type { DaemonContext } from '../modules.js';
 import type { Store } from '@codebox/store';
+import { repoRefOf } from '../run/engine.js';
 import { createDaemonWorkspaces } from '../runs/engine.js';
 import { workStates } from './select.js';
 
@@ -103,15 +104,22 @@ export function createBacklogRuntime(options: CreateBacklogRuntimeOptions): Back
 
   return {
     async readSnapshot(repo: Repo): Promise<BacklogSnapshot> {
-      if (options.ensureClone !== undefined) await options.ensureClone(repo);
-      const clone = clonePath(options.repoRoot, repo.slug);
-      const ref = `refs/heads/${repo.defaultBranch}`;
-      const revision = await run(clone, ['rev-parse', ref]);
+      const ref = repoRefOf(repo, options.repoRoot);
+      let cwd: string;
+      if (ref.source === 'github') {
+        if (options.ensureClone !== undefined) await options.ensureClone(repo);
+        cwd = clonePath(options.repoRoot, ref.slug);
+      } else {
+        // D62: an offline repository is read in place, so there is no clone to refresh first.
+        cwd = ref.path;
+      }
+      const head = `refs/heads/${ref.defaultBranch}`;
+      const revision = await run(cwd, ['rev-parse', head]);
       const sha = revision.stdout.trim();
       if (revision.code !== 0 || sha === '') {
-        throw new Error(`git rev-parse ${ref} failed (exit ${revision.code})`);
+        throw new Error(`git rev-parse ${head} failed (exit ${revision.code})`);
       }
-      const shown = await run(clone, ['show', `${ref}:${BACKLOG_PATH}`]);
+      const shown = await run(cwd, ['show', `${head}:${BACKLOG_PATH}`]);
       if (shown.code !== 0) throw new BacklogMissingError(sha);
       return { markdown: shown.stdout, revision: sha };
     },
@@ -130,10 +138,12 @@ export function createBacklogService(options: CreateBacklogServiceOptions): Back
       repoRoot: config.CB_REPO_ROOT,
       timeoutMs: config.CB_GIT_HTTP_TIMEOUT_SECONDS * 1000,
       ensureClone: async (repo: Repo): Promise<void> => {
+        const ref = repoRefOf(repo, config.CB_REPO_ROOT);
+        if (ref.source !== 'github') return;
         await createDaemonWorkspaces(context).ensureClone({
-          slug: repo.slug,
-          defaultBranch: repo.defaultBranch,
-          cloneUrl: `https://github.com/${repo.slug}.git`,
+          slug: ref.slug,
+          defaultBranch: ref.defaultBranch,
+          cloneUrl: ref.cloneUrl,
         });
       },
     });
