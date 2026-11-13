@@ -26,6 +26,13 @@ first release exists.
   completes instead of returning silently when `state` is absent. The single-use state lives
   3600 s, the same hour GitHub gives the handshake, and `manifest.test.ts`, `service.test.ts`
   and `docs/api.md` pin both.
+- **The conversion accepts GitHub's whole document.** GitHub answers
+  `POST /app-manifests/{code}/conversions` with the app plus the PEM, and the daemon parsed it
+  with a `strictObject` of two keys, so every real handshake failed after GitHub had already
+  created the app: `503 provider_unavailable`, no credential, and the code spent. The schema is
+  now a plain object that takes `id` and `pem` and ignores the rest, the two unreadable-body
+  paths log `github_manifest_failed` instead of failing silently, and `service.test.ts` fills
+  the fake with the full document plus a case with no PEM.
 - Lint and the daemon build are green and the two touched suites pass 44/44. The daemon suite
   keeps 23 failures in 6 files on this Windows host, identical on `main` (POSIX modes, shell and
   git behaviour).

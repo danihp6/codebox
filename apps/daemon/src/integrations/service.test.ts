@@ -336,9 +336,23 @@ describe('integrations service', () => {
 
   it('completes the GitHub manifest flow once and keeps the PEM out of every response', async () => {
     const pem = '-----BEGIN PRIVATE KEY-----\nMIIE-test-pem\n-----END PRIVATE KEY-----';
+    const app = {
+      id: 123,
+      slug: 'codebox-cb-local',
+      node_id: 'MDM6QXBwMTIz',
+      owner: { login: 'dani', id: 1 },
+      name: 'codebox-cb-local',
+      description: null,
+      client_id: 'Iv1.example',
+      client_secret: 'client-secret-not-stored',
+      webhook_secret: 'webhook-secret-not-stored',
+      pem,
+      permissions: { contents: 'write', metadata: 'read' },
+      events: [],
+    };
     const setupResult = setup({
       publicUrl: 'https://box.example.com/',
-      respond: () => new Response(JSON.stringify({ id: 123, pem }), { status: 201 }),
+      respond: () => new Response(JSON.stringify(app), { status: 201 }),
     });
     const started = setupResult.service.startManifest();
     expect(started.action).toBe(
@@ -395,6 +409,18 @@ describe('integrations service', () => {
     );
     expect(error?.status).toBe(503);
     expect(error?.details).toEqual({ reason: 'provider_unavailable' });
+    expect(setupResult.credentials.list()).toEqual([]);
+  });
+
+  it('is 503 and stores nothing when the conversion body carries no PEM', async () => {
+    const setupResult = setup({
+      respond: () => new Response(JSON.stringify({ id: 123, slug: 'codebox' }), { status: 201 }),
+    });
+    const started = setupResult.service.startManifest();
+    const error = await asyncErrorOf(() =>
+      setupResult.service.completeManifest({ code: 'abc', state: started.state }),
+    );
+    expect(error?.status).toBe(503);
     expect(setupResult.credentials.list()).toEqual([]);
   });
 });

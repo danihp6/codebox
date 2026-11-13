@@ -27,7 +27,9 @@ export const ALLOWED_REQUEST_HEADERS: readonly string[] = Object.freeze(['accept
 const TRAILING_SLASHES = /\/+$/;
 const RESULT_SLICE = INTEGRATION_RESULT_MAX_CHARACTERS;
 
-const conversionSchema = z.strictObject({
+// GitHub answers with the whole app document plus the PEM. Only these two fields are ours, and
+// a field upstream adds later must not fail a handshake that already created the app.
+const conversionSchema = z.object({
   id: z.number().int().positive(),
   pem: z.string().min(1),
 });
@@ -200,10 +202,12 @@ export function createIntegrationsService(
     try {
       raw = JSON.parse(text);
     } catch {
+      logger.warn({ msg: 'github_manifest_failed', reason: 'conversion_unreadable' });
       throw new RunApiError('provider_unavailable', 503, { reason: 'provider_unavailable' });
     }
     const parsed = conversionSchema.safeParse(raw);
     if (!parsed.success) {
+      logger.warn({ msg: 'github_manifest_failed', reason: 'conversion_invalid' });
       throw new RunApiError('provider_unavailable', 503, { reason: 'provider_unavailable' });
     }
     return parsed.data;
