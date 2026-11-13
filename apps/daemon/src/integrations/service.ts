@@ -347,7 +347,13 @@ export function createIntegrationsService(
       }
       const state = states.issue();
       logger.info({ msg: 'github_manifest_started' });
-      return { action: GITHUB_MANIFEST_ACTION, manifest: manifestBody(), state };
+      // docs.github.com puts `state` in the action's query, not in a form field: the callback
+      // echoes it back, so the daemon can tell its own handshake from someone else's.
+      return {
+        action: `${GITHUB_MANIFEST_ACTION}?state=${encodeURIComponent(state)}`,
+        manifest: manifestBody(),
+        state,
+      };
     },
 
     async completeManifest(input: {

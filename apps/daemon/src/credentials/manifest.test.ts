@@ -31,11 +31,19 @@ describe('manifest state store', () => {
     const time = clock('2026-10-27T10:00:00.000Z');
     const store = createManifestStateStore({ now: time.now, ttlSeconds: 600 });
     const state = store.issue();
-    time.advance(MANIFEST_STATE_TTL_SECONDS - 1);
+    time.advance(599);
     expect(store.consume(state)).toBe(true);
 
     const expired = store.issue();
-    time.advance(MANIFEST_STATE_TTL_SECONDS);
+    time.advance(600);
     expect(store.consume(expired)).toBe(false);
+  });
+
+  it('keeps an unused state for the hour GitHub gives the handshake', () => {
+    const time = clock('2026-10-27T10:00:00.000Z');
+    const store = createManifestStateStore({ now: time.now });
+    const state = store.issue();
+    time.advance(MANIFEST_STATE_TTL_SECONDS - 1);
+    expect(store.consume(state)).toBe(true);
   });
 });

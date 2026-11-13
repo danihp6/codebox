@@ -1,7 +1,8 @@
 import { randomBytes } from 'node:crypto';
 import { safeEqual, sha256Hex } from '@codebox/security';
 
-export const MANIFEST_STATE_TTL_SECONDS = 600;
+/** GitHub's manifest handshake must finish within one hour, so the single-use state lives as long. */
+export const MANIFEST_STATE_TTL_SECONDS = 3600;
 export const MANIFEST_STATE_BYTES = 24;
 
 export interface ManifestStateStore {

@@ -341,7 +341,9 @@ describe('integrations service', () => {
       respond: () => new Response(JSON.stringify({ id: 123, pem }), { status: 201 }),
     });
     const started = setupResult.service.startManifest();
-    expect(started.action).toBe('https://github.com/settings/apps/new');
+    expect(started.action).toBe(
+      `https://github.com/settings/apps/new?state=${encodeURIComponent(started.state)}`,
+    );
     expect(typeof started.manifest).toBe('object');
     expect(started.manifest['redirect_url']).toBe('https://box.example.com/settings/credentials');
     expect(started.manifest['url']).toBe('https://box.example.com/');

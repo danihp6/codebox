@@ -795,9 +795,11 @@ ever returns a value, a prefix longer than four characters or the sealed envelop
   `422` with `details.reason = "host_not_allowed"`. A transport error or a timeout is a `503`
   with `details.reason = "integration_unreachable"`.
 - `POST /v1/integrations/github/manifest` returns `{ action, manifest, state }` for a browser
-  form; GitHub posts to `action` and redirects to `<CB_PUBLIC_URL>/settings/credentials`, the
-  route that reads `code` and `state` and calls the `complete` endpoint, never to the daemon.
-  `state` is single use and expires after 600 s. `POST /v1/integrations/github/complete` takes
+  form; `action` already carries `state` in its query, the way GitHub documents the handshake,
+  and GitHub posts the `manifest` field there. GitHub answers with a redirect to
+  `<CB_PUBLIC_URL>/settings/credentials`, the route that reads `code` and `state` and calls the
+  `complete` endpoint, never to the daemon. `state` is single use and expires after 3600 s, the
+  same one-hour window GitHub gives the handshake. `POST /v1/integrations/github/complete` takes
   `{ code, state }` and answers `{ configured: true, appId, credentialId }`; a replayed or
   expired `state` is a `422` with `details.reason = "state_invalid"`, GitHub refusing the
   exchange is a `503` with `details.reason = "provider_unavailable"`, and an absent

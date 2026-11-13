@@ -20,6 +20,12 @@ first release exists.
   `<CB_PUBLIC_URL>/settings/credentials`, where the page already reads both parameters; the new
   `GITHUB_MANIFEST_REDIRECT_PATH` names it, `service.test.ts` asserts it with the trailing slash
   trimmed, and `docs/api.md` §5.9 and `docs/app.md` §4 name the return route.
+- **`state` travels where GitHub reads it.** `startManifest` puts `state` in the `action` query
+  (`https://github.com/settings/apps/new?state=…`), the shape GitHub documents, and keeps the
+  hidden field as a fallback; the callback can now echo it back and the credentials page
+  completes instead of returning silently when `state` is absent. The single-use state lives
+  3600 s, the same hour GitHub gives the handshake, and `manifest.test.ts`, `service.test.ts`
+  and `docs/api.md` pin both.
 - Lint and the daemon build are green and the two touched suites pass 44/44. The daemon suite
   keeps 23 failures in 6 files on this Windows host, identical on `main` (POSIX modes, shell and
   git behaviour).
