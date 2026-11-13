@@ -199,9 +199,14 @@ export function createReposService(options: CreateReposServiceOptions): ReposSer
 
     async verify(id: string): Promise<RepoVerify> {
       const repo = requireRepo(store, id);
+      const slug = repo.slug;
+      // D62: a repository with no remote has no provider to ask (Task-125 answers not_applicable).
+      if (slug === null) {
+        throw new RunApiError('provider_unavailable', 503, { reason: 'provider_unavailable' });
+      }
       let answer: { readonly defaultBranch: string; readonly canPush: boolean };
       try {
-        answer = await verifyPort().verify(repo.slug);
+        answer = await verifyPort().verify(slug);
       } catch {
         context.logger.warn({ msg: 'repo_verify_failed', repoId: repo.id, slug: repo.slug });
         throw new RunApiError('provider_unavailable', 503, { reason: 'provider_unreachable' });
