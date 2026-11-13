@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, readdir, rm } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { isAbsolute, join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -457,10 +457,11 @@ describe.skipIf(process.platform === 'win32')('real git', () => {
       'cb/run_real-local-run',
     );
     expect((await git(repo.path, ['worktree', 'list'])).trim().split('\n')).toHaveLength(2);
-    const markerPath = (
+    const reported = (
       await git(worktree.path, ['rev-parse', '--git-path', RUN_MARKER_FILENAME])
     ).trim();
-    expect(JSON.parse(await readFile(join(worktree.path, markerPath), 'utf8'))).toEqual({
+    const markerPath = isAbsolute(reported) ? reported : resolve(worktree.path, reported);
+    expect(JSON.parse(await readFile(markerPath, 'utf8'))).toEqual({
       runId: 'run_real',
       repoSlug: 'widgets',
       branch: 'cb/run_real-local-run',
