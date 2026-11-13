@@ -20,10 +20,10 @@ import {
   createGitRunner,
   worktreePath,
 } from '@codebox/workspaces';
-import type { GitRunner, WorkspaceManager } from '@codebox/workspaces';
+import type { GitRunner, RepoRef, WorkspaceManager } from '@codebox/workspaces';
 import { eventNotifier } from '../events/notifier.js';
 import type { DaemonContext } from '../modules.js';
-import { permissionPath } from '../run/engine.js';
+import { permissionPath, repoRefOf } from '../run/engine.js';
 import { createDaemonWorkspaces, providerAuth } from '../runs/engine.js';
 import { RunApiError } from '../runs/errors.js';
 import {
@@ -158,14 +158,6 @@ type TurnStep =
   | { readonly kind: 'prompt_error' }
   | { readonly kind: 'aborted' };
 
-function repoRef(repo: Repo): { slug: string; defaultBranch: string; cloneUrl: string } {
-  return {
-    slug: repo.slug,
-    defaultBranch: repo.defaultBranch,
-    cloneUrl: `https://github.com/${repo.slug}.git`,
-  };
-}
-
 function toolName(tool: string): string {
   const name = tool.trim();
   return name.length > 0 ? name : UNNAMED_TOOL;
@@ -283,13 +275,27 @@ export function createSessionsService(options: CreateSessionsServiceOptions): Se
   async function ensureWorktree(session: Session, repo: Repo): Promise<string> {
     const live = worktreeDirectories.get(session.id);
     if (live !== undefined) return live;
-    const ref = repoRef(repo);
+    const ref = repoRefOf(repo, config.CB_REPO_ROOT);
+    if (ref.source !== 'github') {
+      // D62: a local repository needs a worktree that `createLocalWorktree` will build.
+      logger.warn({
+        msg: 'session_workspace_unavailable',
+        sessionId: session.id,
+        reason: 'local_repo',
+      });
+      throw workspaceUnavailable();
+    }
+    const repoRef: RepoRef = {
+      slug: ref.slug,
+      defaultBranch: ref.defaultBranch,
+      cloneUrl: ref.cloneUrl,
+    };
     const expected = worktreePath(config.CB_WORKSPACE_ROOT, session.id);
     let path: string;
     try {
-      await workspaces().ensureClone(ref);
+      await workspaces().ensureClone(repoRef);
       const worktree = await workspaces().createWorktree({
-        repo: ref,
+        repo: repoRef,
         runId: session.id,
         baseRef: repo.defaultBranch,
         title: session.title,
@@ -809,7 +815,9 @@ function createProviderMergePort(context: DaemonContext, git: GitRunner): Sessio
   }
   return {
     async merge(input): Promise<void> {
-      const info: RepoInfo = await github().getRepo(input.repo.slug);
+      const slug = input.repo.slug;
+      if (slug === null) throw providerUnavailable();
+      const info: RepoInfo = await github().getRepo(slug);
       await github().pushBranch({
         repo: info,
         worktree: input.worktree,

@@ -5,6 +5,7 @@ import type { DesignPreview, Repo } from '@codebox/contracts';
 import type { Store } from '@codebox/store';
 import type { DaemonContext } from '../modules.js';
 import type { Logger } from '../logger.js';
+import { repoRefOf } from '../run/engine.js';
 import { createDaemonWorkspaces } from '../runs/engine.js';
 import { buildDesignPreview } from './preview.js';
 import type { DesignSource } from './preview.js';
@@ -76,31 +77,35 @@ export function createDesignRuntime(options: DesignRuntimeOptions): DesignRuntim
     return { code: result.code, stdout: result.stdout, stderr: result.stderr };
   }
 
-  async function show(clone: string, sha: string, path: string): Promise<ShowResult> {
-    const result = await run(clone, ['show', `${sha}:${path}`]);
+  async function show(cwd: string, sha: string, path: string): Promise<ShowResult> {
+    const result = await run(cwd, ['show', `${sha}:${path}`]);
     if (result.code === 0) return { text: result.stdout };
     if (absent(result.stderr)) return { text: null };
     throw new DesignReadError('show', result.code);
   }
 
-  async function resolve(clone: string, repo: Repo, revision: string | null): Promise<string> {
+  async function resolve(
+    cwd: string,
+    defaultBranch: string,
+    revision: string | null,
+  ): Promise<string> {
     if (revision === null) {
-      const result = await run(clone, ['rev-parse', `refs/heads/${repo.defaultBranch}`]);
+      const result = await run(cwd, ['rev-parse', `refs/heads/${defaultBranch}`]);
       const sha = result.stdout.trim();
       if (result.code !== 0 || sha === '') throw new DesignReadError('rev-parse', result.code);
       return sha;
     }
-    const result = await run(clone, ['rev-parse', '--verify', `${revision}^{commit}`]);
+    const result = await run(cwd, ['rev-parse', '--verify', `${revision}^{commit}`]);
     const sha = result.stdout.trim();
     if (result.code !== 0 || sha === '') throw new DesignRevisionError(revision);
     return sha;
   }
 
   async function readScreens(
-    clone: string,
+    cwd: string,
     sha: string,
   ): Promise<readonly { readonly file: string; readonly text: string }[]> {
-    const listed = await run(clone, ['ls-tree', '--name-only', '-r', sha, '--', SCREENS_PREFIX]);
+    const listed = await run(cwd, ['ls-tree', '--name-only', '-r', sha, '--', SCREENS_PREFIX]);
     if (listed.code !== 0) {
       if (absent(listed.stderr)) return [];
       throw new DesignReadError('ls-tree', listed.code);
@@ -112,7 +117,7 @@ export function createDesignRuntime(options: DesignRuntimeOptions): DesignRuntim
       .sort();
     const screens: { readonly file: string; readonly text: string }[] = [];
     for (const file of files) {
-      const shown = await show(clone, sha, file);
+      const shown = await show(cwd, sha, file);
       if (shown.text === null) continue;
       screens.push({ file, text: shown.text });
     }
@@ -121,18 +126,25 @@ export function createDesignRuntime(options: DesignRuntimeOptions): DesignRuntim
 
   return {
     async readDesign(repo: Repo, revision: string | null): Promise<DesignSnapshot> {
-      if (options.ensureClone !== undefined) {
-        try {
-          await options.ensureClone(repo);
-        } catch {
-          throw new DesignReadError('fetch', 0);
+      const ref = repoRefOf(repo, options.repoRoot);
+      let cwd: string;
+      if (ref.source === 'github') {
+        if (options.ensureClone !== undefined) {
+          try {
+            await options.ensureClone(repo);
+          } catch {
+            throw new DesignReadError('fetch', 0);
+          }
         }
+        cwd = clonePath(options.repoRoot, ref.slug);
+      } else {
+        // D62: an offline repository is read in place, so there is no clone to refresh first.
+        cwd = ref.path;
       }
-      const clone = clonePath(options.repoRoot, repo.slug);
-      const sha = await resolve(clone, repo, revision);
-      const tokens = await show(clone, sha, TOKENS_PATH);
-      const routes = await show(clone, sha, ROUTES_PATH);
-      const screens = await readScreens(clone, sha);
+      const sha = await resolve(cwd, ref.defaultBranch, revision);
+      const tokens = await show(cwd, sha, TOKENS_PATH);
+      const routes = await show(cwd, sha, ROUTES_PATH);
+      const screens = await readScreens(cwd, sha);
       return {
         revision: sha,
         source: { tokens: tokens.text, routes: routes.text, screens },
@@ -160,10 +172,12 @@ export function createDesignService(options: CreateDesignServiceOptions): Design
       repoRoot: context.config.CB_REPO_ROOT,
       timeoutMs: context.config.CB_GIT_HTTP_TIMEOUT_SECONDS * 1000,
       ensureClone: async (repo: Repo): Promise<void> => {
+        const ref = repoRefOf(repo, context.config.CB_REPO_ROOT);
+        if (ref.source !== 'github') return;
         await createDaemonWorkspaces(context).ensureClone({
-          slug: repo.slug,
-          defaultBranch: repo.defaultBranch,
-          cloneUrl: `https://github.com/${repo.slug}.git`,
+          slug: ref.slug,
+          defaultBranch: ref.defaultBranch,
+          cloneUrl: ref.cloneUrl,
         });
       },
     });

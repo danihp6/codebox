@@ -12,7 +12,7 @@ import { DEFAULT_SUBSYSTEM_FLAGS, createShutdownRegistry } from '../modules.js';
 import type { DaemonContext } from '../modules.js';
 import type { RunEngine, RunOutcome, RunStartInput } from '../run/ports.js';
 import { RunApiError } from './errors.js';
-import { createRunsService, runsService } from './service.js';
+import { createRunsService, queueRun, runsService } from './service.js';
 import type { RunsService } from './service.js';
 
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
@@ -243,6 +243,67 @@ describe('createRun', () => {
     expect(error.status).toBe(422);
     expect(error.details).toEqual({ path: 'run.repoId' });
     expect(test.engine.starts).toHaveLength(0);
+  });
+});
+
+describe('the start input of a repository', () => {
+  const LOCAL_REPO: Repo = {
+    id: 'repo_local01',
+    slug: null,
+    source: 'local',
+    name: 'widgets',
+    defaultBranch: 'main',
+    gate: 'npm test',
+    policy: 'auto',
+    protectedPaths: [],
+    enabled: true,
+    createdAt: '2026-01-01T00:00:00.000Z',
+  };
+
+  function startOf(test: Harness, repo: Repo): RunStartInput | undefined {
+    queueRun({
+      context: test.context,
+      engine: test.engine,
+      now: test.now,
+      repo,
+      jobId: null,
+      trigger: 'manual',
+      title: 'Start',
+      prompt: 'Start the run.',
+      agent: 'build',
+      model: null,
+    });
+    return test.engine.starts.at(-1);
+  }
+
+  it("keeps today's slug and clone URL for a github repository", () => {
+    const test = harness();
+    const repo = test.store.repos.get('repo_test01');
+    if (repo === null) throw new Error('the harness did not seed the repository');
+
+    const start = startOf(test, repo);
+
+    expect(start?.repo).toMatchObject({
+      slug: 'dani/example',
+      defaultBranch: 'main',
+      cloneUrl: 'https://github.com/dani/example.git',
+    });
+  });
+
+  it('fills the slug with the name and the clone URL with the box path for a local one', () => {
+    const test = harness();
+    // The repos row still needs a slug until the D62 migration; it only satisfies the run's
+    // foreign key, and the start input is built from the local object.
+    test.store.repos.create({ ...LOCAL_REPO, slug: 'acme/local-placeholder' });
+
+    const start = startOf(test, LOCAL_REPO);
+
+    expect(start?.repo).toMatchObject({
+      slug: 'widgets',
+      defaultBranch: 'main',
+      cloneUrl: join(test.context.config.CB_REPO_ROOT, 'widgets'),
+    });
+    expect(JSON.stringify(start)).not.toContain('github.com');
   });
 });
 

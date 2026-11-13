@@ -14,6 +14,7 @@ import type { RunRecord, Store } from '@codebox/store';
 import { branchName } from '@codebox/workspaces';
 import type { WorkspaceManager, Worktree } from '@codebox/workspaces';
 import type { DaemonContext } from '../modules.js';
+import { repoRefOf } from '../run/engine.js';
 import { createRunEventWriter } from '../run/events.js';
 import type { RunEngine, RunStartInput } from '../run/ports.js';
 import { createDaemonEngine, createDaemonWorkspaces } from './engine.js';
@@ -120,6 +121,9 @@ export function titleFromPrompt(prompt: string): string {
 export function queueRun(input: QueueRunInput): Run {
   const store = input.context.store;
   const runId = newRunId();
+  const repoRef = repoRefOf(input.repo, input.context.config.CB_REPO_ROOT);
+  const startRepoSlug = repoRef.source === 'github' ? repoRef.slug : repoRef.name;
+  const startCloneUrl = repoRef.source === 'github' ? repoRef.cloneUrl : repoRef.path;
   const baseRef = input.baseRef ?? input.repo.defaultBranch;
   const createdAt = input.now().toISOString();
   const record: RunRecord = {
@@ -166,12 +170,12 @@ export function queueRun(input: QueueRunInput): Run {
     runId,
     repo: {
       id: input.repo.id,
-      slug: input.repo.slug,
+      slug: startRepoSlug,
       defaultBranch: input.repo.defaultBranch,
       gate: input.repo.gate,
       policy: input.repo.policy,
       protectedPaths: input.repo.protectedPaths,
-      cloneUrl: `https://github.com/${input.repo.slug}.git`,
+      cloneUrl: startCloneUrl,
     },
     jobId: input.jobId,
     trigger: input.trigger,
@@ -371,9 +375,10 @@ export function createRunsService(options: CreateRunsServiceOptions): RunsServic
       }
       const repo = store.repos.get(record.repoId);
       if (repo === null) throw new RunApiError('not_found', 404, { path: 'run.repoId' });
+      const ref = repoRefOf(repo, config.CB_REPO_ROOT);
       const worktree: Worktree = {
         runId: record.id,
-        repoSlug: repo.slug,
+        repoSlug: ref.source === 'github' ? ref.slug : ref.name,
         path: record.worktree,
         branch: record.branch,
         baseRef: record.baseRef,
