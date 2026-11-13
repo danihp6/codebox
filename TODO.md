@@ -3106,6 +3106,222 @@ holds `scripts/README.md`, and `packages/contracts/README.md` has one writer (Ta
 
 ---
 
+## Batch 34 — A repository is local first (cut 2026-11-13, D62)
+
+Cut 2026-11-13 from `main` at `61ebc8b`. The tree still assumes every repository is a GitHub
+repository: `repoSchema` requires `owner/name` (`packages/contracts/src/resources.ts:89-100`),
+`POST /v1/repos` takes only a slug (`docs/api.md` §5.2), the read paths hardcode
+`https://github.com/<slug>.git` (`sessions/service.ts:161-166`, `backlog/service.ts:136`,
+`design/service.ts:166`, `runs/service.ts:174`), and the GitHub App the manifest creates is
+stored and never used (`providerAuth` reads `CB_*` only, `apps/daemon/src/runs/engine.ts:43-62`).
+The operator's model is the opposite: a repository is local first — a folder on the box, no
+owner, no network — and a remote is optional, added later by connecting an existing repo of the
+installed account or by pushing the local one into an empty remote. D62 writes that down.
+
+**Priorities.** P0 is the local path end to end: contract, store, workspace, daemon create and
+the Repos screen. P1 is everything that needs the App installed: installation discovery, the
+connect picker, the push, and the local merge that replaces a PR. P2 is prose that no other task
+owns. The Repos UI is split from the daemon because both would own `features/repos/**`; the
+local mode lands here, the connect and push controls in the next cut.
+
+**A constraint worth stating once:** a GitHub App installation token cannot create repositories.
+"Push to GitHub" therefore means the operator creates the empty repo on GitHub and Codebox pushes
+into it; creating the remote from the box needs a user token and is recorded as `[?] L9`, not
+scheduled.
+
+**Hot-file holders in this batch:** Task-122 holds `packages/contracts/src/index.ts` and
+`docs/decisions.md`; Task-123 holds the new migration; Task-125 holds
+`apps/daemon/src/repos/{service,routes}.ts`; Task-126 holds `apps/app/src/app/features/repos/**`.
+No task holds `package.json`, `package-lock.json`, `tsconfig.base.json`, `apps/app/angular.json`,
+`apps/app/src/app/app.routes.ts`, `apps/app/src/main.ts`, `apps/daemon/src/main.ts`,
+`opencode.json`, `TODO.md` or `CHANGELOG.md`. `docs/api.md` §5.2 has one writer (Task-125), and
+`docs/security.md` is untouched: no rule here moves a secret.
+
+- [ ] **[Task-122]** The contract admits a repository with no remote, and nothing changes yet.
+      D62: a repository is local first; `slug` is the remote coordinate and may be null; a remote
+      is added, never required. `repoSchema` gains `source: 'local' | 'github'` and `name` (the
+      folder-safe identity, `^[a-z0-9][a-z0-9._-]{0,63}$`, unique per instance) and `slug`
+      becomes `string | null` — required when `source` is `github`, optional for a local repo
+      that later gains a remote; `createRepoBodySchema` becomes a union on `mode` — `local` takes
+      `name` and no owner, `connect` takes `slug` — with `mode` defaulting to `connect` when the
+      body carries only `slug`, so the shipped app keeps posting today's body until Task-126. Add
+      one `repoRefOf(repo)` returning a
+      discriminated union (`local` → the box path, `github` → today's `cloneUrl`) and thread it
+      through `run/engine.ts`, `runs/service.ts`, `sessions/service.ts`, `backlog/service.ts` and
+      `design/service.ts` so no local repo can ever build a `github.com` URL. A GitHub repo
+      answers byte for byte what it answers today; a local fixture reads its `TODO.md` from its
+      own path in the unit tests, even though nothing can create one yet. Write D62 in
+      `docs/decisions.md` and the two shapes in `docs/api.md` §5.2.
+      *Priority:* P0 — every other task types against this.
+      *Paths:* `packages/contracts/src/{resources.ts,resources.test.ts,primitives.ts,openapi.ts,openapi.test.ts,index.ts}` (hot file), `packages/contracts/README.md`, the five daemon
+      files above and their tests, `docs/decisions.md` (D62), `docs/api.md` §5.2, and the
+      `README.md` lines those files touch.
+      *Dependencies:* none — `repoSchema` and `slugSchema` are merged (Task-03), the read paths
+      are merged.
+      *Acceptance:* `[unit]` a local repo parses with `slug: null` and with a slug, a `github`
+      repo parses with a slug and fails without one, `name` rejects `../x`, `A/B` and an empty
+      string; `[unit]` `createRepoBodySchema` accepts `{ mode: 'local', name }` and
+      rejects `{ mode: 'local', slug }`, accepts `{ mode: 'connect', slug }`, accepts a legacy
+      `{ slug }` as a connect, and rejects a connect without one; `[unit]` the five read paths
+      never contain
+      `https://github.com/` outside `repoRefOf`; `[unit]` the document keeps 67 paths and the
+      `Repo` component carries `source` and a nullable `slug`; `[unit]` lint and the build pass.
+- [ ] **[Task-123]** The store keeps a repository that has no remote. A numbered migration adds
+      `source` (`'local' | 'github'`, default `'github'`) and `name` to `repos`, makes `slug`
+      nullable while keeping its unique index, and backfills `name` from the slug for the rows
+      that predate D62; `store.repos` reads and writes both shapes. A local name is unique, a
+      null slug never collides with another null.
+      *Priority:* P0 — Task-125 writes the row.
+      *Paths:* `packages/store/src/migrations/<next>.sql` (new), `packages/store/src/{schema.ts,repositories/repos.ts}` and their tests, `packages/store/README.md`.
+      *Dependencies:* Task-122's types; the migration runner and `repos` table are merged.
+      *Acceptance:* `[unit]` a fresh database and a database with the previous migration both
+      reach the new version; two local repos with the same name are refused, two github repos
+      with the same slug too, and a local plus a github repo never collide; a legacy row answers
+      `source: 'github'` and a non-null `name`; `[unit]` lint, the store suite and the build pass.
+- [ ] **[Task-124]** A local repository is born offline. `packages/workspaces` gains
+      `initLocal({ name, defaultBranch })`: a normal repository under `CB_REPO_ROOT/<name>` with
+      `git init -b <defaultBranch>`, one initial commit that carries a minimal `TODO.md` (the
+      backlog root, D51) and nothing else, and a `worktree()` that adds a worktree from its
+      default branch exactly as a clone does. No network, no credential, no remote; a name that
+      escapes `CB_REPO_ROOT` is refused before any process starts.
+      *Priority:* P0 — Task-125 calls it.
+      *Paths:* `packages/workspaces/src/{local.ts,local.test.ts,index.ts}` (new and one export
+      line), `packages/workspaces/README.md`.
+      *Dependencies:* Task-122's `name` shape; `createGitRunner`, `GIT_ENV` and the existing
+      `worktree()` are merged.
+      *Acceptance:* `[unit]` against a real git, a local repo is initialised on `main` with one
+      commit, `TODO.md` exists and is the only tracked file, a second `initLocal` with the same
+      name fails without touching the tree, `worktree()` yields a directory whose `HEAD` is the
+      initial commit; `[unit]` no git invocation carries a URL or a token; `[unit]` lint, the
+      workspaces suite and the build pass.
+- [ ] **[Task-125]** The daemon creates a local repository. `POST /v1/repos` takes the Task-122
+      union: `mode: 'local'` validates the name, calls `initLocal`, writes the row and answers the
+      repo with `source: 'local'`, `slug: null`; `mode: 'connect'` (or the old body) keeps the
+      GitHub path untouched until the next cut, and a `connect` without an installation is a
+      `409` with `details.reason = "github_app_installed_required"`. `POST /v1/repos/{id}/verify`
+      on a local repo answers `repo`, `branch` and `gate` from the box and `push` as
+      `not_applicable`, never calling the provider; a duplicate name is the existing `409`.
+      *Priority:* P0 — the Repos screen has nothing to call until this lands.
+      *Paths:* `apps/daemon/src/repos/{service.ts,routes.ts,service.test.ts,routes.test.ts}`,
+      `apps/daemon/README.md`, `docs/api.md` §5.2 only.
+      *Dependencies:* Tasks 122–124 merged; `repos` routes and the `repo_not_allowed` mapping are
+      merged.
+      *Acceptance:* `[unit]` a local create answers `201` with `source: 'local'`, `slug: null`
+      and `name`, writes one row and one repository on disk, and never calls the provider; a
+      duplicate name is `409`; a bad name is `422` at `repo.name`; `[unit]` verify on a local
+      repo answers four checks and no outbound request; `[unit]` the GitHub create path answers
+      exactly what it answers today; `[unit]` lint, the daemon suite and the build pass.
+- [ ] **[Task-126]** Repos creates a local repository from the list screen. The add form asks for
+      a **name** and nothing else in `mode: 'local'` (no slug, no owner), keeps the existing
+      fields collapsed, and the row shows the name with a `Local` tag where a GitHub repo shows
+      `owner/name`; a local repo's detail has no verify/push affordance. Both locales get the
+      strings, and the sheet follows the screen states L8 draws.
+      *Priority:* P0 — this is the operator's request; it is blocked by L8.
+      *Paths:* `apps/app/src/app/features/repos/{repos.page.ts,repos.store.ts,repos.api.ts,i18n.ts}`
+      and their specs.
+      *Dependencies:* Task-125 merged; `design/screens/repo-list.json` + `design/exports/repo-list.png`
+      (the `02 · Repo list` frame and its `loading`/`empty`/`error` states) and L8's new states are
+      read-only inputs. If L8 is still open the operator may free this task and accept the shipped
+      frame for the local state, recorded in the task branch's subject.
+      *Acceptance:* `[unit]` the form posts `{ mode: 'local', name }` and never a slug; a name
+      with `/` is refused before the request; the row renders `Local` for `source: 'local'` and
+      `owner/name` otherwise; both locales carry every new key; `[unit]` lint, the app suite and
+      the build pass; `[live]` a local repo is created and appears in the list after a reload.
+
+## Batch 35 — The remote is optional (cut after Batch 34 lands)
+
+Cut on the day Batch 34 merges, from that `main`. Nothing here starts before the App has an
+installation: the manifest creates an App, it does not install it, and the credential it stores
+is read by no auth path today (`apps/daemon/src/runs/engine.ts:43-62` reads `CB_*` only).
+A GitHub App installation token cannot create repositories, so the push target is an empty repo
+the operator creates on GitHub ([?] L9).
+
+**Hot-file holders in this batch:** Task-127 holds `runs/engine.ts` and `docs/providers.md`
+§5–6; Task-128 holds `apps/daemon/src/repos/**` and `docs/api.md` §5.2; Task-129 holds
+`sessions/service.ts` and `docs/jobs.md` §16; Task-130 holds `apps/app/src/app/features/repos/**`;
+Task-131 holds `docs/app.md` §4 and `docs/product.md`. No task holds `TODO.md`, `CHANGELOG.md`,
+`opencode.json` or `docs/decisions.md`; L9 is the decision.
+
+- [ ] **[Task-127]** The manifest App gets an installation and the daemon uses it. At
+      `completeManifest`, store `appId` and `slug` beside the credential (not-secret settings,
+      the PEM stays sealed), discover the installation with an App JWT (`GET /app/installations`)
+      and store its id; when there is none, answer `installed: false` with the
+      `https://github.com/apps/<slug>/installations/new` link. `providerAuth` prefers the stored
+      App over `CB_*` (D49), mints and caches installation tokens through the existing
+      `git-provider` port, and still falls back to env when no credential exists. No response and
+      no log line carries the PEM or a token.
+      *Priority:* P1 — Task-128 cannot authenticate without it.
+      *Paths:* `apps/daemon/src/integrations/{service.ts,routes.ts,service.test.ts,routes.test.ts}`,
+      `apps/daemon/src/runs/{engine.ts,engine.test.ts}`, `apps/daemon/src/settings/**` (the two
+      not-secret keys), `packages/git-provider/src/{github.ts,app-auth.ts,index.ts}` and tests,
+      `docs/providers.md` §5–6.
+      *Dependencies:* Batch 34 merged; the manifest flow (Tasks 49–50) and the `app` auth port of
+      `git-provider` are merged.
+      *Acceptance:* `[unit]` a completion with one installation stores `appId`, `slug` and the
+      installation id; with none it answers `installed: false` and the link; `[unit]`
+      `providerAuth` answers the stored app, then `CB_*`, then `none`; `[unit]` an installation
+      token is minted once and reused until it expires; `[unit]` no PEM or token appears in a
+      response, a log line or an error; `[unit]` lint, the daemon and git-provider suites and the
+      build pass.
+- [ ] **[Task-128]** Repos connects an existing repo and pushes a local one into an empty remote.
+      `GET /v1/github/repositories` lists the installation's repositories (`fullName`, `private`,
+      `defaultBranch`), paged; `POST /v1/repos { mode: 'connect', slug }` verifies and stores a
+      `source: 'github'` row; `POST /v1/repos/{id}/remote { slug }` takes a local repo, refuses a
+      remote that already has refs (`409 remote_not_empty`), adds `origin`, pushes the default
+      branch with the installation token and writes the `slug` — the repo stays
+      `source: 'local'` because its canonical copy is the box. The clone, fetch and push paths of
+      a GitHub repo carry the token, never the anonymous URL. Verify answers the four checks for
+      both shapes.
+      *Priority:* P1 — the picker and the push button have no endpoint until this lands.
+      *Paths:* `apps/daemon/src/repos/{service.ts,routes.ts,service.test.ts,routes.test.ts}`,
+      `packages/workspaces/src/{clone.ts,local.ts}` and tests (the authenticated URL),
+      `apps/daemon/README.md`, `docs/api.md` §5.2.
+      *Dependencies:* Task-127 merged for the token; Task-125 for the local shape.
+      *Acceptance:* `[unit]` the list page maps GitHub's installation page and refuses a
+      non-installed app; connect stores a github row and runs the provider once; a remote with
+      refs is refused before a push; a successful push writes the slug and leaves `source:
+      'local'`; `[unit]` no clone or fetch for a connected repo is anonymous — the URL carries the
+      token and no log line does; `[unit]` lint, the daemon and workspaces suites and the build
+      pass.
+- [ ] **[Task-129]** A local repo merges without a remote. `POST /v1/sessions/{id}/merge` on a
+      local repo fast-forwards the box's default branch from the session branch instead of opening
+      a PR; the session's target write-set guard still runs, `pendingProposal` still gates a second
+      merge, and a repo with a remote keeps today's PR path untouched. A merge that would not
+      fast-forward is a `409` with `details.reason = "merge_not_fast_forward"`.
+      *Priority:* P1 — without it a local repo's only proposal is unmergeable.
+      *Paths:* `apps/daemon/src/sessions/{service.ts,sessions.test.ts}`, `docs/jobs.md` §16.
+      *Dependencies:* Task-122 and Task-125 merged; the session merge and its write-set guard are
+      merged.
+      *Acceptance:* `[unit]` a local merge moves the default branch and writes no PR, calls no
+      provider and leaves the worktree alone; a path outside the target is still `409
+      target_violation`; a non-fast-forward is `409 merge_not_fast_forward`; a github repo keeps
+      the existing test's calls; `[unit]` lint, the daemon suite and the build pass.
+- [ ] **[Task-130]** The Repos screen connects and pushes. The add sheet gains the picker over
+      `GET /v1/github/repositories` (search by name, private badge) in `mode: 'connect'`, and a
+      local repo's row gains **Push to GitHub**, which asks for the empty remote's `owner/name`
+      and posts `/v1/repos/{id}/remote`; both follow L8's frames, and both locales get the strings.
+      A refused push (`remote_not_empty`) shows the reason, not a generic failure.
+      *Priority:* P1 — the operator's second and third request; blocked by L8 and Task-128.
+      *Paths:* `apps/app/src/app/features/repos/{repos.page.ts,repos.store.ts,repos.api.ts,i18n.ts}`
+      and their specs.
+      *Dependencies:* Task-128 merged; L8's frames and exports are read-only inputs.
+      *Acceptance:* `[unit]` the picker renders the list, filters by name and posts the chosen
+      slug; an empty list shows the install affordance, not an error; the push posts the slug and
+      reloads the row with `owner/name`; `remote_not_empty` is rendered with its key; both locales
+      carry every key; `[unit]` lint, the app suite and the build pass; `[live]` a repo is
+      connected and another is pushed, from the screen, on the box.
+- [ ] **[Task-131]** The app document and the product paragraph describe the three sources.
+      `docs/app.md` §4's Repos row gains the local create, the connect picker and the push, and
+      `docs/product.md`'s repository paragraph says a repository is local first with an optional
+      remote (D62). No other section moves and no heading number changes.
+      *Priority:* P2 — prose only, after the behaviour ships.
+      *Paths:* `docs/app.md` §4, `docs/product.md` (the repository paragraph).
+      *Dependencies:* Tasks 126, 128 and 130 merged.
+      *Acceptance:* `[unit]` the two sections name the three sources and the D62 rule; the rest of
+      `docs/app.md` is byte-identical; `[unit]` lint and the build pass.
+
+---
+
 ## Local / human (never picked by the driver)
 
 The driver only counts `- [ ] **[Task-NN]**`; these `L<n>` items are outside the queue by
@@ -3117,6 +3333,26 @@ exports, L7 restructures the file the importer reads. **No screen task is cut wh
 open** — the two tasks that draw no page, Task-88 and Task-89, were freed by the operator on
 2026-10-30 and run beside this track — and none of the three later items (L1, L3, L4) runs ahead
 of them.
+
+- [ ] **L8 — The repository source sheet (2026-11-13, D62).** The Repos screen must offer three
+      sources — create a local repo (a name, no owner), connect one the installed GitHub App can
+      see, and push a local repo into an empty remote — and the shipped `02 · Repo list` frame
+      draws none of them. Draw the sheet and its state frames (`loading`, `empty`, `error`), the
+      remote badge on a row and the push affordance on a local repo, in dark and light, with the
+      interaction states `L5` established. Export `design/exports/repo-create.png` and, if the
+      sheet gets its own slug, `design/screens/repo-create.json`; otherwise add the states to
+      `repo-list.json`. Update `design/README.md` §1 with the new frame and its caption.
+      *Dependencies:* none. **Blocks** Task-126 and the Repos UI of Batch 35; the operator may
+      free Task-126 by accepting the shipped `02 · Repo list` frame for the local state alone.
+      *Priority:* P0.
+- [ ] **L9 — Creating a GitHub remote from the box (decision, 2026-11-13).** The operator asked
+      for a local repo that pushes to "a repo of the connected account". A GitHub App
+      installation token cannot create repositories; `POST /user/repos` needs a user token. Decide
+      one: the operator creates the empty repo on GitHub (no new credential, Batch 35's push), or
+      Codebox stores a user PAT/OAuth credential and creates it (D49's write-only store, a new
+      provider account or a `github_user` credential). No code until the decision is recorded in
+      `docs/decisions.md`.
+      *Dependencies:* none. *Priority:* P1 for the decision, not for code.
 
 - [x] **L2 — Visual prototype.** A Figma file with the routed screens and the tokens in
       `docs/app.md` §9; export PNGs and a screen-to-route map in `design/`. **Superseded by

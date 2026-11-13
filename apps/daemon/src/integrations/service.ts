@@ -20,12 +20,16 @@ import type { ManifestStateStore } from '../credentials/manifest.js';
 import type { IntegrationStorage, StoredIntegration } from './storage.js';
 
 export const GITHUB_MANIFEST_ACTION = 'https://github.com/settings/apps/new';
+/** Where GitHub sends the browser back: the screen that reads `code` and `state`. */
+export const GITHUB_MANIFEST_REDIRECT_PATH = '/settings/credentials';
 export const ALLOWED_REQUEST_HEADERS: readonly string[] = Object.freeze(['accept', 'content-type']);
 
 const TRAILING_SLASHES = /\/+$/;
 const RESULT_SLICE = INTEGRATION_RESULT_MAX_CHARACTERS;
 
-const conversionSchema = z.strictObject({
+// GitHub answers with the whole app document plus the PEM. Only these two fields are ours, and
+// a field upstream adds later must not fail a handshake that already created the app.
+const conversionSchema = z.object({
   id: z.number().int().positive(),
   pem: z.string().min(1),
 });
@@ -167,7 +171,7 @@ export function createIntegrationsService(
     };
     if (url !== null) {
       manifest.url = url;
-      manifest.redirect_url = `${url.replace(TRAILING_SLASHES, '')}/providers/github/callback`;
+      manifest.redirect_url = `${url.replace(TRAILING_SLASHES, '')}${GITHUB_MANIFEST_REDIRECT_PATH}`;
     }
     return manifest;
   }
@@ -198,10 +202,12 @@ export function createIntegrationsService(
     try {
       raw = JSON.parse(text);
     } catch {
+      logger.warn({ msg: 'github_manifest_failed', reason: 'conversion_unreadable' });
       throw new RunApiError('provider_unavailable', 503, { reason: 'provider_unavailable' });
     }
     const parsed = conversionSchema.safeParse(raw);
     if (!parsed.success) {
+      logger.warn({ msg: 'github_manifest_failed', reason: 'conversion_invalid' });
       throw new RunApiError('provider_unavailable', 503, { reason: 'provider_unavailable' });
     }
     return parsed.data;
@@ -345,7 +351,13 @@ export function createIntegrationsService(
       }
       const state = states.issue();
       logger.info({ msg: 'github_manifest_started' });
-      return { action: GITHUB_MANIFEST_ACTION, manifest: manifestBody(), state };
+      // docs.github.com puts `state` in the action's query, not in a form field: the callback
+      // echoes it back, so the daemon can tell its own handshake from someone else's.
+      return {
+        action: `${GITHUB_MANIFEST_ACTION}?state=${encodeURIComponent(state)}`,
+        manifest: manifestBody(),
+        state,
+      };
     },
 
     async completeManifest(input: {

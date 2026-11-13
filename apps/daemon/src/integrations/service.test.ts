@@ -48,7 +48,9 @@ function recorder(respond: (url: string) => Response | Promise<Response>): {
   };
 }
 
-function fixture(options: { readonly configured?: boolean } = {}): DaemonContext {
+function fixture(
+  options: { readonly configured?: boolean; readonly publicUrl?: string } = {},
+): DaemonContext {
   const root = mkdtempSync(join(tmpdir(), 'cb-58-integrations-'));
   directories.push(root);
   const config = loadConfig({
@@ -58,6 +60,7 @@ function fixture(options: { readonly configured?: boolean } = {}): DaemonContext
     CB_REPO_ROOT: join(root, 'repos'),
     CB_WORKSPACE_ROOT: join(root, 'worktrees'),
     CB_OPENCODE_URL: 'http://127.0.0.1:9',
+    ...(options.publicUrl === undefined ? {} : { CB_PUBLIC_URL: options.publicUrl }),
     ...(options.configured === false ? {} : { CB_SECRETS_KEY: MASTER_KEY }),
   });
   const store = openInMemoryStore();
@@ -87,10 +90,14 @@ interface Setup {
 function setup(
   options: {
     readonly configured?: boolean;
+    readonly publicUrl?: string;
     readonly respond?: (url: string) => Response | Promise<Response>;
   } = {},
 ): Setup {
-  const context = fixture({ configured: options.configured ?? true });
+  const context = fixture({
+    configured: options.configured ?? true,
+    ...(options.publicUrl === undefined ? {} : { publicUrl: options.publicUrl }),
+  });
   const now = (): Date => context.clock();
   const credentials = createCredentialsService({ context, now });
   const { calls, fetch } = recorder(options.respond ?? (() => new Response('ok')));
@@ -329,12 +336,31 @@ describe('integrations service', () => {
 
   it('completes the GitHub manifest flow once and keeps the PEM out of every response', async () => {
     const pem = '-----BEGIN PRIVATE KEY-----\nMIIE-test-pem\n-----END PRIVATE KEY-----';
+    const app = {
+      id: 123,
+      slug: 'codebox-cb-local',
+      node_id: 'MDM6QXBwMTIz',
+      owner: { login: 'dani', id: 1 },
+      name: 'codebox-cb-local',
+      description: null,
+      client_id: 'Iv1.example',
+      client_secret: 'client-secret-not-stored',
+      webhook_secret: 'webhook-secret-not-stored',
+      pem,
+      permissions: { contents: 'write', metadata: 'read' },
+      events: [],
+    };
     const setupResult = setup({
-      respond: () => new Response(JSON.stringify({ id: 123, pem }), { status: 201 }),
+      publicUrl: 'https://box.example.com/',
+      respond: () => new Response(JSON.stringify(app), { status: 201 }),
     });
     const started = setupResult.service.startManifest();
-    expect(started.action).toBe('https://github.com/settings/apps/new');
+    expect(started.action).toBe(
+      `https://github.com/settings/apps/new?state=${encodeURIComponent(started.state)}`,
+    );
     expect(typeof started.manifest).toBe('object');
+    expect(started.manifest['redirect_url']).toBe('https://box.example.com/settings/credentials');
+    expect(started.manifest['url']).toBe('https://box.example.com/');
     expect(started.state.length).toBeGreaterThan(20);
 
     const invalid = await asyncErrorOf(() =>
@@ -383,6 +409,18 @@ describe('integrations service', () => {
     );
     expect(error?.status).toBe(503);
     expect(error?.details).toEqual({ reason: 'provider_unavailable' });
+    expect(setupResult.credentials.list()).toEqual([]);
+  });
+
+  it('is 503 and stores nothing when the conversion body carries no PEM', async () => {
+    const setupResult = setup({
+      respond: () => new Response(JSON.stringify({ id: 123, slug: 'codebox' }), { status: 201 }),
+    });
+    const started = setupResult.service.startManifest();
+    const error = await asyncErrorOf(() =>
+      setupResult.service.completeManifest({ code: 'abc', state: started.state }),
+    );
+    expect(error?.status).toBe(503);
     expect(setupResult.credentials.list()).toEqual([]);
   });
 });

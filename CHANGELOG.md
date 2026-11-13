@@ -6,6 +6,37 @@ first release exists.
 
 ## Unreleased
 
+### Fixed — 2026-11-13 (the GitHub App manifest flow reaches GitHub and returns to the app)
+
+- **The CSP allows the one cross-origin form the product needs.** `form-action 'self'` refused
+  the manifest POST to `https://github.com/settings/apps/new`, so `Settings → Credentials →
+  Connect a service → GitHub` died in the browser before GitHub saw it. The header becomes
+  `form-action 'self' https://github.com` in `apps/daemon/src/app.ts`, pinned by
+  `app.test.ts` and stated with its reason in `docs/security.md`; every other directive still
+  keeps the app on its own origin.
+- **GitHub returns to the screen that completes the app.** `manifest.redirect_url` pointed at
+  `/providers/github/callback`, a path no route serves: the wildcard rendered About and dropped
+  `code` and `state`, so the exchange never ran. It is now
+  `<CB_PUBLIC_URL>/settings/credentials`, where the page already reads both parameters; the new
+  `GITHUB_MANIFEST_REDIRECT_PATH` names it, `service.test.ts` asserts it with the trailing slash
+  trimmed, and `docs/api.md` §5.9 and `docs/app.md` §4 name the return route.
+- **`state` travels where GitHub reads it.** `startManifest` puts `state` in the `action` query
+  (`https://github.com/settings/apps/new?state=…`), the shape GitHub documents, and keeps the
+  hidden field as a fallback; the callback can now echo it back and the credentials page
+  completes instead of returning silently when `state` is absent. The single-use state lives
+  3600 s, the same hour GitHub gives the handshake, and `manifest.test.ts`, `service.test.ts`
+  and `docs/api.md` pin both.
+- **The conversion accepts GitHub's whole document.** GitHub answers
+  `POST /app-manifests/{code}/conversions` with the app plus the PEM, and the daemon parsed it
+  with a `strictObject` of two keys, so every real handshake failed after GitHub had already
+  created the app: `503 provider_unavailable`, no credential, and the code spent. The schema is
+  now a plain object that takes `id` and `pem` and ignores the rest, the two unreadable-body
+  paths log `github_manifest_failed` instead of failing silently, and `service.test.ts` fills
+  the fake with the full document plus a case with no PEM.
+- Lint and the daemon build are green and the two touched suites pass 44/44. The daemon suite
+  keeps 23 failures in 6 files on this Windows host, identical on `main` (POSIX modes, shell and
+  git behaviour).
+
 ### Changed — 2026-11-13 (Task-121: the app document describes the shipped tree)
 
 - **§1 stops promising plugins that do not ship.** The UI row names `@ionic/angular` (no file

@@ -126,8 +126,10 @@ invents a format of its own.
   `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`, and a
   `Content-Security-Policy` of `default-src 'self'; script-src 'self'; style-src 'self'
   'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self';
-  frame-ancestors 'none'; base-uri 'self'; form-action 'self'` — no inline script, no
-  third-party origin.
+  frame-ancestors 'none'; base-uri 'self'; form-action 'self' https://github.com` — no inline
+  script and no third-party origin for anything but one form target. That target is
+  `https://github.com`, because the GitHub App manifest flow is a cross-origin form POST (D49);
+  GitHub answers to `/settings/credentials`, and no other origin may receive a form.
 - Both request refusals are logged by the request middleware as their status; there is no extra
   log line and no request body in it. The numbers are exported constants in
   `apps/daemon/src/app.ts` and `apps/daemon/src/auth/middleware.ts`, pinned by their unit tests
