@@ -27,6 +27,8 @@ not exist. No I/O, no logger, no `Date.now()`; `zod` is the only runtime depende
 - `providers.ts` — §5.9.1: the provider adapter and its failover account (D54).
 - `routines.ts` — the §5.8 routine union (`prompt`/`reminder`) and the chat-tool schemas.
 - `events.ts` — the §6 SSE union, the gap control frame and the retry constants.
+- `run-events.ts` — §5.4: the stored run-event record and its page, built on `pageSchema`, plus `parseRunEventPage`.
+- `run-events.test.ts` — one fixture per record shape and each refused page: unknown type, extra key, bad cursor and unknown page key.
 - `config.ts` — `CodeboxConfig`, the `CB_*` schema with the documented defaults and `parseConfig`.
 - `openapi.ts` — the OpenAPI 3.1 document built from the schemas, plus its 3.1 shape check.
 - `parse.test.ts` — the issue path rules.

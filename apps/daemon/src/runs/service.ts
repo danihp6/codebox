@@ -1,8 +1,16 @@
 import { canCancel } from '@codebox/core';
 import { parseSseEvent } from '@codebox/contracts';
-import type { Approval, Repo, Run, RunDiff, RunTrigger } from '@codebox/contracts';
+import type {
+  Approval,
+  Repo,
+  Run,
+  RunDiff,
+  RunEventPage,
+  RunEventRecord,
+  RunTrigger,
+} from '@codebox/contracts';
 import { toRun, withTransaction } from '@codebox/store';
-import type { EventRecord, RunRecord, Store } from '@codebox/store';
+import type { RunRecord, Store } from '@codebox/store';
 import { branchName } from '@codebox/workspaces';
 import type { WorkspaceManager, Worktree } from '@codebox/workspaces';
 import type { DaemonContext } from '../modules.js';
@@ -18,19 +26,6 @@ const SWEEP_INTERVAL_MS = 60_000;
 const SWEEP_BATCH = 200;
 const TITLE_MAX_CHARS = 80;
 const MERGED_EVENT_SCAN = 200;
-
-export interface EventPageItem {
-  readonly id: number;
-  readonly seq: number | null;
-  readonly type: EventRecord['type'];
-  readonly data: Readonly<Record<string, unknown>>;
-  readonly ts: string;
-}
-
-export interface EventPage {
-  readonly data: EventPageItem[];
-  readonly nextCursor: string | null;
-}
 
 export interface CreateRunsServiceOptions {
   readonly context: DaemonContext;
@@ -60,7 +55,7 @@ export interface RunsService {
     readonly idempotencyKey: string;
   }): Run;
   diff(runId: string): Promise<RunDiff>;
-  events(runId: string, after: number, limit: number): EventPage;
+  events(runId: string, after: number, limit: number): RunEventPage;
   replyApproval(input: {
     readonly id: string;
     readonly decision: 'allow' | 'deny';
@@ -388,10 +383,10 @@ export function createRunsService(options: CreateRunsServiceOptions): RunsServic
       return status.diff;
     },
 
-    events(runId, after, limit): EventPage {
+    events(runId, after, limit): RunEventPage {
       requireRun(runId);
       const records = store.events.readRunAfterSeq(runId, after, limit);
-      const data: EventPageItem[] = records.map((record) => ({
+      const data: RunEventRecord[] = records.map((record) => ({
         id: record.id,
         seq: record.seq,
         type: record.type,

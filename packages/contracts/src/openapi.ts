@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { parseOrThrow } from './parse.js';
+import { runEventPageSchema, runEventRecordSchema } from './run-events.js';
 import { credentialSummarySchema } from './credentials.js';
 import { errorEnvelopeSchema } from './errors.js';
 import { sseEventSchema } from './events.js';
@@ -614,7 +615,7 @@ const ROUTES: readonly RouteSpec[] = [
     summary: 'Event replay as JSON, not SSE.',
     tag: 'runs',
     status: '200',
-    response: 'Page',
+    response: 'RunEventPage',
   },
   {
     path: '/v1/runs/{id}/revert',
@@ -947,6 +948,8 @@ const componentSchemas: Readonly<Record<string, z.ZodType>> = Object.freeze({
   SseEvent: sseEventSchema,
   Error: errorEnvelopeSchema,
   Page: pageOfRun,
+  RunEventRecord: runEventRecordSchema,
+  RunEventPage: runEventPageSchema,
 });
 
 const tagSchema = z.strictObject({

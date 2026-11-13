@@ -51,6 +51,8 @@ const requiredComponents = [
   'SseEvent',
   'Error',
   'Page',
+  'RunEventRecord',
+  'RunEventPage',
 ];
 
 function collectRefs(value: unknown, refs: string[] = []): string[] {
@@ -267,6 +269,34 @@ describe('openapi', () => {
     expect(names).not.toContain('Providers');
     expect(names).not.toContain('ProviderStatus');
     expect(names).not.toContain('ProviderAccount');
+    expect(parseOpenApiDocument(document)).toEqual(document);
+  });
+
+  it('points the run-event replay at its own page component', () => {
+    const document = buildOpenApiDocument();
+    const ref = refOf(document.paths['/v1/runs/{id}/events']?.get, '200');
+    expect(ref).toBe('#/components/schemas/RunEventPage');
+    expect(ref).not.toBe('#/components/schemas/Page');
+    expect(refOf(document.paths['/v1/runs']?.get, '200')).toBe('#/components/schemas/Page');
+    expect(Object.keys(document.paths)).toHaveLength(67);
+
+    const names = Object.keys(document.components.schemas);
+    expect(names).toContain('RunEventRecord');
+    expect(names).toContain('RunEventPage');
+    expect(names).toContain('Page');
+    const refs = collectRefs(document);
+    expect(refs.length).toBeGreaterThan(0);
+    for (const entry of refs) {
+      const match = /^#\/components\/schemas\/([A-Za-z0-9_]+)$/.exec(entry);
+      expect(match, entry).not.toBeNull();
+      expect(names).toContain(match?.[1] ?? '');
+    }
+
+    const page = document.components.schemas['RunEventPage'] as {
+      properties: { data: { items: { required: string[] } } };
+    };
+    expect(page.properties.data.items.required).toEqual(['id', 'seq', 'type', 'data', 'ts']);
+    expect(JSON.stringify(document.components.schemas['RunEventPage'])).toContain('run.output');
     expect(parseOpenApiDocument(document)).toEqual(document);
   });
 

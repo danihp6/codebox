@@ -465,6 +465,10 @@ item when the page is full, `null` otherwise. An unknown run is a 404 before any
 }
 ```
 
+The page and its record are `runEventPageSchema` and `runEventRecordSchema`
+(`packages/contracts/src/run-events.ts`, parsed by `parseRunEventPage`); the OpenAPI
+`RunEventPage` component is that page.
+
 `GET /v1/runs/{id}/diff` answers the stat and the changed files the daemon last measured; the
 patch itself lives on GitHub. A run without a worktree — still queued, or already cleaned up —
 is `409 conflict` with `details.reason = "diff_unavailable"`:
