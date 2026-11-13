@@ -189,16 +189,22 @@ disabled; or no active provider account: nothing runs).
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
 | `GET` | `/v1/repos` | `read` | Registered repositories. |
-| `POST` | `/v1/repos` | `write` | `{ slug, defaultBranch?, gate?, policy?, protectedPaths? }`. |
+| `POST` | `/v1/repos` | `write` | `{ mode?, name?, slug?, defaultBranch?, gate?, policy?, protectedPaths? }`. |
 | `GET` | `/v1/repos/{id}` | `read` | Repo, policy, last run, gate summary. |
 | `PATCH` | `/v1/repos/{id}` | `write` | Gate, policy (`auto`/`manual`), protected paths, enabled. |
 | `DELETE` | `/v1/repos/{id}` | `write` | 409 while a run is live. |
 | `POST` | `/v1/repos/{id}/verify` | `write` | `{ ok, defaultBranch, canPush, checks }`. |
 | `GET` | `/v1/repos/{id}/design?revision=` | `read` | `design/` at a commit: tokens, routes, declared states and the check's findings (D52). |
 
+A repository is **local first** (D62): `source` is `local` or `github`, `name` is the folder-safe
+identity and is unique among local repositories, and `slug` is the remote coordinate, `null` until
+a remote exists.
+
 ```json
 {
   "id": "repo_01J...",
+  "source": "github",
+  "name": "example",
   "slug": "dani/example",
   "defaultBranch": "main",
   "gate": "npm ci && npm test && npm run build",
@@ -207,6 +213,22 @@ disabled; or no active provider account: nothing runs).
   "enabled": true,
   "createdAt": "2026-10-24T18:03:11Z",
   "counts": { "pending": 2, "running": 1, "merged": 8 }
+}
+```
+
+```json
+{
+  "id": "repo_01J...",
+  "source": "local",
+  "name": "widgets",
+  "slug": null,
+  "defaultBranch": "main",
+  "gate": "npm ci && npm test && npm run build",
+  "policy": "auto",
+  "protectedPaths": [],
+  "enabled": true,
+  "createdAt": "2026-11-13T09:00:00Z",
+  "counts": { "pending": 0, "running": 0, "merged": 0 }
 }
 ```
 
@@ -219,19 +241,38 @@ never counts works itself (D59). `GET /v1/repos` answers a §4 `Page<Repo>` — 
 default 50, plus `cursor` — and `GET /v1/repos/{id}` answers `RepoDetail`: the same object plus
 `lastRun`, the repository's newest run or `null`.
 
+`POST /v1/repos` carries one body with two modes. `mode: "local"` takes `name` and no `slug`: the
+daemon writes the row, creates `CB_REPO_ROOT/<name>` with `git init -b <defaultBranch>` and one
+initial commit that carries `TODO.md`, and answers `201` with the repository. `mode: "connect"`
+takes `slug` and, while the GitHub App has no installation, is refused with `409 conflict` and
+`details.reason = "github_app_installed_required"` — no row is written and no provider is called.
+A body with neither mode is today's create: `{ slug }` answers `201` with a `github` repository
+whose `name` is derived from the slug. A duplicate local `name` or a duplicate `slug` is
+`409 conflict` with `details.reason = "unique_violation"`; a name outside
+`^[a-z0-9][a-z0-9._-]{0,63}$` is `422 validation_failed` with `details.path = "repo.name"`; and a
+`git init` that fails is `503 agent_unavailable` with
+`details.reason = "workspace_unavailable"`, with the row deleted before the answer and no folder
+left behind.
+
 `POST /v1/repos/{id}/verify` asks the git provider and answers four checks in this order: `repo`
 is `ok` once the provider answered; `branch` is `ok` when the provider's default branch equals
 the registered one and `mismatch` otherwise; `push` is `ok` when the installation may push and
 `forbidden` otherwise; `gate` is `ok` when the repository carries a gate command and `missing`
 otherwise. `ok` is true only when all four are `ok`; `defaultBranch` and `canPush` are the
-provider's answer, not the stored values. An unknown id is `404` with
-`details.path = "repo.id"`, and a provider that cannot answer is `503 provider_unavailable` with
-`details.reason = "provider_unreachable"`. The route writes nothing and emits no event.
+provider's answer, not the stored values. A repository with `source: "local"` answers the same
+four checks in the same order from the box instead: `repo` is `ok` when `CB_REPO_ROOT/<name>` is a
+work tree and `missing` otherwise, `branch` is `ok` when the default branch exists and `missing`
+otherwise, `push` is `not_applicable`, and `gate` is the same rule; `canPush` is `false`, `ok`
+requires `repo`, `branch` and `gate` — `not_applicable` is neither a pass nor a failure — and the
+route calls no provider, because a missing folder is a `200` answer and not a `503`. An unknown id
+is `404` with `details.path = "repo.id"`, and a provider that cannot answer is
+`503 provider_unavailable` with `details.reason = "provider_unreachable"`. The route writes
+nothing and emits no event.
 
 `DELETE /v1/repos/{id}` answers `204` and removes the row; it refuses with `409 conflict` while
 the repository has a live run (`details.reason = "repo_has_live_run"`) or when run history still
-references it (`details.reason = "repo_has_history"`). A duplicate slug on `POST /v1/repos` is
-also `409 conflict`, with `details.reason = "unique_violation"`.
+references it (`details.reason = "repo_has_history"`). A duplicate slug, or a duplicate local
+`name`, on `POST /v1/repos` is also `409 conflict`, with `details.reason = "unique_violation"`.
 
 `GET /v1/repos/{id}/design` reads the repository's `design/` at `revision`, or at the default
 branch head when the query is absent. `present` is false when `design/tokens.json` is not at

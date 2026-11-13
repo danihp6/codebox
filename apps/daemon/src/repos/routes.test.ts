@@ -13,6 +13,7 @@ import type { Repo, Scope, Work } from '@codebox/contracts';
 import { mintAccessToken, sha256Hex } from '@codebox/security';
 import { openInMemoryStore } from '@codebox/store';
 import type { RunRecord, Store } from '@codebox/store';
+import { WorkspaceError } from '@codebox/workspaces';
 import { createApp } from '../app.js';
 import { createModule as createAuthModule } from '../auth/index.js';
 import { loadConfig, readBuildInfo, resolvePaths } from '../config.js';
@@ -21,7 +22,11 @@ import { DEFAULT_SUBSYSTEM_FLAGS, createShutdownRegistry } from '../modules.js';
 import type { DaemonApp, DaemonContext } from '../modules.js';
 import { registerReposRoutes } from './routes.js';
 import { createReposService } from './service.js';
-import type { RepoVerifyPort } from './service.js';
+import type {
+  RepoLocalInitPort,
+  RepoLocalVerifyPort,
+  RepoVerifyPort,
+} from './service.js';
 
 const SESSION_SECRET = '0123456789abcdef0123456789abcdef';
 const ACCESS_TTL_SECONDS = 900;
@@ -38,6 +43,8 @@ afterEach(() => {
 
 interface HarnessOptions {
   readonly verify?: RepoVerifyPort;
+  readonly localInit?: RepoLocalInitPort;
+  readonly localVerify?: RepoLocalVerifyPort;
 }
 
 interface Harness {
@@ -78,10 +85,20 @@ function harness(options: HarnessOptions = {}): Harness {
   };
   const app = createApp({ context });
   createAuthModule(context).register(app, context);
-  const verify: RepoVerifyPort = options.verify ?? {
-    verify: async () => ({ defaultBranch: 'main', canPush: true }),
+  const serviceOptions: {
+    context: DaemonContext;
+    verify?: RepoVerifyPort;
+    localInit?: RepoLocalInitPort;
+    localVerify?: RepoLocalVerifyPort;
+  } = {
+    context,
+    verify: options.verify ?? {
+      verify: async () => ({ defaultBranch: 'main', canPush: true }),
+    },
   };
-  registerReposRoutes(app, createReposService({ context, verify }));
+  if (options.localInit !== undefined) serviceOptions.localInit = options.localInit;
+  if (options.localVerify !== undefined) serviceOptions.localVerify = options.localVerify;
+  registerReposRoutes(app, createReposService(serviceOptions));
   let devices = 0;
   return {
     app,
@@ -138,6 +155,22 @@ async function createRepo(
   const response = await test.call('POST', '/v1/repos', { token, body });
   expect(response.status).toBe(201);
   return parseRepo(await response.json());
+}
+
+/** A local create never spawns git here: the folder is the fake's answer. */
+function localInitPort(): RepoLocalInitPort {
+  return {
+    async init(input: {
+      readonly name: string;
+      readonly defaultBranch: string;
+    }): Promise<{ path: string }> {
+      return { path: `/srv/codebox/repos/${input.name}` };
+    },
+  };
+}
+
+async function createLocalRepo(test: Harness, token: string, name: string): Promise<Repo> {
+  return createRepo(test, token, { mode: 'local', name });
 }
 
 function runRecord(id: string, repoId: string, state: RunRecord['state']): RunRecord {
@@ -343,6 +376,146 @@ describe('POST /v1/repos', () => {
       details: { reason: 'unique_violation' },
     });
     expect(test.store.repos.list()).toHaveLength(1);
+  });
+});
+
+describe('POST /v1/repos with mode local', () => {
+  it('answers 201 with a body parseRepo accepts, the local source and no slug', async () => {
+    const test = harness({ localInit: localInitPort() });
+    const token = test.device(['write']);
+
+    const response = await test.call('POST', '/v1/repos', {
+      token,
+      body: { mode: 'local', name: 'widgets' },
+    });
+    expect(response.status).toBe(201);
+    expect(response.headers.get('content-type')).toBe('application/json; charset=utf-8');
+
+    const repo = parseRepo(await response.json());
+    expect(repo.source).toBe('local');
+    expect(repo.name).toBe('widgets');
+    expect(repo.slug).toBeNull();
+    expect(repo.defaultBranch).toBe('main');
+    expect(repo.gate).toBe('npm ci && npm test && npm run build');
+    expect(repo.policy).toBe('auto');
+    expect(repo.protectedPaths).toEqual([]);
+    expect(repo.enabled).toBe(true);
+    expect(repo.createdAt).toBe(NOW);
+    expect(repo.counts).toEqual({ pending: 0, running: 0, merged: 0 });
+    expect(test.store.repos.getLocalByName('widgets')).toEqual(repo);
+  });
+
+  it('refuses a bad name, a missing name and a slug with repo.<field>', async () => {
+    const test = harness({ localInit: localInitPort() });
+    const token = test.device(['write']);
+
+    const escaping = await test.call('POST', '/v1/repos', {
+      token,
+      body: { mode: 'local', name: '../x' },
+    });
+    expect(escaping.status).toBe(422);
+    expect(await errorOf(escaping)).toEqual({
+      code: 'validation_failed',
+      details: { path: 'repo.name' },
+    });
+
+    const unnamed = await test.call('POST', '/v1/repos', { token, body: { mode: 'local' } });
+    expect(unnamed.status).toBe(422);
+    expect((await errorOf(unnamed)).details).toEqual({ path: 'repo.name' });
+
+    const withSlug = await test.call('POST', '/v1/repos', {
+      token,
+      body: { mode: 'local', name: 'widgets', slug: 'acme/widgets' },
+    });
+    expect(withSlug.status).toBe(422);
+    expect((await errorOf(withSlug)).details).toEqual({ path: 'repo.slug' });
+
+    expect(test.store.repos.list()).toEqual([]);
+  });
+
+  it('answers 409 unique_violation for a taken local name and keeps one row', async () => {
+    const test = harness({ localInit: localInitPort() });
+    const token = test.device(['write']);
+    await createLocalRepo(test, token, 'widgets');
+
+    const duplicate = await test.call('POST', '/v1/repos', {
+      token,
+      body: { mode: 'local', name: 'widgets' },
+    });
+    expect(duplicate.status).toBe(409);
+    expect(await errorOf(duplicate)).toEqual({
+      code: 'conflict',
+      details: { reason: 'unique_violation' },
+    });
+    expect(test.store.repos.list()).toHaveLength(1);
+  });
+
+  it('answers 503 workspace_unavailable with no row when the folder cannot be created', async () => {
+    const test = harness({
+      localInit: {
+        async init(): Promise<{ path: string }> {
+          throw new WorkspaceError('disk_error', 'disk operation failed: mkdir', null, null);
+        },
+      },
+    });
+    const token = test.device(['write']);
+
+    const response = await test.call('POST', '/v1/repos', {
+      token,
+      body: { mode: 'local', name: 'widgets' },
+    });
+    expect(response.status).toBe(503);
+    expect(await errorOf(response)).toEqual({
+      code: 'agent_unavailable',
+      details: { reason: 'workspace_unavailable' },
+    });
+    expect(test.store.repos.list()).toEqual([]);
+
+    expect(test.logs).toHaveLength(1);
+    const line = test.logs[0] ?? '';
+    expect(line).not.toContain('disk operation failed');
+    const record = JSON.parse(line) as Record<string, unknown>;
+    expect(record['msg']).toBe('repo_create_failed');
+    expect(record['name']).toBe('widgets');
+    expect(record['code']).toBe('disk_error');
+  });
+
+  it('refuses an explicit connect with 409 and writes nothing', async () => {
+    const test = harness();
+    const token = test.device(['write']);
+
+    const connect = await test.call('POST', '/v1/repos', {
+      token,
+      body: { mode: 'connect', slug: 'acme/x' },
+    });
+    expect(connect.status).toBe(409);
+    expect(await errorOf(connect)).toEqual({
+      code: 'conflict',
+      details: { reason: 'github_app_installed_required' },
+    });
+    expect(test.store.repos.list()).toEqual([]);
+
+    const withoutSlug = await test.call('POST', '/v1/repos', { token, body: { mode: 'connect' } });
+    expect(withoutSlug.status).toBe(422);
+    expect((await errorOf(withoutSlug)).details).toEqual({ path: 'repo.slug' });
+  });
+});
+
+describe('POST /v1/repos with the legacy github body', () => {
+  it('keeps today\'s row and derives a name the contract accepts for acme/.github', async () => {
+    const test = harness();
+    const token = test.device(['write']);
+
+    const response = await test.call('POST', '/v1/repos', {
+      token,
+      body: { slug: 'acme/.github' },
+    });
+    expect(response.status).toBe(201);
+    const repo = parseRepo(await response.json());
+    expect(repo.source).toBe('github');
+    expect(repo.slug).toBe('acme/.github');
+    expect(repo.name).toBe('github');
+    expect(test.store.repos.getLocalByName('github')).toBeNull();
   });
 });
 
@@ -571,6 +744,73 @@ describe('POST /v1/repos/{id}/verify', () => {
       code: 'not_found',
       details: { path: 'repo.id' },
     });
+  });
+});
+
+describe('POST /v1/repos/{id}/verify on a local repository', () => {
+  it('answers the four checks from the box and never calls the provider', async () => {
+    let verifies = 0;
+    const test = harness({
+      verify: {
+        verify: async () => {
+          verifies += 1;
+          return { defaultBranch: 'main', canPush: true };
+        },
+      },
+      localInit: localInitPort(),
+      localVerify: {
+        async checks() {
+          return { repo: 'ok', branch: 'ok' };
+        },
+      },
+    });
+    const token = test.device(['read', 'write']);
+    const repo = await createLocalRepo(test, token, 'widgets');
+
+    const response = await test.call('POST', `/v1/repos/${repo.id}/verify`, { token });
+    expect(response.status).toBe(200);
+    const body = parseRepoVerify(await response.json());
+    expect(body.ok).toBe(true);
+    expect(body.defaultBranch).toBe('main');
+    expect(body.canPush).toBe(false);
+    expect(body.checks.map((check) => check.name)).toEqual(['repo', 'branch', 'push', 'gate']);
+    expect(body.checks.map((check) => check.state)).toEqual(['ok', 'ok', 'not_applicable', 'ok']);
+    expect(verifies).toBe(0);
+    expect(test.logs).toEqual([]);
+  });
+
+  it('answers 200 ok false when the folder cannot be seen, never 503', async () => {
+    let verifies = 0;
+    const test = harness({
+      verify: {
+        verify: async () => {
+          verifies += 1;
+          return { defaultBranch: 'main', canPush: true };
+        },
+      },
+      localInit: localInitPort(),
+      localVerify: {
+        async checks() {
+          return { repo: 'missing', branch: 'missing' };
+        },
+      },
+    });
+    const token = test.device(['write']);
+    const repo = await createLocalRepo(test, token, 'widgets');
+
+    const response = await test.call('POST', `/v1/repos/${repo.id}/verify`, { token });
+    expect(response.status).toBe(200);
+    const body = parseRepoVerify(await response.json());
+    expect(body.ok).toBe(false);
+    expect(body.canPush).toBe(false);
+    expect(body.checks.map((check) => check.state)).toEqual([
+      'missing',
+      'missing',
+      'not_applicable',
+      'ok',
+    ]);
+    expect(verifies).toBe(0);
+    expect(test.logs).toEqual([]);
   });
 });
 

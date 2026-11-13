@@ -1,15 +1,21 @@
-import type { Repo, RepoDetail, RepoPolicy, RepoVerify } from '@codebox/contracts';
+import { join } from 'node:path';
+import type { CreateRepoBody, Repo, RepoDetail, RepoPolicy, RepoVerify } from '@codebox/contracts';
 import { createGitHubProvider } from '@codebox/git-provider';
 import type { GitProvider } from '@codebox/git-provider';
 import { StoreError, decodeCursor, encodeCursor } from '@codebox/store';
 import type { PageResult, Store } from '@codebox/store';
-import { createGitRunner } from '@codebox/workspaces';
+import { GIT_ENV, WorkspaceError, createGitRunner, initLocal } from '@codebox/workspaces';
 import type { DaemonContext } from '../modules.js';
 import { providerAuth } from '../runs/engine.js';
 import { RunApiError } from '../runs/errors.js';
 import { newRepoId } from './ids.js';
 
 const GIT_HOST = 'github.com';
+
+/** `nameSchema`'s ceiling; a slug tail longer than this is cut, never refused. */
+const NAME_MAX_LENGTH = 64;
+
+const LOCAL_VERIFY_TIMEOUT_MS = 30_000;
 
 export const REPO_DEFAULTS = Object.freeze({
   defaultBranch: 'main',
@@ -24,13 +30,8 @@ export interface RepoListQuery {
   readonly cursor: string | null;
 }
 
-export interface CreateRepoInput {
-  readonly slug: string;
-  readonly defaultBranch?: string | undefined;
-  readonly gate?: string | undefined;
-  readonly policy?: RepoPolicy | undefined;
-  readonly protectedPaths?: readonly string[] | undefined;
-}
+/** `index.ts` re-exports the name; the service now takes the contract body itself. */
+export type CreateRepoInput = CreateRepoBody;
 
 export interface RepoPatchInput {
   readonly gate?: string | undefined;
@@ -44,15 +45,31 @@ export interface RepoVerifyPort {
   verify(slug: string): Promise<{ readonly defaultBranch: string; readonly canPush: boolean }>;
 }
 
+/** D62: the box's own answer for a repository with no remote. */
+export interface RepoLocalVerifyPort {
+  checks(input: { readonly name: string; readonly defaultBranch: string }): Promise<{
+    readonly repo: string;
+    readonly branch: string;
+  }>;
+}
+
+export interface RepoLocalInitPort {
+  init(input: { readonly name: string; readonly defaultBranch: string }): Promise<{
+    readonly path: string;
+  }>;
+}
+
 export interface CreateReposServiceOptions {
   readonly context: DaemonContext;
   readonly verify?: RepoVerifyPort;
+  readonly localInit?: RepoLocalInitPort;
+  readonly localVerify?: RepoLocalVerifyPort;
 }
 
 export interface ReposService {
   list(query: RepoListQuery): PageResult<Repo>;
   detail(id: string): RepoDetail;
-  create(input: CreateRepoInput): Repo;
+  create(input: CreateRepoBody): Promise<Repo>;
   patch(id: string, input: RepoPatchInput): Repo;
   remove(id: string): void;
   verify(id: string): Promise<RepoVerify>;
@@ -68,6 +85,18 @@ function requireRepo(store: Store, id: string): Repo {
   const repo = store.repos.get(id);
   if (repo === null) throw notFound();
   return repo;
+}
+
+/**
+ * D62: the `name` the github arm sends. The store derives one from the slug tail for a legacy row,
+ * and a tail that starts outside `[a-z0-9]` (`acme/.github`) would fail `nameSchema` at the edge.
+ */
+function nameOfSlug(slug: string): string {
+  const separator = slug.indexOf('/');
+  const tail = separator === -1 ? slug : slug.slice(separator + 1);
+  const stripped = tail.toLowerCase().replace(/^[^a-z0-9]+/, '');
+  const name = stripped.slice(0, NAME_MAX_LENGTH);
+  return name.length === 0 ? 'repo' : name;
 }
 
 /** `docs/api.md` §5.2: the four checks, in this order, and `ok` only when all four are `ok`. */
@@ -112,15 +141,141 @@ function defaultVerifyPort(context: DaemonContext): RepoVerifyPort {
   };
 }
 
+function defaultLocalInitPort(context: DaemonContext): RepoLocalInitPort {
+  return {
+    async init(input: {
+      readonly name: string;
+      readonly defaultBranch: string;
+    }): Promise<{ path: string }> {
+      const created = await initLocal({
+        repoRoot: context.config.CB_REPO_ROOT,
+        name: input.name,
+        defaultBranch: input.defaultBranch,
+        git: createGitRunner(),
+      });
+      return { path: created.path };
+    },
+  };
+}
+
+function defaultLocalVerifyPort(context: DaemonContext): RepoLocalVerifyPort {
+  const git = createGitRunner();
+
+  async function state(cwd: string, args: readonly string[]): Promise<string> {
+    try {
+      const answer = await git.run({ args, cwd, timeoutMs: LOCAL_VERIFY_TIMEOUT_MS, env: GIT_ENV });
+      return answer.code === 0 ? 'ok' : 'missing';
+    } catch {
+      return 'missing';
+    }
+  }
+
+  return {
+    async checks(input: {
+      readonly name: string;
+      readonly defaultBranch: string;
+    }): Promise<{ repo: string; branch: string }> {
+      // A missing folder is a git failure, and here that is an answer rather than a 503.
+      const cwd = join(context.config.CB_REPO_ROOT, input.name);
+      return {
+        repo: await state(cwd, ['rev-parse', '--is-inside-work-tree']),
+        branch: await state(cwd, ['rev-parse', `refs/heads/${input.defaultBranch}`]),
+      };
+    },
+  };
+}
+
 export function createReposService(options: CreateReposServiceOptions): ReposService {
   const context = options.context;
   const store = context.store;
   const clock = context.clock;
   let port: RepoVerifyPort | null = options.verify ?? null;
+  let init: RepoLocalInitPort | null = options.localInit ?? null;
+  let local: RepoLocalVerifyPort | null = options.localVerify ?? null;
 
   function verifyPort(): RepoVerifyPort {
     if (port === null) port = defaultVerifyPort(context);
     return port;
+  }
+
+  function initPort(): RepoLocalInitPort {
+    if (init === null) init = defaultLocalInitPort(context);
+    return init;
+  }
+
+  function localVerifyPort(): RepoLocalVerifyPort {
+    if (local === null) local = defaultLocalVerifyPort(context);
+    return local;
+  }
+
+  function defaultsOf(input: CreateRepoBody): {
+    defaultBranch: string;
+    gate: string;
+    policy: RepoPolicy;
+    protectedPaths: string[];
+    enabled: boolean;
+  } {
+    return {
+      defaultBranch: input.defaultBranch ?? REPO_DEFAULTS.defaultBranch,
+      gate: input.gate ?? REPO_DEFAULTS.gate,
+      policy: input.policy ?? REPO_DEFAULTS.policy,
+      protectedPaths: input.protectedPaths === undefined ? [] : [...input.protectedPaths],
+      enabled: REPO_DEFAULTS.enabled,
+    };
+  }
+
+  function removeRowQuietly(id: string): void {
+    try {
+      store.repos.delete(id);
+    } catch {
+      // A secondary failure changes neither the answer below nor the warn line that carries it.
+    }
+  }
+
+  async function createLocal(input: CreateRepoBody): Promise<Repo> {
+    const name = input.name;
+    if (name === undefined) throw new RunApiError('validation_failed', 422, { path: 'repo.name' });
+    // The unique index is the duplicate gate: a taken name must refuse before a folder exists.
+    const repo = store.repos.create({
+      id: newRepoId(),
+      source: 'local',
+      name,
+      slug: null,
+      ...defaultsOf(input),
+      createdAt: clock().toISOString(),
+    });
+    try {
+      await initPort().init({ name, defaultBranch: repo.defaultBranch });
+    } catch (error) {
+      removeRowQuietly(repo.id);
+      context.logger.warn({
+        msg: 'repo_create_failed',
+        name,
+        code: error instanceof WorkspaceError ? error.code : 'unexpected',
+      });
+      throw new RunApiError('agent_unavailable', 503, { reason: 'workspace_unavailable' });
+    }
+    return repo;
+  }
+
+  async function verifyLocal(repo: Repo): Promise<RepoVerify> {
+    const answer = await localVerifyPort().checks({
+      name: repo.name ?? '',
+      defaultBranch: repo.defaultBranch,
+    });
+    // D62: a repository with no remote has nothing to push, so `push` is neither pass nor failure.
+    const checks: RepoVerify['checks'] = [
+      { name: 'repo', state: answer.repo },
+      { name: 'branch', state: answer.branch },
+      { name: 'push', state: 'not_applicable' },
+      { name: 'gate', state: repo.gate.length > 0 ? 'ok' : 'missing' },
+    ];
+    return {
+      ok: answer.repo === 'ok' && answer.branch === 'ok' && repo.gate.length > 0,
+      defaultBranch: repo.defaultBranch,
+      canPush: false,
+      checks,
+    };
   }
 
   return {
@@ -151,19 +306,25 @@ export function createReposService(options: CreateReposServiceOptions): ReposSer
       return { ...repo, lastRun };
     },
 
-    create(input: CreateRepoInput): Repo {
-      const repo: Repo = {
-        id: newRepoId(),
-        slug: input.slug,
-        defaultBranch: input.defaultBranch ?? REPO_DEFAULTS.defaultBranch,
-        gate: input.gate ?? REPO_DEFAULTS.gate,
-        policy: input.policy ?? REPO_DEFAULTS.policy,
-        protectedPaths: input.protectedPaths === undefined ? [] : [...input.protectedPaths],
-        enabled: REPO_DEFAULTS.enabled,
-        createdAt: clock().toISOString(),
-      };
+    async create(input: CreateRepoBody): Promise<Repo> {
+      if (input.mode === 'connect') {
+        // Batch 35/Task-128 replaces this refusal with the App installation; no row, no provider.
+        throw new RunApiError('conflict', 409, { reason: 'github_app_installed_required' });
+      }
+      if (input.mode === 'local') return createLocal(input);
+      const slug = input.slug;
+      if (slug === undefined) {
+        throw new RunApiError('validation_failed', 422, { path: 'repo.slug' });
+      }
       // A taken slug is `StoreError('unique_violation')`; `handle` maps it to a 409.
-      return store.repos.create(repo);
+      return store.repos.create({
+        id: newRepoId(),
+        source: 'github',
+        name: nameOfSlug(slug),
+        slug,
+        ...defaultsOf(input),
+        createdAt: clock().toISOString(),
+      });
     },
 
     patch(id: string, input: RepoPatchInput): Repo {
@@ -199,8 +360,8 @@ export function createReposService(options: CreateReposServiceOptions): ReposSer
 
     async verify(id: string): Promise<RepoVerify> {
       const repo = requireRepo(store, id);
+      if (repo.source === 'local') return verifyLocal(repo);
       const slug = repo.slug;
-      // D62: a repository with no remote has no provider to ask (Task-125 answers not_applicable).
       if (slug === null) {
         throw new RunApiError('provider_unavailable', 503, { reason: 'provider_unavailable' });
       }

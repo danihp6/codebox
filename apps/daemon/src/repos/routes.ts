@@ -3,7 +3,7 @@ import {
   PAGINATION_DEFAULT_LIMIT,
   PAGINATION_MAX_LIMIT,
   RepoId,
-  branchSchema,
+  createRepoBodySchema,
   globSchema,
   pageOfRepo,
   parseOrThrow,
@@ -11,7 +11,6 @@ import {
   parseRepoDetail,
   parseRepoVerify,
   repoPolicySchema,
-  slugSchema,
 } from '@codebox/contracts';
 import { API_PREFIX } from '../app.js';
 import type { DaemonApp } from '../modules.js';
@@ -30,14 +29,6 @@ const REPOS_PATH = `${API_PREFIX}/repos`;
 const listQuery = z.strictObject({
   limit: z.coerce.number().int().min(1).max(PAGINATION_MAX_LIMIT).default(PAGINATION_DEFAULT_LIMIT),
   cursor: z.string().min(1).optional(),
-});
-
-const createBody = z.strictObject({
-  slug: slugSchema,
-  defaultBranch: branchSchema.optional(),
-  gate: z.string().min(1).optional(),
-  policy: repoPolicySchema.optional(),
-  protectedPaths: z.array(globSchema).optional(),
 });
 
 const patchBody = z.strictObject({
@@ -59,8 +50,8 @@ export function registerReposRoutes(app: DaemonApp, repos: ReposService): void {
   app.post(REPOS_PATH, (c) =>
     handle(c, 'repo', async () => {
       requireScope(c, 'write');
-      const body = parseOrThrow(createBody, await readJson(c), 'repo');
-      return json(c, parseRepo(repos.create(body)), 201);
+      const body = parseOrThrow(createRepoBodySchema, await readJson(c), 'repo');
+      return json(c, parseRepo(await repos.create(body)), 201);
     }),
   );
 
