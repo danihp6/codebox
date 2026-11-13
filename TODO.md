@@ -3068,7 +3068,7 @@ holds `scripts/README.md`, and `packages/contracts/README.md` has one writer (Ta
       `[unit]` the six pure cases pass; `[unit]` `git diff -U0 main...task-119 -- package.json`
       shows one removed and one added line and nothing else; `[unit]` lint, the `scripts` project
       filtered to `test-guard` and the build pass.
-- [ ] **[Task-120]** The app's `NOTICE` spec is line-ending agnostic.
+- [x] **[Task-120]** The app's `NOTICE` spec is line-ending agnostic.
       `apps/app/src/app/features/about/notice.spec.ts:10` compares `NOTICE_TEXT.trim()` with
       `readFileSync(<repo>/NOTICE, 'utf8').trim()`, so a checkout that materialises `NOTICE` with
       CRLF differs on every interior `\r` — the one red file in `npm run test:app` on this

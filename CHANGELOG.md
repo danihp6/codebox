@@ -6,6 +6,18 @@ first release exists.
 
 ## Unreleased
 
+### Changed — 2026-11-13 (Task-120: the NOTICE spec ignores line endings)
+
+- **The verbatim comparison normalises EOLs.** `notice.ts` gains `normaliseEol` (CRLF and lone
+  CR to LF), `notice.spec.ts` normalises both the shipped text and the file it reads, and
+  `parseNotice` normalises once at the top, so a checkout that materialises `NOTICE` with CRLF no
+  longer fails the only red the app suite had on this host. A new case proves a CRLF document and
+  its LF twin parse to the same list, and one pins the helper. `NOTICE` and
+  `scripts/legal/notice.mjs` are untouched.
+- Dev `d3852b5`, QA `658bc62`: the app suite is 66 files / 579 tests all green on a CRLF
+  checkout, lint and build green, task and integration QA green, Linux CI `43395273542` and
+  batch CI `43401953249` success. No `[live]`: the spec compares bytes.
+
 ### Changed — 2026-11-13 (Task-119: the root gate runs on Windows)
 
 - **The coverage guard is a file, not a quoted program.** `package.json`'s `test:guard` becomes
